@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.loopperfect.buckaroo.Dependency;
 import com.loopperfect.buckaroo.Project;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
@@ -17,6 +18,9 @@ public final class Serializers {
 
         gsonBuilder.registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementSerializer());
         gsonBuilder.registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementDeserializer());
+
+        gsonBuilder.registerTypeAdapter(Dependency.class, new DependencySerializer());
+        gsonBuilder.registerTypeAdapter(Dependency.class, new DependencyDeserializer());
 
         gsonBuilder.registerTypeAdapter(Project.class, new ProjectSerializer());
         gsonBuilder.registerTypeAdapter(Project.class, new ProjectDeserializer());

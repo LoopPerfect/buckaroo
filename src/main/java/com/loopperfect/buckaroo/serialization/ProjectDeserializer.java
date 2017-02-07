@@ -1,11 +1,16 @@
 package com.loopperfect.buckaroo.serialization;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.gson.*;
+import com.loopperfect.buckaroo.Dependency;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Project;
 
 import java.lang.reflect.Type;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public final class ProjectDeserializer implements JsonDeserializer<Project> {
 
@@ -29,6 +34,15 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
             license = Optional.empty();
         }
 
-        return new Project(name, license, null);
+        ImmutableSet<Dependency> dependencies;
+        if (jsonObject.has("dependencies")) {
+            dependencies = ImmutableSet.copyOf(Streams.stream(jsonObject.get("dependencies").getAsJsonArray())
+                    .map(x -> (Dependency)context.deserialize(x, Dependency.class))
+                    .collect(Collectors.toSet()));
+        } else {
+            dependencies = ImmutableSet.of();
+        }
+
+        return new Project(name, license, dependencies);
     }
 }

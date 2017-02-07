@@ -2,16 +2,18 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public final class ProjectSerializerTest {
 
     @org.junit.Test
-    public void serialization() throws Exception {
+    public void testProjectSerializer1() throws Exception {
 
         final Project project = new Project(
                 Identifier.of("my-magic-tool"),
@@ -19,7 +21,7 @@ public final class ProjectSerializerTest {
                 ImmutableSet.of(
                         Dependency.of(
                                 Identifier.of("my-magic-lib"),
-                                AnySemanticVersion.of()),
+                                ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6))),
                         Dependency.of(
                                 Identifier.of("some-other-lib"),
                                 ExactSemanticVersion.of(SemanticVersion.of(4, 1)))));
@@ -31,5 +33,15 @@ public final class ProjectSerializerTest {
         final Project deserializedProject = gson.fromJson(serializedProject, Project.class);
 
         assertEquals(project, deserializedProject);
+    }
+
+    @org.junit.Test
+    public void testProjectSerializer2() throws Exception {
+        try {
+            Serializers.gson().fromJson("this is not valid", Project.class);
+            assertTrue(false);
+        } catch (final JsonParseException e) {
+            assertTrue(true);
+        }
     }
 }

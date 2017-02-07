@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.loopperfect.buckaroo.Dependency;
+import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
 import java.lang.reflect.Type;
 
@@ -20,8 +21,10 @@ public final class DependencySerializer implements JsonSerializer<Dependency> {
 
         final JsonObject jsonObject = new JsonObject();
 
-        jsonObject.addProperty("project", dependency.project.toString());
-        jsonObject.add("version", context.serialize(dependency.versionRequirement));
+        jsonObject.addProperty("project", dependency.project.name);
+        jsonObject.add(
+                "version",
+                context.serialize(dependency.versionRequirement, SemanticVersionRequirement.class));
 
         return jsonObject;
     }
