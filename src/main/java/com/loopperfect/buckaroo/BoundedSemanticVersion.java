@@ -20,9 +20,9 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
     public boolean isSatisfiedBy(final SemanticVersion version) {
         switch (direction) {
             case ABOVE:
-                return bound.compareTo(version) > 0;
+                return bound.compareTo(version) >= 0;
             case BELOW:
-                return bound.compareTo(version) < 0;
+                return bound.compareTo(version) <= 0;
         }
         return false;
     }
@@ -30,6 +30,17 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
     @Override
     public ImmutableSet<SemanticVersion> hints() {
         return ImmutableSet.of(bound);
+    }
+
+    @Override
+    public String encode() {
+        switch (direction) {
+            case ABOVE:
+                return ">=" + bound;
+            case BELOW:
+                return "<=" + bound;
+        }
+        return "";
     }
 
     @Override

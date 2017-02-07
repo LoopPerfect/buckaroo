@@ -1,8 +1,10 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class ExactSemanticVersion implements SemanticVersionRequirement {
 
@@ -18,6 +20,34 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
 
     public ImmutableSet<SemanticVersion> hints() {
         return semanticVersions;
+    }
+
+    @Override
+    public String encode() {
+        if (semanticVersions.size() == 1) {
+            return semanticVersions.iterator().next().toString();
+        }
+        return "[" +
+                semanticVersions.stream()
+                        .map(x -> x.toString())
+                        .collect(Collectors.joining(", ")) +
+                "]";
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (obj == null || !(obj instanceof ExactSemanticVersion)) {
+            return false;
+        }
+
+        ExactSemanticVersion other = (ExactSemanticVersion) obj;
+
+        return Objects.equals(semanticVersions, other.semanticVersions);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(semanticVersions);
     }
 
     public static ExactSemanticVersion of(final SemanticVersion semanticVersion) {

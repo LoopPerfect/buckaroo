@@ -7,4 +7,6 @@ public interface SemanticVersionRequirement {
      boolean isSatisfiedBy(final SemanticVersion version);
 
      ImmutableSet<SemanticVersion> hints();
+
+     String encode();
 }

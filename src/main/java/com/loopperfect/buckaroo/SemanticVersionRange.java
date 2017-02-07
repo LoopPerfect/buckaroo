@@ -12,6 +12,8 @@ public final class SemanticVersionRange implements SemanticVersionRequirement {
 
         this.minimumVersion = Preconditions.checkNotNull(minimumVersion);
         this.maximumVersion = Preconditions.checkNotNull(maximumVersion);
+
+        Preconditions.checkArgument(minimumVersion.compareTo(maximumVersion) <= 0);
     }
 
     public boolean isSatisfiedBy(SemanticVersion version) {
@@ -21,5 +23,10 @@ public final class SemanticVersionRange implements SemanticVersionRequirement {
 
     public ImmutableSet<SemanticVersion> hints() {
         return ImmutableSet.of(minimumVersion, maximumVersion);
+    }
+
+    @Override
+    public String encode() {
+        return minimumVersion + "-" + maximumVersion;
     }
 }

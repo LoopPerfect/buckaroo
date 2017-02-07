@@ -8,12 +8,29 @@ public final class AnySemanticVersion implements SemanticVersionRequirement {
 
     }
 
+    @Override
     public boolean isSatisfiedBy(SemanticVersion version) {
         return true;
     }
 
+    @Override
     public ImmutableSet<SemanticVersion> hints() {
         return ImmutableSet.of();
+    }
+
+    @Override
+    public String encode() {
+        return "*";
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return obj != null && obj instanceof AnySemanticVersion;
+    }
+
+    @Override
+    public int hashCode() {
+        return 0;
     }
 
     public static AnySemanticVersion of() {
