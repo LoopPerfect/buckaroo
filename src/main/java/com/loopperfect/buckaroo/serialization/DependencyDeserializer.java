@@ -21,15 +21,10 @@ public final class DependencyDeserializer implements JsonDeserializer<Dependency
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final String projectString = jsonObject.get("project").getAsString();
+        final Identifier project = context.deserialize(jsonObject.get("project"), Identifier.class);
 
-        final Identifier project = Identifier.parse(projectString)
-                .orElseThrow(() -> new JsonParseException("\"" + projectString + "\" is not a valid identifier"));
-
-        final String versionRequirementString = jsonObject.get("version").getAsString();
-
-        final SemanticVersionRequirement versionRequirement = SemanticVersionRequirements.parse(versionRequirementString)
-                .orElseThrow(() -> new JsonParseException("\"" + versionRequirementString + "\" is not a valid version"));
+        final SemanticVersionRequirement versionRequirement =
+                context.deserialize(jsonObject.get("version"), SemanticVersionRequirement.class);
 
         return Dependency.of(project, versionRequirement);
     }

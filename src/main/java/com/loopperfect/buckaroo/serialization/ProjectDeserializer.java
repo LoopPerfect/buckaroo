@@ -19,13 +19,7 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final String nameString = jsonObject.get("name").getAsString();
-
-        if (!Identifier.isValid(nameString)) {
-            throw new JsonParseException("\"" + nameString + "\" is not a valid identifier");
-        }
-
-        final Identifier name = Identifier.of(nameString);
+        final Identifier name = context.deserialize(jsonObject.get("name"), Identifier.class);
 
         Optional<String> license;
         if (jsonObject.has("license")) {
