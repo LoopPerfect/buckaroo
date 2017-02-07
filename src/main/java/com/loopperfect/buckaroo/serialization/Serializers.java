@@ -10,7 +10,7 @@ public final class Serializers {
 
     }
 
-    public static Gson gson() {
+    public static Gson gson(final boolean usePrettyPrinting) {
 
         final GsonBuilder gsonBuilder = new GsonBuilder();
 
@@ -35,6 +35,14 @@ public final class Serializers {
         gsonBuilder.registerTypeAdapter(Project.class, new ProjectSerializer());
         gsonBuilder.registerTypeAdapter(Project.class, new ProjectDeserializer());
 
+        if (usePrettyPrinting) {
+            gsonBuilder.setPrettyPrinting();
+        }
+
         return gsonBuilder.create();
     }
-}
+
+    public static Gson gson() {
+        return gson(false);
+    }
+    }

@@ -1,31 +1,26 @@
 package com.loopperfect.buckaroo;
 
-import java.io.File;
-import java.io.IOException;
+import com.loopperfect.buckaroo.routines.CreateProjectSkeleton;
+
+import java.util.Optional;
 
 public final class Main {
 
     public static void main(final String[] args) {
 
-//        System.out.println("Hello, world. ");
+        if (args.length == 1 && args[0].trim().equalsIgnoreCase("init")) {
 
+            final Routine<Exception> routine = new CreateProjectSkeleton();
 
-        // Create a basic project structure in the working directory...
+            final Optional<Exception> result = routine.execute();
 
-        final File workingDirectory = new File(System.getProperty("user.dir"));
+            if (result.isPresent()) {
+                result.get().printStackTrace();
+            }
 
-        System.out.println("Running in " + workingDirectory + "... ");
-
-
-        // Create buckaroo.json file
-        try {
-            new File("buckaroo.json").createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
+            return;
         }
 
-        // Create buckaroo folder
-        new File("buckaroo").mkdir();
-
+        System.out.println("Buck, Buck, Buckaroo! \uD83E\uDD20");
     }
 }

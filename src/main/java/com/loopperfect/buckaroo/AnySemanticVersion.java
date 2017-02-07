@@ -9,7 +9,7 @@ public final class AnySemanticVersion implements SemanticVersionRequirement {
     }
 
     @Override
-    public boolean isSatisfiedBy(SemanticVersion version) {
+    public boolean isSatisfiedBy(final SemanticVersion version) {
         return true;
     }
 

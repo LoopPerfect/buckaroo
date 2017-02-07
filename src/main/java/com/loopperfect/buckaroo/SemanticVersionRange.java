@@ -16,7 +16,7 @@ public final class SemanticVersionRange implements SemanticVersionRequirement {
         Preconditions.checkArgument(minimumVersion.compareTo(maximumVersion) <= 0);
     }
 
-    public boolean isSatisfiedBy(SemanticVersion version) {
+    public boolean isSatisfiedBy(final SemanticVersion version) {
         return (minimumVersion.compareTo(version) <= 0) &&
                 (maximumVersion.compareTo(version) >= 0);
     }
