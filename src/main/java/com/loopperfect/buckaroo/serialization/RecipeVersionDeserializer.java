@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.*;
+import com.loopperfect.buckaroo.GitCommit;
 import com.loopperfect.buckaroo.RecipeVersion;
 
 import java.lang.reflect.Type;
@@ -13,7 +14,8 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final String url = jsonObject.get("url").getAsString();
+//        final String url = jsonObject.get("url").getAsString();
+        final GitCommit url = context.deserialize(jsonObject.get("url"), GitCommit.class);
 
         Optional<String> buckUrl;
         if (jsonObject.has("buck-url")) {

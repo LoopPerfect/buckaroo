@@ -17,6 +17,9 @@ public final class Serializers {
         gsonBuilder.registerTypeAdapter(SemanticVersion.class, new SemanticVersionSerializer());
         gsonBuilder.registerTypeAdapter(SemanticVersion.class, new SemanticVersionDeserializer());
 
+        gsonBuilder.registerTypeAdapter(GitCommit.class, new GitCommitSerializer());
+        gsonBuilder.registerTypeAdapter(GitCommit.class, new GitCommitDeserializer());
+
         gsonBuilder.registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementSerializer());
         gsonBuilder.registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementDeserializer());
 

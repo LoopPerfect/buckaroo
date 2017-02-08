@@ -20,7 +20,7 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
 
         final JsonObject jsonObject = new JsonObject();
 
-        jsonObject.addProperty("url", recipeVersion.url);
+        jsonObject.add("url", context.serialize(recipeVersion.gitCommit));
 
         if (recipeVersion.buckUrl.isPresent()) {
             jsonObject.addProperty("buck-url", recipeVersion.buckUrl.get());

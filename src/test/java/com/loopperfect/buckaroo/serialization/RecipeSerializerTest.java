@@ -17,12 +17,11 @@ public final class RecipeSerializerTest {
                                 ImmutableMap.of(
                                         SemanticVersion.of(1, 0),
                                         RecipeVersion.of(
-                                                "https://github.com/magicco/magiclib/commit/b0215d5",
-                                                "https://github.com/loopperfect/recipes/commit/b0215d5",
+                                                GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5"),
                                                 "my-magic-lib"),
                                         SemanticVersion.of(1, 1),
                                         RecipeVersion.of(
-                                                "https://github.com/magicco/magiclib/commit/c7355d5",
+                                                GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
                                                 "my-magic-lib")));
 
         final Gson gson = Serializers.gson();

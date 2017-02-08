@@ -1,31 +1,16 @@
 package com.loopperfect.buckaroo;
 
-import java.io.File;
-import java.io.IOException;
+import com.loopperfect.buckaroo.routines.ListRecipes;
 
 public final class Main {
 
     public static void main(final String[] args) {
 
-//        System.out.println("Hello, world. ");
-
-
-        // Create a basic project structure in the working directory...
-
-        final File workingDirectory = new File(System.getProperty("user.dir"));
-
-        System.out.println("Running in " + workingDirectory + "... ");
-
-
-        // Create buckaroo.json file
-        try {
-            new File("buckaroo.json").createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (args.length == 1 && args[0].trim().equalsIgnoreCase("recipes")) {
+            new ListRecipes().run();
+            return;
         }
 
-        // Create buckaroo folder
-        new File("buckaroo").mkdir();
-
+        System.out.println("Buck, Buck, Buckaroo!");
     }
 }
