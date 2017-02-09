@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.routines;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.Gson;
+import com.loopperfect.buckaroo.BuckarooException;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Project;
 import com.loopperfect.buckaroo.Routine;
@@ -14,12 +15,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Optional;
 
-public final class CreateProjectSkeleton implements Routine<Exception> {
-
-
+public final class CreateProjectSkeleton implements Routine {
 
     @Override
-    public Optional<Exception> execute() {
+    public void execute() throws BuckarooException {
 
         final File workingDirectory = new File(System.getProperty("user.dir"));
 
@@ -32,7 +31,7 @@ public final class CreateProjectSkeleton implements Routine<Exception> {
                 Identifier::isValid);
 
         if (!projectNameString.isPresent()) {
-            return Optional.of(new Exception("Could not get a project name"));
+            throw new BuckarooException("Could not get a project name");
         }
 
         final Identifier projectName = Identifier.of(projectNameString.get());
@@ -53,7 +52,7 @@ public final class CreateProjectSkeleton implements Routine<Exception> {
         try {
             Files.write(Paths.get("buckaroo.json"), serializedProject.getBytes(), StandardOpenOption.CREATE);
         } catch (final IOException e) {
-            return Optional.of(e);
+            throw new BuckarooException(e);
         }
 
         // Create buckaroo folder
@@ -62,7 +61,5 @@ public final class CreateProjectSkeleton implements Routine<Exception> {
         modulesFolder.mkdir();
 
         System.out.println("Done! ");
-
-        return Optional.empty();
     }
 }

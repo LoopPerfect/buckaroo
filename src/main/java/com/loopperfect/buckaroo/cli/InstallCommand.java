@@ -1,7 +1,9 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.BuckarooException;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.Routine;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
 import java.util.Objects;
@@ -15,6 +17,13 @@ public final class InstallCommand implements CLICommand {
     private InstallCommand(final Identifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
         this.project = Preconditions.checkNotNull(project);
         this.versionRequirement = Preconditions.checkNotNull(versionRequirement);
+    }
+
+    @Override
+    public Routine routine() {
+        return () -> {
+            throw new BuckarooException("Not implemented yet! ");
+        };
     }
 
     @Override

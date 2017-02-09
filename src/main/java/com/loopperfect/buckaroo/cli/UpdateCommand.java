@@ -1,7 +1,9 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.BuckarooException;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.Routine;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -12,6 +14,13 @@ public final class UpdateCommand implements CLICommand {
 
     private UpdateCommand(final Optional<Identifier>  project) {
         this.project = Preconditions.checkNotNull(project);
+    }
+
+    @Override
+    public Routine routine() {
+        return () -> {
+            throw new BuckarooException("Not implemented yet! ");
+        };
     }
 
     @Override

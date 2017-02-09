@@ -1,8 +1,7 @@
 package com.loopperfect.buckaroo;
 
-import java.util.Optional;
+@FunctionalInterface
+public interface Routine {
 
-public interface Routine<E extends Throwable> {
-
-    <T extends Exception> Optional<T> execute();
+    void execute() throws BuckarooException;
 }

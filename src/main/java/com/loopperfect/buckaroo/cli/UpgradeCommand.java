@@ -1,9 +1,19 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.loopperfect.buckaroo.BuckarooException;
+import com.loopperfect.buckaroo.Routine;
+
 public final class UpgradeCommand implements CLICommand {
 
     private UpgradeCommand() {
 
+    }
+
+    @Override
+    public Routine routine() {
+        return () -> {
+            throw new BuckarooException("Not implemented yet! ");
+        };
     }
 
     @Override

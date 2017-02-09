@@ -1,30 +1,38 @@
 package com.loopperfect.buckaroo;
 
-import com.loopperfect.buckaroo.routines.ListRecipes;
-import com.loopperfect.buckaroo.routines.CreateProjectSkeleton;
-import java.util.Optional;
+import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.cli.CLICommand;
+import com.loopperfect.buckaroo.cli.CLIParsers;
+import org.jparsec.Parser;
+import org.jparsec.error.ParserException;
 
 public final class Main {
 
+    private static String join(final String[] xs) {
+        Preconditions.checkNotNull(xs);
+        final StringBuilder b = new StringBuilder();
+        for (final String x : xs) {
+            b.append(x);
+        }
+        return b.toString();
+    }
+
     public static void main(final String[] args) {
 
-        if (args.length == 1 && args[0].trim().equalsIgnoreCase("init")) {
-            final Routine<Exception> routine = new CreateProjectSkeleton();
-
-            final Optional<Exception> result = routine.execute();
-
-            if (result.isPresent()) {
-                result.get().printStackTrace();
-            }
-
+        if (args.length == 0) {
+            System.out.println("Buck, Buck, Buckaroo! \uD83E\uDD20");
             return;
         }
 
-        if (args.length == 1 && args[0].trim().equalsIgnoreCase("recipes")) {
-            new ListRecipes().run();
-            return;
-        }
+        final Parser<CLICommand> commandParser = CLIParsers.commandParser;
 
-        System.out.println("Buck, Buck, Buckaroo! \uD83E\uDD20");
+        try {
+            final CLICommand command = commandParser.parse(join(args));
+
+            command.routine().execute();
+        } catch (final ParserException | BuckarooException e) {
+            System.out.println("Uh oh!");
+            System.out.println(e.getMessage());
+        }
     }
 }
