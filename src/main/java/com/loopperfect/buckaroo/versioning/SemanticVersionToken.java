@@ -1,4 +1,4 @@
-package com.loopperfect.buckaroo.parsing;
+package com.loopperfect.buckaroo.versioning;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.SemanticVersion;

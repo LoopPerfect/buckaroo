@@ -1,6 +1,5 @@
-package com.loopperfect.buckaroo.parsing;
+package com.loopperfect.buckaroo.versioning;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.loopperfect.buckaroo.*;
@@ -8,9 +7,9 @@ import org.jparsec.Parser;
 import org.jparsec.Parsers;
 import org.jparsec.Scanners;
 
-public final class BuckarooParsers {
+public final class VersioningParsers {
 
-    private BuckarooParsers() {
+    private VersioningParsers() {
 
     }
 

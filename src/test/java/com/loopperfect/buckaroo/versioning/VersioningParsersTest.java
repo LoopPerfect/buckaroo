@@ -1,4 +1,4 @@
-package com.loopperfect.buckaroo.parsing;
+package com.loopperfect.buckaroo.versioning;
 
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
@@ -7,12 +7,12 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public final class BuckarooParsersTest {
+public final class VersioningParsersTest {
 
     @Test
     public void testSemanticVersionParser() {
 
-        final Parser<SemanticVersion> parser = BuckarooParsers.semanticVersionParser;
+        final Parser<SemanticVersion> parser = VersioningParsers.semanticVersionParser;
 
         assertEquals(SemanticVersion.of(123), parser.parse("123"));
         assertEquals(SemanticVersion.of(1, 2), parser.parse("1.2"));
@@ -22,7 +22,7 @@ public final class BuckarooParsersTest {
     @Test
     public void testVersionRequirementTokenizer1() {
 
-        final Parser<ImmutableList<Token>> parser = BuckarooParsers.versionRequirementTokenizer;
+        final Parser<ImmutableList<Token>> parser = VersioningParsers.versionRequirementTokenizer;
 
         assertEquals(ImmutableList.of(SemanticVersionToken.of(SemanticVersion.of(1))), parser.parse("1"));
         assertEquals(ImmutableList.of(AtLeastToken.of()), parser.parse(">= "));
@@ -39,7 +39,7 @@ public final class BuckarooParsersTest {
     @Test
     public void testVersionRequirementTokenizer2() {
 
-        final Parser<ImmutableList<Token>> parser = BuckarooParsers.versionRequirementTokenizer;
+        final Parser<ImmutableList<Token>> parser = VersioningParsers.versionRequirementTokenizer;
 
         final ImmutableList<Token> expected = ImmutableList.of(
                 AtLeastToken.of(),
@@ -53,7 +53,7 @@ public final class BuckarooParsersTest {
     @Test
     public void testVersionRequirementTokenizer3() {
 
-        final Parser<ImmutableList<Token>> parser = BuckarooParsers.versionRequirementTokenizer;
+        final Parser<ImmutableList<Token>> parser = VersioningParsers.versionRequirementTokenizer;
 
         final ImmutableList<Token> expected = ImmutableList.of(
                 OpenListToken.of(),
@@ -72,7 +72,7 @@ public final class BuckarooParsersTest {
     @Test
     public void testSemanticVersionRequirementParser() {
 
-        final Parser<SemanticVersionRequirement> parser = BuckarooParsers.semanticVersionRequirementParser;
+        final Parser<SemanticVersionRequirement> parser = VersioningParsers.semanticVersionRequirementParser;
 
         assertEquals(AnySemanticVersion.of(), parser.parse("*"));
         assertEquals(AnySemanticVersion.of(), parser.parse("  *  "));

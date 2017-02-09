@@ -63,4 +63,12 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
     public static BoundedSemanticVersion of(final SemanticVersion bound, final AboveOrBelow direction) {
         return new BoundedSemanticVersion(bound, direction);
     }
+
+    public static BoundedSemanticVersion atLeast(final SemanticVersion bound) {
+        return new BoundedSemanticVersion(bound, AboveOrBelow.ABOVE);
+    }
+
+    public static BoundedSemanticVersion atMost(final SemanticVersion bound) {
+        return new BoundedSemanticVersion(bound, AboveOrBelow.BELOW);
+    }
 }

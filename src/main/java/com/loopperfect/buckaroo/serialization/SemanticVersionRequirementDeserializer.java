@@ -5,7 +5,7 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
-import com.loopperfect.buckaroo.parsing.BuckarooParsers;
+import com.loopperfect.buckaroo.versioning.VersioningParsers;
 import org.jparsec.error.ParserException;
 
 import java.lang.reflect.Type;
@@ -16,7 +16,7 @@ public final class SemanticVersionRequirementDeserializer implements JsonDeseria
     public SemanticVersionRequirement deserialize(final JsonElement jsonElement, final Type type, final JsonDeserializationContext context) throws JsonParseException {
 
         try {
-            return BuckarooParsers.semanticVersionRequirementParser
+            return VersioningParsers.semanticVersionRequirementParser
                     .parse(jsonElement.getAsString());
         } catch (final ParserException e) {
             throw new JsonParseException("Invalid version", e);
