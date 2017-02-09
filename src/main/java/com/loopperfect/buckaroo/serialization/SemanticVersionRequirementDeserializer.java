@@ -15,6 +15,10 @@ public final class SemanticVersionRequirementDeserializer implements JsonDeseria
     @Override
     public SemanticVersionRequirement deserialize(final JsonElement jsonElement, final Type type, final JsonDeserializationContext context) throws JsonParseException {
 
+        if (!jsonElement.isJsonPrimitive()) {
+            throw new JsonParseException("Expected a string");
+        }
+
         try {
             return VersioningParsers.semanticVersionRequirementParser
                     .parse(jsonElement.getAsString());

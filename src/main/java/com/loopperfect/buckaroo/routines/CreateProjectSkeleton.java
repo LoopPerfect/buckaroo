@@ -1,6 +1,6 @@
 package com.loopperfect.buckaroo.routines;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.loopperfect.buckaroo.BuckarooException;
 import com.loopperfect.buckaroo.Identifier;
@@ -24,7 +24,7 @@ public final class CreateProjectSkeleton implements Routine {
 
         System.out.println("Creating a skeleton project in " + workingDirectory + "... ");
 
-        // Create a project
+        // Create a projectToInstall
         final Optional<String> projectNameString = Routines.requestString(
                 "What is the name of your project?",
                 "That is not a valid project name",
@@ -40,7 +40,7 @@ public final class CreateProjectSkeleton implements Routine {
 
         // TODO: Get license
 
-        final Project project = new Project(projectName, Optional.empty(), ImmutableSet.of());
+        final Project project = new Project(projectName, Optional.empty(), ImmutableMap.of());
 
         final Gson gson = Serializers.gson(true);
 

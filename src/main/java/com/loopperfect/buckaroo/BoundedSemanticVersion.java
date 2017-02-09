@@ -20,9 +20,9 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
     public boolean isSatisfiedBy(final SemanticVersion version) {
         switch (direction) {
             case ABOVE:
-                return bound.compareTo(version) >= 0;
-            case BELOW:
                 return bound.compareTo(version) <= 0;
+            case BELOW:
+                return bound.compareTo(version) >= 0;
         }
         return false;
     }

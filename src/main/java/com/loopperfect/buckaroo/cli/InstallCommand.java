@@ -5,6 +5,7 @@ import com.loopperfect.buckaroo.BuckarooException;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Routine;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
+import com.loopperfect.buckaroo.routines.InstallRecipe;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -21,9 +22,7 @@ public final class InstallCommand implements CLICommand {
 
     @Override
     public Routine routine() {
-        return () -> {
-            throw new BuckarooException("Not implemented yet! ");
-        };
+        return new InstallRecipe(project, versionRequirement);
     }
 
     @Override

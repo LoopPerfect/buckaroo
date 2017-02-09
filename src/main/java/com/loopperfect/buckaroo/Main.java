@@ -8,15 +8,6 @@ import org.jparsec.error.ParserException;
 
 public final class Main {
 
-    private static String join(final String[] xs) {
-        Preconditions.checkNotNull(xs);
-        final StringBuilder b = new StringBuilder();
-        for (final String x : xs) {
-            b.append(x);
-        }
-        return b.toString();
-    }
-
     public static void main(final String[] args) {
 
         if (args.length == 0) {
@@ -27,7 +18,7 @@ public final class Main {
         final Parser<CLICommand> commandParser = CLIParsers.commandParser;
 
         try {
-            final CLICommand command = commandParser.parse(join(args));
+            final CLICommand command = commandParser.parse(String.join(" ", args));
 
             command.routine().execute();
         } catch (final ParserException | BuckarooException e) {

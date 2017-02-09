@@ -1,6 +1,6 @@
 package com.loopperfect.buckaroo.serialization;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
@@ -18,20 +18,17 @@ public final class ProjectSerializerTest {
         final Project project = new Project(
                 Identifier.of("my-magic-tool"),
                 Optional.of("MIT"),
-                ImmutableSet.of(
-                        Dependency.of(
-                                Identifier.of("my-magic-lib"),
-                                ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6))),
-                        Dependency.of(
-                                Identifier.of("some-other-lib"),
-                                ExactSemanticVersion.of(
-                                        SemanticVersion.of(4, 1),
-                                        SemanticVersion.of(4, 2))),
-                        Dependency.of(
-                                Identifier.of("awesome-lib"),
-                                AnySemanticVersion.of())));
+                ImmutableMap.of(
+                        Identifier.of("my-magic-lib"),
+                        ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6)),
+                        Identifier.of("some-other-lib"),
+                        ExactSemanticVersion.of(
+                                SemanticVersion.of(4, 1),
+                                SemanticVersion.of(4, 2)),
+                        Identifier.of("awesome-lib"),
+                        AnySemanticVersion.of()));
 
-        final Gson gson = Serializers.gson();
+        final Gson gson = Serializers.gson(true);
 
         final String serializedProject = gson.toJson(project);
 
