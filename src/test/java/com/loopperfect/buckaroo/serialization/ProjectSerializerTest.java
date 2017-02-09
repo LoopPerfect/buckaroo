@@ -24,7 +24,12 @@ public final class ProjectSerializerTest {
                                 ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6))),
                         Dependency.of(
                                 Identifier.of("some-other-lib"),
-                                ExactSemanticVersion.of(SemanticVersion.of(4, 1)))));
+                                ExactSemanticVersion.of(
+                                        SemanticVersion.of(4, 1),
+                                        SemanticVersion.of(4, 2))),
+                        Dependency.of(
+                                Identifier.of("awesome-lib"),
+                                AnySemanticVersion.of())));
 
         final Gson gson = Serializers.gson();
 
