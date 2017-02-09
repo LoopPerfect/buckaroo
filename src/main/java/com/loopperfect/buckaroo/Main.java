@@ -9,7 +9,6 @@ public final class Main {
     public static void main(final String[] args) {
 
         if (args.length == 1 && args[0].trim().equalsIgnoreCase("init")) {
-
             final Routine<Exception> routine = new CreateProjectSkeleton();
 
             final Optional<Exception> result = routine.execute();
