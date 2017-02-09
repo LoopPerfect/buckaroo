@@ -21,7 +21,7 @@ public final class SemanticVersionsTest {
         ImmutableSet<SemanticVersionRequirement> requirements =
                 ImmutableSet.of(
                         AnySemanticVersion.of(),
-                        new SemanticVersionRange(SemanticVersion.of(3), SemanticVersion.of(7)));
+                        SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(7)));
 
         Optional<SemanticVersion> suggested = SemanticVersions.resolve(availableVersions, requirements);
 
@@ -41,7 +41,7 @@ public final class SemanticVersionsTest {
         ImmutableSet<SemanticVersionRequirement> requirements =
                 ImmutableSet.of(
                         ExactSemanticVersion.of(SemanticVersion.of(5, 3)),
-                        new SemanticVersionRange(SemanticVersion.of(3), SemanticVersion.of(4)));
+                        SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(4)));
 
         Optional<SemanticVersion> suggested = SemanticVersions.resolve(availableVersions, requirements);
 

@@ -36,11 +36,16 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
 
     @Override
     public boolean equals(final Object obj) {
+
+        if (this == obj) {
+            return true;
+        }
+
         if (obj == null || !(obj instanceof ExactSemanticVersion)) {
             return false;
         }
 
-        ExactSemanticVersion other = (ExactSemanticVersion) obj;
+        final ExactSemanticVersion other = (ExactSemanticVersion) obj;
 
         return Objects.equals(semanticVersions, other.semanticVersions);
     }
@@ -56,5 +61,9 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
 
     public static ExactSemanticVersion of(final ImmutableSet<SemanticVersion> semanticVersions) {
         return new ExactSemanticVersion(semanticVersions);
+    }
+
+    public static ExactSemanticVersion of(final SemanticVersion... semanticVersions) {
+        return new ExactSemanticVersion(ImmutableSet.copyOf(semanticVersions));
     }
 }

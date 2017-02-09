@@ -1,7 +1,7 @@
 package com.loopperfect.buckaroo.parsing;
 
 import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.SemanticVersion;
+import com.loopperfect.buckaroo.*;
 import org.jparsec.Parser;
 import org.junit.Test;
 
@@ -67,5 +67,40 @@ public final class BuckarooParsersTest {
         final ImmutableList<Token> actual = parser.parse(" [  7.2  , 7.3, 8]");
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testSemanticVersionRequirementParser() {
+
+        final Parser<SemanticVersionRequirement> parser = BuckarooParsers.semanticVersionRequirementParser;
+
+        assertEquals(AnySemanticVersion.of(), parser.parse("*"));
+        assertEquals(AnySemanticVersion.of(), parser.parse("  *  "));
+
+        assertEquals(ExactSemanticVersion.of(SemanticVersion.of(1, 2, 3)), parser.parse("1.2.3"));
+        assertEquals(ExactSemanticVersion.of(SemanticVersion.of(2, 4)), parser.parse("  2.4"));
+
+        assertEquals(ExactSemanticVersion.of(SemanticVersion.of(1, 1)), parser.parse("=1.1"));
+        assertEquals(ExactSemanticVersion.of(SemanticVersion.of(7)), parser.parse("  =  7 "));
+
+        assertEquals(
+                ExactSemanticVersion.of(SemanticVersion.of(1, 1), SemanticVersion.of(1, 2)),
+                parser.parse(" [ 1.1, 1.2  ] "));
+
+        assertEquals(
+                BoundedSemanticVersion.of(SemanticVersion.of(4, 7), AboveOrBelow.ABOVE),
+                parser.parse(">=4.7"));
+
+        assertEquals(
+                BoundedSemanticVersion.of(SemanticVersion.of(6, 5, 1), AboveOrBelow.BELOW),
+                parser.parse("<=6.5.1"));
+
+        assertEquals(
+                SemanticVersionRange.of(SemanticVersion.of(7, 2), SemanticVersion.of(9)),
+                parser.parse("  7.2 - 9  "));
+
+        assertEquals(
+                SemanticVersionRange.of(SemanticVersion.of(1, 0, 1), SemanticVersion.of(4, 3)),
+                parser.parse("1.0.1-4.3"));
     }
 }

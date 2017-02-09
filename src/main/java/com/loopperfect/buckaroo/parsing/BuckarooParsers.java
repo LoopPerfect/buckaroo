@@ -1,7 +1,9 @@
 package com.loopperfect.buckaroo.parsing;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.SemanticVersion;
+import com.google.common.collect.ImmutableSet;
+import com.loopperfect.buckaroo.*;
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
 import org.jparsec.Scanners;
@@ -11,6 +13,8 @@ public final class BuckarooParsers {
     private BuckarooParsers() {
 
     }
+
+    static final Parser<?> ignoreParser = Scanners.WHITESPACES.skipMany();
 
     static final Parser<Integer> integerParser = Scanners.INTEGER
             .map(x -> Integer.parseUnsignedInt(x));
@@ -55,10 +59,10 @@ public final class BuckarooParsers {
     static final Parser<WildCardToken> wildCardTokenParser =
             Scanners.string("*").map(x -> WildCardToken.of());
 
-    public static final Parser<SemanticVersion> semanticVersionParser = Parsers.or(
-            semanticVersionParser3,
+    public static final Parser<SemanticVersion> semanticVersionParser = Parsers.longest(
+            semanticVersionParser1,
             semanticVersionParser2,
-            semanticVersionParser1); // Order reversed so that we fallback properly
+            semanticVersionParser3);
 
     public static final Parser<ImmutableList<Token>> versionRequirementTokenizer =
             Scanners.WHITESPACES.skipMany().next(
@@ -74,4 +78,49 @@ public final class BuckarooParsers {
                             semanticVersionParser.map(SemanticVersionToken::of))
                             .sepEndBy(Scanners.WHITESPACES.skipMany()))
                     .map(x -> ImmutableList.copyOf(x));
+
+    static final Parser<AnySemanticVersion> anySemanticVersionParser =
+            wildCardTokenParser.between(ignoreParser, ignoreParser).map(x -> AnySemanticVersion.of());
+
+    public static final Parser<ImmutableList<SemanticVersion>> semanticVersionListParser =
+            openListTokenParser.between(ignoreParser, ignoreParser).next(
+                    semanticVersionParser
+                            .between(ignoreParser, ignoreParser)
+                            .sepBy(commaTokenParser.between(ignoreParser, ignoreParser)))
+                    .followedBy(closeListTokenParser.between(ignoreParser, ignoreParser))
+                    .between(ignoreParser, ignoreParser)
+            .map(ImmutableList::copyOf);
+
+    static final Parser<ExactSemanticVersion> exactSemanticVersionParser =
+            Parsers.or(
+                    semanticVersionParser.between(ignoreParser, ignoreParser).map(ExactSemanticVersion::of),
+                    Parsers.sequence(
+                            equalsTokenParser.between(ignoreParser, ignoreParser),
+                            semanticVersionParser.between(ignoreParser, ignoreParser).map(ExactSemanticVersion::of)),
+                    semanticVersionListParser.map(x -> ExactSemanticVersion.of(ImmutableSet.copyOf(x))));
+
+    static final Parser<BoundedSemanticVersion> atLeastSemanticVersionParser =
+            atLeastTokenParser.between(ignoreParser, ignoreParser)
+                    .next(semanticVersionParser.between(ignoreParser, ignoreParser))
+                    .map(x -> BoundedSemanticVersion.of(x, AboveOrBelow.ABOVE));
+
+    static final Parser<BoundedSemanticVersion> atMostSemanticVersionParser =
+            atMostTokenParser.between(ignoreParser, ignoreParser)
+                    .next(semanticVersionParser.between(ignoreParser, ignoreParser))
+                    .map(x -> BoundedSemanticVersion.of(x, AboveOrBelow.BELOW));
+
+    static final Parser<SemanticVersionRange> semanticVersionRangeParser =
+            Parsers.sequence(
+                    semanticVersionParser.followedBy(dashTokenParser.between(ignoreParser, ignoreParser)),
+                    semanticVersionParser,
+                    (x, y) -> SemanticVersionRange.of(x, y))
+                    .between(ignoreParser, ignoreParser);
+
+    public static final Parser<SemanticVersionRequirement> semanticVersionRequirementParser =
+            Parsers.longest(
+                    anySemanticVersionParser,
+                    exactSemanticVersionParser,
+                    atLeastSemanticVersionParser,
+                    atMostSemanticVersionParser,
+                    semanticVersionRangeParser);
 }
