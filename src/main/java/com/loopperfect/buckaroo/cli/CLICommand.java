@@ -1,8 +1,9 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Routine;
+import com.loopperfect.buckaroo.Unit;
+import com.loopperfect.buckaroo.io.IO;
 
 public interface CLICommand {
 
-    Routine routine();
+    IO<Unit> routine();
 }

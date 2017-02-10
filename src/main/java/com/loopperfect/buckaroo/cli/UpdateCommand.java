@@ -1,9 +1,9 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.BuckarooException;
 import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.Routine;
+import com.loopperfect.buckaroo.Unit;
+import com.loopperfect.buckaroo.io.IO;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -17,10 +17,8 @@ public final class UpdateCommand implements CLICommand {
     }
 
     @Override
-    public Routine routine() {
-        return () -> {
-            throw new BuckarooException("Not implemented yet! ");
-        };
+    public IO<Unit> routine() {
+        return null;
     }
 
     @Override

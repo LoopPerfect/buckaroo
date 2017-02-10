@@ -1,7 +1,8 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Routine;
-import com.loopperfect.buckaroo.routines.ListRecipes;
+import com.loopperfect.buckaroo.Unit;
+import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.routines.Routines;
 
 public final class RecipesCommand implements CLICommand {
 
@@ -10,8 +11,8 @@ public final class RecipesCommand implements CLICommand {
     }
 
     @Override
-    public Routine routine() {
-        return new ListRecipes();
+    public IO<Unit> routine() {
+        return Routines.listRecipes;
     }
 
     @Override

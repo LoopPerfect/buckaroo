@@ -24,11 +24,13 @@ public final class CreateProjectSkeleton implements Routine {
 
         System.out.println("Creating a skeleton project in " + workingDirectory + "... ");
 
+        final Optional<String> projectNameString = Optional.of("test"); // TODO
+
         // Create a projectToInstall
-        final Optional<String> projectNameString = Routines.requestString(
-                "What is the name of your project?",
-                "That is not a valid project name",
-                Identifier::isValid);
+//        final Optional<String> projectNameString = Routines.requestString(
+//                "What is the name of your project?",
+//                "That is not a valid project name",
+//                Identifier::isValid);
 
         if (!projectNameString.isPresent()) {
             throw new BuckarooException("Could not get a project name");

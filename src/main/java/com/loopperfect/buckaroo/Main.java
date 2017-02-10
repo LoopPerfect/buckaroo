@@ -1,8 +1,8 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
+import com.loopperfect.buckaroo.io.IOContext;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
@@ -20,8 +20,8 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(String.join(" ", args));
 
-            command.routine().execute();
-        } catch (final ParserException | BuckarooException e) {
+            command.routine().run(IOContext.actual());
+        } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
         }
