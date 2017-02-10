@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,9 +22,15 @@ public interface IOContext {
 
     Optional<String> readln();
 
+    Path getUserHomeDirectory();
+
+    Path getWorkingDirectory();
+
     boolean isFile(final Path path);
 
     boolean exists(final Path path);
+
+    Optional<IOException> createDirectory(final Path path);
 
     Either<IOException, String> readFile(final Path path);
 
@@ -53,6 +60,16 @@ public interface IOContext {
             }
 
             @Override
+            public Path getUserHomeDirectory() {
+                return Paths.get(System.getProperty("user.home"));
+            }
+
+            @Override
+            public Path getWorkingDirectory() {
+                return Paths.get(System.getProperty("user.dir"));
+            }
+
+            @Override
             public boolean isFile(final Path path) {
                 return path.toFile().isFile();
             }
@@ -61,6 +78,16 @@ public interface IOContext {
             public boolean exists(final Path path) {
                 Preconditions.checkNotNull(path);
                 return path.toFile().exists();
+            }
+
+            @Override
+            public Optional<IOException> createDirectory(final Path path) {
+                Preconditions.checkNotNull(path);
+                path.toFile().mkdir();
+                if (!path.toFile().isDirectory() || !path.toFile().exists()) {
+                    return Optional.of(new IOException("Could not create a directory at " + path));
+                }
+                return Optional.empty();
             }
 
             @Override
@@ -79,6 +106,9 @@ public interface IOContext {
                 Preconditions.checkNotNull(path);
                 Preconditions.checkNotNull(content);
                 try {
+                    if (path.toFile().exists()) {
+                        throw new IOException("There is already a file at " + path);
+                    }
                     Files.write(content, path.toFile(), Charset.defaultCharset());
                     return Optional.empty();
                 } catch (final IOException e) {

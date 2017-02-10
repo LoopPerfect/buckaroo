@@ -35,6 +35,6 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
             dependencies = ImmutableMap.of();
         }
 
-        return new Project(name, license, dependencies);
+        return Project.of(name, license, dependencies);
     }
 }

@@ -68,6 +68,10 @@ public interface IO<T> {
         };
     }
 
+    static <T> IO<T> of(IO<T> io) {
+        return io;
+    }
+
     static <T> IO<T> value(final T value) {
         Preconditions.checkNotNull(value);
         return context -> value;
@@ -86,6 +90,14 @@ public interface IO<T> {
         return context -> {
             Preconditions.checkNotNull(context);
             return context.readln();
+        };
+    }
+
+    static IO<Optional<IOException>> createDirectory(final Path path) {
+        Preconditions.checkNotNull(path);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return context.createDirectory(path);
         };
     }
 

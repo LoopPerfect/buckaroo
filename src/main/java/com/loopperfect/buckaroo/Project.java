@@ -19,7 +19,7 @@ public final class Project {
     public final Optional<String> license;
     public final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies;
 
-    public Project(final Identifier name, final Optional<String> license, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+    private Project(final Identifier name, final Optional<String> license, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
 
         this.name = Preconditions.checkNotNull(name);
         this.license = Preconditions.checkNotNull(license);
@@ -69,5 +69,9 @@ public final class Project {
                 .add("license", license)
                 .add("dependencies", dependencies)
                 .toString();
+    }
+
+    public static Project of(final Identifier name, final Optional<String> license, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+        return new Project(name, license, dependencies);
     }
 }

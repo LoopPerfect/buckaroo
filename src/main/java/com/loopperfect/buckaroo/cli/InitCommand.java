@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.cli;
 
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.routines.Routines;
 
 public final class InitCommand implements CLICommand {
 
@@ -11,7 +12,7 @@ public final class InitCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return null;
+        return Routines.createProjectSkeleton;
     }
 
     @Override

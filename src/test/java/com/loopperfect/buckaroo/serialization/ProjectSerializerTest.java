@@ -15,7 +15,7 @@ public final class ProjectSerializerTest {
     @org.junit.Test
     public void testProjectSerializer1() throws Exception {
 
-        final Project project = new Project(
+        final Project project = Project.of(
                 Identifier.of("my-magic-tool"),
                 Optional.of("MIT"),
                 ImmutableMap.of(
