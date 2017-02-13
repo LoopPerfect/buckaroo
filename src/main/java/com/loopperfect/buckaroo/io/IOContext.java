@@ -34,6 +34,8 @@ public interface IOContext {
 
     Either<IOException, String> readFile(final Path path);
 
+    Optional<IOException> writeFile(final Path path, final String content, final boolean overwrite);
+
     Optional<IOException> writeFile(final Path path, final String content);
 
     Either<IOException, ImmutableList<Path>> listFiles(final Path path);
@@ -102,11 +104,11 @@ public interface IOContext {
             }
 
             @Override
-            public Optional<IOException> writeFile(final Path path, final String content) {
+            public Optional<IOException> writeFile(final Path path, final String content, final boolean overwrite) {
                 Preconditions.checkNotNull(path);
                 Preconditions.checkNotNull(content);
                 try {
-                    if (path.toFile().exists()) {
+                    if (!overwrite && path.toFile().exists()) {
                         throw new IOException("There is already a file at " + path);
                     }
                     Files.write(content, path.toFile(), Charset.defaultCharset());
@@ -114,6 +116,11 @@ public interface IOContext {
                 } catch (final IOException e) {
                     return Optional.of(e);
                 }
+            }
+
+            @Override
+            public Optional<IOException> writeFile(final Path path, final String content) {
+                return writeFile(path, content, false);
             }
 
             @Override

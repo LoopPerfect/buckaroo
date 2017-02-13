@@ -11,6 +11,13 @@ public final class SemanticVersions {
 
     }
 
+    /**
+     * Figures out the best version to use given a list of available versions and requirements.
+     *
+     * @param availableVersions The versions available. Usually read from a cook-book
+     * @param requirements The version requirements
+     * @return The best version to use, if such a version exists
+     */
     public static Optional<SemanticVersion> resolve(
             final ImmutableSet<SemanticVersion> availableVersions,
             final ImmutableSet<SemanticVersionRequirement> requirements) {

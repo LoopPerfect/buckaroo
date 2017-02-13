@@ -130,7 +130,7 @@ public interface IO<T> {
         return context -> Unit.of();
     }
 
-    static <T> IO<ImmutableList<T>> sequence(Iterable<IO<T>> ts) {
+    static <T> IO<ImmutableList<T>> sequence(final ImmutableList<IO<T>> ts) {
         Preconditions.checkNotNull(ts);
         return context -> {
             Preconditions.checkNotNull(context);
@@ -140,6 +140,14 @@ public interface IO<T> {
                 builder.add(r);
             }
             return builder.build();
+        };
+    }
+
+    static <T, U> Function<IO<T>, IO<U>> lift(final Function<T, U> f) {
+        Preconditions.checkNotNull(f);
+        return x -> {
+            Preconditions.checkNotNull(x);
+            return x.map(f);
         };
     }
 }
