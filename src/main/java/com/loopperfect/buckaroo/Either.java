@@ -1,7 +1,6 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
-import sun.plugin.dom.exception.InvalidStateException;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -19,29 +18,6 @@ public final class Either<L, R> {
     // l or r will be null depending on the value of which
     private final L l;
     private final R r;
-
-    public boolean isLeft() {
-        return which == LeftOrRight.LEFT;
-    }
-
-    public boolean isRight() {
-        return which == LeftOrRight.RIGHT;
-    }
-
-    public L getLeft() {
-        if (which != LeftOrRight.LEFT) {
-            throw new InvalidStateException("Attempt to access a right either as a left");
-        }
-        return l;
-    }
-
-    public R getRight() {
-        if (which != LeftOrRight.RIGHT) {
-            throw new InvalidStateException("Attempt to access a left either as a right");
-
-        }
-        return r;
-    }
 
     private Either(final LeftOrRight which, final L l, final R r) {
         this.which = which;

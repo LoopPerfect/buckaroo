@@ -42,16 +42,15 @@ public final class Routines {
         Preconditions.checkNotNull(context);
         final Path recipesDirectory = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/recipes");
         final Either<IOException, ImmutableList<Path>> listFiles = context.listFiles(recipesDirectory);
-        if (listFiles.isLeft()) {
-            return Either.left(listFiles.getLeft());
-        }
-        return Either.right(ImmutableList.copyOf(listFiles.getRight()
-                .stream()
-                .filter(x -> isJsonFile(x))
-                .map(x -> x.normalize())
-                .distinct()
-                .map(x -> readRecipe(context, x))
-                .collect(Collectors.toList())));
+        return listFiles.map(
+                x -> x,
+                x -> ImmutableList.copyOf(x
+                        .stream()
+                        .filter(i -> isJsonFile(i))
+                        .map(i -> i.normalize())
+                        .distinct()
+                        .map(i -> readRecipe(context, i))
+                        .collect(Collectors.toList())));
     };
 
     private static Path recipesPath(final IOContext context) {
@@ -137,7 +136,7 @@ public final class Routines {
 
     // TODO: Do we want to modify the BUCK file?
     // We need to do a recursive dependency search!
-    public static IO<Unit> installDependency(final Identifier projectToInstall, final Optional<SemanticVersionRequirement> versionRequirement) {
+    public static final IO<Unit> installDependency(final Identifier projectToInstall, final Optional<SemanticVersionRequirement> versionRequirement) {
         Preconditions.checkNotNull(projectToInstall);
         Preconditions.checkNotNull(versionRequirement);
         // First read the buckaroo.json file
@@ -192,6 +191,69 @@ public final class Routines {
                                     }
                             ));
                         }));
+    }
 
+    private static final IO<Optional<Exception>> checkout(final Path localPath, final String branch) {
+        Preconditions.checkNotNull(localPath);
+        Preconditions.checkNotNull(branch);
+        return context -> context.git().checkout(localPath.toFile(), branch);
+    }
+
+    private static final IO<Optional<Exception>> clone(final Path localPath, final String gitUrl) {
+        Preconditions.checkNotNull(localPath);
+        Preconditions.checkNotNull(gitUrl);
+        return context -> context.git().clone(localPath.toFile(), gitUrl);
+    }
+
+//    public static final IO<Unit> upgrade =
+//            // Tell the user what we are up to...
+//            IO.println("Upgrading the Buckaroo recipes registry... ")
+//                    // Try to checkout master branch
+//                    .then(context -> Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/"))
+//                    .flatMap(x -> IO.println(x).then(IO.value(x)))
+//                    .flatMap(x -> checkout(x, "git@github.com:njlr/buckaroo-recipes-test.git")
+//                            .fallback(
+//                                    i -> i.isPresent(),
+//                                    e -> clone(x,"git@github.com:njlr/buckaroo-recipes-test.git")))
+//                    .flatMap(x -> IO.println(x));
+
+    public static final IO<Unit> upgrade(final RemoteCookBook cookBook) {
+        Preconditions.checkNotNull(cookBook);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            final Path recipesFolder = Paths.get(
+                    context.getUserHomeDirectory().toString(),
+                    ".buckaroo/",
+                    cookBook.name.name);
+            // Tell the user what we are up to...
+            context.println("Upgrading the Buckaroo recipes registry... ");
+            // Try to checkout master...
+            context.println("Switching to master... ");
+            final Optional<Exception> checkoutResult = context.git()
+                    .checkout(recipesFolder.toFile(), "master");
+            // If we fail, try to clone
+            if (checkoutResult.isPresent()) {
+                context.println("Failed! ");
+                context.println("Cloning " + cookBook.url + "... ");
+                final Optional<Exception> cloneResult = context.git().clone(recipesFolder.toFile(), cookBook.url);
+                // If we fail, print an error and stop
+                if (cloneResult.isPresent()) {
+                    context.println("Could not prepare the recipes folder. Perhaps you should delete it? ");
+                    context.println(cloneResult.get().toString());
+                    return Unit.of();
+                }
+            } else {
+                // If we could checkout master, try to pull
+                context.println("Pulling from " + cookBook.url + "... ");
+                final Optional<Exception> pullResult = context.git().pull(recipesFolder.toFile());
+                if (pullResult.isPresent()) {
+                    context.println("We could not pull the latest recipes. ");
+                    context.println(pullResult.get().toString());
+                    return Unit.of();
+                }
+            }
+            context.println("Success!");
+            return Unit.of();
+        };
     }
 }

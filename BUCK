@@ -54,6 +54,32 @@ prebuilt_jar(
   javadoc_url = 'http://hamcrest.org/JavaHamcrest/javadoc/1.3/',
 )
 
+remote_file(
+  name = 'jparsec-jar',
+  out = 'jparsec-3.0.jar',
+  url = 'mvn:org.jparsec:jparsec:jar:3.0',
+  sha1 = 'd58e152623bb664f4c8e6d7ce8db7fa7fda2f7d5',
+)
+
+prebuilt_jar(
+  name = 'jparsec',
+  source_jar = ':jparsec-jar',
+  binary_jar = ':jparsec-jar',
+)
+
+remote_file(
+  name = 'jgit-jar',
+  out = 'jgit-4.5.0.jar',
+  url = 'mvn:org.eclipse.jgit:org.eclipse.jgit:jar:4.5.0.201609210915-r',
+  sha1 = '3e3d0b73dcf4ad649f37758ea8502d92f3d299de',
+)
+
+prebuilt_jar(
+  name = 'jgit',
+  source_jar = ':jgit-jar',
+  binary_jar = ':jgit-jar',
+)
+
 java_library(
   name = 'buckaroo',
   source = '8',
@@ -64,6 +90,8 @@ java_library(
   deps = [
     ':guava',
     ':gson',
+    ':jparsec',
+    ':jgit',
   ],
 )
 
@@ -78,5 +106,6 @@ java_test(
     ':gson',
     ':hamcrest',
     ':junit',
+    ':jparsec',
   ],
 )

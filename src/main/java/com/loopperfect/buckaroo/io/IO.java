@@ -68,6 +68,18 @@ public interface IO<T> {
         };
     }
 
+    default IO<T> fallback(final Predicate<T> condition, final Function<T, IO<T>> retry) {
+        Preconditions.checkNotNull(condition);
+        Preconditions.checkNotNull(retry);
+        return context -> {
+            final T t = run(context);
+            if (condition.test(t)) {
+                return retry.apply(t).run(context);
+            }
+            return t;
+        };
+    }
+
     static <T> IO<T> of(IO<T> io) {
         return io;
     }

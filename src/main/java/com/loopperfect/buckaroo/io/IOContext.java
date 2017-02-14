@@ -40,7 +40,12 @@ public interface IOContext {
 
     Either<IOException, ImmutableList<Path>> listFiles(final Path path);
 
+    GitContext git();
+
     static IOContext actual() {
+
+        final GitContext gitContext = GitContext.actual();
+
         return new IOContext() {
 
             @Override
@@ -131,6 +136,11 @@ public interface IOContext {
                 } catch (final IOException e) {
                     return Either.left(e);
                 }
+            }
+
+            @Override
+            public GitContext git() {
+                return gitContext;
             }
         };
     }
