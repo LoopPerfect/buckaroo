@@ -37,6 +37,10 @@ public final class CLIParsersTest {
                 CLIParsers.commandParser.parse(" install   awesome  "));
 
         assertEquals(
+                UninstallCommand.of(Identifier.of("some_lib")),
+                CLIParsers.commandParser.parse(" uninstall   some_lib "));
+
+        assertEquals(
                 InstallCommand.of(Identifier.of("some_lib"), BoundedSemanticVersion.atLeast(SemanticVersion.of(2))),
                 CLIParsers.commandParser.parse(" install  some_lib>=2  "));
 
