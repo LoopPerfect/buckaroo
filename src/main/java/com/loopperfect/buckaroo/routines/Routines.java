@@ -256,4 +256,31 @@ public final class Routines {
             return Unit.of();
         };
     }
+
+    public static final IO<Unit> uninstallRecipe(final Identifier recipe) {
+        Preconditions.checkNotNull(recipe);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            context.println("Uninstalling " + recipe.name + "... ");
+            final Either<IOException, Project> projectFile = readProjectFile.run(context);
+            return projectFile.join(
+                    error -> {
+                        context.println("Could not load buckaroo.json. Are you in the right folder? ");
+                        return Unit.of();
+                    },
+                    project -> {
+                        if (project.dependencies.containsKey(recipe)) {
+                            final SemanticVersionRequirement versionRequirement = project.dependencies.get(recipe);
+                            context.println("Found a dependency on " + recipe.name + " " + versionRequirement.encode());
+                            final Project modifiedProject = project.removeDependency(recipe);
+                            context.println("Writing the modified project file... ");
+                            writeProjectFile(modifiedProject).run(context);
+                            context.println("Done.");
+                        } else {
+                            context.println("Could not find " + recipe.name + " in this project's dependencies. ");
+                        }
+                        return Unit.of();
+                    });
+        };
+    }
 }

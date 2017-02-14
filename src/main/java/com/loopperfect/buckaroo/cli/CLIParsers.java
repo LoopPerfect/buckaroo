@@ -63,6 +63,14 @@ public final class CLIParsers {
                         (x, y, z) -> InstallCommand.of(y, z))
                         .between(ignoreParser, ignoreParser));
 
+    static final Parser<UninstallCommand> uninstallCommandParser =
+            Parsers.sequence(
+                    uninstallTokenParser
+                            .followedBy(Scanners.WHITESPACES.atLeast(1)),
+                    identifierParser,
+                    (x, y) -> UninstallCommand.of(y))
+                    .between(ignoreParser, ignoreParser);
+
     static final Parser<UpdateCommand> updateCommandParser =
             Parsers.longest(
                 updateTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
@@ -86,6 +94,7 @@ public final class CLIParsers {
                     initCommandParser,
                     upgradeCommandParser,
                     installCommandParser,
+                    uninstallCommandParser,
                     updateCommandParser,
                     recipesCommandParser);
 }

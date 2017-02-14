@@ -10,6 +10,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableSet.builder;
 
@@ -40,6 +41,19 @@ public final class Project {
                         FluentIterable.from(dependencies.entrySet())
                                 .append(Maps.immutableEntry(dependency.project, dependency.versionRequirement)));
 
+        return new Project(name, license, nextDependencies);
+    }
+
+    public Project removeDependency(final Identifier identifier) {
+        Preconditions.checkNotNull(identifier);
+        if (!dependencies.containsKey(identifier)) {
+            return this;
+        }
+        final ImmutableMap<Identifier, SemanticVersionRequirement> nextDependencies =
+                ImmutableMap.copyOf(dependencies.entrySet()
+                        .stream()
+                        .filter(x -> !x.getKey().equals(identifier))
+                        .collect(Collectors.toList()));
         return new Project(name, license, nextDependencies);
     }
 
