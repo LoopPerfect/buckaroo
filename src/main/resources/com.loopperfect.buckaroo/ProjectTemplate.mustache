@@ -1,0 +1,15 @@
+cxx_binary(
+  name = '{{name}}',
+  header_namespace = '{{name}}',
+  srcs = glob([
+    '**/*.cpp',
+  ]),
+  headers = subdir_glob([
+    ('include', '**/*.hpp'),
+  ]),
+  deps = [
+    {{#dependencies}}
+      '//buckaroo/{{name}}:{{name}}',
+    {{/dependencies}}
+  ],
+)

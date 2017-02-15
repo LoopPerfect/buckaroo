@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.buck.BuckFile;
 import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.io.IOContext;
 import com.loopperfect.buckaroo.serialization.Serializers;
@@ -364,6 +365,35 @@ public final class Routines {
                                 }
                                 return Unit.of();
                             });
+                });
+    };
+
+    public static final IO<Unit> generateBuckFile = context -> {
+        Preconditions.checkNotNull(context);
+        context.println("Generating BUCK file... ");
+        final Either<IOException, Project> projectFile = readProjectFile.run(context);
+        return projectFile.join(
+                error -> {
+                    context.println("Could not load buckaroo.json. Are you in the right folder? ");
+                    return Unit.of();
+                },
+                project -> {
+                    final Either<IOException, String> buckFile = BuckFile.generate(project);
+                    return buckFile.join(error -> {
+                        context.println("Could not generate the BUCK file! ");
+                        context.println(error.toString());
+                        return Unit.of();
+                    }, buckString -> {
+                        final Path path = Paths.get(context.getWorkingDirectory().toString(), "BUCK");
+                        final Optional<IOException> writeResult = context.writeFile(path, buckString);
+                        if (writeResult.isPresent()) {
+                            context.println("Could not write the BUCK file.");
+                            context.println(writeResult.get().toString());
+                            return Unit.of();
+                        }
+                        context.println("Done. ");
+                        return Unit.of();
+                    });
                 });
     };
 }

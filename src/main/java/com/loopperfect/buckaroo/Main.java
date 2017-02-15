@@ -8,6 +8,10 @@ import org.jparsec.error.ParserException;
 
 public final class Main {
 
+    private Main() {
+
+    }
+
     public static void main(final String[] args) {
 
         if (args.length == 0) {
