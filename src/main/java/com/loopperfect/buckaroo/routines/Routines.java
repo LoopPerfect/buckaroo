@@ -14,8 +14,11 @@ import com.loopperfect.buckaroo.serialization.Serializers;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class Routines {
 
@@ -40,7 +43,7 @@ public final class Routines {
     // TODO: Refactor to make this more functional!
     private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipes = context -> {
         Preconditions.checkNotNull(context);
-        final Path recipesDirectory = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/recipes");
+        final Path recipesDirectory = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/buckaroo-recipes-test/recipes");
         final Either<IOException, ImmutableList<Path>> listFiles = context.listFiles(recipesDirectory);
         return listFiles.map(
                 x -> x,
@@ -283,4 +286,84 @@ public final class Routines {
                     });
         };
     }
+
+    // Load the projects file
+    //
+    public static final IO<Unit> installExisting = context -> {
+        Preconditions.checkNotNull(context);
+        // Load the project file
+        final Either<IOException, Project> projectFile = readProjectFile.run(context);
+        // Did it succeed?
+        return projectFile.join(
+                // No; show an error message
+                error -> {
+                    context.println("Could not load buckaroo.json. Are you in the right folder? ");
+                    return Unit.of();
+                },
+                project -> {
+                    context.println("Loaded the buckaroo.json file. ");
+                    // Load the recipes file
+                    final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
+                            loadRecipes.run(context);
+                    // Did we succeed?
+                    return recipesFile.join(
+                            // Nope
+                            error -> {
+                                // Show an error
+                                context.println("Could not load the recipes file. ");
+                                return Unit.of();
+                            },
+                            // Yes!
+                            recipes -> {
+                                // TODO: We need to get implicit dependencies!
+                                // Ignore the recipes that failed to load
+                                final ImmutableList<Recipe> resolvedRecipes = ImmutableList.copyOf(recipes.stream()
+                                        .flatMap(x -> x.join(e -> Stream.empty(), r -> Stream.of(r)))
+                                        .collect(Collectors.toList()));
+                                // For each dependency in the project, we need to
+                                // find the versions in the recipe book
+                                // and take the highest compatible version.
+                                for (final Map.Entry<Identifier, SemanticVersionRequirement> dependency : project.dependencies.entrySet()) {
+                                    final Optional<RecipeVersion> recipeVersion = resolvedRecipes.stream()
+                                            .filter(x -> dependency.getKey().equals(x.name))
+                                            .flatMap(x -> x.versions.entrySet().stream())
+                                            .filter(x -> dependency.getValue().isSatisfiedBy(x.getKey()))
+                                            .sorted(Comparator.comparing(Map.Entry::getKey))
+                                            .map(x -> x.getValue())
+                                            .findFirst();
+                                    if (!recipeVersion.isPresent()) {
+                                        context.println("Could not find a version of " + dependency.getKey() +
+                                                " that satisfies " + dependency.getValue().encode() + ". ");
+                                        return Unit.of();
+                                    }
+                                    final GitCommit gitCommit = recipeVersion.get().gitCommit;
+                                    // Let's pull it from git...
+                                    context.println("Cloning " + gitCommit.url + "... ");
+                                    final Path dependencyPath = Paths.get(
+                                            context.getWorkingDirectory().toString(),
+                                            "buckaroo/",
+                                            dependency.getKey().name);
+                                    final Optional<Exception> cloneResult = context.git().clone(
+                                            dependencyPath.toFile(),
+                                            gitCommit.url);
+                                    if (cloneResult.isPresent()) {
+                                        context.println("Failed to clone " + gitCommit.url + ". ");
+                                        context.println(cloneResult.get().toString());
+                                        return Unit.of();
+                                    }
+                                    context.println("Done. ");
+                                    context.println("Checking out " + gitCommit.commit + "... ");
+                                    final Optional<Exception> checkoutResult = context.git()
+                                            .checkout(dependencyPath.toFile(), gitCommit.commit);
+                                    if (checkoutResult.isPresent()) {
+                                        context.println("Failed to checkout " + gitCommit.commit + ". ");
+                                        context.println(checkoutResult.get().toString());
+                                        return Unit.of();
+                                    }
+                                    context.println("Done. ");
+                                }
+                                return Unit.of();
+                            });
+                });
+    };
 }

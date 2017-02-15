@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
@@ -37,6 +38,15 @@ public final class Recipe {
     @Override
     public int hashCode() {
         return Objects.hash(name, url, versions);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("name", name)
+                .add("url", url)
+                .add("versions", versions)
+                .toString();
     }
 
     public static Recipe of(final Identifier name, final String url, final ImmutableMap<SemanticVersion, RecipeVersion> versions) {

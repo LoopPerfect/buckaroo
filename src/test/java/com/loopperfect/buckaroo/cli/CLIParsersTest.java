@@ -32,6 +32,8 @@ public final class CLIParsersTest {
 
         assertEquals(UpgradeCommand.of(), parser.parse("upgrade"));
 
+        assertEquals(InstallExistingCommand.of(), parser.parse(" install "));
+
         assertEquals(
                 InstallCommand.of(Identifier.of("awesome")),
                 CLIParsers.commandParser.parse(" install   awesome  "));

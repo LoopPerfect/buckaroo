@@ -47,6 +47,11 @@ public final class CLIParsers {
             recipesTokenParser.between(ignoreParser, ignoreParser)
                     .map(x -> RecipesCommand.of());
 
+    static final Parser<InstallExistingCommand> installExistingCommandParser =
+            installTokenParser
+                    .between(ignoreParser, ignoreParser)
+                    .map(x -> InstallExistingCommand.of());
+
     static final Parser<InstallCommand> installCommandParser =
             Parsers.longest(
                 Parsers.sequence(
@@ -93,6 +98,7 @@ public final class CLIParsers {
             Parsers.longest(
                     initCommandParser,
                     upgradeCommandParser,
+                    installExistingCommandParser,
                     installCommandParser,
                     uninstallCommandParser,
                     updateCommandParser,
