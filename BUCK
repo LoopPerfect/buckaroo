@@ -80,6 +80,19 @@ prebuilt_jar(
   binary_jar = ':jgit-jar',
 )
 
+remote_file(
+  name = 'mustache-jar',
+  out = 'mustache-0.8.9.jar',
+  url = 'mvn:com.github.spullara.mustache.java:compiler:jar:0.8.9',
+  sha1 = 'dba18d9ea10323c02ae5bc4c2121048853b233e1',
+)
+
+prebuilt_jar(
+  name = 'mustache',
+  source_jar = ':mustache-jar',
+  binary_jar = ':mustache-jar',
+)
+
 java_library(
   name = 'buckaroo',
   source = '8',
@@ -92,6 +105,7 @@ java_library(
     ':gson',
     ':jparsec',
     ':jgit',
+    ':mustache',
   ],
 )
 
