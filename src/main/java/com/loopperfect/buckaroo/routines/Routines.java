@@ -311,7 +311,7 @@ public final class Routines {
                     context.println("Loaded the buckaroo.json file. ");
                     // Load the recipes file
                     final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
-                            loadRecipes(Identifier.of("buck-recipes-test")).run(context);
+                            loadRecipes(Identifier.of("buckaroo-recipes-test")).run(context);
                     // Did we succeed?
                     return recipesFile.join(
                             // Nope
@@ -400,6 +400,32 @@ public final class Routines {
                         context.println("Done. ");
                         return Unit.of();
                     });
+                });
+    };
+
+    public static final IO<Unit> listCookBooks = context -> {
+        Preconditions.checkNotNull(context);
+        final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
+        final Either<IOException, String> readFileResult = context.readFile(configPath);
+        return readFileResult.join(
+                error -> {
+                    context.println("Error reading config.json");
+                    context.println(error.toString());
+                    return Unit.of();
+                },
+                file -> {
+                    try {
+                        final BuckarooConfig config = Serializers.gson().fromJson(file, BuckarooConfig.class);
+                        for (final RemoteCookBook cookBook : config.cookBooks) {
+                            context.println(cookBook.name.name);
+                            context.println(cookBook.url);
+                            context.println();
+                        }
+                    } catch (final JsonParseException e) {
+                        context.println("Error parsing config.json");
+                        context.println(e.toString());
+                    }
+                    return Unit.of();
                 });
     };
 }

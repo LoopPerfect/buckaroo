@@ -18,6 +18,8 @@ import java.util.stream.Stream;
 
 public interface IOContext {
 
+    void println();
+
     void println(final String x);
 
     Optional<String> readln();
@@ -47,6 +49,11 @@ public interface IOContext {
         final GitContext gitContext = GitContext.actual();
 
         return new IOContext() {
+
+            @Override
+            public void println() {
+                System.out.println();
+            }
 
             @Override
             public void println(final String x) {

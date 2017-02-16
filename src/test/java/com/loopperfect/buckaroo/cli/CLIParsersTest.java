@@ -36,6 +36,8 @@ public final class CLIParsersTest {
 
         assertEquals(GenerateCommand.of(), parser.parse("   generate "));
 
+        assertEquals(CookbooksCommand.of(), parser.parse("   cookbooks "));
+
         assertEquals(
                 InstallCommand.of(Identifier.of("awesome")),
                 CLIParsers.commandParser.parse(" install   awesome  "));

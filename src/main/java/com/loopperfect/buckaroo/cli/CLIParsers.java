@@ -43,6 +43,9 @@ public final class CLIParsers {
     static final Parser<Void> generateTokenParser =
             Scanners.stringCaseInsensitive("generate");
 
+    static final Parser<Void> cookbooksTokenParser =
+            Scanners.stringCaseInsensitive("cookbooks");
+
     static final Parser<Void> ignoreParser =
             Scanners.WHITESPACES.skipMany();
 
@@ -101,6 +104,10 @@ public final class CLIParsers {
             generateTokenParser.between(ignoreParser, ignoreParser)
                     .map(x -> GenerateCommand.of());
 
+    static final Parser<CookbooksCommand> cookbooksCommandParser =
+            cookbooksTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> CookbooksCommand.of());
+
     public static final Parser<CLICommand> commandParser =
             Parsers.longest(
                     initCommandParser,
@@ -110,5 +117,6 @@ public final class CLIParsers {
                     uninstallCommandParser,
                     updateCommandParser,
                     recipesCommandParser,
-                    generateCommandParser);
+                    generateCommandParser,
+                    cookbooksCommandParser);
 }
