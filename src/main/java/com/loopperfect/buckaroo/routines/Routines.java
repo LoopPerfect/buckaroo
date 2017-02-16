@@ -81,19 +81,47 @@ public final class Routines {
         return Files.getFileExtension(path.toString()).equalsIgnoreCase("json");
     }
 
-    public static final IO<Unit> listRecipes = recipesPath(Identifier.of("buckaroo-recipes-test"))
-        .flatMap(x -> IO.println("Searching for recipes in " + x + "... ").then(IO.value(x)))
-        .flatMap(x -> IO.listFiles(x))
-        .flatMap(x -> context -> x.map(
-                y -> y.toString(),
-                y -> y.stream()
-                        .filter(z -> Files.getFileExtension(z.toString()).equalsIgnoreCase("json"))
-                        .distinct()
-                        .map(z -> context.readFile(z)
-                                .rightProjection(w -> Serializers.gson().fromJson(w, Recipe.class))
-                                .join(w -> "Could not load " + z.getFileName(), w -> formatRecipe(w)))
-                        .collect(Collectors.joining("\n"))))
-        .flatMap(x -> x.join(y -> IO.println(y), y -> IO.println(y)));
+    public static final IO<Unit> listRecipesForCookBook(final Identifier cookBook) {
+        Preconditions.checkNotNull(cookBook);
+        return recipesPath(cookBook)
+                .flatMap(x -> IO.println("Searching for recipes in " + x + "... ").then(IO.value(x)))
+                .flatMap(x -> IO.listFiles(x))
+                .flatMap(x -> context -> x.map(
+                        y -> y.toString(),
+                        y -> y.stream()
+                                .filter(z -> Files.getFileExtension(z.toString()).equalsIgnoreCase("json"))
+                                .distinct()
+                                .map(z -> context.readFile(z)
+                                        .rightProjection(w -> Serializers.gson().fromJson(w, Recipe.class))
+                                        .join(w -> "Could not load " + z.getFileName(), w -> formatRecipe(w)))
+                                .collect(Collectors.joining("\n"))))
+                .flatMap(x -> x.join(y -> IO.println(y), y -> IO.println(y)));
+    }
+
+    public static final IO<Unit> listRecipes = context -> {
+        Preconditions.checkNotNull(context);
+        Preconditions.checkNotNull(context);
+        final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
+        final Either<IOException, String> readFileResult = context.readFile(configPath);
+        return readFileResult.join(
+                error -> {
+                    context.println("Error reading config.json");
+                    context.println(error.toString());
+                    return Unit.of();
+                },
+                file -> {
+                    try {
+                        final BuckarooConfig config = Serializers.gson().fromJson(file, BuckarooConfig.class);
+                        for (final RemoteCookBook cookBook : config.cookBooks) {
+                            listRecipesForCookBook(cookBook.name).run(context);
+                        }
+                    } catch (final JsonParseException e) {
+                        context.println("Error parsing config.json");
+                        context.println(e.toString());
+                    }
+                    return Unit.of();
+                });
+    };
 
     private static final String invalidProjectNameWarning =
             "A project name may only contain letters, numbers, underscores and dashes. " +
