@@ -113,6 +113,10 @@ java_library(
   srcs = glob([
     'src/main/java/com/**/*.java',
   ]),
+  resources = glob([
+    'src/main/resources/**/*.mustache',
+  ]),
+  resources_root = 'src/main/resources',
   deps = [
     ':guava',
     ':gson',
@@ -135,6 +139,8 @@ java_binary(
 
 java_test(
   name = 'buckaroo-test',
+  source = '8',
+  target = '8',
   srcs = glob([
     'src/test/java/com/**/*.java',
   ]),
