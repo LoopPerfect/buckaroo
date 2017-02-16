@@ -38,6 +38,12 @@ public final class Serializers {
         gsonBuilder.registerTypeAdapter(Project.class, new ProjectSerializer());
         gsonBuilder.registerTypeAdapter(Project.class, new ProjectDeserializer());
 
+        gsonBuilder.registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigSerializer());
+        gsonBuilder.registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigDeserializer());
+
+        gsonBuilder.registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookSerializer());
+        gsonBuilder.registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookDeserializer());
+
         if (usePrettyPrinting) {
             gsonBuilder.setPrettyPrinting();
         }

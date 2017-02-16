@@ -42,24 +42,30 @@ public final class Routines {
     }
 
     // TODO: Refactor to make this more functional!
-    private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipes = context -> {
-        Preconditions.checkNotNull(context);
-        final Path recipesDirectory = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/buckaroo-recipes-test/recipes");
-        final Either<IOException, ImmutableList<Path>> listFiles = context.listFiles(recipesDirectory);
-        return listFiles.map(
-                x -> x,
-                x -> ImmutableList.copyOf(x
-                        .stream()
-                        .filter(i -> isJsonFile(i))
-                        .map(i -> i.normalize())
-                        .distinct()
-                        .map(i -> readRecipe(context, i))
-                        .collect(Collectors.toList())));
-    };
+    private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipes(final Identifier cookBook) {
+        Preconditions.checkNotNull(cookBook);
+        return context -> {
+                Preconditions.checkNotNull(context);
+                final Path recipesDirectory = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", cookBook.name,"/recipes");
+                final Either<IOException, ImmutableList<Path>> listFiles = context.listFiles(recipesDirectory);
+                return listFiles.map(
+                        x -> x,
+                        x -> ImmutableList.copyOf(x
+                                .stream()
+                                .filter(i -> isJsonFile(i))
+                                .map(i -> i.normalize())
+                                .distinct()
+                                .map(i -> readRecipe(context, i))
+                                .collect(Collectors.toList())));
+        };
+    }
 
-    private static Path recipesPath(final IOContext context) {
-        Preconditions.checkNotNull(context);
-        return Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/recipes");
+    private static IO<Path> recipesPath(final Identifier cookBook) {
+        Preconditions.checkNotNull(cookBook);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", cookBook.name, "/recipes/");
+        };
     }
 
     private static String formatRecipe(final Recipe recipe) {
@@ -75,7 +81,7 @@ public final class Routines {
         return Files.getFileExtension(path.toString()).equalsIgnoreCase("json");
     }
 
-    public static final IO<Unit> listRecipes = IO.of(context -> Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/recipes"))
+    public static final IO<Unit> listRecipes = recipesPath(Identifier.of("buckaroo-recipes-test"))
         .flatMap(x -> IO.println("Searching for recipes in " + x + "... ").then(IO.value(x)))
         .flatMap(x -> IO.listFiles(x))
         .flatMap(x -> context -> x.map(
@@ -157,7 +163,7 @@ public final class Routines {
                                         project.dependencies.get(projectToInstall).encode());
                             }
                             // No, so load the recipes...
-                            return loadRecipes.flatMap(y -> y.join(
+                            return loadRecipes(Identifier.of("buckaroo-recipes-test")).flatMap(y -> y.join(
                                     // Loading the recipes failed; print the error
                                     error -> IO.println(error),
                                     // Success!
@@ -305,7 +311,7 @@ public final class Routines {
                     context.println("Loaded the buckaroo.json file. ");
                     // Load the recipes file
                     final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
-                            loadRecipes.run(context);
+                            loadRecipes(Identifier.of("buck-recipes-test")).run(context);
                     // Did we succeed?
                     return recipesFile.join(
                             // Nope
