@@ -167,7 +167,7 @@ public final class Routines {
     // TODO: Get license
     public static final IO<Unit> createProjectSkeleton = IO.of(context -> context.getWorkingDirectory())
             .flatMap(x -> IO.println("Creating a project in " + x + "... "))
-            .flatMap(x -> IO.println("What is the name of your project? ").then(IO.value(x)))
+            .flatMap(x -> IO.println("What is the name of your project? "))
             .then(requestIdentifier)
             .flatMap(x -> IO.println(x).then(IO.value(x)))
             .map(x -> Project.of(x, Optional.empty(), ImmutableMap.of()))

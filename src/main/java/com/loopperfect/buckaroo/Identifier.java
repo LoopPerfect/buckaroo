@@ -31,7 +31,7 @@ public final class Identifier {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(name);
+        return Objects.hashCode(name) * 17;
     }
 
     @Override
