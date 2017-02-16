@@ -63,5 +63,5 @@ pom.xml
 buckaroo.iml
 
 buckaroo.json
-buckaroo/
-target/
+/buckaroo/
+/target/
