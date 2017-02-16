@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.Equivalence;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
@@ -40,18 +41,26 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
         return Integer.compare(patch, other.patch);
     }
 
+    public boolean equals(final SemanticVersion other) {
+        Preconditions.checkNotNull(other);
+        return this == other ||
+                ((major == other.major) &&
+                        (minor == other.minor) &&
+                        (patch == other.patch));
+    }
+
     @Override
     public boolean equals(final Object o) {
+
+        if (o == this) {
+            return true;
+        }
 
         if (o == null || !(o instanceof SemanticVersion)) {
             return false;
         }
 
-        SemanticVersion other = (SemanticVersion) o;
-
-        return (major == other.major) &&
-            (minor == other.minor) &&
-            (patch == other.patch);
+        return equals((SemanticVersion) o);
     }
 
     @Override

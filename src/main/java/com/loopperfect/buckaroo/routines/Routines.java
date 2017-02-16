@@ -41,6 +41,18 @@ public final class Routines {
                 });
     };
 
+    private static final IO<Optional<IOException>> checkout(final Path path, final GitCommit commit) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(commit);
+        return context -> {
+            context.git().clone(path.toFile(), commit.url);
+            context.git().checkout(path.toFile(), commit.url);
+            context.git().pull(path.toFile());
+            return context.git().status(path.toFile())
+                    .join(error -> Optional.of(new IOException(error)), x -> Optional.empty());
+        };
+    }
+
     private static final Either<IOException, Recipe> readRecipe(final IOContext context, final Path path) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(context);
@@ -254,9 +266,39 @@ public final class Routines {
                                                         () -> ExactSemanticVersion.of(versionToUse.get())));
                                         final Project modifiedProject = project.addDependency(dependency);
                                         // Write the project file; print done or error
-                                        return IO.println("Installing " + projectToInstall.name + "@" + versionToUse.get() + "... ")
-                                                .then(writeProjectFile(modifiedProject))
-                                                .flatMap(i -> IO.println(i.map(j -> j.toString()).orElse("Done!")));
+                                        return context -> {
+                                            context.println("Installing " + projectToInstall.name + "@" + versionToUse.get() + "... ");
+                                            final Optional<IOException> writeProjectFileResult = writeProjectFile(modifiedProject).run(context);
+                                            if (writeProjectFileResult.isPresent()) {
+                                                context.println("Could not write the project file. ");
+                                                context.println(writeProjectFileResult.get().toString());
+                                                return Unit.of();
+                                            }
+                                            final RecipeVersion recipeVersionToInstall = recipes.stream()
+                                                    .flatMap(i -> i.join(j -> Stream.empty(), j -> Stream.of(j)))
+                                                    .filter(i -> i.name.equals(projectToInstall))
+                                                    .flatMap(i -> i.versions.entrySet().stream())
+                                                    .filter(i -> i.getKey().equals(versionToUse.get()))
+                                                    .map(i -> i.getValue())
+                                                    .findAny()
+                                                    .get(); // TODO: Refactor
+                                            final Path clonePath = Paths.get(
+                                                    context.getWorkingDirectory().toString(),
+                                                    "/buckaroo/",
+                                                    projectToInstall.name,
+                                                    "/",
+                                                    versionToUse.get().toString());
+                                            final Optional<IOException> checkoutResult =
+                                                    checkout(clonePath, recipeVersionToInstall.gitCommit)
+                                                            .run(context);
+                                            if (checkoutResult.isPresent()) {
+                                                context.println("Could not fetch " + projectToInstall.name + "@" + versionToUse.get() + ". ");
+                                                context.println(checkoutResult.get().toString());
+                                            } else {
+                                                context.println("Done! ");
+                                            }
+                                            return Unit.of();
+                                        };
                                     }
                             ));
                         }));
