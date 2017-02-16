@@ -55,6 +55,45 @@ prebuilt_jar(
 )
 
 remote_file(
+  name = 'slf4j-api-jar',
+  out = 'slf4j-api-1.7.6.jar',
+  url = 'mvn:org.slf4j:slf4j-api:jar:1.7.6',
+  sha1 = '562424e36df3d2327e8e9301a76027fca17d54ea',
+)
+
+prebuilt_jar(
+  name = 'slf4j-api',
+  source_jar = ':slf4j-api-jar',
+  binary_jar = ':slf4j-api-jar',
+)
+
+remote_file(
+  name = 'slf4j-nop-jar',
+  out = 'slf4j-nop-1.7.6.jar',
+  url = 'mvn:org.slf4j:slf4j-nop:jar:1.7.6',
+  sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
+)
+
+prebuilt_jar(
+  name = 'slf4j-nop',
+  source_jar = ':slf4j-nop-jar',
+  binary_jar = ':slf4j-nop-jar',
+)
+
+remote_file(
+  name = 'jsch-jar',
+  out = 'jsch-0.1.54.jar',
+  url = 'mvn:com.jcraft:jsch:jar:0.1.54',
+  sha1 = 'da3584329a263616e277e15462b387addd1b208d',
+)
+
+prebuilt_jar(
+  name = 'jsch',
+  source_jar = ':jsch-jar',
+  binary_jar = ':jsch-jar',
+)
+
+remote_file(
   name = 'jparsec-jar',
   out = 'jparsec-3.0.jar',
   url = 'mvn:org.jparsec:jparsec:jar:3.0',
@@ -123,6 +162,9 @@ java_library(
     ':jparsec',
     ':jgit',
     ':mustache',
+    ':slf4j-api',
+    ':slf4j-nop',
+    ':jsch',
   ],
 )
 
