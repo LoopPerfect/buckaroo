@@ -53,6 +53,22 @@ public final class Routines {
         };
     }
 
+    private static final IO<Optional<IOException>> install(final Identifier name, final SemanticVersion semanticVersion, final RecipeVersion recipeVersion) {
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(semanticVersion);
+        Preconditions.checkNotNull(recipeVersion);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            final Path clonePath = Paths.get(
+                    context.getWorkingDirectory().toString(),
+                    "/buckaroo/",
+                    name.name,
+                    "/",
+                    semanticVersion.toString());
+            return checkout(clonePath, recipeVersion.gitCommit).run(context);
+        };
+    }
+
     private static final Either<IOException, Recipe> readRecipe(final IOContext context, final Path path) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(context);
@@ -282,14 +298,8 @@ public final class Routines {
                                                     .map(i -> i.getValue())
                                                     .findAny()
                                                     .get(); // TODO: Refactor
-                                            final Path clonePath = Paths.get(
-                                                    context.getWorkingDirectory().toString(),
-                                                    "/buckaroo/",
-                                                    projectToInstall.name,
-                                                    "/",
-                                                    versionToUse.get().toString());
                                             final Optional<IOException> checkoutResult =
-                                                    checkout(clonePath, recipeVersionToInstall.gitCommit)
+                                                    install(projectToInstall, versionToUse.get(), recipeVersionToInstall)
                                                             .run(context);
                                             if (checkoutResult.isPresent()) {
                                                 context.println("Could not fetch " + projectToInstall.name + "@" + versionToUse.get() + ". ");
@@ -383,8 +393,6 @@ public final class Routines {
         };
     }
 
-    // Load the projects file
-    //
     public static final IO<Unit> installExisting = context -> {
         Preconditions.checkNotNull(context);
         // Load the project file
@@ -420,40 +428,27 @@ public final class Routines {
                                 // find the versions in the recipe book
                                 // and take the highest compatible version.
                                 for (final Map.Entry<Identifier, SemanticVersionRequirement> dependency : project.dependencies.entrySet()) {
-                                    final Optional<RecipeVersion> recipeVersion = resolvedRecipes.stream()
+                                    final Optional<Map.Entry<SemanticVersion, RecipeVersion>> versionToInstall = resolvedRecipes.stream()
                                             .filter(x -> dependency.getKey().equals(x.name))
                                             .flatMap(x -> x.versions.entrySet().stream())
                                             .filter(x -> dependency.getValue().isSatisfiedBy(x.getKey()))
                                             .sorted(Comparator.comparing(Map.Entry::getKey))
-                                            .map(x -> x.getValue())
                                             .findFirst();
-                                    if (!recipeVersion.isPresent()) {
+                                    if (!versionToInstall.isPresent()) {
                                         context.println("Could not find a version of " + dependency.getKey() +
                                                 " that satisfies " + dependency.getValue().encode() + ". ");
                                         return Unit.of();
                                     }
-                                    final GitCommit gitCommit = recipeVersion.get().gitCommit;
+                                    final GitCommit gitCommit = versionToInstall.get().getValue().gitCommit;
                                     // Let's pull it from git...
-                                    context.println("Cloning " + gitCommit.url + "... ");
-                                    final Path dependencyPath = Paths.get(
-                                            context.getWorkingDirectory().toString(),
-                                            "buckaroo/",
-                                            dependency.getKey().name);
-                                    final Optional<Exception> cloneResult = context.git().clone(
-                                            dependencyPath.toFile(),
-                                            gitCommit.url);
-                                    if (cloneResult.isPresent()) {
-                                        context.println("Failed to clone " + gitCommit.url + ". ");
-                                        context.println(cloneResult.get().toString());
-                                        return Unit.of();
-                                    }
-                                    context.println("Done. ");
-                                    context.println("Checking out " + gitCommit.commit + "... ");
-                                    final Optional<Exception> checkoutResult = context.git()
-                                            .checkout(dependencyPath.toFile(), gitCommit.commit);
-                                    if (checkoutResult.isPresent()) {
+                                    context.println("Fetching " + gitCommit.url + "... ");
+                                    final Optional<IOException> installResult =
+                                            install(dependency.getKey(),
+                                                    versionToInstall.get().getKey(),
+                                                    versionToInstall.get().getValue()).run(context);
+                                    if (installResult.isPresent()) {
                                         context.println("Failed to checkout " + gitCommit.commit + ". ");
-                                        context.println(checkoutResult.get().toString());
+                                        context.println(installResult.get().toString());
                                         return Unit.of();
                                     }
                                     context.println("Done. ");
