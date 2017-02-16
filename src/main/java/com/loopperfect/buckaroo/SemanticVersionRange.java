@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 
@@ -52,6 +53,14 @@ public final class SemanticVersionRange implements SemanticVersionRequirement {
 
         return Objects.equals(minimumVersion, other.minimumVersion) &&
                 Objects.equals(maximumVersion, other.maximumVersion);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("minimumVersion", minimumVersion)
+                .add("maximumVersion", maximumVersion)
+                .toString();
     }
 
     public static SemanticVersionRange of(final SemanticVersion minimumVersion, final SemanticVersion maximumVersion) {

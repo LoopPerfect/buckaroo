@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 public final class AnySemanticVersion implements SemanticVersionRequirement {
@@ -31,6 +32,11 @@ public final class AnySemanticVersion implements SemanticVersionRequirement {
     @Override
     public int hashCode() {
         return 0;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).toString();
     }
 
     public static AnySemanticVersion of() {

@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 
@@ -58,6 +59,14 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
     @Override
     public int hashCode() {
         return Objects.hash(bound, direction);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("bound", bound)
+                .add("direction", direction)
+                .toString();
     }
 
     public static BoundedSemanticVersion of(final SemanticVersion bound, final AboveOrBelow direction) {

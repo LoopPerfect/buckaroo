@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 
@@ -53,6 +54,13 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
     @Override
     public int hashCode() {
         return Objects.hash(semanticVersions);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("semanticVersions", semanticVersions)
+                .toString();
     }
 
     public static ExactSemanticVersion of(final SemanticVersion semanticVersion) {
