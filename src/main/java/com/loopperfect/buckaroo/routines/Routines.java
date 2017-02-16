@@ -15,9 +15,7 @@ import com.loopperfect.buckaroo.serialization.Serializers;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,6 +24,22 @@ public final class Routines {
     private Routines() {
 
     }
+
+    public static final IO<Either<IOException, BuckarooConfig>> loadConfig = context -> {
+        Preconditions.checkNotNull(context);
+        final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
+        final Either<IOException, String> readFileResult = context.readFile(configPath);
+        return readFileResult.join(
+                e -> Either.left(e),
+                file -> {
+                    try {
+                        final BuckarooConfig config = Serializers.gson().fromJson(file, BuckarooConfig.class);
+                        return Either.right(config);
+                    } catch (final JsonParseException e) {
+                        return Either.left(new IOException(e));
+                    }
+                });
+    };
 
     private static final Either<IOException, Recipe> readRecipe(final IOContext context, final Path path) {
         Preconditions.checkNotNull(path);
@@ -42,7 +56,7 @@ public final class Routines {
     }
 
     // TODO: Refactor to make this more functional!
-    private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipes(final Identifier cookBook) {
+    private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipesForCookBook(final Identifier cookBook) {
         Preconditions.checkNotNull(cookBook);
         return context -> {
                 Preconditions.checkNotNull(context);
@@ -59,6 +73,23 @@ public final class Routines {
                                 .collect(Collectors.toList())));
         };
     }
+
+    // TODO: Refactor to make this more functional
+    private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipes = context -> {
+        Preconditions.checkNotNull(context);
+        final Either<IOException, BuckarooConfig> loadConfigResult = loadConfig.run(context);
+        return loadConfigResult.rightProjection(config -> {
+            final List<Either<IOException, Recipe>> r = new ArrayList<>();
+            for (final RemoteCookBook cookBook : config.cookBooks) {
+                final Either<IOException, ImmutableList<Either<IOException, Recipe>>> loadRecipesResult =
+                        loadRecipesForCookBook(cookBook.name).run(context);
+                r.addAll(loadRecipesResult.join(
+                        error -> ImmutableList.of(),
+                        recipes -> recipes));
+            }
+            return ImmutableList.copyOf(r);
+        });
+    };
 
     private static IO<Path> recipesPath(final Identifier cookBook) {
         Preconditions.checkNotNull(cookBook);
@@ -191,7 +222,7 @@ public final class Routines {
                                         project.dependencies.get(projectToInstall).encode());
                             }
                             // No, so load the recipes...
-                            return loadRecipes(Identifier.of("buckaroo-recipes-test")).flatMap(y -> y.join(
+                            return loadRecipes.flatMap(y -> y.join(
                                     // Loading the recipes failed; print the error
                                     error -> IO.println(error),
                                     // Success!
@@ -242,18 +273,6 @@ public final class Routines {
         Preconditions.checkNotNull(gitUrl);
         return context -> context.git().clone(localPath.toFile(), gitUrl);
     }
-
-//    public static final IO<Unit> upgrade =
-//            // Tell the user what we are up to...
-//            IO.println("Upgrading the Buckaroo recipes registry... ")
-//                    // Try to checkout master branch
-//                    .then(context -> Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/"))
-//                    .flatMap(x -> IO.println(x).then(IO.value(x)))
-//                    .flatMap(x -> checkout(x, "git@github.com:njlr/buckaroo-recipes-test.git")
-//                            .fallback(
-//                                    i -> i.isPresent(),
-//                                    e -> clone(x,"git@github.com:njlr/buckaroo-recipes-test.git")))
-//                    .flatMap(x -> IO.println(x));
 
     public static final IO<Unit> upgrade(final RemoteCookBook cookBook) {
         Preconditions.checkNotNull(cookBook);
@@ -339,7 +358,7 @@ public final class Routines {
                     context.println("Loaded the buckaroo.json file. ");
                     // Load the recipes file
                     final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
-                            loadRecipes(Identifier.of("buckaroo-recipes-test")).run(context);
+                            loadRecipes.run(context);
                     // Did we succeed?
                     return recipesFile.join(
                             // Nope
@@ -431,29 +450,15 @@ public final class Routines {
                 });
     };
 
-    public static final IO<Unit> listCookBooks = context -> {
-        Preconditions.checkNotNull(context);
-        final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
-        final Either<IOException, String> readFileResult = context.readFile(configPath);
-        return readFileResult.join(
-                error -> {
-                    context.println("Error reading config.json");
-                    context.println(error.toString());
-                    return Unit.of();
-                },
-                file -> {
-                    try {
-                        final BuckarooConfig config = Serializers.gson().fromJson(file, BuckarooConfig.class);
+    public static final IO<Unit> listCookBooks =
+            loadConfig.flatMap(x -> x.join(
+                    error -> IO.println("Error loading config.json").then(IO.println(error)),
+                    config -> context -> {
                         for (final RemoteCookBook cookBook : config.cookBooks) {
                             context.println(cookBook.name.name);
                             context.println(cookBook.url);
                             context.println();
                         }
-                    } catch (final JsonParseException e) {
-                        context.println("Error parsing config.json");
-                        context.println(e.toString());
-                    }
-                    return Unit.of();
-                });
-    };
+                        return Unit.of();
+                    }));
 }
