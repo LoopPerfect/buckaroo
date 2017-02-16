@@ -74,10 +74,23 @@ remote_file(
   sha1 = '3e3d0b73dcf4ad649f37758ea8502d92f3d299de',
 )
 
+# We need to strip out the jar signing
+# TODO: Find a better approach! 
+genrule(
+  name = 'jgit-jar-fixed',
+  srcs = [
+    '//:jgit-jar',
+  ],
+  cmd = 
+    'cp buck-out/gen/jgit-jar/jgit-4.5.0.jar $OUT && ' + 
+    'zip -d $OUT META-INF/*.RSA META-INF/*.SF META-INF/*.MF',
+  out = 'jgit-4.5.0-fixed.jar',
+)
+
 prebuilt_jar(
   name = 'jgit',
-  source_jar = ':jgit-jar',
-  binary_jar = ':jgit-jar',
+  source_jar = ':jgit-jar-fixed',
+  binary_jar = ':jgit-jar-fixed',
 )
 
 remote_file(
@@ -106,6 +119,17 @@ java_library(
     ':jparsec',
     ':jgit',
     ':mustache',
+  ],
+)
+
+java_binary(
+  name = 'buckaroo-cli',
+  main_class = 'com.loopperfect.buckaroo.Main',
+  # blacklist = [
+  #   'org.slf4j',
+  # ],
+  deps = [
+    ':buckaroo',
   ],
 )
 
