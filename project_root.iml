@@ -5,6 +5,7 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <excludeFolder url="file://$MODULE_DIR$/.buckd" />
       <excludeFolder url="file://$MODULE_DIR$/.git" />
       <excludeFolder url="file://$MODULE_DIR$/buck-out" />
@@ -15,7 +16,9 @@
     <orderEntry type="library" name="library_project_root_gson" level="project" />
     <orderEntry type="library" name="library_project_root_guava" level="project" />
     <orderEntry type="library" scope="TEST" name="library_project_root_hamcrest" level="project" />
+    <orderEntry type="library" name="library_project_root_jgit" level="project" />
+    <orderEntry type="library" name="library_project_root_jparsec" level="project" />
     <orderEntry type="library" scope="TEST" name="library_project_root_junit" level="project" />
-    <orderEntry type="library" name="org.jparsec:jparsec:3.0" level="project" />
+    <orderEntry type="library" name="library_project_root_mustache" level="project" />
   </component>
 </module>
