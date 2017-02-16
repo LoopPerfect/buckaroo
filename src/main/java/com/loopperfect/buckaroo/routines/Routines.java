@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
@@ -229,6 +230,24 @@ public final class Routines {
                     Paths.get("buckaroo.json"),
                     Serializers.gson(true).toJson(project),
                     true);
+    }
+
+    private static ImmutableMap<Identifier, Optional<SemanticVersion>> resolveDependencies(final Project project, final ImmutableList<Recipe> recipes) {
+        Preconditions.checkNotNull(project);
+        Preconditions.checkNotNull(recipes);
+        // TODO: Integrate dependency resolver code
+        return project.dependencies.entrySet()
+                .stream()
+                .map(x -> Maps.immutableEntry(
+                        x.getKey(),
+                        recipes.stream()
+                                .filter(y -> y.name.equals(x.getKey()))
+                                .flatMap(y -> y.versions.entrySet().stream())
+                                .filter(y -> x.getValue().isSatisfiedBy(y.getKey()))
+                                .sorted(Comparator.comparing(y -> y.getKey()))
+                                .map(y -> y.getKey())
+                                .findFirst()))
+                .collect(ImmutableMap.toImmutableMap(x -> x.getKey(), x -> x.getValue()));
     }
 
     // TODO: Do we want to modify the BUCK file?
@@ -468,21 +487,41 @@ public final class Routines {
                     return Unit.of();
                 },
                 project -> {
-                    final Either<IOException, String> buckFile = BuckFile.generate(project);
-                    return buckFile.join(error -> {
-                        context.println("Could not generate the BUCK file! ");
+                    final Either<IOException, ImmutableList<Recipe>> loadRecipesResult = loadRecipes
+                            .run(context)
+                            .rightProjection(x -> x.stream()
+                                    .flatMap(y -> y.join(z -> Stream.empty(), z -> Stream.of(z)))
+                                    .collect(ImmutableList.toImmutableList()));
+                    return loadRecipesResult.join(error -> {
+                        context.println("Could not load the recipes. ");
                         context.println(error.toString());
                         return Unit.of();
-                    }, buckString -> {
-                        final Path path = Paths.get(context.getWorkingDirectory().toString(), "BUCK");
-                        final Optional<IOException> writeResult = context.writeFile(path, buckString);
-                        if (writeResult.isPresent()) {
-                            context.println("Could not write the BUCK file.");
-                            context.println(writeResult.get().toString());
+                    }, recipes -> {
+                        final ImmutableMap<Identifier, Optional<SemanticVersion>> resolvedDependencies =
+                                resolveDependencies(project, recipes);
+                        if (resolvedDependencies.entrySet().stream().anyMatch(x -> !x.getValue().isPresent())) {
                             return Unit.of();
                         }
-                        context.println("Done. ");
-                        return Unit.of();
+                        final Either<IOException, String> buckFile = BuckFile.generate(
+                                project.name,
+                                resolvedDependencies.entrySet()
+                                        .stream()
+                                        .collect(ImmutableMap.toImmutableMap(x -> x.getKey(), x -> x.getValue().get())));
+                        return buckFile.join(error -> {
+                            context.println("Could not generate the BUCK file! ");
+                            context.println(error.toString());
+                            return Unit.of();
+                        }, buckString -> {
+                            final Path path = Paths.get(context.getWorkingDirectory().toString(), "BUCK");
+                            final Optional<IOException> writeResult = context.writeFile(path, buckString);
+                            if (writeResult.isPresent()) {
+                                context.println("Could not write the BUCK file.");
+                                context.println(writeResult.get().toString());
+                                return Unit.of();
+                            }
+                            context.println("Done. ");
+                            return Unit.of();
+                        });
                     });
                 });
     };
