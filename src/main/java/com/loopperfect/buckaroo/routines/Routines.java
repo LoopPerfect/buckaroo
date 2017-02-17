@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.buck.BuckFile;
@@ -14,6 +15,7 @@ import com.loopperfect.buckaroo.io.IOContext;
 import com.loopperfect.buckaroo.serialization.Serializers;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -200,17 +202,34 @@ public final class Routines {
             .then(requestIdentifier)
             .flatMap(x -> IO.println(x).then(IO.value(x)))
             .map(x -> Project.of(x, Optional.empty(), ImmutableMap.of()))
-            .flatMap(x -> IO.println("Creating the buckaroo.json file... ").then(IO.value(x)))
+            .flatMap(project -> IO.println("Creating the buckaroo.json file... ").then(IO.value(project)))
             .map(x -> Serializers.gson(true).toJson(x))
             .flatMap(x -> IO.writeFile(Paths.get("buckaroo.json"), x))
             .flatMap(x -> x.isPresent() ?
                     IO.println(x.get()) :
-                    IO.println("Done! ")
+                    IO.println("Done. ")
                             .then(IO.println("Creating the modules directory... "))
                             .then(IO.createDirectory(Paths.get("./buckaroo")))
                             .flatMap(y -> y.isPresent() ?
                                     IO.println(y.get()) :
-                                    IO.println("Done!")
+                                    IO.println("Done. ")
+                                            .then(IO.println("Creating C++ boiler-plate... "))
+                                            .then(context -> context.createDirectory(
+                                                    Paths.get(context.getWorkingDirectory().toString(), "src")))
+                                            .then(context -> context.createDirectory(
+                                                    Paths.get(context.getWorkingDirectory().toString(), "include")))
+                                            .then(IO.value(Try.safe(() -> Resources.toString(
+                                                    Resources.getResource("com.loopperfect.buckaroo/EmptyMain.cpp"),
+                                                    Charset.defaultCharset()), IOException.class)))
+                                            .flatMap(emptyMain -> emptyMain.join(
+                                                    error -> IO.println("Could not generate main.cpp. ").then(IO.println(error.toString())),
+                                                    main -> context -> {
+                                                        context.writeFile(
+                                                                Paths.get(context.getWorkingDirectory().toString(), "src", "main.cpp"),
+                                                                main);
+                                                        return Unit.of();
+                                                    }))
+                                            .then(IO.println("Done. "))
                                             .then(IO.println("Make sure you add buckaroo.json and buckaroo/ to your .gitignore"))));
 
     private static final IO<Either<IOException, Project>> readProjectFile =
