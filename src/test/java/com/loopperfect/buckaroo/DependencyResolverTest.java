@@ -38,36 +38,6 @@ public class DependencyResolverTest {
         );
     }
 
-    private static DependencyFetcher createFetcher(ImmutableMap<Identifier, ImmutableMap<SemanticVersion,Project>> projects) {
-        DependencyFetcher fetcher = (id, requirement) -> {
-
-            if(!projects.containsKey(id)) {
-                return Either.left(
-                    new ProjectNotFoundException(id)
-                );
-            }
-
-            final Map<SemanticVersion, Project> candidates =
-                projects.getOrDefault(id, ImmutableMap.of())
-                    .entrySet()
-                    .stream()
-                    .filter(entry -> requirement.isSatisfiedBy(entry.getKey()))
-                    .collect(Collectors.toMap(k->k.getKey(),v->v.getValue()));
-
-            if(candidates.isEmpty())
-                return Either.left(
-                    new VersionRequirementNotSatisfiedException(id, requirement)
-                );
-
-            return Either.right(
-                ImmutableMap.copyOf(candidates)
-            );
-        };
-
-        return fetcher;
-    }
-
-
     @Test
     public void resolveSimple() throws Exception {
 
@@ -90,7 +60,7 @@ public class DependencyResolverTest {
                 baz.name, ImmutableMap.of( SemanticVersion.of(1), baz ));
 
 
-        DependencyFetcher fetcher = createFetcher(projects);
+        DependencyFetcher fetcher = new DependencyFetcherFromMap(projects);
 
         ImmutableMap<Project, SemanticVersion> toInstall = DependencyResolver.resolve(project, fetcher).toOptional().get();
 
@@ -124,7 +94,7 @@ public class DependencyResolverTest {
                 bar.name, ImmutableMap.of( SemanticVersion.of(1), bar ),
                 baz.name, ImmutableMap.of( SemanticVersion.of(1), baz ));
 
-        DependencyFetcher fetcher = createFetcher(projects);
+        DependencyFetcher fetcher = new DependencyFetcherFromMap(projects);
 
         ImmutableMap<Project, SemanticVersion> toInstall = DependencyResolver.resolve(project, fetcher).toOptional().get();
 
@@ -159,7 +129,7 @@ public class DependencyResolverTest {
                 bar.name, ImmutableMap.of(SemanticVersion.of(1), bar),
                 baz.name, ImmutableMap.of(SemanticVersion.of(1), baz));
 
-        DependencyFetcher fetcher = createFetcher(projects);
+        DependencyFetcher fetcher = new DependencyFetcherFromMap(projects);
 
 
         List<DependencyResolverException> unresolved = DependencyResolver.resolve(project, fetcher)
