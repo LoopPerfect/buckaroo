@@ -431,70 +431,94 @@ public final class Routines {
         };
     }
 
-    public static final IO<Unit> installExisting = context -> {
-        Preconditions.checkNotNull(context);
-        // Load the project file
-        final Either<IOException, Project> projectFile = readProjectFile.run(context);
-        // Did it succeed?
-        return projectFile.join(
-                // No; show an error message
-                error -> {
-                    context.println("Could not load buckaroo.json. Are you in the right folder? ");
-                    return Unit.of();
-                },
-                project -> {
-                    context.println("Loaded the buckaroo.json file. ");
-                    // Load the recipes file
-                    final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
-                            loadRecipes.run(context);
-                    // Did we succeed?
-                    return recipesFile.join(
-                            // Nope
-                            error -> {
-                                // Show an error
-                                context.println("Could not load the recipes file. ");
-                                return Unit.of();
-                            },
-                            // Yes!
-                            recipes -> {
-                                // TODO: We need to get implicit dependencies!
-                                // Ignore the recipes that failed to load
-                                final ImmutableList<Recipe> resolvedRecipes = ImmutableList.copyOf(recipes.stream()
-                                        .flatMap(x -> x.join(e -> Stream.empty(), r -> Stream.of(r)))
-                                        .collect(Collectors.toList()));
-                                // For each dependency in the project, we need to
-                                // find the versions in the recipe book
-                                // and take the highest compatible version.
-                                for (final Map.Entry<Identifier, SemanticVersionRequirement> dependency : project.dependencies.entrySet()) {
-                                    final Optional<Map.Entry<SemanticVersion, RecipeVersion>> versionToInstall = resolvedRecipes.stream()
-                                            .filter(x -> dependency.getKey().equals(x.name))
-                                            .flatMap(x -> x.versions.entrySet().stream())
-                                            .filter(x -> dependency.getValue().isSatisfiedBy(x.getKey()))
-                                            .sorted(Comparator.comparing(Map.Entry::getKey))
-                                            .findFirst();
-                                    if (!versionToInstall.isPresent()) {
-                                        context.println("Could not find a version of " + dependency.getKey() +
-                                                " that satisfies " + dependency.getValue().encode() + ". ");
-                                        return Unit.of();
-                                    }
-                                    final GitCommit gitCommit = versionToInstall.get().getValue().gitCommit;
-                                    // Let's pull it from git...
-                                    context.println("Fetching " + gitCommit.url + "... ");
-                                    final Optional<IOException> installResult =
-                                            install(dependency.getKey(),
-                                                    versionToInstall.get().getKey(),
-                                                    versionToInstall.get().getValue()).run(context);
-                                    if (installResult.isPresent()) {
-                                        context.println("Failed to checkout " + gitCommit.commit + ". ");
-                                        context.println(installResult.get().toString());
-                                        return Unit.of();
-                                    }
-                                    context.println("Done. ");
-                                }
-                                return Unit.of();
-                            });
-                });
-    };
+    static ImmutableList<Recipe> ignoreMissing(final ImmutableList<Either<IOException, Recipe>> xs) {
+        Preconditions.checkNotNull(xs);
+        return xs.stream()
+                .flatMap(x -> x.join(y -> Stream.empty(), y -> Stream.of(y)))
+                .collect(ImmutableList.toImmutableList());
+    }
+
+    // Loads the project file
+    // Loads all recipes
+    // Resolves any dependencies
+    // Checkout each required version
+    // Generate the dependency definitions
+    public static final IO<Unit> installExisting = readProjectFile
+            .flatMap(projectFile -> projectFile.join(
+                    error -> IO.println("Could not load buckaroo.json. Are you in the right folder? "),
+                    project -> IO.println("Loaded the buckaroo.json file. ")
+                            // Load all recipes
+                            .flatMap(x -> loadRecipes
+                                    .flatMap(recipesFile -> recipesFile.join(
+                                            error -> IO.println("Could not load any recipes. "),
+                                            recipes -> IO.value(ignoreMissing(recipes))
+//                                                    .flatMap(filteredRecipes -> IO.println(filteredRecipes)
+//                                                            .then(IO.value(filteredRecipes)))
+                                                    .flatMap(filteredRecipes -> IO.value(resolveDependencies(project, filteredRecipes)))
+//                                                    .flatMap(i -> IO.println(i))
+                                                    .flatMap(resolvedDependencies -> )
+                                                    .ignore()
+                                    )))));
+
+//    public static final IO<Unit> installExisting = context -> {
+//        Preconditions.checkNotNull(context);
+//        // Load the project file
+//        final Either<IOException, Project> projectFile = readProjectFile.run(context);
+//        // Did it succeed?
+//        return projectFile.join(
+//                // No; show an error message
+//                error -> {
+//                    context.println("Could not load buckaroo.json. Are you in the right folder? ");
+//                    return Unit.of();
+//                },
+//                project -> {
+//                    context.println("Loaded the buckaroo.json file. ");
+//                    // Load the recipes file
+//                    final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
+//                            loadRecipes.run(context);
+//                    // Did we succeed?
+//                    return recipesFile.join(
+//                            // Nope
+//                            error -> {
+//                                // Show an error
+//                                context.println("Could not load the recipes file. ");
+//                                return Unit.of();
+//                            },
+//                            // Yes!
+//                            recipes -> {
+//                                // Ignore the recipes that failed to load
+//                                final ImmutableList<Recipe> resolvedRecipes = ImmutableList.copyOf(recipes.stream()
+//                                        .flatMap(x -> x.join(e -> Stream.empty(), r -> Stream.of(r)))
+//                                        .collect(Collectors.toList()));
+//                                // TODO: We need to get implicit dependencies!
+//                                final ImmutableMap<Identifier, Optional<SemanticVersion>> resolvedDependencies =
+//                                        resolveDependencies(project, resolvedRecipes);
+//                                for (final Map.Entry<Identifier, Optional<SemanticVersion>> dependency : resolvedDependencies.entrySet()) {
+//                                    if (!dependency.getValue().isPresent()) {
+//                                        context.println("Could not find a version of " + dependency.getKey() +
+//                                                " that satisfies all version requirements. ");
+//                                        return Unit.of();
+//                                    }
+//                                    final GitCommit gitCommit = resolvedRecipes.stream()
+//                                            .flatMap(x -> x.versions.entrySet().stream())
+//                                            .filter(x -> x.getKey().equals(dependency.getValue().get())).get().getValue().gitCommit;
+//                                    // Let's pull it from git...
+//                                    context.println("Fetching " + gitCommit.url + "... ");
+//                                    final Optional<IOException> installResult =
+//                                            install(dependency.getKey(),
+//                                                    versionToInstall.get().getKey(),
+//                                                    versionToInstall.get().getValue()).run(context);
+//                                    if (installResult.isPresent()) {
+//                                        context.println("Failed to checkout " + gitCommit.commit + ". ");
+//                                        context.println(installResult.get().toString());
+//                                        return Unit.of();
+//                                    }
+//                                    context.println("Done. ");
+//                                }
+//                                return Unit.of();
+//                            });
+//                });
+//    };
 
     public static final IO<Unit> generateBuckFile = context -> {
         Preconditions.checkNotNull(context);

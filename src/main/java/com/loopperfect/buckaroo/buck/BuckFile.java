@@ -55,4 +55,36 @@ public final class BuckFile {
 
         return Either.right(writer.toString());
     }
+
+    public static Either<IOException, String> list(final String name, final ImmutableList<String> values) {
+
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(values);
+
+        final URL url = Resources.getResource("com.loopperfect.buckaroo/BuckListTemplate.mustache");
+        final String templateString;
+        try {
+            templateString = Resources.toString(url, Charsets.UTF_8);
+        } catch (final IOException e) {
+            return Either.left(e);
+        }
+
+        final Map<String, Object> scopes = ImmutableMap.of(
+                "name", name,
+                "values", values);
+
+        final Writer writer = new StringWriter();
+        final MustacheFactory mustacheFactory = new DefaultMustacheFactory();
+        final Mustache mustache = mustacheFactory.compile(new StringReader(templateString), "BuckList");
+
+        mustache.execute(writer, scopes);
+
+        try {
+            writer.flush();
+        } catch (final IOException e) {
+            return Either.left(e);
+        }
+
+        return Either.right(writer.toString());
+    }
 }
