@@ -5,17 +5,17 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
-public final class ResolvedDependency {
+public final class RecipeIdentifier {
 
     public final Identifier project;
     public final SemanticVersion version;
 
-    private ResolvedDependency(final Identifier project, final SemanticVersion version) {
+    private RecipeIdentifier(final Identifier project, final SemanticVersion version) {
         this.project = Preconditions.checkNotNull(project);
         this.version = Preconditions.checkNotNull(version);
     }
 
-    public boolean equals(final ResolvedDependency other) {
+    public boolean equals(final RecipeIdentifier other) {
         return this == other ||
                 (Objects.equals(project, other.project) &&
                         Objects.equals(version, other.version));
@@ -26,10 +26,10 @@ public final class ResolvedDependency {
         if (this == obj) {
             return true;
         }
-        if (obj == null || !(obj instanceof ResolvedDependency)) {
+        if (obj == null || !(obj instanceof RecipeIdentifier)) {
             return false;
         }
-        return equals((ResolvedDependency) obj);
+        return equals((RecipeIdentifier) obj);
     }
 
     @Override
@@ -45,7 +45,7 @@ public final class ResolvedDependency {
                 .toString();
     }
 
-    public static ResolvedDependency of(final Identifier project, final SemanticVersion version) {
-        return new ResolvedDependency(project, version);
+    public static RecipeIdentifier of(final Identifier project, final SemanticVersion version) {
+        return new RecipeIdentifier(project, version);
     }
 }

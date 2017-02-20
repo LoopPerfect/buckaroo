@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.sun.tools.doclets.formats.html.markup.HtmlStyle.bar;
 import static org.junit.Assert.*;
 
 /**
@@ -19,126 +20,86 @@ import static org.junit.Assert.*;
 public class DependencyResolverTest {
 
     @Test
-    public void getLatestOfNone() throws Exception {
-        ImmutableMap<SemanticVersion, Project> versions = ImmutableMap.of();
-        assertFalse(DependencyResolver.getLatest(versions).isPresent());
-    }
-
-
-    @Test
-    public void getLatestOfThree() throws Exception {
-        ImmutableMap<SemanticVersion, Project> versions = ImmutableMap.of(
-            SemanticVersion.of(2), Project.of("foo2"),
-            SemanticVersion.of(3), Project.of("foo3"),
-            SemanticVersion.of(1), Project.of("foo1")
-        );
-
-        assertTrue(
-            SemanticVersion.of(3).equals( DependencyResolver.getLatest(versions).get().getKey() )
-        );
-    }
-
-    @Test
     public void resolveSimple() throws Exception {
 
-        Project project = Project.of("project", ImmutableMap.of(
+        final Project project = Project.of("project", DependencyGroup.of(ImmutableMap.of(
             Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(1)),
-            Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+            Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1)))));
 
-        Project foo = Project.of("foo", ImmutableMap.of());
-        Project bar = Project.of("bar", ImmutableMap.of(
-            Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final DependencyFetcher fetcher = DependencyFetcherFromMap.of(
+                ImmutableMap.of(
+                        Identifier.of("foo"), ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of()),
+                        Identifier.of("bar"), ImmutableMap.of(
+                                SemanticVersion.of(1),
+                                DependencyGroup.of(ImmutableMap.of(
+                                        Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))))),
+                        Identifier.of("baz"), ImmutableMap.of(
+                                SemanticVersion.of(1), DependencyGroup.of())));
 
-        Project baz = Project.of("baz");
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> expected =
+                Either.right(ImmutableMap.of(
+                        Identifier.of("foo"), SemanticVersion.of(1),
+                        Identifier.of("bar"), SemanticVersion.of(1),
+                        Identifier.of("baz"), SemanticVersion.of(1)));
 
-        ImmutableMap<Identifier, ImmutableMap<SemanticVersion, Project>> projects =
-            ImmutableMap.of(
-                foo.name, ImmutableMap.of( SemanticVersion.of(1), foo ),
-                bar.name, ImmutableMap.of( SemanticVersion.of(1), bar ),
-                baz.name, ImmutableMap.of( SemanticVersion.of(1), baz ));
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> actual =
+                DependencyResolver.resolve(project.dependencies, fetcher);
 
-
-        DependencyFetcher fetcher = new DependencyFetcherFromMap(projects);
-
-        ImmutableMap<Project, SemanticVersion> toInstall = DependencyResolver.resolve(project, fetcher).toOptional().get();
-
-        assertEquals(ImmutableMap.of(
-            foo, SemanticVersion.of(1),
-            bar, SemanticVersion.of(1),
-            baz, SemanticVersion.of(1)
-        ), toInstall);
+        assertEquals(expected, actual);
     }
 
     @Test
     public void resolveCircular() throws Exception {
 
-        Project project = Project.of("project", ImmutableMap.of(
-            Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(1)),
-            Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final Project project = Project.of("project", DependencyGroup.of(ImmutableMap.of(
+                Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(1)),
+                Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1)))));
 
-        Project foo = Project.of("foo", ImmutableMap.of());
-        Project bar = Project.of("bar", ImmutableMap.of(
-            Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final DependencyFetcher fetcher = DependencyFetcherFromMap.of(ImmutableMap.of(
+                Identifier.of("foo"), ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of()),
+                Identifier.of("bar"), ImmutableMap.of(
+                        SemanticVersion.of(1), DependencyGroup.of(ImmutableMap.of(
+                                Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))))),
+                Identifier.of("baz"), ImmutableMap.of(
+                        SemanticVersion.of(1), DependencyGroup.of(ImmutableMap.of(
+                                Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1)))))));
 
-        Project baz = Project.of("baz", ImmutableMap.of(
-            Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> expected =
+                Either.right(ImmutableMap.of(
+                        Identifier.of("foo"), SemanticVersion.of(1),
+                        Identifier.of("bar"), SemanticVersion.of(1),
+                        Identifier.of("baz"), SemanticVersion.of(1)));
 
-        ImmutableMap<Identifier, ImmutableMap<SemanticVersion, Project>> projects =
-            ImmutableMap.of(
-                foo.name, ImmutableMap.of( SemanticVersion.of(1), foo ),
-                bar.name, ImmutableMap.of( SemanticVersion.of(1), bar ),
-                baz.name, ImmutableMap.of( SemanticVersion.of(1), baz ));
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> actual =
+                DependencyResolver.resolve(project.dependencies, fetcher);
 
-        DependencyFetcher fetcher = new DependencyFetcherFromMap(projects);
-
-        ImmutableMap<Project, SemanticVersion> toInstall = DependencyResolver.resolve(project, fetcher).toOptional().get();
-
-        assertEquals(ImmutableMap.of(
-            foo, SemanticVersion.of(1),
-            bar, SemanticVersion.of(1),
-            baz, SemanticVersion.of(1)
-        ), toInstall);
+        assertEquals(expected, actual);
     }
 
 
     @Test
     public void resolveFailure() throws Exception {
 
-        Project project = Project.of("project", ImmutableMap.of(
-            Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(2)),
-            Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final Project project = Project.of("project", DependencyGroup.of(ImmutableMap.of(
+                Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(2)),
+                Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1)))));
 
-        Project foo = Project.of("foo", ImmutableMap.of());
-        Project bar = Project.of("bar", ImmutableMap.of(
-            Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final DependencyFetcher fetcher = DependencyFetcherFromMap.of(ImmutableMap.of(
+                Identifier.of("foo"), ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of()),
+                Identifier.of("bar"), ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of(ImmutableMap.of(
+                        Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))))),
+                Identifier.of("baz"), ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of(ImmutableMap.of(
+                        Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1)))))));
 
-        Project baz = Project.of("baz", ImmutableMap.of(
-            Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
-        ));
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> expected =
+                Either.left(ImmutableList.of(
+                        new VersionRequirementNotSatisfiedException(
+                                Identifier.of("foo"),
+                                ExactSemanticVersion.of(SemanticVersion.of(2)))));
 
-        ImmutableMap<Identifier, ImmutableMap<SemanticVersion, Project>> projects =
-            ImmutableMap.of(
-                foo.name, ImmutableMap.of(SemanticVersion.of(1), foo),
-                bar.name, ImmutableMap.of(SemanticVersion.of(1), bar),
-                baz.name, ImmutableMap.of(SemanticVersion.of(1), baz));
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> actual =
+                DependencyResolver.resolve(project.dependencies, fetcher);
 
-        DependencyFetcher fetcher = new DependencyFetcherFromMap(projects);
-
-
-        List<DependencyResolverException> unresolved = DependencyResolver.resolve(project, fetcher)
-            .join(e -> e, x -> null);
-
-        assertEquals(ImmutableList.of(
-            new VersionRequirementNotSatisfiedException(
-                Identifier.of("foo"),
-                ExactSemanticVersion.of(SemanticVersion.of(2)))
-        ), unresolved);
+        assertEquals(expected, actual);
     }
 }

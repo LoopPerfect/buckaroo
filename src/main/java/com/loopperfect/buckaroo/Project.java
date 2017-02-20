@@ -18,9 +18,9 @@ public final class Project {
 
     public final Identifier name;
     public final Optional<String> license;
-    public final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies;
+    public final DependencyGroup dependencies;
 
-    private Project(final Identifier name, final Optional<String> license, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+    private Project(final Identifier name, final Optional<String> license, final DependencyGroup dependencies) {
 
         this.name = Preconditions.checkNotNull(name);
         this.license = Preconditions.checkNotNull(license);
@@ -28,33 +28,13 @@ public final class Project {
     }
 
     public Project addDependency(final Dependency dependency) {
-
         Preconditions.checkNotNull(dependency);
-
-        if (dependencies.containsKey(dependency.project) &&
-                dependencies.get(dependency.project).equals(dependency.versionRequirement)) {
-            return this;
-        }
-
-        final ImmutableMap<Identifier, SemanticVersionRequirement> nextDependencies =
-                ImmutableMap.copyOf(
-                        FluentIterable.from(dependencies.entrySet())
-                                .append(Maps.immutableEntry(dependency.project, dependency.versionRequirement)));
-
-        return new Project(name, license, nextDependencies);
+        return new Project(name, license, dependencies.addDependency(dependency));
     }
 
     public Project removeDependency(final Identifier identifier) {
         Preconditions.checkNotNull(identifier);
-        if (!dependencies.containsKey(identifier)) {
-            return this;
-        }
-        final ImmutableMap<Identifier, SemanticVersionRequirement> nextDependencies =
-                ImmutableMap.copyOf(dependencies.entrySet()
-                        .stream()
-                        .filter(x -> !x.getKey().equals(identifier))
-                        .collect(Collectors.toList()));
-        return new Project(name, license, nextDependencies);
+        return new Project(name, license, dependencies.removeDependency(identifier));
     }
 
     @Override
@@ -64,7 +44,7 @@ public final class Project {
             return false;
         }
 
-        Project other = (Project) obj;
+        final Project other = (Project) obj;
 
         return Objects.equals(name, other.name) &&
                 Objects.equals(license, other.license) &&
@@ -85,15 +65,15 @@ public final class Project {
                 .toString();
     }
 
-    public static Project of(final Identifier name, final Optional<String> license, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+    public static Project of(final Identifier name, final Optional<String> license, final DependencyGroup dependencies) {
         return new Project(name, license, dependencies);
     }
 
-    public static Project of(final String name, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+    public static Project of(final String name, final DependencyGroup dependencies) {
         return new Project(Identifier.of(name), Optional.empty(), dependencies);
     }
 
     public static Project of(final String name) {
-        return new Project(Identifier.of(name), Optional.empty(), ImmutableMap.of());
+        return new Project(Identifier.of(name), Optional.empty(), DependencyGroup.of());
     }
 }

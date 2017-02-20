@@ -18,7 +18,7 @@ public final class ProjectSerializerTest {
         final Project project = Project.of(
                 Identifier.of("my-magic-tool"),
                 Optional.of("MIT"),
-                ImmutableMap.of(
+                DependencyGroup.of(ImmutableMap.of(
                         Identifier.of("my-magic-lib"),
                         ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6)),
                         Identifier.of("some-other-lib"),
@@ -26,7 +26,7 @@ public final class ProjectSerializerTest {
                                 SemanticVersion.of(4, 1),
                                 SemanticVersion.of(4, 2)),
                         Identifier.of("awesome-lib"),
-                        AnySemanticVersion.of()));
+                        AnySemanticVersion.of())));
 
         final Gson gson = Serializers.gson(true);
 

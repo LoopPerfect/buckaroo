@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.loopperfect.buckaroo.Dependency;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Project;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
@@ -31,8 +32,8 @@ public final class ProjectSerializer implements JsonSerializer<Project> {
 
         final JsonObject dependenciesObject = new JsonObject();
 
-        for (final Map.Entry<Identifier, SemanticVersionRequirement> i : project.dependencies.entrySet()) {
-            dependenciesObject.addProperty(i.getKey().name, i.getValue().encode());
+        for (final Dependency i : project.dependencies.entries()) {
+            dependenciesObject.addProperty(i.project.name, i.versionRequirement.encode());
         }
 
         jsonObject.add("dependencies", dependenciesObject);

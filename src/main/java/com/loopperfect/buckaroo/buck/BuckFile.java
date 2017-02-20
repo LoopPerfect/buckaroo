@@ -13,7 +13,6 @@ import com.loopperfect.buckaroo.*;
 import java.io.*;
 import java.net.URL;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public final class BuckFile {
 
@@ -38,7 +37,7 @@ public final class BuckFile {
                 "name", project.name,
                 "dependencies", resolvedDependencies.entrySet()
                         .stream()
-                        .map(x -> ResolvedDependency.of(x.getKey(), x.getValue()))
+                        .map(x -> RecipeIdentifier.of(x.getKey(), x.getValue()))
                         .collect(ImmutableList.toImmutableList()));
 
         final Writer writer = new StringWriter();

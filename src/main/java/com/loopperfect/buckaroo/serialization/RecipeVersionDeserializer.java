@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.*;
+import com.loopperfect.buckaroo.DependencyGroup;
 import com.loopperfect.buckaroo.GitCommit;
 import com.loopperfect.buckaroo.RecipeVersion;
 
@@ -26,6 +27,6 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
 
         final String target = jsonObject.get("target").getAsString();
 
-        return RecipeVersion.of(url, buckUrl, target);
+        return RecipeVersion.of(url, buckUrl, target, DependencyGroup.of());
     }
 }

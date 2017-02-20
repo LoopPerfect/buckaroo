@@ -201,7 +201,7 @@ public final class Routines {
             .flatMap(x -> IO.println("What is the name of your project? "))
             .then(requestIdentifier)
             .flatMap(x -> IO.println(x).then(IO.value(x)))
-            .map(x -> Project.of(x, Optional.empty(), ImmutableMap.of()))
+            .map(x -> Project.of(x, Optional.empty(), DependencyGroup.of()))
             .flatMap(project -> IO.println("Creating the buckaroo.json file... ").then(IO.value(project)))
             .map(x -> Serializers.gson(true).toJson(x))
             .flatMap(x -> IO.writeFile(Paths.get("buckaroo.json"), x))
@@ -255,14 +255,14 @@ public final class Routines {
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(recipes);
         // TODO: Integrate dependency resolver code
-        return project.dependencies.entrySet()
+        return project.dependencies.entries()
                 .stream()
                 .map(x -> Maps.immutableEntry(
-                        x.getKey(),
+                        x.project,
                         recipes.stream()
-                                .filter(y -> y.name.equals(x.getKey()))
+                                .filter(y -> y.name.equals(x.project))
                                 .flatMap(y -> y.versions.entrySet().stream())
-                                .filter(y -> x.getValue().isSatisfiedBy(y.getKey()))
+                                .filter(y -> x.versionRequirement.isSatisfiedBy(y.getKey()))
                                 .sorted(Comparator.comparing(y -> y.getKey()))
                                 .map(y -> y.getKey())
                                 .findFirst()))
@@ -282,10 +282,10 @@ public final class Routines {
                         // Read the project file...
                         project -> {
                             // Is it already installed?
-                            if (project.dependencies.containsKey(projectToInstall)) {
+                            if (project.dependencies.dependencies.containsKey(projectToInstall)) {
                                 // Yes
                                 return IO.println("That library is already a dependency! Version " +
-                                        project.dependencies.get(projectToInstall).encode());
+                                        project.dependencies.dependencies.get(projectToInstall).encode());
                             }
                             // No, so load the recipes...
                             return loadRecipes.flatMap(y -> y.join(
@@ -416,8 +416,8 @@ public final class Routines {
                         return Unit.of();
                     },
                     project -> {
-                        if (project.dependencies.containsKey(recipe)) {
-                            final SemanticVersionRequirement versionRequirement = project.dependencies.get(recipe);
+                        if (project.dependencies.dependencies.containsKey(recipe)) {
+                            final SemanticVersionRequirement versionRequirement = project.dependencies.dependencies.get(recipe);
                             context.println("Found a dependency on " + recipe.name + " " + versionRequirement.encode());
                             final Project modifiedProject = project.removeDependency(recipe);
                             context.println("Writing the modified project file... ");
@@ -454,9 +454,9 @@ public final class Routines {
                                             recipes -> IO.value(ignoreMissing(recipes))
 //                                                    .flatMap(filteredRecipes -> IO.println(filteredRecipes)
 //                                                            .then(IO.value(filteredRecipes)))
-                                                    .flatMap(filteredRecipes -> IO.value(resolveDependencies(project, filteredRecipes)))
-//                                                    .flatMap(i -> IO.println(i))
-                                                    .flatMap(resolvedDependencies -> )
+//                                                    .flatMap(filteredRecipes -> IO.value(DependencyResolver.resolve(project, filteredRecipes)))
+                                                    .flatMap(i -> IO.println(i))
+//                                                    .flatMap(resolvedDependencies -> )
                                                     .ignore()
                                     )))));
 
@@ -580,4 +580,15 @@ public final class Routines {
                         }
                         return Unit.of();
                     }));
+
+//    public static final IO<Unit> listDependencies =
+//            readProjectFile.flatMap(
+//                    projectFile -> projectFile.join(
+//                            error -> IO.println(error),
+//                            project -> loadRecipes.flatMap(recipesFile -> recipesFile.join(
+//                                    error -> IO.println(error),
+//                                    recipes -> DependencyResolver.resolve() IO.println(recipes.stream()
+//                                            .flatMap(x -> x.join(y -> Stream.empty(), y -> Stream.of(y)))
+//                                            .collect(ImmutableList.toImmutableList()))
+//                            ))));
 }
