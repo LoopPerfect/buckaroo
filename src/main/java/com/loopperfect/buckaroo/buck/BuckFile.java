@@ -5,10 +5,10 @@ import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.Project;
+import com.loopperfect.buckaroo.*;
 
 import java.io.*;
 import java.net.URL;
@@ -21,9 +21,10 @@ public final class BuckFile {
 
     }
 
-    public static Either<IOException, String> generate(final Project project) {
+    public static Either<IOException, String> generate(final Identifier project, final ImmutableMap<Identifier, SemanticVersion> resolvedDependencies) {
 
         Preconditions.checkNotNull(project);
+        Preconditions.checkNotNull(resolvedDependencies);
 
         final URL url = Resources.getResource("com.loopperfect.buckaroo/ProjectTemplate.mustache");
         final String templateString;
@@ -34,10 +35,11 @@ public final class BuckFile {
         }
 
         final Map<String, Object> scopes = ImmutableMap.of(
-                "name", project.name.name,
-                "dependencies", project.dependencies.keySet()
+                "name", project.name,
+                "dependencies", resolvedDependencies.entrySet()
                         .stream()
-                        .collect(Collectors.toList()));
+                        .map(x -> ResolvedDependency.of(x.getKey(), x.getValue()))
+                        .collect(ImmutableList.toImmutableList()));
 
         final Writer writer = new StringWriter();
         final MustacheFactory mustacheFactory = new DefaultMustacheFactory();

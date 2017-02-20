@@ -17,16 +17,20 @@ public final class Identifier {
         this.name = name;
     }
 
+    public boolean equals(final Identifier other) {
+        Preconditions.checkNotNull(other);
+        return this == other || Objects.equal(name, other.name);
+    }
+
     @Override
     public boolean equals(final Object obj) {
-
+        if (this == obj) {
+            return true;
+        }
         if (obj == null || !(obj instanceof Identifier)) {
             return false;
         }
-
-        Identifier other = (Identifier) obj;
-
-        return Objects.equal(name, other.name);
+        return equals((Identifier)obj);
     }
 
     @Override

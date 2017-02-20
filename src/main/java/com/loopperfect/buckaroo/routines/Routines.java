@@ -4,7 +4,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.buck.BuckFile;
@@ -13,6 +15,7 @@ import com.loopperfect.buckaroo.io.IOContext;
 import com.loopperfect.buckaroo.serialization.Serializers;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -40,6 +43,34 @@ public final class Routines {
                     }
                 });
     };
+
+    private static final IO<Optional<IOException>> checkout(final Path path, final GitCommit commit) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(commit);
+        return context -> {
+            context.git().clone(path.toFile(), commit.url);
+            context.git().checkout(path.toFile(), commit.url);
+            context.git().pull(path.toFile());
+            return context.git().status(path.toFile())
+                    .join(error -> Optional.of(new IOException(error)), x -> Optional.empty());
+        };
+    }
+
+    private static final IO<Optional<IOException>> install(final Identifier name, final SemanticVersion semanticVersion, final RecipeVersion recipeVersion) {
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(semanticVersion);
+        Preconditions.checkNotNull(recipeVersion);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            final Path clonePath = Paths.get(
+                    context.getWorkingDirectory().toString(),
+                    "/buckaroo/",
+                    name.name,
+                    "/",
+                    semanticVersion.toString());
+            return checkout(clonePath, recipeVersion.gitCommit).run(context);
+        };
+    }
 
     private static final Either<IOException, Recipe> readRecipe(final IOContext context, final Path path) {
         Preconditions.checkNotNull(path);
@@ -171,17 +202,34 @@ public final class Routines {
             .then(requestIdentifier)
             .flatMap(x -> IO.println(x).then(IO.value(x)))
             .map(x -> Project.of(x, Optional.empty(), ImmutableMap.of()))
-            .flatMap(x -> IO.println("Creating the buckaroo.json file... ").then(IO.value(x)))
+            .flatMap(project -> IO.println("Creating the buckaroo.json file... ").then(IO.value(project)))
             .map(x -> Serializers.gson(true).toJson(x))
             .flatMap(x -> IO.writeFile(Paths.get("buckaroo.json"), x))
             .flatMap(x -> x.isPresent() ?
                     IO.println(x.get()) :
-                    IO.println("Done! ")
+                    IO.println("Done. ")
                             .then(IO.println("Creating the modules directory... "))
                             .then(IO.createDirectory(Paths.get("./buckaroo")))
                             .flatMap(y -> y.isPresent() ?
                                     IO.println(y.get()) :
-                                    IO.println("Done!")
+                                    IO.println("Done. ")
+                                            .then(IO.println("Creating C++ boiler-plate... "))
+                                            .then(context -> context.createDirectory(
+                                                    Paths.get(context.getWorkingDirectory().toString(), "src")))
+                                            .then(context -> context.createDirectory(
+                                                    Paths.get(context.getWorkingDirectory().toString(), "include")))
+                                            .then(IO.value(Try.safe(() -> Resources.toString(
+                                                    Resources.getResource("com.loopperfect.buckaroo/EmptyMain.cpp"),
+                                                    Charset.defaultCharset()), IOException.class)))
+                                            .flatMap(emptyMain -> emptyMain.join(
+                                                    error -> IO.println("Could not generate main.cpp. ").then(IO.println(error.toString())),
+                                                    main -> context -> {
+                                                        context.writeFile(
+                                                                Paths.get(context.getWorkingDirectory().toString(), "src", "main.cpp"),
+                                                                main);
+                                                        return Unit.of();
+                                                    }))
+                                            .then(IO.println("Done. "))
                                             .then(IO.println("Make sure you add buckaroo.json and buckaroo/ to your .gitignore"))));
 
     private static final IO<Either<IOException, Project>> readProjectFile =
@@ -201,6 +249,24 @@ public final class Routines {
                     Paths.get("buckaroo.json"),
                     Serializers.gson(true).toJson(project),
                     true);
+    }
+
+    private static ImmutableMap<Identifier, Optional<SemanticVersion>> resolveDependencies(final Project project, final ImmutableList<Recipe> recipes) {
+        Preconditions.checkNotNull(project);
+        Preconditions.checkNotNull(recipes);
+        // TODO: Integrate dependency resolver code
+        return project.dependencies.entrySet()
+                .stream()
+                .map(x -> Maps.immutableEntry(
+                        x.getKey(),
+                        recipes.stream()
+                                .filter(y -> y.name.equals(x.getKey()))
+                                .flatMap(y -> y.versions.entrySet().stream())
+                                .filter(y -> x.getValue().isSatisfiedBy(y.getKey()))
+                                .sorted(Comparator.comparing(y -> y.getKey()))
+                                .map(y -> y.getKey())
+                                .findFirst()))
+                .collect(ImmutableMap.toImmutableMap(x -> x.getKey(), x -> x.getValue()));
     }
 
     // TODO: Do we want to modify the BUCK file?
@@ -254,9 +320,33 @@ public final class Routines {
                                                         () -> ExactSemanticVersion.of(versionToUse.get())));
                                         final Project modifiedProject = project.addDependency(dependency);
                                         // Write the project file; print done or error
-                                        return IO.println("Installing " + projectToInstall.name + "@" + versionToUse.get() + "... ")
-                                                .then(writeProjectFile(modifiedProject))
-                                                .flatMap(i -> IO.println(i.map(j -> j.toString()).orElse("Done!")));
+                                        return context -> {
+                                            context.println("Installing " + projectToInstall.name + "@" + versionToUse.get() + "... ");
+                                            final Optional<IOException> writeProjectFileResult = writeProjectFile(modifiedProject).run(context);
+                                            if (writeProjectFileResult.isPresent()) {
+                                                context.println("Could not write the project file. ");
+                                                context.println(writeProjectFileResult.get().toString());
+                                                return Unit.of();
+                                            }
+                                            final RecipeVersion recipeVersionToInstall = recipes.stream()
+                                                    .flatMap(i -> i.join(j -> Stream.empty(), j -> Stream.of(j)))
+                                                    .filter(i -> i.name.equals(projectToInstall))
+                                                    .flatMap(i -> i.versions.entrySet().stream())
+                                                    .filter(i -> i.getKey().equals(versionToUse.get()))
+                                                    .map(i -> i.getValue())
+                                                    .findAny()
+                                                    .get(); // TODO: Refactor
+                                            final Optional<IOException> checkoutResult =
+                                                    install(projectToInstall, versionToUse.get(), recipeVersionToInstall)
+                                                            .run(context);
+                                            if (checkoutResult.isPresent()) {
+                                                context.println("Could not fetch " + projectToInstall.name + "@" + versionToUse.get() + ". ");
+                                                context.println(checkoutResult.get().toString());
+                                            } else {
+                                                context.println("Done! ");
+                                            }
+                                            return Unit.of();
+                                        };
                                     }
                             ));
                         }));
@@ -341,8 +431,6 @@ public final class Routines {
         };
     }
 
-    // Load the projects file
-    //
     public static final IO<Unit> installExisting = context -> {
         Preconditions.checkNotNull(context);
         // Load the project file
@@ -378,40 +466,27 @@ public final class Routines {
                                 // find the versions in the recipe book
                                 // and take the highest compatible version.
                                 for (final Map.Entry<Identifier, SemanticVersionRequirement> dependency : project.dependencies.entrySet()) {
-                                    final Optional<RecipeVersion> recipeVersion = resolvedRecipes.stream()
+                                    final Optional<Map.Entry<SemanticVersion, RecipeVersion>> versionToInstall = resolvedRecipes.stream()
                                             .filter(x -> dependency.getKey().equals(x.name))
                                             .flatMap(x -> x.versions.entrySet().stream())
                                             .filter(x -> dependency.getValue().isSatisfiedBy(x.getKey()))
                                             .sorted(Comparator.comparing(Map.Entry::getKey))
-                                            .map(x -> x.getValue())
                                             .findFirst();
-                                    if (!recipeVersion.isPresent()) {
+                                    if (!versionToInstall.isPresent()) {
                                         context.println("Could not find a version of " + dependency.getKey() +
                                                 " that satisfies " + dependency.getValue().encode() + ". ");
                                         return Unit.of();
                                     }
-                                    final GitCommit gitCommit = recipeVersion.get().gitCommit;
+                                    final GitCommit gitCommit = versionToInstall.get().getValue().gitCommit;
                                     // Let's pull it from git...
-                                    context.println("Cloning " + gitCommit.url + "... ");
-                                    final Path dependencyPath = Paths.get(
-                                            context.getWorkingDirectory().toString(),
-                                            "buckaroo/",
-                                            dependency.getKey().name);
-                                    final Optional<Exception> cloneResult = context.git().clone(
-                                            dependencyPath.toFile(),
-                                            gitCommit.url);
-                                    if (cloneResult.isPresent()) {
-                                        context.println("Failed to clone " + gitCommit.url + ". ");
-                                        context.println(cloneResult.get().toString());
-                                        return Unit.of();
-                                    }
-                                    context.println("Done. ");
-                                    context.println("Checking out " + gitCommit.commit + "... ");
-                                    final Optional<Exception> checkoutResult = context.git()
-                                            .checkout(dependencyPath.toFile(), gitCommit.commit);
-                                    if (checkoutResult.isPresent()) {
+                                    context.println("Fetching " + gitCommit.url + "... ");
+                                    final Optional<IOException> installResult =
+                                            install(dependency.getKey(),
+                                                    versionToInstall.get().getKey(),
+                                                    versionToInstall.get().getValue()).run(context);
+                                    if (installResult.isPresent()) {
                                         context.println("Failed to checkout " + gitCommit.commit + ". ");
-                                        context.println(checkoutResult.get().toString());
+                                        context.println(installResult.get().toString());
                                         return Unit.of();
                                     }
                                     context.println("Done. ");
@@ -431,21 +506,41 @@ public final class Routines {
                     return Unit.of();
                 },
                 project -> {
-                    final Either<IOException, String> buckFile = BuckFile.generate(project);
-                    return buckFile.join(error -> {
-                        context.println("Could not generate the BUCK file! ");
+                    final Either<IOException, ImmutableList<Recipe>> loadRecipesResult = loadRecipes
+                            .run(context)
+                            .rightProjection(x -> x.stream()
+                                    .flatMap(y -> y.join(z -> Stream.empty(), z -> Stream.of(z)))
+                                    .collect(ImmutableList.toImmutableList()));
+                    return loadRecipesResult.join(error -> {
+                        context.println("Could not load the recipes. ");
                         context.println(error.toString());
                         return Unit.of();
-                    }, buckString -> {
-                        final Path path = Paths.get(context.getWorkingDirectory().toString(), "BUCK");
-                        final Optional<IOException> writeResult = context.writeFile(path, buckString);
-                        if (writeResult.isPresent()) {
-                            context.println("Could not write the BUCK file.");
-                            context.println(writeResult.get().toString());
+                    }, recipes -> {
+                        final ImmutableMap<Identifier, Optional<SemanticVersion>> resolvedDependencies =
+                                resolveDependencies(project, recipes);
+                        if (resolvedDependencies.entrySet().stream().anyMatch(x -> !x.getValue().isPresent())) {
                             return Unit.of();
                         }
-                        context.println("Done. ");
-                        return Unit.of();
+                        final Either<IOException, String> buckFile = BuckFile.generate(
+                                project.name,
+                                resolvedDependencies.entrySet()
+                                        .stream()
+                                        .collect(ImmutableMap.toImmutableMap(x -> x.getKey(), x -> x.getValue().get())));
+                        return buckFile.join(error -> {
+                            context.println("Could not generate the BUCK file! ");
+                            context.println(error.toString());
+                            return Unit.of();
+                        }, buckString -> {
+                            final Path path = Paths.get(context.getWorkingDirectory().toString(), "BUCK");
+                            final Optional<IOException> writeResult = context.writeFile(path, buckString);
+                            if (writeResult.isPresent()) {
+                                context.println("Could not write the BUCK file.");
+                                context.println(writeResult.get().toString());
+                                return Unit.of();
+                            }
+                            context.println("Done. ");
+                            return Unit.of();
+                        });
                     });
                 });
     };
