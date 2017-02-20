@@ -154,11 +154,13 @@ public class DependencyResolverTest {
         DependencyFetcher fetcher = createFetcher(projects);
 
 
-        List<ImmutableMap.Entry<Identifier, SemanticVersionRequirement>> unresolved = DependencyResolver.resolve(project, fetcher)
+        List<DependencyResolverException> unresolved = DependencyResolver.resolve(project, fetcher)
             .join(e -> e, x -> null);
 
         assertEquals(ImmutableList.of(
-            Maps.immutableEntry(foo.name, ExactSemanticVersion.of(SemanticVersion.of(2)))
+            new VersionRequirementNotSatisfiedException(
+                Identifier.of("foo"),
+                ExactSemanticVersion.of(SemanticVersion.of(2)))
         ), unresolved);
     }
 }

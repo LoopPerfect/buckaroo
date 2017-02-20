@@ -2,11 +2,9 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import jdk.nashorn.internal.ir.annotations.Immutable;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by gaetano on 13/02/17.
@@ -28,9 +26,8 @@ public final class DependencyResolver {
     }
 
     public static Either<
-        List<
-            ImmutableMap.Entry<Identifier, SemanticVersionRequirement>>,
-            ImmutableMap<Project, SemanticVersion>> resolve(Project p, DependencyFetcher proj) {
+        List<DependencyResolverException>,
+        ImmutableMap<Project, SemanticVersion>> resolve(Project p, DependencyFetcher proj) {
 
         Stack< Project > todo = new Stack<>();
         Set< Identifier > seen = new HashSet<>();
@@ -78,12 +75,17 @@ public final class DependencyResolver {
                     todo.add(successful.getValue());
                     deps.put(successful.getValue(), successful.getKey());
                 }
-
             }
         }
 
         if(!unresolved.isEmpty()) {
-            return Either.left(ImmutableList.copyOf(unresolved));
+            return Either.left(
+                ImmutableList.copyOf(
+                    unresolved
+                        .stream()
+                        .map(u->new VersionRequirementNotSatisfiedException(u.getKey(), u.getValue()))
+                        .collect(Collectors.toList()))
+            );
         }
 
         return Either.right(
