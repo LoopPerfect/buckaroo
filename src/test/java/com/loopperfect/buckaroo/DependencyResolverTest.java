@@ -28,9 +28,9 @@ public class DependencyResolverTest {
     @Test
     public void getLatestOfThree() throws Exception {
         ImmutableMap<SemanticVersion, Project> versions = ImmutableMap.of(
-            SemanticVersion.of(2), Project.of( Identifier.of("foo2"), Optional.empty(), ImmutableMap.of()),
-            SemanticVersion.of(3), Project.of( Identifier.of("foo3"), Optional.empty(), ImmutableMap.of()),
-            SemanticVersion.of(1), Project.of( Identifier.of("foo1"), Optional.empty(), ImmutableMap.of())
+            SemanticVersion.of(2), Project.of("foo2"),
+            SemanticVersion.of(3), Project.of("foo3"),
+            SemanticVersion.of(1), Project.of("foo1")
         );
 
         assertTrue(
@@ -41,17 +41,17 @@ public class DependencyResolverTest {
     @Test
     public void resolveSimple() throws Exception {
 
-        Project project = Project.of( Identifier.of("project"), Optional.empty(), ImmutableMap.of(
+        Project project = Project.of("project", ImmutableMap.of(
             Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(1)),
             Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
-        Project foo = Project.of( Identifier.of("foo"), Optional.empty(), ImmutableMap.of());
-        Project bar = Project.of( Identifier.of("bar"), Optional.empty(), ImmutableMap.of(
+        Project foo = Project.of("foo", ImmutableMap.of());
+        Project bar = Project.of("bar", ImmutableMap.of(
             Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
-        Project baz = Project.of( Identifier.of("baz"), Optional.empty(), ImmutableMap.of());
+        Project baz = Project.of("baz");
 
         ImmutableMap<Identifier, ImmutableMap<SemanticVersion, Project>> projects =
             ImmutableMap.of(
@@ -74,17 +74,17 @@ public class DependencyResolverTest {
     @Test
     public void resolveCircular() throws Exception {
 
-        Project project = Project.of( Identifier.of("project"), Optional.empty(), ImmutableMap.of(
+        Project project = Project.of("project", ImmutableMap.of(
             Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(1)),
             Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
-        Project foo = Project.of( Identifier.of("foo"), Optional.empty(), ImmutableMap.of());
-        Project bar = Project.of( Identifier.of("bar"), Optional.empty(), ImmutableMap.of(
+        Project foo = Project.of("foo", ImmutableMap.of());
+        Project bar = Project.of("bar", ImmutableMap.of(
             Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
-        Project baz = Project.of( Identifier.of("baz"), Optional.empty(), ImmutableMap.of(
+        Project baz = Project.of("baz", ImmutableMap.of(
             Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
@@ -109,17 +109,17 @@ public class DependencyResolverTest {
     @Test
     public void resolveFailure() throws Exception {
 
-        Project project = Project.of(Identifier.of("project"), Optional.empty(), ImmutableMap.of(
+        Project project = Project.of("project", ImmutableMap.of(
             Identifier.of("foo"), ExactSemanticVersion.of(SemanticVersion.of(2)),
             Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
-        Project foo = Project.of(Identifier.of("foo"), Optional.empty(), ImmutableMap.of());
-        Project bar = Project.of(Identifier.of("bar"), Optional.empty(), ImmutableMap.of(
+        Project foo = Project.of("foo", ImmutableMap.of());
+        Project bar = Project.of("bar", ImmutableMap.of(
             Identifier.of("baz"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 
-        Project baz = Project.of(Identifier.of("baz"), Optional.empty(), ImmutableMap.of(
+        Project baz = Project.of("baz", ImmutableMap.of(
             Identifier.of("bar"), ExactSemanticVersion.of(SemanticVersion.of(1))
         ));
 

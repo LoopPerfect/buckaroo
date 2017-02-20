@@ -31,7 +31,7 @@ public final class DependencyResolver {
 
         Stack< Project > todo = new Stack<>();
         Set< Identifier > seen = new HashSet<>();
-        HashMap< Project, SemanticVersion > deps = new HashMap<>();
+        HashMap< Project, SemanticVersion > deps = new HashMap<>(); //todo: extend to  Set<SemanticVersion> and narrow down using Requirements...
         List<DependencyResolverException> unresolved = new ArrayList<>();
         todo.push(p);
         seen.add(p.name);
@@ -63,13 +63,13 @@ public final class DependencyResolver {
                     x->Optional.empty()
                 );
 
-                if(unresolvedProject.isPresent()) {
+                if (unresolvedProject.isPresent()) {
                     DependencyResolverException failed = unresolvedProject.get();
                     unresolved.add(failed);
                     seen.add(failed.getIdentifier());
                 }
 
-                if(resolvedProject.isPresent()) {
+                if (resolvedProject.isPresent()) {
                     ImmutableMap.Entry<SemanticVersion, Project> successful = resolvedProject.get();
                     seen.add(successful.getValue().name);
                     todo.add(successful.getValue());
@@ -78,10 +78,9 @@ public final class DependencyResolver {
             }
         }
 
-        if(!unresolved.isEmpty()) {
+        if (!unresolved.isEmpty()) {
             return Either.left(
-                ImmutableList.copyOf(
-                    unresolved)
+                ImmutableList.copyOf(unresolved)
             );
         }
 

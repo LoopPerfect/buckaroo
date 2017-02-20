@@ -8,11 +8,11 @@ import java.util.Objects;
  * Created by gaetano on 16/02/17.
  */
 public final class VersionNotFoundException extends DependencyResolverException {
-    public final SemanticVersion ver;
+    private final SemanticVersion version;
 
     public VersionNotFoundException(final Identifier id, final SemanticVersion ver){
         super(id, "Version " + ver + "of Project "+ id.name + "not found");
-        this.ver = Preconditions.checkNotNull(ver);
+        this.version = Preconditions.checkNotNull(ver);
     }
 
     @Override
@@ -29,6 +29,6 @@ public final class VersionNotFoundException extends DependencyResolverException 
         final VersionNotFoundException other = (VersionNotFoundException) obj;
 
         return Objects.equals(id, other.id)
-            && Objects.equals(ver, other.ver);
+            && Objects.equals(version, other.version);
     }
 }

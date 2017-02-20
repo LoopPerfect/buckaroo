@@ -88,4 +88,12 @@ public final class Project {
     public static Project of(final Identifier name, final Optional<String> license, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
         return new Project(name, license, dependencies);
     }
+
+    public static Project of(final String name, final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+        return new Project(Identifier.of(name), Optional.empty(), dependencies);
+    }
+
+    public static Project of(final String name) {
+        return new Project(Identifier.of(name), Optional.empty(), ImmutableMap.of());
+    }
 }
