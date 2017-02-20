@@ -8,12 +8,10 @@ import java.util.Objects;
  * Created by gaetano on 16/02/17.
  */
 public final class VersionNotFoundException extends DependencyResolverException {
-    public final Identifier id;
     public final SemanticVersion ver;
 
     public VersionNotFoundException(final Identifier id, final SemanticVersion ver){
-        super("Version " + ver + "of Project "+ id.name + "not found");
-        this.id = Preconditions.checkNotNull(id);
+        super(id, "Version " + ver + "of Project "+ id.name + "not found");
         this.ver = Preconditions.checkNotNull(ver);
     }
 

@@ -8,12 +8,10 @@ import java.util.Objects;
  * Created by gaetano on 16/02/17.
  */
 public final class VersionRequirementNotSatisfiedException extends DependencyResolverException {
-    public final Identifier id;
     public final SemanticVersionRequirement requirement;
 
     public VersionRequirementNotSatisfiedException(final Identifier id, final SemanticVersionRequirement requirement){
-        super("Project " + id.name + " can't satisfy version requirement: "+ requirement.toString());
-        this.id = Preconditions.checkNotNull(id);
+        super(id, "Project " + id.name + " can't satisfy version requirement: "+ requirement.toString());
         this.requirement = Preconditions.checkNotNull(requirement);
     }
 

@@ -9,6 +9,6 @@ import com.google.common.collect.ImmutableMap;
 @FunctionalInterface
 public interface DependencyFetcher {
     Either<
-        ImmutableMap.Entry<Identifier,SemanticVersionRequirement>,
+        DependencyResolverException,
         ImmutableMap<SemanticVersion, Project>> fetch(Identifier id, SemanticVersionRequirement req);
 };

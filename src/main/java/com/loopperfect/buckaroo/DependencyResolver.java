@@ -32,7 +32,7 @@ public final class DependencyResolver {
         Stack< Project > todo = new Stack<>();
         Set< Identifier > seen = new HashSet<>();
         HashMap< Project, SemanticVersion > deps = new HashMap<>();
-        List< ImmutableMap.Entry<Identifier, SemanticVersionRequirement>> unresolved = new ArrayList<>();
+        List<DependencyResolverException> unresolved = new ArrayList<>();
         todo.push(p);
         seen.add(p.name);
 
@@ -40,7 +40,7 @@ public final class DependencyResolver {
             final Project toResolve = todo.pop();
             final List<
                 Either<
-                    ImmutableMap.Entry<Identifier, SemanticVersionRequirement>,
+                    DependencyResolverException,
                     ImmutableMap.Entry<SemanticVersion, Project>>>  next =
                     toResolve.dependencies
                     .entrySet()
@@ -51,22 +51,22 @@ public final class DependencyResolver {
                     //.flatMap(x->x.map(i->Stream.of(i)).orElse(Stream.empty()))
                     .collect(Collectors.toList());
 
-            for (Either<ImmutableMap.Entry<Identifier, SemanticVersionRequirement>, ImmutableMap.Entry<SemanticVersion, Project>> item : next) {
+            for (Either<DependencyResolverException, ImmutableMap.Entry<SemanticVersion, Project>> item : next) {
 
                 Optional<ImmutableMap.Entry<SemanticVersion,Project>> resolvedProject = item.join(
                     x->Optional.empty(),
                     x->Optional.of(x)
                 );
 
-                Optional<ImmutableMap.Entry<Identifier, SemanticVersionRequirement>> unresolvedProject = item.join(
+                Optional<DependencyResolverException> unresolvedProject = item.join(
                     x->Optional.of(x),
                     x->Optional.empty()
                 );
 
                 if(unresolvedProject.isPresent()) {
-                    ImmutableMap.Entry<Identifier, SemanticVersionRequirement> failed = unresolvedProject.get();
+                    DependencyResolverException failed = unresolvedProject.get();
                     unresolved.add(failed);
-                    seen.add(failed.getKey());
+                    seen.add(failed.getIdentifier());
                 }
 
                 if(resolvedProject.isPresent()) {
@@ -81,10 +81,7 @@ public final class DependencyResolver {
         if(!unresolved.isEmpty()) {
             return Either.left(
                 ImmutableList.copyOf(
-                    unresolved
-                        .stream()
-                        .map(u->new VersionRequirementNotSatisfiedException(u.getKey(), u.getValue()))
-                        .collect(Collectors.toList()))
+                    unresolved)
             );
         }
 

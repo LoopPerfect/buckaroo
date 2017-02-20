@@ -8,12 +8,10 @@ import java.util.Objects;
  * Created by gaetano on 16/02/17.
  */
 public final class ProjectNotFoundException extends DependencyResolverException {
-    public final Identifier id;
 
     public ProjectNotFoundException(final Identifier id){
-        super("Project not found" + id.name);
-        this.id = Preconditions.checkNotNull(id);
-    }
+        super(id, "Project not found" + id.name);
+     }
 
     @Override
     public boolean equals(final Object obj) {

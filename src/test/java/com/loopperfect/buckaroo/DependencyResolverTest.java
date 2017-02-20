@@ -40,6 +40,13 @@ public class DependencyResolverTest {
 
     private static DependencyFetcher createFetcher(ImmutableMap<Identifier, ImmutableMap<SemanticVersion,Project>> projects) {
         DependencyFetcher fetcher = (id, requirement) -> {
+
+            if(!projects.containsKey(id)) {
+                return Either.left(
+                    new ProjectNotFoundException(id)
+                );
+            }
+
             final Map<SemanticVersion, Project> candidates =
                 projects.getOrDefault(id, ImmutableMap.of())
                     .entrySet()
@@ -49,7 +56,8 @@ public class DependencyResolverTest {
 
             if(candidates.isEmpty())
                 return Either.left(
-                    Maps.immutableEntry(id, requirement));
+                    new VersionRequirementNotSatisfiedException(id, requirement)
+                );
 
             return Either.right(
                 ImmutableMap.copyOf(candidates)
