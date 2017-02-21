@@ -18,172 +18,31 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface IOContext {
+public interface IOContext
+    extends GitContext, SystemContext, FSContext {
 
-    void println();
+    public static IOContext actual() {
+        return new IOContext(){
+            private final FileSystem fs = FileSystems.getDefault();
 
-    void println(final String x);
-
-    Optional<String> readln();
-
-    Path getUserHomeDirectory();
-
-    Path getWorkingDirectory();
-
-    Path getPath(String...path);
-
-    boolean isFile(final Path path);
-
-    boolean exists(final Path path);
-
-    Optional<IOException> createDirectory(final Path path);
-
-    Either<IOException, String> readFile(final Path path);
-
-    Optional<IOException> writeFile(final Path path, final String content, final boolean overwrite);
-
-    Optional<IOException> writeFile(final Path path, final String content);
-
-    Either<IOException, ImmutableList<Path>> listFiles(final Path path);
-
-    GitContext git();
-
-    static IOContext actual() {
-        return create(
-            FileSystems.getDefault(),
-            System.getProperty("user.home"),
-            System.getProperty("user.dir"));
-    }
-    static IOContext fake() {
-        return create(
-            Jimfs.newFileSystem(Configuration.unix()),
-            System.getProperty("user.home"),
-            System.getProperty("user.dir"));
+            @Override
+            public FileSystem getFS() {
+                return fs;
+            }
+        };
     }
 
-    static IOContext create(FileSystem fs, String homeDir, String workingDir) {
-
-        final GitContext gitContext = GitContext.actual();
-
+    public static IOContext fake() {
         return new IOContext() {
+            private final FileSystem fs = Jimfs
+                .newFileSystem(Configuration.unix());
 
             @Override
-            public void println() {
-                System.out.println();
-            }
-
-            @Override
-            public void println(final String x) {
-                System.out.println(x);
-            }
-
-            @Override
-            public Optional<String> readln() {
-                if (System.console() != null) {
-                    return Optional.of(System.console().readLine());
-                }
-                final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-                try {
-                    return Optional.of(reader.readLine());
-                } catch (final IOException e) {
-                    return Optional.empty();
-                }
-            }
-
-            @Override
-            public Path getUserHomeDirectory() {
-                return fs.getPath(homeDir);
-            }
-
-            @Override
-            public Path getWorkingDirectory() {
-                return fs.getPath(workingDir);
-            }
-
-            @Override
-            public Path getPath(String...path) {
-                String[] paths = Arrays
-                    .stream(path)
-                    .toArray(size -> new String[size]);
-                return fs.getPath("", paths);
-            }
-
-            @Override
-            public boolean isFile(final Path path) {
-                return Files.isRegularFile(path);
-            }
-
-            @Override
-            public boolean exists(final Path path) {
-                Preconditions.checkNotNull(path);
-                return Files.exists(path);
-            }
-
-            @Override
-            public Optional<IOException> createDirectory(final Path p)  {
-                Preconditions.checkNotNull(p);
-                final Path path = fs.getPath(p.toString());
-                try {
-                    Files.createDirectories(path);
-                } catch(IOException e) {
-                    return Optional.of(e);
-                }
-                if (!Files.isDirectory(path) || !Files.exists(path)) {
-                    return Optional.of(new IOException("Could not create a directory at " + path));
-                }
-                return Optional.empty();
-            }
-
-            @Override
-            public Either<IOException, String> readFile(final Path p) {
-                Preconditions.checkNotNull(p);
-                final Path path = fs.getPath(p.toString());
-                try {
-                    final String content = Files.readAllLines(fs.getPath(path.toString()), Charset.defaultCharset())
-                        .stream()
-                        .collect(Collectors.joining("\n"));
-                    return Either.right(content);
-                } catch (final IOException e) {
-                    return Either.left(e);
-                }
-            }
-
-            @Override
-            public Optional<IOException> writeFile(final Path p, final String content, final boolean overwrite) {
-                Preconditions.checkNotNull(p);
-                Preconditions.checkNotNull(content);
-                final Path path = fs.getPath(p.toString());
-                try {
-                    if (!overwrite && Files.exists(path)) {
-                        throw new IOException("There is already a file at " + path);
-                    }
-                    Files.write(path, ImmutableList.of(content), Charset.defaultCharset());
-                    return Optional.empty();
-                } catch (final IOException e) {
-                    return Optional.of(e);
-                }
-            }
-
-            @Override
-            public Optional<IOException> writeFile(final Path path, final String content) {
-                return writeFile(path, content, false);
-            }
-
-            @Override
-            public Either<IOException, ImmutableList<Path>> listFiles(final Path p) {
-                Preconditions.checkNotNull(p);
-                final Path path = fs.getPath(p.toString());
-                try (Stream<Path> paths = java.nio.file.Files.walk(path, 1, FileVisitOption.FOLLOW_LINKS)) {
-                    return Either.right(ImmutableList.copyOf(paths.collect(Collectors.toList())));
-                } catch (final IOException e) {
-                    return Either.left(e);
-                }
-            }
-
-            @Override
-            public GitContext git() {
-                return gitContext;
+            public FileSystem getFS() {
+                return fs;
             }
         };
     }
 }
+
+

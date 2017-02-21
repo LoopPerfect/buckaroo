@@ -103,6 +103,8 @@ public class RoutinesTest {
             Charset.defaultCharset()
         );
 
+        System.out.println(configPath.toString());
+
         assertEquals(
             Routines.loadConfig
                 .run(io)

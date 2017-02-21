@@ -52,10 +52,10 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(commit);
         return context -> {
-            context.git().clone(path.toFile(), commit.url);
-            context.git().checkout(path.toFile(), commit.url);
-            context.git().pull(path.toFile());
-            return context.git().status(path.toFile())
+            context.clone(path.toFile(), commit.url);
+            context.checkout(path.toFile(), commit.url);
+            context.pull(path.toFile());
+            return context.status(path.toFile())
                     .join(error -> Optional.of(new IOException(error)), x -> Optional.empty());
         };
     }
@@ -360,13 +360,13 @@ public final class Routines {
     private static final IO<Optional<Exception>> checkout(final Path localPath, final String branch) {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(branch);
-        return context -> context.git().checkout(localPath.toFile(), branch);
+        return context -> context.checkout(localPath.toFile(), branch);
     }
 
     private static final IO<Optional<Exception>> clone(final Path localPath, final String gitUrl) {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
-        return context -> context.git().clone(localPath.toFile(), gitUrl);
+        return context -> context.clone(localPath.toFile(), gitUrl);
     }
 
     public static final IO<Unit> upgrade(final RemoteCookBook cookBook) {
@@ -381,13 +381,13 @@ public final class Routines {
             context.println("Upgrading the Buckaroo recipes registry... ");
             // Try to checkout master...
             context.println("Switching to master... ");
-            final Optional<Exception> checkoutResult = context.git()
+            final Optional<Exception> checkoutResult = context
                     .checkout(recipesFolder.toFile(), "master");
             // If we fail, try to clone
             if (checkoutResult.isPresent()) {
                 context.println("Failed! ");
                 context.println("Cloning " + cookBook.url + "... ");
-                final Optional<Exception> cloneResult = context.git().clone(recipesFolder.toFile(), cookBook.url);
+                final Optional<Exception> cloneResult = context.clone(recipesFolder.toFile(), cookBook.url);
                 // If we fail, print an error and stop
                 if (cloneResult.isPresent()) {
                     context.println("Could not prepare the recipes folder. Perhaps you should delete it? ");
@@ -397,7 +397,7 @@ public final class Routines {
             } else {
                 // If we could checkout master, try to pull
                 context.println("Pulling from " + cookBook.url + "... ");
-                final Optional<Exception> pullResult = context.git().pull(recipesFolder.toFile());
+                final Optional<Exception> pullResult = context.pull(recipesFolder.toFile());
                 if (pullResult.isPresent()) {
                     context.println("We could not pull the latest recipes. ");
                     context.println(pullResult.get().toString());
