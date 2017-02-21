@@ -6,16 +6,17 @@ import com.loopperfect.buckaroo.Either;
 import org.eclipse.jgit.api.*;
 
 import java.io.File;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
 import java.util.Optional;
+
+import static org.eclipse.jgit.api.Git.cloneRepository;
 
 public interface GitContext {
 
-    default Optional<Exception> clone(final File localPath, final String gitUrl) {
+    default Optional<Exception> gitClone(final File localPath, final String gitUrl) {
 
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
+        
 
         try {
             final CloneCommand command = Git.cloneRepository()
@@ -29,7 +30,7 @@ public interface GitContext {
         return Optional.empty();
     }
 
-    default Optional<Exception> checkout(final File localPath, final String branch) {
+    default Optional<Exception> gitCheckout(final File localPath, final String branch) {
 
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(branch);
@@ -47,7 +48,7 @@ public interface GitContext {
         return Optional.empty();
     }
 
-    default Optional<Exception> pull(final File localPath) {
+    default Optional<Exception> gitPull(final File localPath) {
 
         Preconditions.checkNotNull(localPath);
 
@@ -62,7 +63,7 @@ public interface GitContext {
         return Optional.empty();
     }
 
-    default Either<Exception, Status> status(final File localPath) {
+    default Either<Exception, Status> gitStatus(final File localPath) {
 
         Preconditions.checkNotNull(localPath);
 

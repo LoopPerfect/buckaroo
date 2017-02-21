@@ -52,10 +52,10 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(commit);
         return context -> {
-            context.clone(path.toFile(), commit.url);
-            context.checkout(path.toFile(), commit.url);
-            context.pull(path.toFile());
-            return context.status(path.toFile())
+            context.gitClone(path.toFile(), commit.url);
+            context.gitCheckout(path.toFile(), commit.url);
+            context.gitPull(path.toFile());
+            return context.gitStatus(path.toFile())
                     .join(error -> Optional.of(new IOException(error)), x -> Optional.empty());
         };
     }
@@ -360,13 +360,13 @@ public final class Routines {
     private static final IO<Optional<Exception>> checkout(final Path localPath, final String branch) {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(branch);
-        return context -> context.checkout(localPath.toFile(), branch);
+        return context -> context.gitCheckout(localPath.toFile(), branch);
     }
 
     private static final IO<Optional<Exception>> clone(final Path localPath, final String gitUrl) {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
-        return context -> context.clone(localPath.toFile(), gitUrl);
+        return context -> context.gitClone(localPath.toFile(), gitUrl);
     }
 
     public static final IO<Unit> upgrade(final RemoteCookBook cookBook) {
@@ -379,15 +379,15 @@ public final class Routines {
                     cookBook.name.name);
             // Tell the user what we are up to...
             context.println("Upgrading the Buckaroo recipes registry... ");
-            // Try to checkout master...
+            // Try to gitCheckout master...
             context.println("Switching to master... ");
             final Optional<Exception> checkoutResult = context
-                    .checkout(recipesFolder.toFile(), "master");
-            // If we fail, try to clone
+                    .gitCheckout(recipesFolder.toFile(), "master");
+            // If we fail, try to gitClone
             if (checkoutResult.isPresent()) {
                 context.println("Failed! ");
                 context.println("Cloning " + cookBook.url + "... ");
-                final Optional<Exception> cloneResult = context.clone(recipesFolder.toFile(), cookBook.url);
+                final Optional<Exception> cloneResult = context.gitClone(recipesFolder.toFile(), cookBook.url);
                 // If we fail, print an error and stop
                 if (cloneResult.isPresent()) {
                     context.println("Could not prepare the recipes folder. Perhaps you should delete it? ");
@@ -395,11 +395,11 @@ public final class Routines {
                     return Unit.of();
                 }
             } else {
-                // If we could checkout master, try to pull
+                // If we could gitCheckout master, try to gitPull
                 context.println("Pulling from " + cookBook.url + "... ");
-                final Optional<Exception> pullResult = context.pull(recipesFolder.toFile());
+                final Optional<Exception> pullResult = context.gitPull(recipesFolder.toFile());
                 if (pullResult.isPresent()) {
-                    context.println("We could not pull the latest recipes. ");
+                    context.println("We could not gitPull the latest recipes. ");
                     context.println(pullResult.get().toString());
                     return Unit.of();
                 }
@@ -483,14 +483,14 @@ public final class Routines {
                                         return Unit.of();
                                     }
                                     final GitCommit gitCommit = versionToInstall.get().getValue().gitCommit;
-                                    // Let's pull it from git...
+                                    // Let's gitPull it from git...
                                     context.println("Fetching " + gitCommit.url + "... ");
                                     final Optional<IOException> installResult =
                                             install(dependency.getKey(),
                                                     versionToInstall.get().getKey(),
                                                     versionToInstall.get().getValue()).run(context);
                                     if (installResult.isPresent()) {
-                                        context.println("Failed to checkout " + gitCommit.commit + ". ");
+                                        context.println("Failed to gitCheckout " + gitCommit.commit + ". ");
                                         context.println(installResult.get().toString());
                                         return Unit.of();
                                     }
