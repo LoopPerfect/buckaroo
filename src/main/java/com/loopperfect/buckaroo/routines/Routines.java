@@ -33,17 +33,19 @@ public final class Routines {
         final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
         final Either<IOException, String> readFileResult = context.readFile(configPath);
         return readFileResult.join(
-                e -> Either.left(e),
-                file -> {
-                    try {
-                        final BuckarooConfig config = Serializers.gson().fromJson(file, BuckarooConfig.class);
-                        if(config == null)
-                            return Either.left(new IOException("invalid json"));
-                        return Either.right(config);
-                    } catch (final JsonParseException e) {
-                        return Either.left(new IOException(e));
-                    }
-                });
+            e -> Either.left(e),
+            file -> {
+                try {
+                    final BuckarooConfig config = Serializers.gson()
+                        .fromJson(file, BuckarooConfig.class);
+                    if(config == null)
+                        return Either.left(new IOException("invalid json"));
+                    return Either.right(config);
+                } catch (final JsonParseException e) {
+                    return Either.left(new IOException(e));
+                }
+            });
+
     };
 
     private static final IO<Optional<IOException>> checkout(final Path path, final GitCommit commit) {

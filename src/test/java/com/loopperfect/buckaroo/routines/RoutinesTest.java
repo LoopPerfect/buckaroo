@@ -15,6 +15,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -94,13 +95,15 @@ public class RoutinesTest {
             ".buckaroo/",
             "config.json");
 
-        final String content = "{\"cookBooks:\"[]}";
+        final String content = "{" +
+            "\"cookBooks\":[]" +
+            "}";
 
         Files.createDirectories(configPath.getParent());
         Files.write(
             configPath,
             ImmutableList.of(content),
-            StandardCharsets.UTF_8
+            Charset.defaultCharset()
         );
 
         assertEquals(
