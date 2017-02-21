@@ -2,11 +2,15 @@ package com.loopperfect.buckaroo.routines;
 
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.GitCommit;
 import com.loopperfect.buckaroo.Routine;
 import com.loopperfect.buckaroo.io.GitContext;
 import com.loopperfect.buckaroo.io.IOContext;
+import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -15,7 +19,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 
 /**
@@ -67,9 +75,11 @@ public class RoutinesTest {
         IOException error = new IOException("foo");
         when(p.toString()).thenReturn("/");
         when(io.getUserHomeDirectory()).thenReturn(p);
-        when(io.readFile(Mockito.any())).thenReturn(Either.right("{" +
-            "\"cookBooks\":[]" +
-            "}"));
+        when(io.readFile(Mockito.any())).thenReturn(
+            Either.right("{" +
+                "\"cookBooks\":[]" +
+                "}")
+        );
 
         assertEquals(
             Routines.loadConfig
@@ -80,13 +90,31 @@ public class RoutinesTest {
     }
 
     @Test
-    public void upgrade() throws Exception {
+    public void loadConfigFromFakeFs() throws Exception {
 
-    }
+        FileSystem fs = Jimfs.newFileSystem(Configuration.unix());
+        IOContext io = IOContext.actual(fs);
+        final Path configPath = fs.getPath(
+            io.getUserHomeDirectory().toString(),
+            ".buckaroo/",
+            "config.json");
 
-    @Test
-    public void uninstallRecipe() throws Exception {
+        final String content = "{\"cookBooks:\"[]}";
 
+        java.nio.file.Files.createDirectories(configPath.getParent());
+        java.nio.file.Files.write(
+            configPath,
+            ImmutableList.of(content),
+            StandardCharsets.UTF_8
+        );
+
+
+        assertEquals(
+            Routines.loadConfig
+                .run(io)
+                .join(x->null, x->x)
+                .cookBooks,
+            ImmutableList.of());
     }
 
 }
