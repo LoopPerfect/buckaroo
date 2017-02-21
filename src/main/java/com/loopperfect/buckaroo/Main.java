@@ -29,7 +29,7 @@ public final class Main {
             final CLICommand command = commandParser.parse(String.join(" ", args));
 
             FileSystem fs = FileSystems.getDefault();
-            command.routine().run(IOContext.actual(fs));
+            command.routine().run(IOContext.actual());
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());

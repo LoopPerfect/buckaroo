@@ -6,6 +6,8 @@ import com.loopperfect.buckaroo.Either;
 import org.eclipse.jgit.api.*;
 
 import java.io.File;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.util.Optional;
 
 public interface GitContext {

@@ -16,8 +16,6 @@ import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -88,9 +86,8 @@ public class RoutinesTest {
     @Test
     public void loadConfigFromFakeFs() throws Exception {
 
-        FileSystem fs = Jimfs.newFileSystem(Configuration.unix());
-        IOContext io = IOContext.actual(fs);
-        final Path configPath = fs.getPath(
+        IOContext io = IOContext.fake();
+        final Path configPath = io.getPath(
             io.getUserHomeDirectory().toString(),
             ".buckaroo/",
             "config.json");

@@ -2,7 +2,9 @@ package com.loopperfect.buckaroo.io;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import java.nio.file.Files;
+
+import java.nio.file.*;
+
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
@@ -11,10 +13,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,6 +29,8 @@ public interface IOContext {
     Path getUserHomeDirectory();
 
     Path getWorkingDirectory();
+
+    Path getPath(String...path);
 
     boolean isFile(final Path path);
 
@@ -47,7 +48,20 @@ public interface IOContext {
 
     GitContext git();
 
-    static IOContext actual(FileSystem fs) {
+    static IOContext actual() {
+        return create(
+            FileSystems.getDefault(),
+            System.getProperty("user.home"),
+            System.getProperty("user.dir"));
+    }
+    static IOContext fake() {
+        return create(
+            Jimfs.newFileSystem(Configuration.unix()),
+            System.getProperty("user.home"),
+            System.getProperty("user.dir"));
+    }
+
+    static IOContext create(FileSystem fs, String homeDir, String workingDir) {
 
         final GitContext gitContext = GitContext.actual();
 
@@ -78,12 +92,20 @@ public interface IOContext {
 
             @Override
             public Path getUserHomeDirectory() {
-                return fs.getPath(System.getProperty("user.home"));
+                return fs.getPath(homeDir);
             }
 
             @Override
             public Path getWorkingDirectory() {
-                return fs.getPath(System.getProperty("user.dir"));
+                return fs.getPath(workingDir);
+            }
+
+            @Override
+            public Path getPath(String...path) {
+                String[] paths = Arrays
+                    .stream(path)
+                    .toArray(size -> new String[size]);
+                return fs.getPath("", paths);
             }
 
             @Override
@@ -98,8 +120,9 @@ public interface IOContext {
             }
 
             @Override
-            public Optional<IOException> createDirectory(final Path path)  {
-                Preconditions.checkNotNull(path);
+            public Optional<IOException> createDirectory(final Path p)  {
+                Preconditions.checkNotNull(p);
+                final Path path = fs.getPath(p.toString());
                 try {
                     Files.createDirectories(path);
                 } catch(IOException e) {
@@ -112,8 +135,9 @@ public interface IOContext {
             }
 
             @Override
-            public Either<IOException, String> readFile(final Path path) {
-                Preconditions.checkNotNull(path);
+            public Either<IOException, String> readFile(final Path p) {
+                Preconditions.checkNotNull(p);
+                final Path path = fs.getPath(p.toString());
                 try {
                     final String content = Files.readAllLines(fs.getPath(path.toString()), Charset.defaultCharset())
                         .stream()
@@ -146,8 +170,9 @@ public interface IOContext {
             }
 
             @Override
-            public Either<IOException, ImmutableList<Path>> listFiles(final Path path) {
-                Preconditions.checkNotNull(path);
+            public Either<IOException, ImmutableList<Path>> listFiles(final Path p) {
+                Preconditions.checkNotNull(p);
+                final Path path = fs.getPath(p.toString());
                 try (Stream<Path> paths = java.nio.file.Files.walk(path, 1, FileVisitOption.FOLLOW_LINKS)) {
                     return Either.right(ImmutableList.copyOf(paths.collect(Collectors.toList())));
                 } catch (final IOException e) {
