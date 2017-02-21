@@ -8,7 +8,7 @@ import java.util.Optional;
 /**
  * Created by gaetano on 21/02/17.
  */
-public interface SystemContext {
+public interface ConsoleContext {
     default void println() {
         System.out.println();
     }

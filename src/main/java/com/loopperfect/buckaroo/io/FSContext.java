@@ -19,6 +19,8 @@ import java.util.stream.Stream;
 /**
  * Created by gaetano on 21/02/17.
  */
+
+@FunctionalInterface
 public interface FSContext {
 
     FileSystem getFS();
