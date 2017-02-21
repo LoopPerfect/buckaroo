@@ -25,6 +25,14 @@ public final class Either<L, R> {
         this.r = r;
     }
 
+    public Optional<L> left() {
+        return join(Optional::of, x -> Optional.empty());
+    }
+
+    public Optional<R> right() {
+        return join(x -> Optional.empty(), Optional::of);
+    }
+
     public <T, U> Either<T, U> map(final Function<L, T> f, final Function<R, U> g) {
         Preconditions.checkNotNull(f);
         Preconditions.checkNotNull(g);

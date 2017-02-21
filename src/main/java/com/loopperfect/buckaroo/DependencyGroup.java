@@ -23,6 +23,11 @@ public final class DependencyGroup {
         return dependencies.isEmpty();
     }
 
+    public boolean requires(final Identifier identifier) {
+        Preconditions.checkNotNull(identifier);
+        return dependencies.containsKey(identifier);
+    }
+
     public ImmutableList<Dependency> entries() {
         return dependencies.entrySet()
                 .stream()

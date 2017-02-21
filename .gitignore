@@ -57,6 +57,7 @@ fabric.properties
 buck-out/
 .buckd/
 .buckconfig
+.buckconfig.local
 
 .idea/
 pom.xml
@@ -65,3 +66,4 @@ buckaroo.iml
 buckaroo.json
 /buckaroo/
 /target/
+BUCKAROO_DEPS
