@@ -8,11 +8,9 @@ import org.eclipse.jgit.api.*;
 import java.io.File;
 import java.util.Optional;
 
-import static org.eclipse.jgit.api.Git.cloneRepository;
-
 public interface GitContext {
 
-    default Optional<Exception> gitClone(final File localPath, final String gitUrl) {
+    default Optional<Exception> clone(final File localPath, final String gitUrl) {
 
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
@@ -30,7 +28,7 @@ public interface GitContext {
         return Optional.empty();
     }
 
-    default Optional<Exception> gitCheckout(final File localPath, final String branch) {
+    default Optional<Exception> checkout(final File localPath, final String branch) {
 
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(branch);
@@ -48,7 +46,7 @@ public interface GitContext {
         return Optional.empty();
     }
 
-    default Optional<Exception> gitPull(final File localPath) {
+    default Optional<Exception> pull(final File localPath) {
 
         Preconditions.checkNotNull(localPath);
 
@@ -63,7 +61,7 @@ public interface GitContext {
         return Optional.empty();
     }
 
-    default Either<Exception, Status> gitStatus(final File localPath) {
+    default Either<Exception, Status> status(final File localPath) {
 
         Preconditions.checkNotNull(localPath);
 
@@ -74,5 +72,33 @@ public interface GitContext {
         } catch (final Exception e) {
             return Either.left(e);
         }
+    }
+
+    static GitContext actual() {
+        return new GitContext(){};
+    }
+
+    static GitContext fake(){
+        return new GitContext() {
+            @Override
+            public Optional<Exception> clone(final File localPath, final String gitUrl) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<Exception> checkout(final File localPath, final String branch) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<Exception> pull(final File localPath) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Either<Exception, Status> status(final File localPath) {
+                return null;
+            }
+        };
     }
 }

@@ -30,8 +30,8 @@ public final class Routines {
 
     public static final IO<Either<IOException, BuckarooConfig>> loadConfig = context -> {
         Preconditions.checkNotNull(context);
-        final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
-        final Either<IOException, String> readFileResult = context.readFile(configPath);
+        final Path configPath = Paths.get(context.fs().getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
+        final Either<IOException, String> readFileResult = context.fs().readFile(configPath);
         return readFileResult.join(
             e -> Either.left(e),
             file -> {
@@ -52,10 +52,10 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(commit);
         return context -> {
-            context.gitClone(path.toFile(), commit.url);
-            context.gitCheckout(path.toFile(), commit.url);
-            context.gitPull(path.toFile());
-            return context.gitStatus(path.toFile())
+            context.git().clone(path.toFile(), commit.url);
+            context.git().checkout(path.toFile(), commit.url);
+            context.git().pull(path.toFile());
+            return context.git().status(path.toFile())
                     .join(error -> Optional.of(new IOException(error)), x -> Optional.empty());
         };
     }
@@ -67,7 +67,7 @@ public final class Routines {
         return context -> {
             Preconditions.checkNotNull(context);
             final Path clonePath = Paths.get(
-                    context.getWorkingDirectory().toString(),
+                    context.fs().getWorkingDirectory().toString(),
                     "/buckaroo/",
                     name.name,
                     "/",
@@ -80,7 +80,7 @@ public final class Routines {
     private static final Either<IOException, Recipe> readRecipe(final IOContext context, final Path path) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(context);
-        return context.readFile(path).join(
+        return context.fs().readFile(path).join(
                 x -> Either.left(x),
                 x -> {
                     try {
@@ -96,8 +96,8 @@ public final class Routines {
         Preconditions.checkNotNull(cookBook);
         return context -> {
                 Preconditions.checkNotNull(context);
-                final Path recipesDirectory = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", cookBook.name,"/recipes");
-                final Either<IOException, ImmutableList<Path>> listFiles = context.listFiles(recipesDirectory);
+                final Path recipesDirectory = Paths.get(context.fs().getUserHomeDirectory().toString(), ".buckaroo/", cookBook.name,"/recipes");
+                final Either<IOException, ImmutableList<Path>> listFiles = context.fs().listFiles(recipesDirectory);
                 return listFiles.map(
                         x -> x,
                         x -> ImmutableList.copyOf(x
@@ -131,7 +131,7 @@ public final class Routines {
         Preconditions.checkNotNull(cookBook);
         return context -> {
             Preconditions.checkNotNull(context);
-            return Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", cookBook.name, "/recipes/");
+            return Paths.get(context.fs().getUserHomeDirectory().toString(), ".buckaroo/", cookBook.name, "/recipes/");
         };
     }
 
@@ -158,7 +158,7 @@ public final class Routines {
                         y -> y.stream()
                                 .filter(z -> Files.getFileExtension(z.toString()).equalsIgnoreCase("json"))
                                 .distinct()
-                                .map(z -> context.readFile(z)
+                                .map(z -> context.fs().readFile(z)
                                         .rightProjection(w -> Serializers.gson().fromJson(w, Recipe.class))
                                         .join(w -> "Could not load " + z.getFileName(), w -> formatRecipe(w)))
                                 .collect(Collectors.joining("\n"))))
@@ -168,12 +168,12 @@ public final class Routines {
     public static final IO<Unit> listRecipes = context -> {
         Preconditions.checkNotNull(context);
         Preconditions.checkNotNull(context);
-        final Path configPath = Paths.get(context.getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
-        final Either<IOException, String> readFileResult = context.readFile(configPath);
+        final Path configPath = Paths.get(context.fs().getUserHomeDirectory().toString(), ".buckaroo/", "config.json");
+        final Either<IOException, String> readFileResult = context.fs().readFile(configPath);
         return readFileResult.join(
                 error -> {
-                    context.println("Error reading config.json");
-                    context.println(error.toString());
+                    context.console().println("Error reading config.json");
+                    context.console().println(error.toString());
                     return Unit.of();
                 },
                 file -> {
@@ -183,8 +183,8 @@ public final class Routines {
                             listRecipesForCookBook(cookBook.name).run(context);
                         }
                     } catch (final JsonParseException e) {
-                        context.println("Error parsing config.json");
-                        context.println(e.toString());
+                        context.console().println("Error parsing config.json");
+                        context.console().println(e.toString());
                     }
                     return Unit.of();
                 });
@@ -201,7 +201,7 @@ public final class Routines {
             .map(x -> x.get());
 
     // TODO: Get license
-    public static final IO<Unit> createProjectSkeleton = IO.of(context -> context.getWorkingDirectory())
+    public static final IO<Unit> createProjectSkeleton = IO.of(context -> context.fs().getWorkingDirectory())
             .flatMap(x -> IO.println("Creating a project in " + x + "... "))
             .flatMap(x -> IO.println("What is the name of your project? "))
             .then(requestIdentifier)
@@ -219,18 +219,18 @@ public final class Routines {
                                     IO.println(y.get()) :
                                     IO.println("Done. ")
                                             .then(IO.println("Creating C++ boiler-plate... "))
-                                            .then(context -> context.createDirectory(
-                                                    Paths.get(context.getWorkingDirectory().toString(), "src")))
-                                            .then(context -> context.createDirectory(
-                                                    Paths.get(context.getWorkingDirectory().toString(), "include")))
+                                            .then(context -> context.fs().createDirectory(
+                                                    Paths.get(context.fs().getWorkingDirectory().toString(), "src")))
+                                            .then(context -> context.fs().createDirectory(
+                                                    Paths.get(context.fs().getWorkingDirectory().toString(), "include")))
                                             .then(IO.value(Try.safe(() -> Resources.toString(
                                                     Resources.getResource("com.loopperfect.buckaroo/EmptyMain.cpp"),
                                                     Charset.defaultCharset()), IOException.class)))
                                             .flatMap(emptyMain -> emptyMain.join(
                                                     error -> IO.println("Could not generate main.cpp. ").then(IO.println(error.toString())),
                                                     main -> context -> {
-                                                        context.writeFile(
-                                                                Paths.get(context.getWorkingDirectory().toString(), "src", "main.cpp"),
+                                                        context.fs().writeFile(
+                                                                Paths.get(context.fs().getWorkingDirectory().toString(), "src", "main.cpp"),
                                                                 main);
                                                         return Unit.of();
                                                     }))
@@ -250,7 +250,7 @@ public final class Routines {
                             }));
 
     private static final IO<Optional<IOException>> writeProjectFile(final Project project) {
-            return context -> context.writeFile(
+            return context -> context.fs().writeFile(
                     Paths.get("buckaroo.json"),
                     Serializers.gson(true).toJson(project),
                     true);
@@ -326,11 +326,11 @@ public final class Routines {
                                         final Project modifiedProject = project.addDependency(dependency);
                                         // Write the project file; print done or error
                                         return context -> {
-                                            context.println("Installing " + projectToInstall.name + "@" + versionToUse.get() + "... ");
+                                            context.console().println("Installing " + projectToInstall.name + "@" + versionToUse.get() + "... ");
                                             final Optional<IOException> writeProjectFileResult = writeProjectFile(modifiedProject).run(context);
                                             if (writeProjectFileResult.isPresent()) {
-                                                context.println("Could not write the project file. ");
-                                                context.println(writeProjectFileResult.get().toString());
+                                                context.console().println("Could not write the project file. ");
+                                                context.console().println(writeProjectFileResult.get().toString());
                                                 return Unit.of();
                                             }
                                             final RecipeVersion recipeVersionToInstall = recipes.stream()
@@ -345,10 +345,10 @@ public final class Routines {
                                                     install(projectToInstall, versionToUse.get(), recipeVersionToInstall)
                                                             .run(context);
                                             if (checkoutResult.isPresent()) {
-                                                context.println("Could not fetch " + projectToInstall.name + "@" + versionToUse.get() + ". ");
-                                                context.println(checkoutResult.get().toString());
+                                                context.console().println("Could not fetch " + projectToInstall.name + "@" + versionToUse.get() + ". ");
+                                                context.console().println(checkoutResult.get().toString());
                                             } else {
-                                                context.println("Done! ");
+                                                context.console().println("Done! ");
                                             }
                                             return Unit.of();
                                         };
@@ -360,13 +360,13 @@ public final class Routines {
     private static final IO<Optional<Exception>> checkout(final Path localPath, final String branch) {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(branch);
-        return context -> context.gitCheckout(localPath.toFile(), branch);
+        return context -> context.git().checkout(localPath.toFile(), branch);
     }
 
     private static final IO<Optional<Exception>> clone(final Path localPath, final String gitUrl) {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
-        return context -> context.gitClone(localPath.toFile(), gitUrl);
+        return context -> context.git().clone(localPath.toFile(), gitUrl);
     }
 
     public static final IO<Unit> upgrade(final RemoteCookBook cookBook) {
@@ -374,37 +374,37 @@ public final class Routines {
         return context -> {
             Preconditions.checkNotNull(context);
             final Path recipesFolder = Paths.get(
-                    context.getUserHomeDirectory().toString(),
+                    context.fs().getUserHomeDirectory().toString(),
                     ".buckaroo/",
                     cookBook.name.name);
             // Tell the user what we are up to...
-            context.println("Upgrading the Buckaroo recipes registry... ");
+            context.console().println("Upgrading the Buckaroo recipes registry... ");
             // Try to gitCheckout master...
-            context.println("Switching to master... ");
+            context.console().println("Switching to master... ");
             final Optional<Exception> checkoutResult = context
-                    .gitCheckout(recipesFolder.toFile(), "master");
+                    .git().checkout(recipesFolder.toFile(), "master");
             // If we fail, try to gitClone
             if (checkoutResult.isPresent()) {
-                context.println("Failed! ");
-                context.println("Cloning " + cookBook.url + "... ");
-                final Optional<Exception> cloneResult = context.gitClone(recipesFolder.toFile(), cookBook.url);
+                context.console().println("Failed! ");
+                context.console().println("Cloning " + cookBook.url + "... ");
+                final Optional<Exception> cloneResult = context.git().clone(recipesFolder.toFile(), cookBook.url);
                 // If we fail, print an error and stop
                 if (cloneResult.isPresent()) {
-                    context.println("Could not prepare the recipes folder. Perhaps you should delete it? ");
-                    context.println(cloneResult.get().toString());
+                    context.console().println("Could not prepare the recipes folder. Perhaps you should delete it? ");
+                    context.console().println(cloneResult.get().toString());
                     return Unit.of();
                 }
             } else {
                 // If we could gitCheckout master, try to gitPull
-                context.println("Pulling from " + cookBook.url + "... ");
-                final Optional<Exception> pullResult = context.gitPull(recipesFolder.toFile());
+                context.console().println("Pulling from " + cookBook.url + "... ");
+                final Optional<Exception> pullResult = context.git().pull(recipesFolder.toFile());
                 if (pullResult.isPresent()) {
-                    context.println("We could not gitPull the latest recipes. ");
-                    context.println(pullResult.get().toString());
+                    context.console().println("We could not gitPull the latest recipes. ");
+                    context.console().println(pullResult.get().toString());
                     return Unit.of();
                 }
             }
-            context.println("Success!");
+            context.console().println("Success!");
             return Unit.of();
         };
     }
@@ -413,23 +413,23 @@ public final class Routines {
         Preconditions.checkNotNull(recipe);
         return context -> {
             Preconditions.checkNotNull(context);
-            context.println("Uninstalling " + recipe.name + "... ");
+            context.console().println("Uninstalling " + recipe.name + "... ");
             final Either<IOException, Project> projectFile = readProjectFile.run(context);
             return projectFile.join(
                     error -> {
-                        context.println("Could not load buckaroo.json. Are you in the right folder? ");
+                        context.console().println("Could not load buckaroo.json. Are you in the right folder? ");
                         return Unit.of();
                     },
                     project -> {
                         if (project.dependencies.containsKey(recipe)) {
                             final SemanticVersionRequirement versionRequirement = project.dependencies.get(recipe);
-                            context.println("Found a dependency on " + recipe.name + " " + versionRequirement.encode());
+                            context.console().println("Found a dependency on " + recipe.name + " " + versionRequirement.encode());
                             final Project modifiedProject = project.removeDependency(recipe);
-                            context.println("Writing the modified project file... ");
+                            context.console().println("Writing the modified project file... ");
                             writeProjectFile(modifiedProject).run(context);
-                            context.println("Done.");
+                            context.console().println("Done.");
                         } else {
-                            context.println("Could not find " + recipe.name + " in this project's dependencies. ");
+                            context.console().println("Could not find " + recipe.name + " in this project's dependencies. ");
                         }
                         return Unit.of();
                     });
@@ -444,11 +444,11 @@ public final class Routines {
         return projectFile.join(
                 // No; show an error message
                 error -> {
-                    context.println("Could not load buckaroo.json. Are you in the right folder? ");
+                    context.console().println("Could not load buckaroo.json. Are you in the right folder? ");
                     return Unit.of();
                 },
                 project -> {
-                    context.println("Loaded the buckaroo.json file. ");
+                    context.console().println("Loaded the buckaroo.json file. ");
                     // Load the recipes file
                     final Either<IOException, ImmutableList<Either<IOException, Recipe>>> recipesFile =
                             loadRecipes.run(context);
@@ -457,7 +457,7 @@ public final class Routines {
                             // Nope
                             error -> {
                                 // Show an error
-                                context.println("Could not load the recipes file. ");
+                                context.console().println("Could not load the recipes file. ");
                                 return Unit.of();
                             },
                             // Yes!
@@ -478,23 +478,23 @@ public final class Routines {
                                             .sorted(Comparator.comparing(Map.Entry::getKey))
                                             .findFirst();
                                     if (!versionToInstall.isPresent()) {
-                                        context.println("Could not find a version of " + dependency.getKey() +
+                                        context.console().println("Could not find a version of " + dependency.getKey() +
                                                 " that satisfies " + dependency.getValue().encode() + ". ");
                                         return Unit.of();
                                     }
                                     final GitCommit gitCommit = versionToInstall.get().getValue().gitCommit;
                                     // Let's gitPull it from git...
-                                    context.println("Fetching " + gitCommit.url + "... ");
+                                    context.console().println("Fetching " + gitCommit.url + "... ");
                                     final Optional<IOException> installResult =
                                             install(dependency.getKey(),
                                                     versionToInstall.get().getKey(),
                                                     versionToInstall.get().getValue()).run(context);
                                     if (installResult.isPresent()) {
-                                        context.println("Failed to gitCheckout " + gitCommit.commit + ". ");
-                                        context.println(installResult.get().toString());
+                                        context.console().println("Failed to gitCheckout " + gitCommit.commit + ". ");
+                                        context.console().println(installResult.get().toString());
                                         return Unit.of();
                                     }
-                                    context.println("Done. ");
+                                    context.console().println("Done. ");
                                 }
                                 return Unit.of();
                             });
@@ -503,11 +503,11 @@ public final class Routines {
 
     public static final IO<Unit> generateBuckFile = context -> {
         Preconditions.checkNotNull(context);
-        context.println("Generating BUCK file... ");
+        context.console().println("Generating BUCK file... ");
         final Either<IOException, Project> projectFile = readProjectFile.run(context);
         return projectFile.join(
                 error -> {
-                    context.println("Could not load buckaroo.json. Are you in the right folder? ");
+                    context.console().println("Could not load buckaroo.json. Are you in the right folder? ");
                     return Unit.of();
                 },
                 project -> {
@@ -517,8 +517,8 @@ public final class Routines {
                                     .flatMap(y -> y.join(z -> Stream.empty(), z -> Stream.of(z)))
                                     .collect(ImmutableList.toImmutableList()));
                     return loadRecipesResult.join(error -> {
-                        context.println("Could not load the recipes. ");
-                        context.println(error.toString());
+                        context.console().println("Could not load the recipes. ");
+                        context.console().println(error.toString());
                         return Unit.of();
                     }, recipes -> {
                         final ImmutableMap<Identifier, Optional<SemanticVersion>> resolvedDependencies =
@@ -532,18 +532,18 @@ public final class Routines {
                                         .stream()
                                         .collect(ImmutableMap.toImmutableMap(x -> x.getKey(), x -> x.getValue().get())));
                         return buckFile.join(error -> {
-                            context.println("Could not generate the BUCK file! ");
-                            context.println(error.toString());
+                            context.console().println("Could not generate the BUCK file! ");
+                            context.console().println(error.toString());
                             return Unit.of();
                         }, buckString -> {
-                            final Path path = Paths.get(context.getWorkingDirectory().toString(), "BUCK");
-                            final Optional<IOException> writeResult = context.writeFile(path, buckString);
+                            final Path path = Paths.get(context.fs().getWorkingDirectory().toString(), "BUCK");
+                            final Optional<IOException> writeResult = context.fs().writeFile(path, buckString);
                             if (writeResult.isPresent()) {
-                                context.println("Could not write the BUCK file.");
-                                context.println(writeResult.get().toString());
+                                context.console().println("Could not write the BUCK file.");
+                                context.console().println(writeResult.get().toString());
                                 return Unit.of();
                             }
-                            context.println("Done. ");
+                            context.console().println("Done. ");
                             return Unit.of();
                         });
                     });
@@ -555,9 +555,9 @@ public final class Routines {
                     error -> IO.println("Error loading config.json").then(IO.println(error)),
                     config -> context -> {
                         for (final RemoteCookBook cookBook : config.cookBooks) {
-                            context.println(cookBook.name.name);
-                            context.println(cookBook.url);
-                            context.println();
+                            context.console().println(cookBook.name.name);
+                            context.console().println(cookBook.url);
+                            context.console().println();
                         }
                         return Unit.of();
                     }));

@@ -93,7 +93,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(x);
         return context -> {
             Preconditions.checkNotNull(context);
-            context.println(x.toString());
+            context.console().println(x.toString());
             return Unit.of();
         };
     }
@@ -101,7 +101,7 @@ public interface IO<T> {
     static IO<Optional<String>> read() {
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.readln();
+            return context.console().readln();
         };
     }
 
@@ -109,7 +109,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.createDirectory(path);
+            return context.fs().createDirectory(path);
         };
     }
 
@@ -118,7 +118,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(content);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.writeFile(path, content);
+            return context.fs().writeFile(path, content);
         };
     }
 
@@ -126,7 +126,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.readFile(path);
+            return context.fs().readFile(path);
         };
     }
 
@@ -134,7 +134,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.listFiles(path);
+            return context.fs().listFiles(path);
         };
     }
 

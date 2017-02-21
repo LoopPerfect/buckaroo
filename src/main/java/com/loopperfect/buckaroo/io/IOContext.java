@@ -6,30 +6,45 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 
 
-public interface IOContext
-    extends GitContext, ConsoleContext, FSContext {
+public interface IOContext {
 
-    public static IOContext actual() {
-        return new IOContext(){
-            private final FileSystem fs = FileSystems.getDefault();
+    FSContext fs();
+    GitContext git();
+    ConsoleContext console();
+
+    static IOContext create(final FSContext fs, final GitContext git, final ConsoleContext console) {
+        return new IOContext() {
+            @Override
+            public FSContext fs() {
+                return fs;
+            }
 
             @Override
-            public FileSystem getFS() {
-                return fs;
+            public GitContext git() {
+                return git;
+            }
+
+            @Override
+            public ConsoleContext console() {
+                return console;
             }
         };
     }
 
-    public static IOContext fake() {
-        return new IOContext() {
-            private final FileSystem fs = Jimfs
-                .newFileSystem(Configuration.unix());
+    public static IOContext actual() {
+        return create(
+            FSContext.actual(),
+            GitContext.actual(),
+            ConsoleContext.actual()
+        );
+    }
 
-            @Override
-            public FileSystem getFS() {
-                return fs;
-            }
-        };
+    public static IOContext fake() {
+        return create(
+            FSContext.fake(),
+            GitContext.fake(),
+            ConsoleContext.fake()
+        );
     }
 }
 

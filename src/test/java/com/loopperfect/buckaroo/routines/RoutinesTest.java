@@ -12,8 +12,10 @@ import org.mockito.Mockito;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
+import java.io.IOError;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -26,69 +28,55 @@ import java.nio.file.Path;
 public class RoutinesTest {
     @Test
     public void loadConfigReadFileFailed() throws Exception {
-        IOContext io = mock(IOContext.class);
-        Path p = mock(Path.class);
 
-        IOException error = new IOException("foo");
-        when(p.toString()).thenReturn("/");
-        when(io.getUserHomeDirectory()).thenReturn(p);
-        when(io.readFile(Mockito.any())).thenReturn(Either.left(error));
+        IOContext io = IOContext.fake();
 
-        assertEquals(
+        Path path = io.fs().getPath(
+            io.fs().getUserHomeDirectory().toString(),
+            ".buckaroo",
+            "config.json"
+        );
+
+        io.fs().createDirectory(path.getParent());
+
+        assertTrue(
             Routines
                 .loadConfig
                 .run(io)
-                .join(x->x, x->null),
-            error
+                .join(x->x, x->null) instanceof java.nio.file.NoSuchFileException
+
         );
     }
 
     @Test
     public void loadConfigParsingInvalidString() throws Exception {
-        IOContext io = mock(IOContext.class);
-        Path p = mock(Path.class);
-
-        when(p.toString()).thenReturn("/");
-        when(io.getUserHomeDirectory()).thenReturn(p);
-        when(io.readFile(Mockito.any())).thenReturn(Either.right(""));
-
-        //TODO: check type of IOException
-        assertNotNull(
-            Routines.loadConfig
-                .run(io)
-                .join(x->x, x->null)
-        );
-
-    }
-
-    @Test
-    public void loadConfigParsingEmptyCookbook() throws Exception {
-        IOContext io = mock(IOContext.class);
-        Path p = mock(Path.class);
-
-        IOException error = new IOException("foo");
-        when(p.toString()).thenReturn("/");
-        when(io.getUserHomeDirectory()).thenReturn(p);
-        when(io.readFile(Mockito.any())).thenReturn(
-            Either.right("{" +
-                "\"cookBooks\":[]" +
-                "}")
-        );
-
-        assertEquals(
-            Routines.loadConfig
-                .run(io)
-                .join(x->null, x->x)
-                .cookBooks,
-            ImmutableList.of());
-    }
-
-    @Test
-    public void loadConfigFromFakeFs() throws Exception {
 
         IOContext io = IOContext.fake();
-        final Path configPath = io.getPath(
-            io.getUserHomeDirectory().toString(),
+
+        Path path = io.fs().getPath(
+            io.fs().getUserHomeDirectory().toString(),
+            ".buckaroo",
+            "config.json"
+        );
+
+        io.fs().createDirectory(path.getParent());
+        io.fs().writeFile(path, "");
+
+        assertTrue(
+            Routines
+                .loadConfig
+                .run(io)
+                .join(x -> x, x -> null) != null
+
+        );
+    }
+
+    @Test
+    public void loadConfigParsesEmptsCoockbook() throws Exception {
+
+        IOContext io = IOContext.fake();
+        final Path configPath = io.fs().getPath(
+            io.fs().getUserHomeDirectory().toString(),
             ".buckaroo/",
             "config.json");
 
