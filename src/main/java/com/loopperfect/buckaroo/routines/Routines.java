@@ -37,6 +37,8 @@ public final class Routines {
                 file -> {
                     try {
                         final BuckarooConfig config = Serializers.gson().fromJson(file, BuckarooConfig.class);
+                        if(config == null)
+                            return Either.left(new IOException("invalid json"));
                         return Either.right(config);
                     } catch (final JsonParseException e) {
                         return Either.left(new IOException(e));
@@ -68,7 +70,8 @@ public final class Routines {
                     name.name,
                     "/",
                     semanticVersion.toString());
-            return checkout(clonePath, recipeVersion.gitCommit).run(context);
+            return checkout(clonePath, recipeVersion.gitCommit)
+                .run(context);
         };
     }
 

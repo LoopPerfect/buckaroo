@@ -104,8 +104,7 @@ public interface IOContext {
                 return Optional.empty();
             }
 
-            @Override
-            public Either<IOException, String> readFile(final Path path) {
+            @Override            public Either<IOException, String> readFile(final Path path) {
                 Preconditions.checkNotNull(path);
                 try {
                     final String content = Files.asCharSource(path.toFile(), Charset.defaultCharset()).read();

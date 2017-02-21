@@ -31,7 +31,7 @@ public final class DependencyResolver {
 
         Stack< Project > todo = new Stack<>();
         Set< Identifier > seen = new HashSet<>();
-        HashMap< Project, SemanticVersion > deps = new HashMap<>(); //todo: extend to  Set<SemanticVersion> and narrow down using Requirements...
+        HashMap< Project, SemanticVersion > deps = new HashMap<>(); //TODO: extend to Set<SemanticVersion> and narrow down using Requirements...
         List<DependencyResolverException> unresolved = new ArrayList<>();
         todo.push(p);
         seen.add(p.name);

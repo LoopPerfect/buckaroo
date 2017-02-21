@@ -20,5 +20,6 @@
     <orderEntry type="library" name="library_project_root_jparsec" level="project" />
     <orderEntry type="library" scope="TEST" name="library_project_root_junit" level="project" />
     <orderEntry type="library" name="library_project_root_mustache" level="project" />
+    <orderEntry type="library" name="org.mockito:mockito-core:2.7.5" level="project" />
   </component>
 </module>
