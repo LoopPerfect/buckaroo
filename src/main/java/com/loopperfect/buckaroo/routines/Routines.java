@@ -105,6 +105,35 @@ public final class Routines {
         };
     }
 
+    private static IO<Either<IOException, CookBook>> loadCookBook(final RemoteCookBook cookBook) {
+        Preconditions.checkNotNull(cookBook);
+        return IO.of(context -> Paths.get(
+                context.getUserHomeDirectory().toString(),
+                ".buckaroo/",
+                cookBook.name.name,
+                "/recipes"))
+                .flatMap(recipesDirectory -> context -> context.listFiles(recipesDirectory).rightProjection(
+                        x -> CookBook.of(x.stream()
+                                .filter(Routines::isJsonFile)
+                                .map(Path::normalize)
+                                .distinct()
+                                .map(i -> readRecipe(context, i))
+                                .flatMap(i -> i.join(j -> Stream.empty(), Stream::of))
+                                .collect(ImmutableSet.toImmutableSet()))));
+    }
+
+    // TODO: Refactor to make this more functional
+    private static IO<ImmutableList<Either<IOException, CookBook>>> loadCookBooks(final BuckarooConfig config) {
+        Preconditions.checkNotNull(config);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return config.cookBooks.stream()
+                    .map(Routines::loadCookBook)
+                    .map(x -> x.run(context))
+                    .collect(ImmutableList.toImmutableList());
+        };
+    }
+
     // TODO: Refactor to make this more functional
     private static IO<Either<IOException, ImmutableList<Either<IOException, Recipe>>>> loadRecipes = context -> {
         Preconditions.checkNotNull(context);
@@ -581,14 +610,42 @@ public final class Routines {
                         return Unit.of();
                     }));
 
-//    public static final IO<Unit> listDependencies =
-//            readProjectFile.flatMap(
-//                    projectFile -> projectFile.join(
-//                            error -> IO.println(error),
-//                            project -> loadRecipes.flatMap(recipesFile -> recipesFile.join(
-//                                    error -> IO.println(error),
-//                                    recipes -> DependencyResolver.resolve() IO.println(recipes.stream()
-//                                            .flatMap(x -> x.join(y -> Stream.empty(), y -> Stream.of(y)))
-//                                            .collect(ImmutableList.toImmutableList()))
-//                            ))));
+    private static <L, R> ImmutableList<R> onlyRight(final ImmutableList<Either<L, R>> xs) {
+        Preconditions.checkNotNull(xs);
+        return xs.stream()
+                .flatMap(x -> x.join(i -> Stream.empty(), Stream::of))
+                .collect(ImmutableList.toImmutableList());
+    }
+
+    private static String show(final DependencyResolverException e) {
+        Preconditions.checkNotNull(e);
+        return e.getIdentifier() + " could not be resolved. \n" + e.getMessage();
+    }
+
+    private static String show(final Map.Entry<Identifier, SemanticVersion> e) {
+        Preconditions.checkNotNull(e);
+        return e.getKey() + " at version " + e.getValue();
+    }
+
+    public static final IO<Unit> listDependencies =
+            readProjectFile.flatMap(
+                    projectFile -> projectFile.join(
+                            IO::println,
+                            project -> loadConfig.flatMap(
+                                    configFile -> configFile.join(
+                                            IO::println,
+                                            config -> loadCookBooks(config)
+                                                    .map(Routines::onlyRight)
+                                                    .map(CookbookDependencyFetcher::of)
+                                                    .map(fetcher -> DependencyResolver.resolve(
+                                                            project.dependencies, fetcher))
+                                                    .map(x -> x.join(
+                                                            errors -> errors.stream()
+                                                                    .map(Routines::show),
+                                                            dependencies -> dependencies.entrySet().stream()
+                                                                    .map(Routines::show)))
+                                                    .flatMap(xs -> IO.sequence(xs
+                                                            .map(IO::println)
+                                                            .collect(ImmutableList.toImmutableList())))
+                                                    .ignore()))));
 }
