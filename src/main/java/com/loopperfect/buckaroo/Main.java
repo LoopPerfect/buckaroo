@@ -6,6 +6,10 @@ import com.loopperfect.buckaroo.io.IOContext;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
+import javax.security.auth.login.Configuration;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+
 public final class Main {
 
     private Main() {
@@ -24,7 +28,8 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(String.join(" ", args));
 
-            command.routine().run(IOContext.actual());
+            FileSystem fs = FileSystems.getDefault();
+            command.routine().run(IOContext.actual(fs));
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());

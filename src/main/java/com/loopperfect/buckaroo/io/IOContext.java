@@ -3,12 +3,16 @@ package com.loopperfect.buckaroo.io;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystem;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,7 +48,12 @@ public interface IOContext {
 
     GitContext git();
 
-    static IOContext actual() {
+    static File getFile(FileSystem fs, Path path) {
+        return fs.getPath(path.toString())
+            .toFile();
+    }
+
+    static IOContext actual(FileSystem fs) {
 
         final GitContext gitContext = GitContext.actual();
 
@@ -75,39 +84,42 @@ public interface IOContext {
 
             @Override
             public Path getUserHomeDirectory() {
-                return Paths.get(System.getProperty("user.home"));
+                return fs.getPath(System.getProperty("user.home"));
             }
 
             @Override
             public Path getWorkingDirectory() {
-                return Paths.get(System.getProperty("user.dir"));
+                return fs.getPath(System.getProperty("user.dir"));
             }
 
             @Override
             public boolean isFile(final Path path) {
-                return path.toFile().isFile();
+                return getFile(fs, path)
+                    .isFile();
             }
 
             @Override
             public boolean exists(final Path path) {
                 Preconditions.checkNotNull(path);
-                return path.toFile().exists();
+                return getFile(fs, path)
+                    .exists();
             }
 
             @Override
             public Optional<IOException> createDirectory(final Path path) {
                 Preconditions.checkNotNull(path);
-                path.toFile().mkdir();
-                if (!path.toFile().isDirectory() || !path.toFile().exists()) {
+                getFile(fs, path).mkdir();
+                if (!getFile(fs, path).isDirectory() || !getFile(fs, path).exists()) {
                     return Optional.of(new IOException("Could not create a directory at " + path));
                 }
                 return Optional.empty();
             }
 
-            @Override            public Either<IOException, String> readFile(final Path path) {
+            @Override
+            public Either<IOException, String> readFile(final Path path) {
                 Preconditions.checkNotNull(path);
                 try {
-                    final String content = Files.asCharSource(path.toFile(), Charset.defaultCharset()).read();
+                    final String content = Files.asCharSource(getFile(fs, path), Charset.defaultCharset()).read();
                     return Either.right(content);
                 } catch (final IOException e) {
                     return Either.left(e);
@@ -119,10 +131,10 @@ public interface IOContext {
                 Preconditions.checkNotNull(path);
                 Preconditions.checkNotNull(content);
                 try {
-                    if (!overwrite && path.toFile().exists()) {
+                    if (!overwrite && getFile(fs, path).exists()) {
                         throw new IOException("There is already a file at " + path);
                     }
-                    Files.write(content, path.toFile(), Charset.defaultCharset());
+                    Files.write(content, getFile(fs, path), Charset.defaultCharset());
                     return Optional.empty();
                 } catch (final IOException e) {
                     return Optional.of(e);
@@ -137,7 +149,7 @@ public interface IOContext {
             @Override
             public Either<IOException, ImmutableList<Path>> listFiles(final Path path) {
                 Preconditions.checkNotNull(path);
-                try (Stream<Path> paths = java.nio.file.Files.walk(path, 1, FileVisitOption.FOLLOW_LINKS)) {
+                try (Stream<Path> paths = java.nio.file.Files.walk(fs.getPath(path.toString()), 1, FileVisitOption.FOLLOW_LINKS)) {
                     return Either.right(ImmutableList.copyOf(paths.collect(Collectors.toList())));
                 } catch (final IOException e) {
                     return Either.left(e);

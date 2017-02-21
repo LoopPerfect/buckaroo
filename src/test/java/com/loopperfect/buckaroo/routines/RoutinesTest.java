@@ -2,21 +2,20 @@ package com.loopperfect.buckaroo.routines;
 
 
 import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.BuckarooConfig;
 import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.GitCommit;
+import com.loopperfect.buckaroo.Routine;
+import com.loopperfect.buckaroo.io.GitContext;
 import com.loopperfect.buckaroo.io.IOContext;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 
 
 /**
@@ -78,13 +77,6 @@ public class RoutinesTest {
                 .join(x->null, x->x)
                 .cookBooks,
             ImmutableList.of());
-
-    }
-
-
-    @Test
-    public void installDependency() throws Exception {
-
     }
 
     @Test
