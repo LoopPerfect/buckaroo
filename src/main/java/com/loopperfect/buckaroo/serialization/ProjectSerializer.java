@@ -5,13 +5,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.loopperfect.buckaroo.Dependency;
-import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Project;
-import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
 import java.lang.reflect.Type;
-import java.util.Map;
 
 public final class ProjectSerializer implements JsonSerializer<Project> {
 

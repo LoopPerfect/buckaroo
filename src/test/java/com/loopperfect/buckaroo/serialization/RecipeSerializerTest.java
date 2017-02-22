@@ -14,21 +14,21 @@ public final class RecipeSerializerTest {
     public void testRecipeSerialization() {
 
         final Recipe recipe = Recipe.of(
-                                Identifier.of("magic-lib"),
-                                "https://github.com/magicco/magiclib/commit/b0215d5",
-                                ImmutableMap.of(
-                                        SemanticVersion.of(1, 0),
-                                        RecipeVersion.of(
-                                                GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5"),
-                                                Optional.empty(),
-                                                "my-magic-lib",
-                                                DependencyGroup.of(
-                                                        ImmutableMap.of(
-                                                                Identifier.of("awesome"), AnySemanticVersion.of()))),
-                                        SemanticVersion.of(1, 1),
-                                        RecipeVersion.of(
-                                                GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
-                                                "my-magic-lib")));
+            Identifier.of("magic-lib"),
+            "https://github.com/magicco/magiclib/commit/b0215d5",
+            ImmutableMap.of(
+                SemanticVersion.of(1, 0),
+                RecipeVersion.of(
+                    GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5"),
+                    Optional.empty(),
+                    "my-magic-lib",
+                    DependencyGroup.of(
+                        ImmutableMap.of(
+                            Identifier.of("awesome"), AnySemanticVersion.of()))),
+                SemanticVersion.of(1, 1),
+                RecipeVersion.of(
+                    GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
+                    "my-magic-lib")));
 
         final Gson gson = Serializers.gson(true);
 

@@ -2,7 +2,6 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -37,19 +36,19 @@ public final class RecipeVersion {
         final RecipeVersion other = (RecipeVersion) obj;
 
         return Objects.equals(gitCommit, other.gitCommit) &&
-                Objects.equals(buckUrl, other.buckUrl) &&
-                Objects.equals(target, other.target) &&
-                Objects.equals(dependencies, other.dependencies);
+            Objects.equals(buckUrl, other.buckUrl) &&
+            Objects.equals(target, other.target) &&
+            Objects.equals(dependencies, other.dependencies);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("gitCommit", gitCommit)
-                .add("buckUrl", buckUrl)
-                .add("target", target)
-                .add("dependencies", dependencies)
-                .toString();
+            .add("gitCommit", gitCommit)
+            .add("buckUrl", buckUrl)
+            .add("target", target)
+            .add("dependencies", dependencies)
+            .toString();
     }
 
     public static RecipeVersion of(final GitCommit gitCommit, final Optional<String> buckUrl, final String target, final DependencyGroup dependencies) {

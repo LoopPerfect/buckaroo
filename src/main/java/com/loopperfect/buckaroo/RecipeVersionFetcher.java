@@ -13,12 +13,12 @@ public interface RecipeVersionFetcher {
     static RecipeVersionFetcher of(final ImmutableList<CookBook> cookBooks) {
         Preconditions.checkNotNull(cookBooks);
         return identifier -> cookBooks.stream()
-                .flatMap(x -> x.recipes.stream())
-                .filter(x -> x.name.equals(identifier.project))
-                .flatMap(x -> x.versions.entrySet().stream()
-                        .filter(y -> y.getKey().equals(identifier.version)))
-                .map(x -> x.getValue())
-                .findAny();
+            .flatMap(x -> x.recipes.stream())
+            .filter(x -> x.name.equals(identifier.project))
+            .flatMap(x -> x.versions.entrySet().stream()
+                .filter(y -> y.getKey().equals(identifier.version)))
+            .map(x -> x.getValue())
+            .findAny();
     }
 
     static RecipeVersionFetcher of(final CookBook cookBook) {

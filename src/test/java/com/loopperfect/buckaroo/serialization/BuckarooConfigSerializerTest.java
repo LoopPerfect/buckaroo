@@ -14,9 +14,9 @@ public final class BuckarooConfigSerializerTest {
     @Test
     public void testBuckarooConfigSerializer() {
         final BuckarooConfig config = BuckarooConfig.of(ImmutableList.of(
-                RemoteCookBook.of(
-                        Identifier.of("cookbook"),
-                        "git@github.com:njlr/buckaroo-recipes-test.git")));
+            RemoteCookBook.of(
+                Identifier.of("cookbook"),
+                "git@github.com:njlr/buckaroo-recipes-test.git")));
         final Gson gson = Serializers.gson();
         final String serializedConfig = gson.toJson(config);
         final BuckarooConfig deserializedConfig = gson.fromJson(serializedConfig, BuckarooConfig.class);

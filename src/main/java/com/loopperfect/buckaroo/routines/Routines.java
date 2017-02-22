@@ -25,42 +25,42 @@ public final class Routines {
     }
 
     private static final IO<String> buckarooDirectory =
-            context -> Paths.get(context.fs().userHomeDirectory().toString(), ".buckaroo/").toString();
+        context -> Paths.get(context.fs().userHomeDirectory().toString(), ".buckaroo/").toString();
 
     public static final IO<String> configFilePath =
-            buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
+        buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
 
     public static final IO<String> projectFilePath =
-            context -> Paths.get(context.fs().workingDirectory().toString(), "buckaroo.json").toString();
+        context -> Paths.get(context.fs().workingDirectory().toString(), "buckaroo.json").toString();
 
     public static IO<Either<IOException, Project>> readProject(final String path) {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
-                Either::left,
-                content -> Try.safe(
-                        () -> Serializers.gson().fromJson(content, Project.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new));
+            Either::left,
+            content -> Try.safe(
+                () -> Serializers.gson().fromJson(content, Project.class), JsonSyntaxException.class)
+                .leftProjection(IOException::new));
     }
 
     public static IO<Either<IOException, BuckarooConfig>> readConfig(final String path) {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
-                Either::left,
-                content -> {
-                    Preconditions.checkNotNull(content);
-                    return Try.safe(
-                        () -> Serializers.gson().fromJson(content, BuckarooConfig.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new);
-                });
+            Either::left,
+            content -> {
+                Preconditions.checkNotNull(content);
+                return Try.safe(
+                    () -> Serializers.gson().fromJson(content, BuckarooConfig.class), JsonSyntaxException.class)
+                    .leftProjection(IOException::new);
+            });
     }
 
     private static IO<Either<IOException, Recipe>> readRecipe(final String path) {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
-                Either::left,
-                content -> Try.safe(
-                        () -> Serializers.gson().fromJson(content, Recipe.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new));
+            Either::left,
+            content -> Try.safe(
+                () -> Serializers.gson().fromJson(content, Recipe.class), JsonSyntaxException.class)
+                .leftProjection(IOException::new));
     }
 
     private static boolean isJsonFile(final String path) {
@@ -71,7 +71,7 @@ public final class Routines {
         Preconditions.checkNotNull(xs);
         Preconditions.checkNotNull(x);
         return Streams.concat(xs.stream(), Stream.of(x))
-                .collect(ImmutableList.toImmutableList());
+            .collect(ImmutableList.toImmutableList());
     }
 
     public static <L, R> IO<Either<L, ImmutableList<R>>> allOrNothing(final ImmutableList<IO<Either<L, R>>> xs) {
@@ -107,13 +107,13 @@ public final class Routines {
     private static IO<Either<IOException, CookBook>> readCookBook(final String path) {
         Preconditions.checkNotNull(path);
         return IO.of(x -> x.fs().listFiles(Paths.get(path, "/recipes/").toString()))
-                .flatMap(listFiles -> listFiles.join(
-                        error -> IO.value(Either.left(error)),
-                        paths -> allOrNothing(paths.stream()
-                                .filter(Routines::isJsonFile)
-                                .map(Routines::readRecipe)
-                                .collect(ImmutableList.toImmutableList()))
-                                .map(x -> x.rightProjection(recipes -> CookBook.of(ImmutableSet.copyOf(recipes))))));
+            .flatMap(listFiles -> listFiles.join(
+                error -> IO.value(Either.left(error)),
+                paths -> allOrNothing(paths.stream()
+                    .filter(Routines::isJsonFile)
+                    .map(Routines::readRecipe)
+                    .collect(ImmutableList.toImmutableList()))
+                    .map(x -> x.rightProjection(recipes -> CookBook.of(ImmutableSet.copyOf(recipes))))));
     }
 
     private static Path append(final Path a, final String... b) {
@@ -123,14 +123,14 @@ public final class Routines {
     public static IO<Either<IOException, ImmutableList<CookBook>>> readCookBooks(final BuckarooConfig config) {
         Preconditions.checkNotNull(config);
         return allOrNothing(config.cookBooks.stream()
-                .map(remoteCookBook -> buckarooDirectory
-                        .flatMap(path -> context -> context.fs().getPath(path, remoteCookBook.name.toString()).toString())
-                        .flatMap(Routines::readCookBook))
-                .collect(ImmutableList.toImmutableList()));
+            .map(remoteCookBook -> buckarooDirectory
+                .flatMap(path -> context -> context.fs().getPath(path, remoteCookBook.name.toString()).toString())
+                .flatMap(Routines::readCookBook))
+            .collect(ImmutableList.toImmutableList()));
     }
 
     private static IO<Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>>> resolveDependencies(
-            final Project project, final ImmutableList<CookBook> cookBooks) {
+        final Project project, final ImmutableList<CookBook> cookBooks) {
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(cookBooks);
         final DependencyFetcher fetcher = CookbookDependencyFetcher.of(cookBooks);
@@ -141,10 +141,10 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(gitCommit);
         return IO.of(context -> context.fs().getPath(path).toFile())
-                .flatMap(file -> IO.sequence(ImmutableList.of(
-                        context -> context.git().clone(file, gitCommit.url),
-                        context -> context.git().checkout(file, gitCommit.commit),
-                        context -> context.git().pull(file)))
-                        .then(context -> context.git().status(file)));
+            .flatMap(file -> IO.sequence(ImmutableList.of(
+                context -> context.git().clone(file, gitCommit.url),
+                context -> context.git().checkout(file, gitCommit.commit),
+                context -> context.git().pull(file)))
+                .then(context -> context.git().status(file)));
     }
 }

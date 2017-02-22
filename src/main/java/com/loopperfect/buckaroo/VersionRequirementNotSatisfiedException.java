@@ -11,7 +11,7 @@ public final class VersionRequirementNotSatisfiedException extends DependencyRes
     private final SemanticVersionRequirement requirement;
 
     VersionRequirementNotSatisfiedException(final Identifier id, final SemanticVersionRequirement requirement) {
-        super(id, "Project " + id.name + " can't satisfy version requirement: "+ requirement.toString());
+        super(id, "Project " + id.name + " can't satisfy version requirement: " + requirement.toString());
         this.requirement = Preconditions.checkNotNull(requirement);
     }
 

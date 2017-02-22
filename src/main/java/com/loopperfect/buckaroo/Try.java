@@ -21,7 +21,7 @@ public final class Try {
                 return Either.left(exceptionType.cast(e));
             }
             throw new IllegalStateException("A CheckedSupplier may only throw its specified Throwable type. " +
-                    "Got " + e.getClass().getCanonicalName() + " expected " + exceptionType.getCanonicalName() + ". ");
+                "Got " + e.getClass().getCanonicalName() + " expected " + exceptionType.getCanonicalName() + ". ");
         }
     }
 

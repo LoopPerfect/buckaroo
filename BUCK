@@ -113,6 +113,21 @@ remote_file(
   sha1 = '3e3d0b73dcf4ad649f37758ea8502d92f3d299de',
 )
 
+
+remote_file(
+  name = 'jimfs-jar',
+  out = 'jimfs-1.1.jar',
+  url = 'mvn:com.google.jimfs:jimfs:jar:1.1',
+  sha1 = '8fbd0579dc68aba6186935cc1bee21d2f3e7ec1c',
+)
+
+prebuilt_jar(
+  name = 'jimfs',
+  source_jar = ':jimfs-jar',
+  binary_jar = ':jimfs-jar',
+  javadoc_url = 'https://google.github.io/jimfs/releases/1.1/api/docs/',
+)
+
 # We need to strip out the jar signing
 # TODO: Find a better approach! 
 genrule(
@@ -166,6 +181,7 @@ java_library(
     ':slf4j-api',
     ':slf4j-nop',
     ':jsch',
+    ':jimfs'
   ],
 )
 
@@ -193,6 +209,7 @@ java_test(
     ':gson',
     ':hamcrest',
     ':junit',
+    ':jimfs',
     ':jparsec',
   ],
 )

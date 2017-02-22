@@ -37,38 +37,38 @@ public final class Either<L, R> {
         Preconditions.checkNotNull(f);
         Preconditions.checkNotNull(g);
         return which == LeftOrRight.LEFT ?
-                Either.left(f.apply(l)) :
-                Either.right(g.apply(r));
+            Either.left(f.apply(l)) :
+            Either.right(g.apply(r));
     }
 
     public <T, U> Either<T, U> flatMap(final Function<L, Either<T, U>> f, final Function<R, Either<T, U>> g) {
         Preconditions.checkNotNull(f);
         Preconditions.checkNotNull(g);
         return which == LeftOrRight.LEFT ?
-                f.apply(l) :
-                g.apply(r);
+            f.apply(l) :
+            g.apply(r);
     }
 
     public <T> Either<T, R> leftProjection(final Function<L, T> f) {
         Preconditions.checkNotNull(f);
         return which == LeftOrRight.LEFT ?
-                Either.left(f.apply(l)) :
-                Either.right(r);
+            Either.left(f.apply(l)) :
+            Either.right(r);
     }
 
     public <T> Either<L, T> rightProjection(final Function<R, T> f) {
         Preconditions.checkNotNull(f);
         return which == LeftOrRight.LEFT ?
-                Either.left(l) :
-                Either.right(f.apply(r));
+            Either.left(l) :
+            Either.right(f.apply(r));
     }
 
     public <T> T join(final Function<L, T> f, final Function<R, T> g) {
         Preconditions.checkNotNull(f);
         Preconditions.checkNotNull(g);
         return which == LeftOrRight.LEFT ?
-                f.apply(l) :
-                g.apply(r);
+            f.apply(l) :
+            g.apply(r);
     }
 
     public Optional<R> toOptional() {
@@ -94,16 +94,16 @@ public final class Either<L, R> {
         final Either<L, R> other = (Either<L, R>) obj;
 
         return Objects.equals(which, other.which) &&
-                (which == LeftOrRight.LEFT ?
-                        Objects.equals(l, other.l) :
-                        Objects.equals(r, other.r));
+            (which == LeftOrRight.LEFT ?
+                Objects.equals(l, other.l) :
+                Objects.equals(r, other.r));
     }
 
     @Override
     public String toString() {
         return which == LeftOrRight.LEFT ?
-                "[Left " + l + "]" :
-                "[Right " + r + "]";
+            "[Left " + l + "]" :
+            "[Right " + r + "]";
     }
 
     public static <L, R> Either<L, R> left(final L x) {
@@ -126,7 +126,7 @@ public final class Either<L, R> {
         Preconditions.checkNotNull(f);
         Preconditions.checkNotNull(g);
         return either.which == LeftOrRight.LEFT ?
-                f.apply(either.l) :
-                g.apply(either.r);
+            f.apply(either.l) :
+            g.apply(either.r);
     }
 }

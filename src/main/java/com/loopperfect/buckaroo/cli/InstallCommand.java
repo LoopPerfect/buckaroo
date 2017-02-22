@@ -1,9 +1,10 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.SemanticVersionRequirement;
+import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Routines;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -42,7 +43,7 @@ public final class InstallCommand implements CLICommand {
         final InstallCommand other = (InstallCommand) obj;
 
         return Objects.equals(project, other.project) &&
-                Objects.equals(versionRequirement, other.versionRequirement);
+            Objects.equals(versionRequirement, other.versionRequirement);
     }
 
     public static InstallCommand of(final Identifier project, final Optional<SemanticVersionRequirement> versionRequirement) {

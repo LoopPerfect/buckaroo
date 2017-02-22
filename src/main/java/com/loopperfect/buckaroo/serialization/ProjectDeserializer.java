@@ -1,12 +1,12 @@
 package com.loopperfect.buckaroo.serialization;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.gson.*;
-import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.DependencyGroup;
+import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.Project;
 
 import java.lang.reflect.Type;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public final class ProjectDeserializer implements JsonDeserializer<Project> {
 

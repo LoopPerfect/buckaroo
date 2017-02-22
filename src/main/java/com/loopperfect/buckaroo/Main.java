@@ -6,7 +6,6 @@ import com.loopperfect.buckaroo.io.IOContext;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
-import javax.security.auth.login.Configuration;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 

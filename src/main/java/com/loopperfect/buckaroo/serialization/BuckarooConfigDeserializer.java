@@ -28,9 +28,9 @@ public final class BuckarooConfigDeserializer implements JsonDeserializer<Buckar
             return BuckarooConfig.of(ImmutableList.of());
 
         final ImmutableList<RemoteCookBook> cookBooks = ImmutableList.copyOf(
-                Streams.stream(cookBooksElement)
-                        .map(x -> (RemoteCookBook) context.deserialize(x, RemoteCookBook.class))
-                        .collect(Collectors.toList()));
+            Streams.stream(cookBooksElement)
+                .map(x -> (RemoteCookBook) context.deserialize(x, RemoteCookBook.class))
+                .collect(Collectors.toList()));
 
         return BuckarooConfig.of(cookBooks);
     }

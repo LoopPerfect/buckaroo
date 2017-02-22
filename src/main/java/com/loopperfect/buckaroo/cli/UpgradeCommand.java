@@ -4,7 +4,6 @@ import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.RemoteCookBook;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Routines;
 
 public final class UpgradeCommand implements CLICommand {
 
@@ -15,8 +14,8 @@ public final class UpgradeCommand implements CLICommand {
     @Override
     public IO<Unit> routine() {
         final RemoteCookBook cookBook = RemoteCookBook.of(
-                Identifier.of("buckaroo-recipes-test"),
-                "git@github.com:njlr/buckaroo-recipes-test.git");
+            Identifier.of("buckaroo-recipes-test"),
+            "git@github.com:njlr/buckaroo-recipes-test.git");
         return null;
     }
 

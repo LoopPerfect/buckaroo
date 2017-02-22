@@ -29,10 +29,10 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
             return semanticVersions.iterator().next().toString();
         }
         return "[" +
-                semanticVersions.stream()
-                        .map(x -> x.toString())
-                        .collect(Collectors.joining(", ")) +
-                "]";
+            semanticVersions.stream()
+                .map(x -> x.toString())
+                .collect(Collectors.joining(", ")) +
+            "]";
     }
 
     @Override
@@ -59,8 +59,8 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("semanticVersions", semanticVersions)
-                .toString();
+            .add("semanticVersions", semanticVersions)
+            .toString();
     }
 
     public static ExactSemanticVersion of(final SemanticVersion semanticVersion) {

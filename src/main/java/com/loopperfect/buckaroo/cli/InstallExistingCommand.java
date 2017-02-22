@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo.cli;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.routines.InstallExisting;
-import com.loopperfect.buckaroo.routines.Routines;
 
 public final class InstallExistingCommand implements CLICommand {
 

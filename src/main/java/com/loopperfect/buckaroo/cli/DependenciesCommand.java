@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo.cli;
 import com.google.common.base.MoreObjects;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Routines;
 
 public final class DependenciesCommand implements CLICommand {
 
@@ -29,7 +28,7 @@ public final class DependenciesCommand implements CLICommand {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .toString();
+            .toString();
     }
 
     public static DependenciesCommand of() {

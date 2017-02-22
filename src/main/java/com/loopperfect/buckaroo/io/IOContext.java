@@ -5,7 +5,9 @@ import com.google.common.base.Preconditions;
 public interface IOContext {
 
     FSContext fs();
+
     GitContext git();
+
     ConsoleContext console();
 
     static IOContext of(final FSContext fs, final GitContext git, final ConsoleContext console) {
@@ -32,16 +34,16 @@ public interface IOContext {
 
     static IOContext actual() {
         return of(
-                FSContext.actual(),
-                GitContext.actual(),
-                ConsoleContext.actual());
+            FSContext.actual(),
+            GitContext.actual(),
+            ConsoleContext.actual());
     }
 
     static IOContext fake() {
         return of(
-                FSContext.fake(),
-                GitContext.fake(),
-                ConsoleContext.fake());
+            FSContext.fake(),
+            GitContext.fake(),
+            ConsoleContext.fake());
     }
 }
 

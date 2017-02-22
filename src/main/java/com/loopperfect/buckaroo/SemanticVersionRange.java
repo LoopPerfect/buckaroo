@@ -21,7 +21,7 @@ public final class SemanticVersionRange implements SemanticVersionRequirement {
 
     public boolean isSatisfiedBy(final SemanticVersion version) {
         return (minimumVersion.compareTo(version) <= 0) &&
-                (maximumVersion.compareTo(version) >= 0);
+            (maximumVersion.compareTo(version) >= 0);
     }
 
     public ImmutableSet<SemanticVersion> hints() {
@@ -52,15 +52,15 @@ public final class SemanticVersionRange implements SemanticVersionRequirement {
         final SemanticVersionRange other = (SemanticVersionRange) obj;
 
         return Objects.equals(minimumVersion, other.minimumVersion) &&
-                Objects.equals(maximumVersion, other.maximumVersion);
+            Objects.equals(maximumVersion, other.maximumVersion);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("minimumVersion", minimumVersion)
-                .add("maximumVersion", maximumVersion)
-                .toString();
+            .add("minimumVersion", minimumVersion)
+            .add("maximumVersion", maximumVersion)
+            .toString();
     }
 
     public static SemanticVersionRange of(final SemanticVersion minimumVersion, final SemanticVersion maximumVersion) {

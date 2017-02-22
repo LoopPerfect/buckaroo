@@ -40,7 +40,7 @@ public final class GitCommit {
 
         final GitCommit other = (GitCommit) obj;
 
-        return url.equals(other.url) &&  commit.equals(other.commit);
+        return url.equals(other.url) && commit.equals(other.commit);
     }
 
     @Override

@@ -12,16 +12,16 @@ public final class SemanticVersionsTest {
     public void resolve1() throws Exception {
 
         ImmutableSet<SemanticVersion> availableVersions =
-                ImmutableSet.of(
-                        SemanticVersion.of(1),
-                        SemanticVersion.of(3, 2),
-                        SemanticVersion.of(4, 1),
-                        SemanticVersion.of(27, 3, 0));
+            ImmutableSet.of(
+                SemanticVersion.of(1),
+                SemanticVersion.of(3, 2),
+                SemanticVersion.of(4, 1),
+                SemanticVersion.of(27, 3, 0));
 
         ImmutableSet<SemanticVersionRequirement> requirements =
-                ImmutableSet.of(
-                        AnySemanticVersion.of(),
-                        SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(7)));
+            ImmutableSet.of(
+                AnySemanticVersion.of(),
+                SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(7)));
 
         Optional<SemanticVersion> suggested = SemanticVersions.resolve(availableVersions, requirements);
 
@@ -32,16 +32,16 @@ public final class SemanticVersionsTest {
     public void resolve2() throws Exception {
 
         ImmutableSet<SemanticVersion> availableVersions =
-                ImmutableSet.of(
-                        SemanticVersion.of(1),
-                        SemanticVersion.of(3, 2),
-                        SemanticVersion.of(4, 1),
-                        SemanticVersion.of(27, 3, 0));
+            ImmutableSet.of(
+                SemanticVersion.of(1),
+                SemanticVersion.of(3, 2),
+                SemanticVersion.of(4, 1),
+                SemanticVersion.of(27, 3, 0));
 
         ImmutableSet<SemanticVersionRequirement> requirements =
-                ImmutableSet.of(
-                        ExactSemanticVersion.of(SemanticVersion.of(5, 3)),
-                        SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(4)));
+            ImmutableSet.of(
+                ExactSemanticVersion.of(SemanticVersion.of(5, 3)),
+                SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(4)));
 
         Optional<SemanticVersion> suggested = SemanticVersions.resolve(availableVersions, requirements);
 

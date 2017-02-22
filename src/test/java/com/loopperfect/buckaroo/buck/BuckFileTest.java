@@ -2,13 +2,14 @@ package com.loopperfect.buckaroo.buck;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.SemanticVersion;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 public class BuckFileTest {
 
@@ -17,11 +18,11 @@ public class BuckFileTest {
 
         final Identifier project = Identifier.of("my-magic-tool");
         final ImmutableMap<Identifier, SemanticVersion> resolvedDependencies =
-                ImmutableMap.of(
-                        Identifier.of("my-magic-lib"),
-                        SemanticVersion.of(4, 5, 6),
-                        Identifier.of("some-other-lib"),
-                        SemanticVersion.of(4, 1));
+            ImmutableMap.of(
+                Identifier.of("my-magic-lib"),
+                SemanticVersion.of(4, 5, 6),
+                Identifier.of("some-other-lib"),
+                SemanticVersion.of(4, 1));
 
         final Either<IOException, String> generatedProject = BuckFile.generate(project, resolvedDependencies);
 
@@ -32,10 +33,10 @@ public class BuckFileTest {
     public void list() {
 
         final Either<IOException, String> generatedList = BuckFile.list(
-                "buckarooDeps",
-                ImmutableList.of(
-                        "//buckaroo/awesome/1.0.0:awesome",
-                        "//buckaroo/some-lib/2.0.1:some-lib"));
+            "buckarooDeps",
+            ImmutableList.of(
+                "//buckaroo/awesome/1.0.0:awesome",
+                "//buckaroo/some-lib/2.0.1:some-lib"));
 
         assertTrue(generatedList.join(error -> false, string -> string.length() > 10));
     }

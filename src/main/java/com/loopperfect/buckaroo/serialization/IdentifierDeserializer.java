@@ -23,6 +23,6 @@ public final class IdentifierDeserializer implements JsonDeserializer<Identifier
         }
 
         return Identifier.parse(jsonElement.getAsString())
-                .orElseThrow(() -> new JsonParseException("\"" + jsonElement.getAsString() + "\" is not a valid name"));
+            .orElseThrow(() -> new JsonParseException("\"" + jsonElement.getAsString() + "\" is not a valid name"));
     }
 }

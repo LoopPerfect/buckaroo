@@ -19,7 +19,7 @@ public final class DependencyFetcherFromMap implements DependencyFetcher {
 
     @Override
     public Either<DependencyResolverException, ImmutableMap<SemanticVersion, DependencyGroup>> fetch(
-            final Identifier id, final SemanticVersionRequirement versionRequirement) {
+        final Identifier id, final SemanticVersionRequirement versionRequirement) {
 
         Preconditions.checkNotNull(id);
         Preconditions.checkNotNull(versionRequirement);
@@ -29,10 +29,10 @@ public final class DependencyFetcherFromMap implements DependencyFetcher {
         }
 
         final ImmutableMap<SemanticVersion, DependencyGroup> candidates = projects.getOrDefault(id, ImmutableMap.of())
-                .entrySet()
-                .stream()
-                .filter(entry -> versionRequirement.isSatisfiedBy(entry.getKey()))
-                .collect(ImmutableMap.toImmutableMap(entry -> entry.getKey(), Map.Entry::getValue));
+            .entrySet()
+            .stream()
+            .filter(entry -> versionRequirement.isSatisfiedBy(entry.getKey()))
+            .collect(ImmutableMap.toImmutableMap(entry -> entry.getKey(), Map.Entry::getValue));
 
         if (candidates.isEmpty()) {
             return Either.left(new VersionRequirementNotSatisfiedException(id, versionRequirement));
@@ -42,7 +42,7 @@ public final class DependencyFetcherFromMap implements DependencyFetcher {
     }
 
     public static DependencyFetcher of(
-            final ImmutableMap<Identifier, ImmutableMap<SemanticVersion, DependencyGroup>> projects) {
+        final ImmutableMap<Identifier, ImmutableMap<SemanticVersion, DependencyGroup>> projects) {
         return new DependencyFetcherFromMap(projects);
     }
 }

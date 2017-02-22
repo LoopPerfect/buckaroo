@@ -1,14 +1,11 @@
 package com.loopperfect.buckaroo.io;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Unit;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;

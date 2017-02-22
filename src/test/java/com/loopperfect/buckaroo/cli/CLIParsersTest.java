@@ -1,11 +1,15 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.BoundedSemanticVersion;
+import com.loopperfect.buckaroo.ExactSemanticVersion;
+import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.SemanticVersion;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public final class CLIParsersTest {
 
@@ -39,28 +43,28 @@ public final class CLIParsersTest {
         assertEquals(CookbooksCommand.of(), parser.parse("   cookbooks "));
 
         assertEquals(
-                InstallCommand.of(Identifier.of("awesome")),
-                CLIParsers.commandParser.parse(" install   awesome  "));
+            InstallCommand.of(Identifier.of("awesome")),
+            CLIParsers.commandParser.parse(" install   awesome  "));
 
         assertEquals(
-                UninstallCommand.of(Identifier.of("some_lib")),
-                CLIParsers.commandParser.parse(" uninstall   some_lib "));
+            UninstallCommand.of(Identifier.of("some_lib")),
+            CLIParsers.commandParser.parse(" uninstall   some_lib "));
 
         assertEquals(
-                InstallCommand.of(Identifier.of("some_lib"), BoundedSemanticVersion.atLeast(SemanticVersion.of(2))),
-                CLIParsers.commandParser.parse(" install  some_lib>=2  "));
+            InstallCommand.of(Identifier.of("some_lib"), BoundedSemanticVersion.atLeast(SemanticVersion.of(2))),
+            CLIParsers.commandParser.parse(" install  some_lib>=2  "));
 
         assertEquals(
-                InstallCommand.of(Identifier.of("another-lib2"), ExactSemanticVersion.of(SemanticVersion.of(2))),
-                CLIParsers.commandParser.parse("install another-lib2 [ 2 ]  "));
+            InstallCommand.of(Identifier.of("another-lib2"), ExactSemanticVersion.of(SemanticVersion.of(2))),
+            CLIParsers.commandParser.parse("install another-lib2 [ 2 ]  "));
 
         assertEquals(
-                UpdateCommand.of(Identifier.of("boost-config")),
-                CLIParsers.commandParser.parse(" uPdAte  boost-config "));
+            UpdateCommand.of(Identifier.of("boost-config")),
+            CLIParsers.commandParser.parse(" uPdAte  boost-config "));
 
         assertEquals(
-                UpdateCommand.of(),
-                CLIParsers.commandParser.parse("update"));
+            UpdateCommand.of(),
+            CLIParsers.commandParser.parse("update"));
 
         try {
             parser.parse("installsomething");

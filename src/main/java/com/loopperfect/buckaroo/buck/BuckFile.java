@@ -8,9 +8,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.RecipeIdentifier;
+import com.loopperfect.buckaroo.SemanticVersion;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.net.URL;
 import java.util.Map;
 
@@ -34,11 +40,11 @@ public final class BuckFile {
         }
 
         final Map<String, Object> scopes = ImmutableMap.of(
-                "name", project.name,
-                "dependencies", resolvedDependencies.entrySet()
-                        .stream()
-                        .map(x -> RecipeIdentifier.of(x.getKey(), x.getValue()))
-                        .collect(ImmutableList.toImmutableList()));
+            "name", project.name,
+            "dependencies", resolvedDependencies.entrySet()
+                .stream()
+                .map(x -> RecipeIdentifier.of(x.getKey(), x.getValue()))
+                .collect(ImmutableList.toImmutableList()));
 
         final Writer writer = new StringWriter();
         final MustacheFactory mustacheFactory = new DefaultMustacheFactory();
@@ -69,8 +75,8 @@ public final class BuckFile {
         }
 
         final Map<String, Object> scopes = ImmutableMap.of(
-                "name", name,
-                "values", values);
+            "name", name,
+            "values", values);
 
         final Writer writer = new StringWriter();
         final MustacheFactory mustacheFactory = new DefaultMustacheFactory();

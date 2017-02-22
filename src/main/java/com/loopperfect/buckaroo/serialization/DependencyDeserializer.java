@@ -5,10 +5,8 @@ import com.google.gson.*;
 import com.loopperfect.buckaroo.Dependency;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
-import com.loopperfect.buckaroo.SemanticVersionRequirements;
 
 import java.lang.reflect.Type;
-import java.util.Optional;
 
 public final class DependencyDeserializer implements JsonDeserializer<Dependency> {
 
@@ -24,7 +22,7 @@ public final class DependencyDeserializer implements JsonDeserializer<Dependency
         final Identifier project = context.deserialize(jsonObject.get("project"), Identifier.class);
 
         final SemanticVersionRequirement versionRequirement =
-                context.deserialize(jsonObject.get("version"), SemanticVersionRequirement.class);
+            context.deserialize(jsonObject.get("version"), SemanticVersionRequirement.class);
 
         return Dependency.of(project, versionRequirement);
     }

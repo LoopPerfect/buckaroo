@@ -4,8 +4,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
-import java.util.Map;
-
 public final class Dependency {
 
     public final Identifier project;
@@ -22,7 +20,7 @@ public final class Dependency {
         Preconditions.checkNotNull(recipe);
 
         return Objects.equal(recipe.name, project) &&
-                recipe.versions.keySet().stream().anyMatch(x -> versionRequirement.isSatisfiedBy(x));
+            recipe.versions.keySet().stream().anyMatch(x -> versionRequirement.isSatisfiedBy(x));
     }
 
     @Override
@@ -34,7 +32,7 @@ public final class Dependency {
         Dependency other = (Dependency) obj;
 
         return Objects.equal(project, other.project) &&
-                Objects.equal(versionRequirement, other.versionRequirement);
+            Objects.equal(versionRequirement, other.versionRequirement);
     }
 
     @Override
@@ -45,9 +43,9 @@ public final class Dependency {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("project", project)
-                .add("versionRequirement", versionRequirement)
-                .toString();
+            .add("project", project)
+            .add("versionRequirement", versionRequirement)
+            .toString();
     }
 
     public static Dependency of(final Identifier project, final SemanticVersionRequirement versionRequirement) {
