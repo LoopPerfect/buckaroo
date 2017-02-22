@@ -65,4 +65,33 @@ public final class DependencyResolver {
 
         return Either.left(ImmutableList.copyOf(unresolved));
     }
+
+
+    public static ImmutableMap<Identifier, SemanticVersion> removeDependency(
+        final ImmutableMap<Identifier, SemanticVersion> deps,
+        final Identifier id,
+        final DependencyFetcher fetcher) {
+        if (!deps.containsKey(id)) return deps;
+
+        final SemanticVersionRequirement version = ExactSemanticVersion.of(deps.get(id));
+        final ImmutableMap<SemanticVersion, DependencyGroup> removableVersions = fetcher.fetch(id, version)
+            .right()
+            .get();
+
+        final DependencyGroup removable = removableVersions.get(deps.get(id));
+
+        if(removable.isEmpty()) return deps;
+
+        return deps
+            .entrySet()
+            .stream()
+            .filter(
+                x -> !removable.dependencies.containsKey((x.getKey()))
+                    && !x.getValue().equals(id)
+            ).collect(ImmutableMap.toImmutableMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue)
+            );
+    }
+
 }
