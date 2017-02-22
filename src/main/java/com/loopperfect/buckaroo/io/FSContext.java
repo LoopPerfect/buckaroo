@@ -6,10 +6,7 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.util.Arrays;
@@ -37,7 +34,7 @@ public interface FSContext {
     default Path getPath(String... path) {
         String[] paths = Arrays
             .stream(path)
-            .toArray(size -> new String[size]);
+            .toArray(String[]::new);
         return getFS().getPath("", paths);
     }
 
@@ -50,23 +47,23 @@ public interface FSContext {
         return Files.exists(path);
     }
 
-    default Optional<IOException> createDirectory(final Path p) {
+    default Optional<IOException> createDirectory(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p.toString());
+        final Path path = getFS().getPath(p);
         try {
             Files.createDirectories(path);
         } catch (IOException e) {
             return Optional.of(e);
         }
         if (!Files.isDirectory(path) || !Files.exists(path)) {
-            return Optional.of(new IOException("Could not create a directory at " + path));
+            return Optional.of(new IOException("Could not of a directory at " + path));
         }
         return Optional.empty();
     }
 
-    default Either<IOException, String> readFile(final Path p) {
+    default Either<IOException, String> readFile(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p.toString());
+        final Path path = getFS().getPath(p);
         try {
             final String content = Files.readAllLines(getFS().getPath(path.toString()), Charset.defaultCharset())
                 .stream()
@@ -96,11 +93,11 @@ public interface FSContext {
         return writeFile(path, content, false);
     }
 
-    default Either<IOException, ImmutableList<Path>> listFiles(final Path p) {
+    default Either<IOException, ImmutableList<String>> listFiles(final String p) {
         Preconditions.checkNotNull(p);
         final Path path = getFS().getPath(p.toString());
         try (Stream<Path> paths = java.nio.file.Files.walk(path, 1, FileVisitOption.FOLLOW_LINKS)) {
-            return Either.right(ImmutableList.copyOf(paths.collect(Collectors.toList())));
+            return Either.right(paths.map(Path::toString).collect(ImmutableList.toImmutableList()));
         } catch (final IOException e) {
             return Either.left(e);
         }
@@ -108,20 +105,20 @@ public interface FSContext {
 
 
     static FSContext actual() {
-        return create(
+        return of(
             FileSystems.getDefault(),
             System.getProperty("user.home"),
             System.getProperty("user.dir"));
     }
 
     static FSContext fake() {
-        return create(
+        return of(
             Jimfs.newFileSystem(Configuration.unix()),
             System.getProperty("user.home"),
             System.getProperty("user.dir"));
     }
 
-    static FSContext create(final FileSystem fs, final String homeDir, final String workingDir) {
+    static FSContext of(final FileSystem fs, final String homeDir, final String workingDir) {
         return new FSContext() {
             @Override
             public FileSystem getFS() {

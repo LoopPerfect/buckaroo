@@ -93,7 +93,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(x);
         return context -> {
             Preconditions.checkNotNull(context);
-            context.println(x.toString());
+            context.console().println(x.toString());
             return Unit.of();
         };
     }
@@ -101,15 +101,15 @@ public interface IO<T> {
     static IO<Optional<String>> read() {
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.readln();
+            return context.console().readln();
         };
     }
 
-    static IO<Optional<IOException>> createDirectory(final Path path) {
+    static IO<Optional<IOException>> createDirectory(final String path) {
         Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.createDirectory(path);
+            return context.fs().createDirectory(path);
         };
     }
 
@@ -118,7 +118,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(content);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.writeFile(context.getPath(path), content, overwrite);
+            return context.fs().writeFile(context.fs().getPath(path), content, overwrite);
         };
     }
 
@@ -126,19 +126,19 @@ public interface IO<T> {
         return writeFile(path, content, false);
     }
 
-    static IO<Either<IOException, String>> readFile(final Path path) {
+    static IO<Either<IOException, String>> readFile(final String path) {
         Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.readFile(path);
+            return context.fs().readFile(path);
         };
     }
 
-    static IO<Either<IOException, ImmutableList<Path>>> listFiles(final Path path) {
+    static IO<Either<IOException, ImmutableList<String>>> listFiles(final String path) {
         Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.listFiles(path);
+            return context.fs().listFiles(path);
         };
     }
 

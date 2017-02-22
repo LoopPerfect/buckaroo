@@ -6,104 +6,73 @@ import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.io.IOContext;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 
 /**
  * Created by gaetano on 20/02/17.
  */
-public class RoutinesTest {
+public final class RoutinesTest {
+
     @Test
     public void loadConfigReadFileFailed() throws Exception {
-//        IOContext io = mock(IOContext.class);
-//        Path p = mock(Path.class);
-//
-//        IOException error = new IOException("foo");
-//        when(p.toString()).thenReturn("/");
-//        when(io.userHomeDirectory()).thenReturn(p);
-//        when(io.readFile(Mockito.any())).thenReturn(Either.left(error));
-//
-//        assertEquals(
-//            Routines
-//                .loadConfig
-//                .run(io)
-//                .join(x->x, x->null),
-//            error
-//        );
+
+        IOContext io = IOContext.fake();
+
+        Path path = io.fs().getPath(
+                io.fs().userHomeDirectory().toString(),
+                ".buckaroo",
+                "config.json"
+        );
+
+        io.fs().createDirectory(path.getParent().toString());
+
+        assertTrue(Routines.readConfig(path.toString()).run(io)
+                .join(x -> x, x -> null) instanceof java.nio.file.NoSuchFileException);
     }
 
     @Test
     public void loadConfigParsingInvalidString() throws Exception {
-//        IOContext io = mock(IOContext.class);
-//        Path p = mock(Path.class);
-//
-//        when(p.toString()).thenReturn("/");
-//        when(io.userHomeDirectory()).thenReturn(p);
-//        when(io.readFile(Mockito.any())).thenReturn(Either.right(""));
-//
-//        //TODO: check type of IOException
-//        assertNotNull(
-//            Routines.loadConfig
-//                .run(io)
-//                .join(x->x, x->null)
-//        );
 
+        final IOContext io = IOContext.fake();
+
+        final Path path = io.fs().getPath(
+                io.fs().userHomeDirectory().toString(),
+                ".buckaroo",
+                "config.json");
+
+        io.fs().createDirectory(path.getParent().toString());
+        io.fs().writeFile(path, "");
+
+        assertTrue(Routines.readConfig(path.toString()).run(io).join(x -> true, x -> false));
     }
 
     @Test
-    public void loadConfigParsingEmptyCookbook() throws Exception {
-//        IOContext io = mock(IOContext.class);
-//        Path p = mock(Path.class);
-//
-//        IOException error = new IOException("foo");
-//        when(p.toString()).thenReturn("/");
-//        when(io.userHomeDirectory()).thenReturn(p);
-//        when(io.readFile(Mockito.any())).thenReturn(
-//            Either.right("{" +
-//                "\"cookBooks\":[]" +
-//                "}")
-//        );
-//
-//        assertEquals(
-//            Routines.loadConfig
-//                .run(io)
-//                .join(x->null, x->x)
-//                .cookBooks,
-//            ImmutableList.of());
-    }
+    public void loadConfigParsesEmptsCookbook() throws Exception {
 
-    @Test
-    public void loadConfigFromFakeFs() throws Exception {
+        final IOContext io = IOContext.fake();
 
-//        IOContext io = IOContext.fake();
-//        final Path configPath = io.getPath(
-//            io.userHomeDirectory().toString(),
-//            ".buckaroo/",
-//            "config.json");
-//
-//        final String content = "{" +
-//            "\"cookBooks\":[]" +
-//            "}";
-//
-//        Files.createDirectories(configPath.getParent());
-//        Files.write(
-//            configPath,
-//            ImmutableList.of(content),
-//            Charset.defaultCharset()
-//        );
-//
-//        System.out.println(configPath.toString());
-//
-//        assertEquals(
-//            Routines.loadConfig
-//                .run(io)
-//                .join(x->null, x->x)
-//                .cookBooks,
-//            ImmutableList.of());
+        final Path path = io.fs().getPath(
+                io.fs().userHomeDirectory().toString(),
+                ".buckaroo/",
+                "config.json");
+
+        final String content = "{" +
+                "\"cookBooks\":[]" +
+                "}";
+
+        Files.createDirectories(path.getParent());
+        Files.write(path, ImmutableList.of(content), Charset.defaultCharset());
+
+        System.out.println(path.toString());
+
+        assertEquals(Routines.readConfig(path.toString()).run(io).rightProjection(x -> x.cookBooks),
+                Either.right(ImmutableList.of()));
     }
 
 }

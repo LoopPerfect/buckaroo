@@ -1,35 +1,47 @@
 package com.loopperfect.buckaroo.io;
 
-import java.nio.file.*;
+import com.google.common.base.Preconditions;
 
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
+public interface IOContext {
 
+    FSContext fs();
+    GitContext git();
+    ConsoleContext console();
 
-public interface IOContext
-    extends GitContext, ConsoleContext, FSContext {
-
-    static IOContext actual() {
-        return new IOContext(){
-            private final FileSystem fs = FileSystems.getDefault();
+    static IOContext of(final FSContext fs, final GitContext git, final ConsoleContext console) {
+        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(git);
+        Preconditions.checkNotNull(console);
+        return new IOContext() {
+            @Override
+            public FSContext fs() {
+                return fs;
+            }
 
             @Override
-            public FileSystem getFS() {
-                return fs;
+            public GitContext git() {
+                return git;
+            }
+
+            @Override
+            public ConsoleContext console() {
+                return console;
             }
         };
     }
 
-    static IOContext fake() {
-        return new IOContext() {
-            private final FileSystem fs = Jimfs
-                .newFileSystem(Configuration.unix());
+    static IOContext actual() {
+        return of(
+                FSContext.actual(),
+                GitContext.actual(),
+                ConsoleContext.actual());
+    }
 
-            @Override
-            public FileSystem getFS() {
-                return fs;
-            }
-        };
+    static IOContext fake() {
+        return of(
+                FSContext.fake(),
+                GitContext.fake(),
+                ConsoleContext.fake());
     }
 }
 

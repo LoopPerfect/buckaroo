@@ -12,7 +12,6 @@ import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import org.eclipse.jgit.api.Status;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,44 +24,47 @@ public final class Routines {
 
     }
 
-    private static final IO<Path> buckarooDirectory =
-            context -> Paths.get(context.userHomeDirectory().toString(), ".buckaroo/");
+    private static final IO<String> buckarooDirectory =
+            context -> Paths.get(context.fs().userHomeDirectory().toString(), ".buckaroo/").toString();
 
-    public static final IO<Path> configFilePath =
-            buckarooDirectory.map(x -> Paths.get(x.toString(), "config.json"));
+    public static final IO<String> configFilePath =
+            buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
 
-    public static final IO<Path> projectFilePath =
-            context -> Paths.get(context.workingDirectory().toString(), "buckaroo.json");
+    public static final IO<String> projectFilePath =
+            context -> Paths.get(context.fs().workingDirectory().toString(), "buckaroo.json").toString();
 
-    public static IO<Either<IOException, Project>> readProject(final Path path) {
+    public static IO<Either<IOException, Project>> readProject(final String path) {
         Preconditions.checkNotNull(path);
-        return context -> context.readFile(path).join(
+        return context -> context.fs().readFile(path).join(
                 Either::left,
                 content -> Try.safe(
                         () -> Serializers.gson().fromJson(content, Project.class), JsonSyntaxException.class)
                         .leftProjection(IOException::new));
     }
 
-    public static IO<Either<IOException, BuckarooConfig>> readConfig(final Path path) {
+    public static IO<Either<IOException, BuckarooConfig>> readConfig(final String path) {
         Preconditions.checkNotNull(path);
-        return context -> context.readFile(path).join(
+        return context -> context.fs().readFile(path).join(
                 Either::left,
-                content -> Try.safe(
+                content -> {
+                    Preconditions.checkNotNull(content);
+                    return Try.safe(
                         () -> Serializers.gson().fromJson(content, BuckarooConfig.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new));
+                        .leftProjection(IOException::new);
+                });
     }
 
-    private static IO<Either<IOException, Recipe>> readRecipe(final Path path) {
+    private static IO<Either<IOException, Recipe>> readRecipe(final String path) {
         Preconditions.checkNotNull(path);
-        return context -> context.readFile(path).join(
+        return context -> context.fs().readFile(path).join(
                 Either::left,
                 content -> Try.safe(
                         () -> Serializers.gson().fromJson(content, Recipe.class), JsonSyntaxException.class)
                         .leftProjection(IOException::new));
     }
 
-    private static boolean isJsonFile(final Path path) {
-        return Files.getFileExtension(path.toString()).equalsIgnoreCase("json");
+    private static boolean isJsonFile(final String path) {
+        return Files.getFileExtension(path).equalsIgnoreCase("json");
     }
 
     private static <T> ImmutableList<T> append(final ImmutableList<T> xs, final T x) {
@@ -102,9 +104,9 @@ public final class Routines {
         };
     }
 
-    private static IO<Either<IOException, CookBook>> readCookBook(final Path path) {
+    private static IO<Either<IOException, CookBook>> readCookBook(final String path) {
         Preconditions.checkNotNull(path);
-        return IO.of(x -> x.listFiles(Paths.get(path.toString(), "/recipes/")))
+        return IO.of(x -> x.fs().listFiles(Paths.get(path, "/recipes/").toString()))
                 .flatMap(listFiles -> listFiles.join(
                         error -> IO.value(Either.left(error)),
                         paths -> allOrNothing(paths.stream()
@@ -122,7 +124,7 @@ public final class Routines {
         Preconditions.checkNotNull(config);
         return allOrNothing(config.cookBooks.stream()
                 .map(remoteCookBook -> buckarooDirectory
-                        .map(path -> append(path, remoteCookBook.name.toString()))
+                        .flatMap(path -> context -> context.fs().getPath(path, remoteCookBook.name.toString()).toString())
                         .flatMap(Routines::readCookBook))
                 .collect(ImmutableList.toImmutableList()));
     }
@@ -138,11 +140,11 @@ public final class Routines {
     public static IO<Either<Exception, Status>> ensureCheckout(final String path, final GitCommit gitCommit) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(gitCommit);
-        return IO.of(context -> context.getFS().getPath(path).toFile())
+        return IO.of(context -> context.fs().getPath(path).toFile())
                 .flatMap(file -> IO.sequence(ImmutableList.of(
-                        context -> context.gitClone(file, gitCommit.url),
-                        context -> context.gitCheckout(file, gitCommit.commit),
-                        context -> context.gitPull(file)))
-                        .then(context -> context.gitStatus(file)));
+                        context -> context.git().clone(file, gitCommit.url),
+                        context -> context.git().checkout(file, gitCommit.commit),
+                        context -> context.git().pull(file)))
+                        .then(context -> context.git().status(file)));
     }
 }

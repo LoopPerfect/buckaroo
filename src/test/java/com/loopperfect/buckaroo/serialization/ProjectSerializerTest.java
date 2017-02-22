@@ -46,4 +46,14 @@ public final class ProjectSerializerTest {
             assertTrue(true);
         }
     }
+
+    @org.junit.Test
+    public void testProjectSerializer3() throws Exception {
+        try {
+            final Project project = Serializers.gson().fromJson("", Project.class);
+            assertTrue(false);
+        } catch (final JsonParseException e) {
+            assertTrue(true);
+        }
+    }
 }

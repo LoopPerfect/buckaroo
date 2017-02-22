@@ -16,10 +16,12 @@ public final class Try {
         try {
             return Either.right(f.get());
         } catch (final Throwable e) {
+            Preconditions.checkNotNull(e);
             if (exceptionType.isInstance(e)) {
                 return Either.left(exceptionType.cast(e));
             }
-            throw new IllegalStateException("A CheckedSupplier may only throw its specified Throwable type");
+            throw new IllegalStateException("A CheckedSupplier may only throw its specified Throwable type. " +
+                    "Got " + e.getClass().getCanonicalName() + " expected " + exceptionType.getCanonicalName() + ". ");
         }
     }
 

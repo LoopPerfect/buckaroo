@@ -62,7 +62,7 @@ public final class InstallExisting {
     private static IO<String> recipePath(final String dependenciesDirectory, final RecipeIdentifier recipe) {
         Preconditions.checkNotNull(dependenciesDirectory);
         Preconditions.checkNotNull(recipe);
-        return IO.of(x -> x.getPath(dependenciesDirectory, "/",
+        return IO.of(x -> x.fs().getPath(dependenciesDirectory, "/",
                 recipe.project.toString(), "/", recipe.version.toString(), "/").toString());
     }
 
@@ -137,11 +137,11 @@ public final class InstallExisting {
         return DependencyResolver.resolve(project.dependencies, fetcher).join(
                 IO::println,
                 resolvedDependencies -> continueUntilPresent(ImmutableList.of(
-                        IO.of(x -> x.workingDirectory().toString() + "/BUCKAROO_DEPS")
+                        IO.of(x -> x.fs().workingDirectory().toString() + "/BUCKAROO_DEPS")
                                 .flatMap(path -> generateBuckarooDeps(path, resolvedDependencies)),
-                        IO.of(x -> x.workingDirectory().toString() + "/.buckconfig.local")
+                        IO.of(x -> x.fs().workingDirectory().toString() + "/.buckconfig.local")
                                 .flatMap(path -> generateBuckConfig(path, resolvedDependencies)),
-                        IO.of(x -> x.workingDirectory().toString() + "/buckaroo/")
+                        IO.of(x -> x.fs().workingDirectory().toString() + "/buckaroo/")
                                 .flatMap(path -> installDependencies(path, cookBooks, resolvedDependencies))))
                         .flatMap(x -> Optionals.join(x,
                                 IO::println,
