@@ -12,7 +12,7 @@ public final class RecipesCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.listRecipes;
+        return null;
     }
 
     @Override

@@ -9,7 +9,7 @@ import com.google.common.jimfs.Jimfs;
 public interface IOContext
     extends GitContext, ConsoleContext, FSContext {
 
-    public static IOContext actual() {
+    static IOContext actual() {
         return new IOContext(){
             private final FileSystem fs = FileSystems.getDefault();
 
@@ -20,7 +20,7 @@ public interface IOContext
         };
     }
 
-    public static IOContext fake() {
+    static IOContext fake() {
         return new IOContext() {
             private final FileSystem fs = Jimfs
                 .newFileSystem(Configuration.unix());

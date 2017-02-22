@@ -17,7 +17,7 @@ public final class UpgradeCommand implements CLICommand {
         final RemoteCookBook cookBook = RemoteCookBook.of(
                 Identifier.of("buckaroo-recipes-test"),
                 "git@github.com:njlr/buckaroo-recipes-test.git");
-        return Routines.upgrade(cookBook);
+        return null;
     }
 
     @Override

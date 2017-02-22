@@ -26,11 +26,11 @@ public interface FSContext {
 
     FileSystem getFS();
 
-    default Path getUserHomeDirectory() {
+    default Path userHomeDirectory() {
         return getFS().getPath(System.getProperty("user.home"));
     }
 
-    default Path getWorkingDirectory() {
+    default Path workingDirectory() {
         return getFS().getPath(System.getProperty("user.dir"));
     }
 
@@ -129,13 +129,13 @@ public interface FSContext {
             }
 
             @Override
-            public Path getUserHomeDirectory() {
+            public Path userHomeDirectory() {
                 return getFS()
                     .getPath(homeDir);
             }
 
             @Override
-            public Path getWorkingDirectory() {
+            public Path workingDirectory() {
                 return getFS()
                     .getPath(workingDir);
             }

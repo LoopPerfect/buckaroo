@@ -27,6 +27,13 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
 
         final String target = jsonObject.get("target").getAsString();
 
-        return RecipeVersion.of(url, buckUrl, target, DependencyGroup.of());
+        DependencyGroup dependencies;
+        if (jsonObject.has("dependencies")) {
+            dependencies = context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class);
+        } else {
+            dependencies = DependencyGroup.of();
+        }
+
+        return RecipeVersion.of(url, buckUrl, target, dependencies);
     }
 }

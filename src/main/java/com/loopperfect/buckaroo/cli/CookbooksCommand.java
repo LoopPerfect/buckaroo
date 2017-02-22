@@ -22,7 +22,7 @@ public final class CookbooksCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.listCookBooks;
+        return null;
     }
 
     public static CookbooksCommand of() {

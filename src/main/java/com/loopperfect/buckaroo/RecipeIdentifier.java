@@ -15,6 +15,10 @@ public final class RecipeIdentifier {
         this.version = Preconditions.checkNotNull(version);
     }
 
+    public String encode() {
+        return project.name + "@" + version.toString();
+    }
+
     public boolean equals(final RecipeIdentifier other) {
         return this == other ||
                 (Objects.equals(project, other.project) &&

@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.loopperfect.buckaroo.*;
 
+import java.util.Optional;
+
 import static org.junit.Assert.assertEquals;
 
 public final class RecipeSerializerTest {
@@ -18,13 +20,17 @@ public final class RecipeSerializerTest {
                                         SemanticVersion.of(1, 0),
                                         RecipeVersion.of(
                                                 GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5"),
-                                                "my-magic-lib"),
+                                                Optional.empty(),
+                                                "my-magic-lib",
+                                                DependencyGroup.of(
+                                                        ImmutableMap.of(
+                                                                Identifier.of("awesome"), AnySemanticVersion.of()))),
                                         SemanticVersion.of(1, 1),
                                         RecipeVersion.of(
                                                 GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
                                                 "my-magic-lib")));
 
-        final Gson gson = Serializers.gson();
+        final Gson gson = Serializers.gson(true);
 
         final String serializedRecipe = gson.toJson(recipe);
 

@@ -12,7 +12,7 @@ public final class InitCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.createProjectSkeleton;
+        return null;
     }
 
     @Override

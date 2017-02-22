@@ -22,7 +22,7 @@ public final class GenerateCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.generateBuckFile;
+        return null;
     }
 
     public static GenerateCommand of() {

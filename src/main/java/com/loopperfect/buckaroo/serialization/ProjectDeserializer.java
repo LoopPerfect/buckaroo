@@ -24,17 +24,13 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
             license = Optional.empty();
         }
 
-        ImmutableMap<Identifier, SemanticVersionRequirement> dependencies;
+        DependencyGroup dependencies;
         if (jsonObject.has("dependencies")) {
-            final JsonObject jsonObjectDependencies = jsonObject.getAsJsonObject("dependencies");
-            dependencies = ImmutableMap.copyOf(
-                    jsonObjectDependencies.entrySet().stream().collect(Collectors.toMap(
-                            x -> context.deserialize(new JsonPrimitive(x.getKey()), Identifier.class),
-                            x -> context.deserialize(x.getValue(), SemanticVersionRequirement.class))));
+            dependencies = context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class);
         } else {
-            dependencies = ImmutableMap.of();
+            dependencies = DependencyGroup.of();
         }
 
-        return Project.of(name, license, DependencyGroup.of(dependencies));
+        return Project.of(name, license, dependencies);
     }
 }

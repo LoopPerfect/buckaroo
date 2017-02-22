@@ -36,7 +36,7 @@ public final class UninstallCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.uninstallRecipe(project);
+        return null;
     }
 
     public static UninstallCommand of(final Identifier project) {

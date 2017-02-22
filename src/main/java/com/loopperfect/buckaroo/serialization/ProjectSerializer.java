@@ -27,16 +27,10 @@ public final class ProjectSerializer implements JsonSerializer<Project> {
         jsonObject.addProperty("name", project.name.name);
 
         if (project.license.isPresent()) {
-            jsonObject.addProperty("license", project.license.get().toString());
+            jsonObject.addProperty("license", project.license.get());
         }
 
-        final JsonObject dependenciesObject = new JsonObject();
-
-        for (final Dependency i : project.dependencies.entries()) {
-            dependenciesObject.addProperty(i.project.name, i.versionRequirement.encode());
-        }
-
-        jsonObject.add("dependencies", dependenciesObject);
+        jsonObject.add("dependencies", context.serialize(project.dependencies));
 
         return jsonObject;
     }

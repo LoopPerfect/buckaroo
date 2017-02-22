@@ -29,6 +29,9 @@ public final class Serializers {
         gsonBuilder.registerTypeAdapter(Dependency.class, new DependencySerializer());
         gsonBuilder.registerTypeAdapter(Dependency.class, new DependencyDeserializer());
 
+        gsonBuilder.registerTypeAdapter(DependencyGroup.class, new DependencyGroupSerializer());
+        gsonBuilder.registerTypeAdapter(DependencyGroup.class, new DependencyGroupDeserializer());
+
         gsonBuilder.registerTypeAdapter(RecipeVersion.class, new RecipeVersionSerializer());
         gsonBuilder.registerTypeAdapter(RecipeVersion.class, new RecipeVersionDeserializer());
 
@@ -54,4 +57,4 @@ public final class Serializers {
     public static Gson gson() {
         return gson(false);
     }
-    }
+}

@@ -13,7 +13,7 @@ public final class DependenciesCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.listDependencies;
+        return null;
     }
 
     @Override

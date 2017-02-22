@@ -28,6 +28,10 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
 
         jsonObject.addProperty("target", recipeVersion.target);
 
+        if (!recipeVersion.dependencies.isEmpty()) {
+            jsonObject.add("dependencies", context.serialize(recipeVersion.dependencies));
+        }
+
         return jsonObject;
     }
 }

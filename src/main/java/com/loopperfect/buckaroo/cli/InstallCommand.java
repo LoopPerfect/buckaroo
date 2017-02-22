@@ -20,7 +20,8 @@ public final class InstallCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Routines.installDependency(project, versionRequirement);
+//        return Routines.installDependency(project, versionRequirement);
+        return null;
     }
 
     @Override

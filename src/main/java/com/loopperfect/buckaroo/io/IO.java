@@ -113,13 +113,17 @@ public interface IO<T> {
         };
     }
 
-    static IO<Optional<IOException>> writeFile(final Path path, final String content) {
+    static IO<Optional<IOException>> writeFile(final String path, final String content, final boolean overwrite) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(content);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.writeFile(path, content);
+            return context.writeFile(context.getPath(path), content, overwrite);
         };
+    }
+
+    static IO<Optional<IOException>> writeFile(final String path, final String content) {
+        return writeFile(path, content, false);
     }
 
     static IO<Either<IOException, String>> readFile(final Path path) {
