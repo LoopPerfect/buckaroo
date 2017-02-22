@@ -24,7 +24,7 @@ public final class Routines {
 
     }
 
-    private static final IO<String> buckarooDirectory =
+    public static final IO<String> buckarooDirectory =
             context -> Paths.get(context.fs().userHomeDirectory().toString(), ".buckaroo/").toString();
 
     public static final IO<String> configFilePath =
