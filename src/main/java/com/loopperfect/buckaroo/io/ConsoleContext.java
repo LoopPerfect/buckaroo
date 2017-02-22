@@ -36,10 +36,10 @@ public interface ConsoleContext {
     }
 
     static ConsoleContext fake() {
-        return create(x->null, Optional::empty);
+        return of(x->null, Optional::empty);
     }
 
-    static ConsoleContext create(final Function<String, Void> printer, final Supplier<Optional<String>> reader) {
+    static ConsoleContext of(final Function<String, Void> printer, final Supplier<Optional<String>> reader) {
 
         return new ConsoleContext() {
             @Override

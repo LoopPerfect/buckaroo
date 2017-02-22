@@ -12,7 +12,7 @@ public interface IOContext {
     GitContext git();
     ConsoleContext console();
 
-    static IOContext create(final FSContext fs, final GitContext git, final ConsoleContext console) {
+    static IOContext of(final FSContext fs, final GitContext git, final ConsoleContext console) {
         return new IOContext() {
             @Override
             public FSContext fs() {
@@ -32,7 +32,7 @@ public interface IOContext {
     }
 
     public static IOContext actual() {
-        return create(
+        return of(
             FSContext.actual(),
             GitContext.actual(),
             ConsoleContext.actual()
@@ -40,7 +40,7 @@ public interface IOContext {
     }
 
     public static IOContext fake() {
-        return create(
+        return of(
             FSContext.fake(),
             GitContext.fake(),
             ConsoleContext.fake()

@@ -105,20 +105,20 @@ public interface FSContext {
 
 
     static FSContext actual() {
-        return create(
+        return of(
             FileSystems.getDefault(),
             System.getProperty("user.home"),
             System.getProperty("user.dir"));
     }
 
     static FSContext fake() {
-        return create(
+        return of(
             Jimfs.newFileSystem(Configuration.unix()),
             System.getProperty("user.home"),
             System.getProperty("user.dir"));
     }
 
-    static FSContext create(final FileSystem fs, final String homeDir, final String workingDir) {
+    static FSContext of(final FileSystem fs, final String homeDir, final String workingDir) {
         return new FSContext() {
             @Override
             public FileSystem getFS() {
