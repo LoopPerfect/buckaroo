@@ -28,32 +28,21 @@ public final class ProjectSerializerTest {
                         Identifier.of("awesome-lib"),
                         AnySemanticVersion.of())));
 
-        final Gson gson = Serializers.gson(true);
+        final String serializedProject = Serializers.serialize(project);
 
-        final String serializedProject = gson.toJson(project);
+        final Either<JsonParseException, Project> deserializedProject =
+                Serializers.parseProject(serializedProject);
 
-        final Project deserializedProject = gson.fromJson(serializedProject, Project.class);
-
-        assertEquals(project, deserializedProject);
+        assertEquals(Either.right(project), deserializedProject);
     }
 
     @org.junit.Test
     public void testProjectSerializer2() throws Exception {
-        try {
-            Serializers.gson().fromJson("this is not valid", Project.class);
-            assertTrue(false);
-        } catch (final JsonParseException e) {
-            assertTrue(true);
-        }
+        assertTrue(Serializers.parseProject("this is not valid").left().isPresent());
     }
 
     @org.junit.Test
     public void testProjectSerializer3() throws Exception {
-        try {
-            final Project project = Serializers.gson().fromJson("", Project.class);
-            assertTrue(false);
-        } catch (final JsonParseException e) {
-            assertTrue(true);
-        }
+        assertTrue(Serializers.parseProject("").left().isPresent());
     }
 }

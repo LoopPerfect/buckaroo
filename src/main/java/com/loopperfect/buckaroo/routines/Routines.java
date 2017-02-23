@@ -37,9 +37,13 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
                 Either::left,
-                content -> Try.safe(
-                        () -> Serializers.gson().fromJson(content, Project.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new));
+                content -> Serializers.parseProject(content).leftProjection(IOException::new));
+    }
+
+    public static IO<Optional<IOException>> writeProject(final String path, final Project project, final boolean overwrite) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(project);
+        return IO.writeFile(path, Serializers.serialize(project), overwrite);
     }
 
     public static IO<Either<IOException, BuckarooConfig>> readConfig(final String path) {
@@ -48,9 +52,7 @@ public final class Routines {
                 Either::left,
                 content -> {
                     Preconditions.checkNotNull(content);
-                    return Try.safe(
-                        () -> Serializers.gson().fromJson(content, BuckarooConfig.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new);
+                    return Serializers.parseConfig(content).leftProjection(IOException::new);
                 });
     }
 
@@ -58,9 +60,7 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
                 Either::left,
-                content -> Try.safe(
-                        () -> Serializers.gson().fromJson(content, Recipe.class), JsonSyntaxException.class)
-                        .leftProjection(IOException::new));
+                content -> Serializers.parseRecipe(content).leftProjection(IOException::new));
     }
 
     private static boolean isJsonFile(final String path) {

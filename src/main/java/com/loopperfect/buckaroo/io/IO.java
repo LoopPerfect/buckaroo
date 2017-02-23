@@ -5,11 +5,16 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Unit;
+import org.jparsec.functors.Map2;
+import org.jparsec.functors.Map3;
+import org.jparsec.functors.Map4;
+import org.jparsec.functors.Map5;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -158,6 +163,53 @@ public interface IO<T> {
             return builder.build();
         };
     }
+
+    static <A, B, T> IO<T> sequence(final IO<A> a, final IO<B> b, final BiFunction<A, B, T> selector) {
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(b);
+        Preconditions.checkNotNull(selector);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return selector.apply(a.run(context), b.run(context));
+        };
+    }
+
+    static <A, B, C, T> IO<T> sequence(final IO<A> a, final IO<B> b, final IO<C> c, final Map3<A, B, C, T> selector) {
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(b);
+        Preconditions.checkNotNull(c);
+        Preconditions.checkNotNull(selector);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return selector.map(a.run(context), b.run(context), c.run(context));
+        };
+    }
+
+    static <A, B, C, D, T> IO<T> sequence(final IO<A> a, final IO<B> b, final IO<C> c, final IO<D> d, final Map4<A, B, C, D, T> selector) {
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(b);
+        Preconditions.checkNotNull(c);
+        Preconditions.checkNotNull(d);
+        Preconditions.checkNotNull(selector);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return selector.map(a.run(context), b.run(context), c.run(context), d.run(context));
+        };
+    }
+
+    static <A, B, C, D, E, T> IO<T> sequence(final IO<A> a, final IO<B> b, final IO<C> c, final IO<D> d, final IO<E> e, final Map5<A, B, C, D, E, T> selector) {
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(b);
+        Preconditions.checkNotNull(c);
+        Preconditions.checkNotNull(d);
+        Preconditions.checkNotNull(e);
+        Preconditions.checkNotNull(selector);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return selector.map(a.run(context), b.run(context), c.run(context), d.run(context), e.run(context));
+        };
+    }
+
 
     static <T, U> Function<IO<T>, IO<U>> lift(final Function<T, U> f) {
         Preconditions.checkNotNull(f);

@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.cli;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.routines.Install;
 import com.loopperfect.buckaroo.routines.Routines;
 
 import java.util.Objects;
@@ -20,8 +21,7 @@ public final class InstallCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-//        return Routines.installDependency(project, versionRequirement);
-        return null;
+        return Install.routine(project, versionRequirement);
     }
 
     @Override
