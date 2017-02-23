@@ -1,6 +1,6 @@
 package com.loopperfect.buckaroo.serialization;
 
-import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import org.junit.Test;
 
@@ -10,13 +10,12 @@ public final class DependencySerializerTest {
 
     private static void serializeDeserialize(final Dependency dependency) {
 
-        final Gson gson = Serializers.gson();
+        final String serializedDependency = Serializers.serialize(dependency);
 
-        final String serializedDependency = gson.toJson(dependency);
+        final Either<JsonParseException, Dependency> deserizializedDependency =
+                Serializers.parseDependency(serializedDependency);
 
-        final Dependency deserizializedDependency = gson.fromJson(serializedDependency, Dependency.class);
-
-        assertEquals(dependency, deserizializedDependency);
+        assertEquals(Either.right(dependency), deserizializedDependency);
     }
 
     @Test

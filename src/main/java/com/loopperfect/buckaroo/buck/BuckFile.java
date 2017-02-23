@@ -26,10 +26,9 @@ public final class BuckFile {
 
     }
 
-    public static Either<IOException, String> generate(final Identifier project, final ImmutableMap<Identifier, SemanticVersion> resolvedDependencies) {
+    public static Either<IOException, String> generate(final Identifier project) {
 
         Preconditions.checkNotNull(project);
-        Preconditions.checkNotNull(resolvedDependencies);
 
         final URL url = Resources.getResource("com.loopperfect.buckaroo/ProjectTemplate.mustache");
         final String templateString;
@@ -40,11 +39,7 @@ public final class BuckFile {
         }
 
         final Map<String, Object> scopes = ImmutableMap.of(
-            "name", project.name,
-            "dependencies", resolvedDependencies.entrySet()
-                .stream()
-                .map(x -> RecipeIdentifier.of(x.getKey(), x.getValue()))
-                .collect(ImmutableList.toImmutableList()));
+                "name", project.name);
 
         final Writer writer = new StringWriter();
         final MustacheFactory mustacheFactory = new DefaultMustacheFactory();
