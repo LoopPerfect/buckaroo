@@ -17,18 +17,17 @@ import java.util.stream.Stream;
 /**
  * Created by gaetano on 21/02/17.
  */
-
 @FunctionalInterface
 public interface FSContext {
 
     FileSystem getFS();
 
-    default Path userHomeDirectory() {
-        return getFS().getPath(System.getProperty("user.home"));
+    default String userHomeDirectory() {
+        return getFS().getPath(System.getProperty("user.home")).toString();
     }
 
-    default Path workingDirectory() {
-        return getFS().getPath(System.getProperty("user.dir"));
+    default String workingDirectory() {
+        return getFS().getPath(System.getProperty("user.dir")).toString();
     }
 
     default Path getPath(String... path) {
@@ -38,13 +37,14 @@ public interface FSContext {
         return getFS().getPath("", paths);
     }
 
-    default boolean isFile(final Path path) {
-        return Files.isRegularFile(path);
+    default boolean isFile(final String path) {
+        Preconditions.checkNotNull(path);
+        return Files.isRegularFile(getFS().getPath(path));
     }
 
-    default boolean exists(final Path path) {
+    default boolean exists(final String path) {
         Preconditions.checkNotNull(path);
-        return Files.exists(path);
+        return Files.exists(getFS().getPath(path));
     }
 
     default Optional<IOException> createDirectory(final String p) {
@@ -119,22 +119,28 @@ public interface FSContext {
     }
 
     static FSContext of(final FileSystem fs, final String homeDir, final String workingDir) {
+
+        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(homeDir);
+        Preconditions.checkNotNull(workingDir);
+
         return new FSContext() {
+
             @Override
             public FileSystem getFS() {
                 return fs;
             }
 
             @Override
-            public Path userHomeDirectory() {
+            public String userHomeDirectory() {
                 return getFS()
-                    .getPath(homeDir);
+                    .getPath(homeDir).toString();
             }
 
             @Override
-            public Path workingDirectory() {
+            public String workingDirectory() {
                 return getFS()
-                    .getPath(workingDir);
+                    .getPath(workingDir).toString();
             }
         };
     }

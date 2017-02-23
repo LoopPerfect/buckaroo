@@ -69,6 +69,10 @@ public final class Project {
         return new Project(name, license, dependencies);
     }
 
+    public static Project of(final Identifier name) {
+        return new Project(name, Optional.empty(), DependencyGroup.of());
+    }
+
     public static Project of(final String name, final DependencyGroup dependencies) {
         return new Project(Identifier.of(name), Optional.empty(), dependencies);
     }
