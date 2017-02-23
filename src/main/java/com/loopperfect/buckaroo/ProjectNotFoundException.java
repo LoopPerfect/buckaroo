@@ -10,7 +10,7 @@ import java.util.Objects;
 public final class ProjectNotFoundException extends DependencyResolverException {
 
     public ProjectNotFoundException(final Identifier id){
-        super(id, "Project not found" + id.name);
+        super(id, "Project not found " + id.name);
      }
 
     @Override
