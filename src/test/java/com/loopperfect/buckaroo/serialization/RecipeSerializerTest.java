@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 
 import java.util.Optional;
@@ -30,12 +31,11 @@ public final class RecipeSerializerTest {
                     GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
                     "my-magic-lib")));
 
-        final Gson gson = Serializers.gson(true);
+        final String serializedRecipe = Serializers.serialize(recipe);
 
-        final String serializedRecipe = gson.toJson(recipe);
+        final Either<JsonParseException, Recipe> deserializedRecipe =
+                Serializers.parseRecipe(serializedRecipe);
 
-        final Recipe deserializedRecipe = gson.fromJson(serializedRecipe, Recipe.class);
-
-        assertEquals(recipe, deserializedRecipe);
+        assertEquals(Either.right(recipe), deserializedRecipe);
     }
 }
