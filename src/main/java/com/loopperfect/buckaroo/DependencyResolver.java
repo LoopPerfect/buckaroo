@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.*;
 
@@ -67,31 +68,27 @@ public final class DependencyResolver {
     }
 
 
-    public static ImmutableMap<Identifier, SemanticVersion> removeDependency(
-        final ImmutableMap<Identifier, SemanticVersion> deps,
+    public static ImmutableSet<Identifier> removableDependencies(
+        final ImmutableMap<Identifier, SemanticVersionRequirement> deps,
         final Identifier id,
         final DependencyFetcher fetcher) {
-        if (!deps.containsKey(id)) return deps;
+        if (!deps.containsKey(id))
+            return ImmutableSet.of();
 
-        final SemanticVersionRequirement version = ExactSemanticVersion.of(deps.get(id));
+        final SemanticVersionRequirement version = deps.get(id);
         final ImmutableMap<SemanticVersion, DependencyGroup> removableVersions = fetcher.fetch(id, version)
             .right()
             .get();
 
-        final DependencyGroup removable = removableVersions.get(deps.get(id));
+        return getLatest(removableVersions).map( removable ->
+            removable.getValue().dependencies
+                .keySet()
+                .stream()
+                .filter(x ->
+                    !deps.containsKey(x)
+                ).collect(ImmutableSet.toImmutableSet()))
+            .orElse(ImmutableSet.of());
 
-        if(removable.isEmpty()) return deps;
-
-        return deps
-            .entrySet()
-            .stream()
-            .filter(
-                x -> !removable.dependencies.containsKey((x.getKey()))
-                    && !x.getValue().equals(id)
-            ).collect(ImmutableMap.toImmutableMap(
-                Map.Entry::getKey,
-                Map.Entry::getValue)
-            );
     }
 
 }

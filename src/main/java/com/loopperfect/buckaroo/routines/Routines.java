@@ -25,13 +25,13 @@ public final class Routines {
     }
 
     public static final IO<String> buckarooDirectory =
-            context -> Paths.get(context.fs().userHomeDirectory().toString(), ".buckaroo/").toString();
+            context -> Paths.get(context.fs().userHomeDirectory(), ".buckaroo/").toString();
 
     public static final IO<String> configFilePath =
         buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
 
     public static final IO<String> projectFilePath =
-        context -> Paths.get(context.fs().workingDirectory().toString(), "buckaroo.json").toString();
+        context -> Paths.get(context.fs().workingDirectory(), "buckaroo.json").toString();
 
     public static IO<Either<IOException, Project>> readProject(final String path) {
         Preconditions.checkNotNull(path);
