@@ -81,6 +81,15 @@ public final class InstallExisting {
                 .map(x -> x.leftProjection(IOException::new).left());
     }
 
+    private static IO<Optional<IOException>> installResource(final Resource resource, final String targetPath) {
+        Preconditions.checkNotNull(resource);
+        Preconditions.checkNotNull(targetPath);
+        return IO.println("Fetching " + resource.description() + "... ")
+                .then(resource.fetch().flatMap(x -> x.join(
+                        error -> IO.value(Optional.of(error)),
+                        content -> IO.writeFile(targetPath, content, true))));
+    }
+
     private static IO<Optional<IOException>> installDependency(
             final String dependenciesDirectory,
             final RecipeIdentifier identifier,
@@ -95,6 +104,12 @@ public final class InstallExisting {
                 .filter(entry -> recipeVersion.dependencies.requires(entry.getKey()))
                 .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
         return continueUntilPresent(ImmutableList.of(
+                IO.println("Installing " + identifier.project + "@" + identifier.version + "... ")
+                        .then(IO.value(Optional.empty())),
+                recipePath(dependenciesDirectory, identifier)
+                        .flatMap(path -> recipeVersion.buckResource.map(
+                                resource -> installResource(resource, path + "/BUCK"))
+                                        .orElseGet(() -> IO.value(Optional.empty()))),
                 fetchDependency(dependenciesDirectory, identifier, recipeVersion, refinedDependencies),
                 recipePath(dependenciesDirectory, identifier)
                         .flatMap(path -> generateBuckConfig(path + "/.buckconfig.local", "../..", refinedDependencies)),

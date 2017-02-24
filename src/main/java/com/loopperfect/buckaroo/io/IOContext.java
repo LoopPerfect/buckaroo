@@ -7,12 +7,17 @@ public interface IOContext {
     FSContext fs();
     GitContext git();
     ConsoleContext console();
+    HttpContext http();
 
-    static IOContext of(final FSContext fs, final GitContext git, final ConsoleContext console) {
+    static IOContext of(final FSContext fs, final GitContext git, final ConsoleContext console, final HttpContext http) {
+
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(git);
         Preconditions.checkNotNull(console);
+        Preconditions.checkNotNull(http);
+
         return new IOContext() {
+
             @Override
             public FSContext fs() {
                 return fs;
@@ -27,6 +32,11 @@ public interface IOContext {
             public ConsoleContext console() {
                 return console;
             }
+
+            @Override
+            public HttpContext http() {
+                return http;
+            }
         };
     }
 
@@ -34,14 +44,16 @@ public interface IOContext {
         return of(
                 FSContext.actual(),
                 GitContext.actual(),
-                ConsoleContext.actual());
+                ConsoleContext.actual(),
+                HttpContext.actual());
     }
 
     static IOContext fake() {
         return of(
                 FSContext.fake(),
                 GitContext.fake(),
-                ConsoleContext.fake());
+                ConsoleContext.fake(),
+                HttpContext.fake());
     }
 }
 

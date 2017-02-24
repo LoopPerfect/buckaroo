@@ -6,13 +6,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.loopperfect.buckaroo.RecipeVersion;
+import com.loopperfect.buckaroo.Resource;
 
 import java.lang.reflect.Type;
 
 public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersion> {
 
     @Override
-    public JsonElement serialize(final RecipeVersion recipeVersion, final Type type, final JsonSerializationContext context) {
+    public JsonElement serialize(
+            final RecipeVersion recipeVersion, final Type type, final JsonSerializationContext context) {
 
         Preconditions.checkNotNull(recipeVersion);
         Preconditions.checkNotNull(type);
@@ -22,14 +24,16 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
 
         jsonObject.add("url", context.serialize(recipeVersion.gitCommit));
 
-        if (recipeVersion.buckUrl.isPresent()) {
-            jsonObject.addProperty("buck-url", recipeVersion.buckUrl.get());
+        if (recipeVersion.target.isPresent()) {
+            jsonObject.addProperty("target", recipeVersion.target.get());
         }
-
-        jsonObject.addProperty("target", recipeVersion.target);
 
         if (!recipeVersion.dependencies.isEmpty()) {
             jsonObject.add("dependencies", context.serialize(recipeVersion.dependencies));
+        }
+
+        if (recipeVersion.buckResource.isPresent()) {
+            jsonObject.add("buck", context.serialize(recipeVersion.buckResource.get(), Resource.class));
         }
 
         return jsonObject;

@@ -49,7 +49,10 @@ public final class Recipe {
                 .toString();
     }
 
-    public static Recipe of(final Identifier name, final String url, final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
+    public static Recipe of(
+            final Identifier name,
+            final String url,
+            final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
         return new Recipe(name, url, versions);
     }
 }

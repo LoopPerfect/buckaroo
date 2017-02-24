@@ -42,6 +42,11 @@ public interface FSContext {
         return Files.isRegularFile(getFS().getPath(path));
     }
 
+    default boolean isDirectory(final String path) {
+        Preconditions.checkNotNull(path);
+        return Files.isDirectory(getFS().getPath(path));
+    }
+
     default boolean exists(final String path) {
         Preconditions.checkNotNull(path);
         return Files.exists(getFS().getPath(path));
@@ -95,14 +100,13 @@ public interface FSContext {
 
     default Either<IOException, ImmutableList<String>> listFiles(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p.toString());
-        try (Stream<Path> paths = java.nio.file.Files.walk(path, 1, FileVisitOption.FOLLOW_LINKS)) {
+        final Path path = getFS().getPath(p);
+        try (Stream<Path> paths = java.nio.file.Files.list(path)) {
             return Either.right(paths.map(Path::toString).collect(ImmutableList.toImmutableList()));
         } catch (final IOException e) {
             return Either.left(e);
         }
     }
-
 
     static FSContext actual() {
         return of(
@@ -118,11 +122,11 @@ public interface FSContext {
             System.getProperty("user.dir"));
     }
 
-    static FSContext of(final FileSystem fs, final String homeDir, final String workingDir) {
+    static FSContext of(final FileSystem fs, final String homeDirectory, final String workingDirectory) {
 
         Preconditions.checkNotNull(fs);
-        Preconditions.checkNotNull(homeDir);
-        Preconditions.checkNotNull(workingDir);
+        Preconditions.checkNotNull(homeDirectory);
+        Preconditions.checkNotNull(workingDirectory);
 
         return new FSContext() {
 
@@ -134,13 +138,13 @@ public interface FSContext {
             @Override
             public String userHomeDirectory() {
                 return getFS()
-                    .getPath(homeDir).toString();
+                    .getPath(homeDirectory).toString();
             }
 
             @Override
             public String workingDirectory() {
                 return getFS()
-                    .getPath(workingDir).toString();
+                    .getPath(workingDirectory).toString();
             }
         };
     }

@@ -21,11 +21,11 @@ public final class RecipeSerializerTest {
                                         SemanticVersion.of(1, 0),
                                         RecipeVersion.of(
                                                 GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5"),
-                                                Optional.empty(),
-                                                "my-magic-lib",
+                                                Optional.of("my-magic-lib"),
                                                 DependencyGroup.of(
                                                         ImmutableMap.of(
-                                                                Identifier.of("awesome"), AnySemanticVersion.of()))),
+                                                                Identifier.of("awesome"), AnySemanticVersion.of())),
+                                                Optional.of(FileResource.of("./BUCK"))),
                                         SemanticVersion.of(1, 1),
                                         RecipeVersion.of(
                                                 GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
