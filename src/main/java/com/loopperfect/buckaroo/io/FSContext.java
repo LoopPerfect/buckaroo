@@ -6,7 +6,7 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.util.Arrays;
@@ -49,7 +49,7 @@ public interface FSContext {
 
     default boolean exists(final String path) {
         Preconditions.checkNotNull(path);
-        return Files.exists(getFS().getPath(path));
+        return Files.exists(getFS().getPath(path).toAbsolutePath());
     }
 
     default Optional<IOException> createDirectory(final String p) {
@@ -79,22 +79,29 @@ public interface FSContext {
         }
     }
 
-    default Optional<IOException> writeFile(final Path p, final String content, final boolean overwrite) {
+    default Optional<IOException> writeFile(final String p, final String content, final boolean overwrite) {
         Preconditions.checkNotNull(p);
         Preconditions.checkNotNull(content);
-        final Path path = getFS().getPath(p.toString());
+        final Path path = getFS().getPath(p);
         try {
-            if (!overwrite && Files.exists(path)) {
-                throw new IOException("There is already a file at " + path);
+            if (Files.exists(path)) {
+                if (!overwrite) {
+                    throw new IOException("There is already a file at " + path);
+                }
+            } else {
+                if (!Files.exists(path.getParent())) {
+                    Files.createDirectories(path.getParent());
+                }
+                Files.createFile(path);
             }
-            Files.write(path, ImmutableList.of(content), Charset.defaultCharset());
+            Files.write(path, ImmutableList.of(content), Charset.defaultCharset(), StandardOpenOption.CREATE);
             return Optional.empty();
         } catch (final IOException e) {
             return Optional.of(e);
         }
     }
 
-    default Optional<IOException> writeFile(final Path path, final String content) {
+    default Optional<IOException> writeFile(final String path, final String content) {
         return writeFile(path, content, false);
     }
 

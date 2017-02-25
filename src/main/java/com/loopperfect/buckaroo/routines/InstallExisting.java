@@ -106,11 +106,11 @@ public final class InstallExisting {
         return continueUntilPresent(ImmutableList.of(
                 IO.println("Installing " + identifier.project + "@" + identifier.version + "... ")
                         .then(IO.value(Optional.empty())),
+                fetchDependency(dependenciesDirectory, identifier, recipeVersion, refinedDependencies),
                 recipePath(dependenciesDirectory, identifier)
                         .flatMap(path -> recipeVersion.buckResource.map(
                                 resource -> installResource(resource, path + "/BUCK"))
                                         .orElseGet(() -> IO.value(Optional.empty()))),
-                fetchDependency(dependenciesDirectory, identifier, recipeVersion, refinedDependencies),
                 recipePath(dependenciesDirectory, identifier)
                         .flatMap(path -> generateBuckConfig(path + "/.buckconfig.local", "../..", refinedDependencies)),
                 recipePath(dependenciesDirectory, identifier)
@@ -159,7 +159,8 @@ public final class InstallExisting {
                                 .flatMap(path -> generateBuckConfig(path, "./buckaroo", resolvedDependencies)),
                         IO.of(x -> x.fs().workingDirectory() + "/buckaroo/")
                                 .flatMap(path -> installDependencies(path, cookBooks, resolvedDependencies))))
-                        .flatMap(x -> Optionals.join(x,
+                        .flatMap(x -> Optionals.join(
+                                x,
                                 IO::println,
                                 () -> IO.println("Success! "))));
     }

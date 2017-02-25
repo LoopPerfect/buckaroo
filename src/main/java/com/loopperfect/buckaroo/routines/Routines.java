@@ -107,6 +107,7 @@ public final class Routines {
                             .map(file -> file.substring(0, file.length() - ".json".length()))
                             .filter(Identifier::isValid)
                             .map(Identifier::of)
+                            .distinct()
                             .collect(ImmutableList.toImmutableList()));
         };
     }
