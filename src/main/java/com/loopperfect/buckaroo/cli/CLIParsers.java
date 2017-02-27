@@ -14,117 +14,125 @@ public final class CLIParsers {
     }
 
     public static final Parser<Identifier> identifierParser =
-        Scanners.isChar(CharPredicates.or(CharPredicates.IS_ALPHA_NUMERIC, CharPredicates.among("-_")))
-            .times(3, 30)
-            .source()
-            .map(Identifier::of);
+            Scanners.isChar(CharPredicates.or(CharPredicates.IS_ALPHA_NUMERIC, CharPredicates.among("-_")))
+                    .times(3, 30)
+                    .source()
+                    .map(Identifier::of);
 
     static final Parser<Void> initTokenParser =
-        Scanners.stringCaseInsensitive("init");
+            Scanners.stringCaseInsensitive("init");
 
     static final Parser<Void> upgradeTokenParser =
-        Scanners.stringCaseInsensitive("upgrade");
+            Scanners.stringCaseInsensitive("upgrade");
 
     static final Parser<Void> installTokenParser =
-        Scanners.stringCaseInsensitive("install");
+            Scanners.stringCaseInsensitive("install");
 
     static final Parser<Void> uninstallTokenParser =
-        Scanners.stringCaseInsensitive("uninstall");
+            Scanners.stringCaseInsensitive("uninstall");
 
     static final Parser<Void> updateTokenParser =
-        Scanners.stringCaseInsensitive("update");
+            Scanners.stringCaseInsensitive("update");
 
     static final Parser<Void> libraryTokenParser =
-        Scanners.stringCaseInsensitive("library");
+            Scanners.stringCaseInsensitive("library");
 
     static final Parser<Void> recipesTokenParser =
-        Scanners.stringCaseInsensitive("recipes");
+            Scanners.stringCaseInsensitive("recipes");
 
     static final Parser<Void> generateTokenParser =
-        Scanners.stringCaseInsensitive("generate");
+            Scanners.stringCaseInsensitive("generate");
 
     static final Parser<Void> cookbooksTokenParser =
-        Scanners.stringCaseInsensitive("cookbooks");
+            Scanners.stringCaseInsensitive("cookbooks");
 
     static final Parser<Void> dependenciesTokenParser =
-        Scanners.stringCaseInsensitive("dependencies");
+            Scanners.stringCaseInsensitive("dependencies");
+
+    static final Parser<Void> versionTokenParser =
+            Scanners.stringCaseInsensitive("version");
 
     static final Parser<Void> ignoreParser =
-        Scanners.WHITESPACES.skipMany();
+            Scanners.WHITESPACES.skipMany();
 
     static final Parser<RecipesCommand> recipesCommandParser =
-        recipesTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> RecipesCommand.of());
+            recipesTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> RecipesCommand.of());
 
     static final Parser<InstallExistingCommand> installExistingCommandParser =
-        installTokenParser
-            .between(ignoreParser, ignoreParser)
-            .map(x -> InstallExistingCommand.of());
+            installTokenParser
+                    .between(ignoreParser, ignoreParser)
+                    .map(x -> InstallExistingCommand.of());
 
     static final Parser<InstallCommand> installCommandParser =
-        Parsers.longest(
-            Parsers.sequence(
-                installTokenParser
-                    .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                identifierParser,
-                (x, y) -> InstallCommand.of(y))
-                .between(ignoreParser, ignoreParser),
-            Parsers.sequence(
-                installTokenParser
-                    .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                identifierParser,
-                VersioningParsers.semanticVersionRequirementParser,
-                (x, y, z) -> InstallCommand.of(y, z))
-                .between(ignoreParser, ignoreParser));
+            Parsers.longest(
+                Parsers.sequence(
+                        installTokenParser
+                                .followedBy(Scanners.WHITESPACES.atLeast(1)),
+                        identifierParser,
+                        (x, y) -> InstallCommand.of(y))
+                        .between(ignoreParser, ignoreParser),
+                Parsers.sequence(
+                        installTokenParser
+                                .followedBy(Scanners.WHITESPACES.atLeast(1)),
+                        identifierParser,
+                        VersioningParsers.semanticVersionRequirementParser,
+                        (x, y, z) -> InstallCommand.of(y, z))
+                        .between(ignoreParser, ignoreParser));
 
     static final Parser<UninstallCommand> uninstallCommandParser =
-        Parsers.sequence(
-            uninstallTokenParser
-                .followedBy(Scanners.WHITESPACES.atLeast(1)),
-            identifierParser,
-            (x, y) -> UninstallCommand.of(y))
-            .between(ignoreParser, ignoreParser);
+            Parsers.sequence(
+                    uninstallTokenParser
+                            .followedBy(Scanners.WHITESPACES.atLeast(1)),
+                    identifierParser,
+                    (x, y) -> UninstallCommand.of(y))
+                    .between(ignoreParser, ignoreParser);
 
     static final Parser<UpdateCommand> updateCommandParser =
-        Parsers.longest(
-            updateTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
-                .next(identifierParser)
-                .between(ignoreParser, ignoreParser)
-                .map(x -> UpdateCommand.of(x)),
-            updateTokenParser
-                .between(ignoreParser, ignoreParser)
-                .map(x -> UpdateCommand.of()));
+            Parsers.longest(
+                updateTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+                        .next(identifierParser)
+                        .between(ignoreParser, ignoreParser)
+                        .map(x -> UpdateCommand.of(x)),
+                updateTokenParser
+                        .between(ignoreParser, ignoreParser)
+                        .map(x -> UpdateCommand.of()));
 
     static final Parser<InitCommand> initCommandParser =
-        initTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> InitCommand.of());
+            initTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> InitCommand.of());
 
     static final Parser<UpgradeCommand> upgradeCommandParser =
-        upgradeTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> UpgradeCommand.of());
+            upgradeTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> UpgradeCommand.of());
 
     static final Parser<GenerateCommand> generateCommandParser =
-        generateTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> GenerateCommand.of());
+            generateTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> GenerateCommand.of());
 
     static final Parser<CookbooksCommand> cookbooksCommandParser =
-        cookbooksTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> CookbooksCommand.of());
+            cookbooksTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> CookbooksCommand.of());
 
     static final Parser<DependenciesCommand> dependenciesCommandParser =
-        dependenciesTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> DependenciesCommand.of());
+            dependenciesTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> DependenciesCommand.of());
+
+    static final Parser<VersionCommand> versionCommandParser =
+            versionTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> VersionCommand.of());
 
     public static final Parser<CLICommand> commandParser =
-        Parsers.longest(
-            initCommandParser,
-            upgradeCommandParser,
-            installExistingCommandParser,
-            installCommandParser,
-            uninstallCommandParser,
-            updateCommandParser,
-            recipesCommandParser,
-            generateCommandParser,
-            cookbooksCommandParser,
-            dependenciesCommandParser);
+            Parsers.longest(
+                    initCommandParser,
+                    upgradeCommandParser,
+                    installExistingCommandParser,
+                    installCommandParser,
+                    uninstallCommandParser,
+                    updateCommandParser,
+                    recipesCommandParser,
+                    generateCommandParser,
+                    cookbooksCommandParser,
+                    dependenciesCommandParser,
+                    versionCommandParser);
 }

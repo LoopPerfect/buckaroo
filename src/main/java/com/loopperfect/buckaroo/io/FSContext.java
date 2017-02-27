@@ -6,7 +6,7 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.util.Arrays;
@@ -42,9 +42,14 @@ public interface FSContext {
         return Files.isRegularFile(getFS().getPath(path));
     }
 
+    default boolean isDirectory(final String path) {
+        Preconditions.checkNotNull(path);
+        return Files.isDirectory(getFS().getPath(path));
+    }
+
     default boolean exists(final String path) {
         Preconditions.checkNotNull(path);
-        return Files.exists(getFS().getPath(path));
+        return Files.exists(getFS().getPath(path).toAbsolutePath());
     }
 
     default Optional<IOException> createDirectory(final String p) {
@@ -74,15 +79,22 @@ public interface FSContext {
         }
     }
 
-    default Optional<IOException> writeFile(final Path p, final String content, final boolean overwrite) {
+    default Optional<IOException> writeFile(final String p, final String content, final boolean overwrite) {
         Preconditions.checkNotNull(p);
         Preconditions.checkNotNull(content);
-        final Path path = getFS().getPath(p.toString());
+        final Path path = getFS().getPath(p);
         try {
-            if (!overwrite && Files.exists(path)) {
-                throw new IOException("There is already a file at " + path);
+            if (Files.exists(path)) {
+                if (!overwrite) {
+                    throw new IOException("There is already a file at " + path);
+                }
+            } else {
+                if (!Files.exists(path.getParent())) {
+                    Files.createDirectories(path.getParent());
+                }
+                Files.createFile(path);
             }
-            Files.write(path, ImmutableList.of(content), Charset.defaultCharset());
+            Files.write(path, ImmutableList.of(content), Charset.defaultCharset(), StandardOpenOption.CREATE);
             return Optional.empty();
         } catch (final IOException e) {
             return Optional.of(e);
@@ -99,20 +111,19 @@ public interface FSContext {
        }
     }
 
-    default Optional<IOException> writeFile(final Path path, final String content) {
+    default Optional<IOException> writeFile(final String path, final String content) {
         return writeFile(path, content, false);
     }
 
     default Either<IOException, ImmutableList<String>> listFiles(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p.toString());
-        try (Stream<Path> paths = java.nio.file.Files.walk(path, 1, FileVisitOption.FOLLOW_LINKS)) {
+        final Path path = getFS().getPath(p);
+        try (Stream<Path> paths = java.nio.file.Files.list(path)) {
             return Either.right(paths.map(Path::toString).collect(ImmutableList.toImmutableList()));
         } catch (final IOException e) {
             return Either.left(e);
         }
     }
-
 
     static FSContext actual() {
         return of(
@@ -128,11 +139,11 @@ public interface FSContext {
             System.getProperty("user.dir"));
     }
 
-    static FSContext of(final FileSystem fs, final String homeDir, final String workingDir) {
+    static FSContext of(final FileSystem fs, final String homeDirectory, final String workingDirectory) {
 
         Preconditions.checkNotNull(fs);
-        Preconditions.checkNotNull(homeDir);
-        Preconditions.checkNotNull(workingDir);
+        Preconditions.checkNotNull(homeDirectory);
+        Preconditions.checkNotNull(workingDirectory);
 
         return new FSContext() {
 
@@ -144,13 +155,13 @@ public interface FSContext {
             @Override
             public String userHomeDirectory() {
                 return getFS()
-                    .getPath(homeDir).toString();
+                    .getPath(homeDirectory).toString();
             }
 
             @Override
             public String workingDirectory() {
                 return getFS()
-                    .getPath(workingDir).toString();
+                    .getPath(workingDirectory).toString();
             }
         };
     }

@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Unit;
-import org.jparsec.functors.Map2;
 import org.jparsec.functors.Map3;
 import org.jparsec.functors.Map4;
 import org.jparsec.functors.Map5;
@@ -120,7 +119,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(content);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.fs().writeFile(context.fs().getPath(path), content, overwrite);
+            return context.fs().writeFile(path, content, overwrite);
         };
     }
 

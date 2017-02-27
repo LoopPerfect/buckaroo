@@ -85,6 +85,10 @@ public final class Serializers {
             .registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigDeserializer())
             .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookSerializer())
             .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookDeserializer())
+            .registerTypeAdapter(Resource.class, new ResourceDeserializer())
+            .registerTypeAdapter(Resource.class, new FileResourceSerializer())
+            .registerTypeAdapter(FileResource.class, new FileResourceSerializer())
+            .registerTypeAdapter(UrlResource.class, new UrlResourceSerializer())
             .setPrettyPrinting()
             .create();
 }

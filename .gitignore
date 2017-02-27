@@ -56,7 +56,6 @@ fabric.properties
 
 buck-out/
 .buckd/
-.buckconfig
 .buckconfig.local
 
 .idea/

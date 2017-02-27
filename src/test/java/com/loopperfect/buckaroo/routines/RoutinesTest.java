@@ -42,12 +42,12 @@ public final class RoutinesTest {
         final IOContext io = IOContext.fake();
 
         final Path path = io.fs().getPath(
-            io.fs().userHomeDirectory().toString(),
-            ".buckaroo",
-            "config.json");
+                io.fs().userHomeDirectory(),
+                ".buckaroo",
+                "config.json");
 
         io.fs().createDirectory(path.getParent().toString());
-        io.fs().writeFile(path, "");
+        io.fs().writeFile(path.toString(), "");
 
         assertTrue(Routines.readConfig(path.toString()).run(io).join(x -> true, x -> false));
     }
@@ -58,9 +58,9 @@ public final class RoutinesTest {
         final IOContext io = IOContext.fake();
 
         final Path path = io.fs().getPath(
-            io.fs().userHomeDirectory().toString(),
-            ".buckaroo/",
-            "config.json");
+                io.fs().userHomeDirectory(),
+                ".buckaroo/",
+                "config.json");
 
         final String content = "{" +
             "\"cookBooks\":[]" +

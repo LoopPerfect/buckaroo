@@ -181,16 +181,13 @@ java_library(
     ':slf4j-api',
     ':slf4j-nop',
     ':jsch',
-    ':jimfs'
+    ':jimfs',
   ],
 )
 
 java_binary(
   name = 'buckaroo-cli',
   main_class = 'com.loopperfect.buckaroo.Main',
-  # blacklist = [
-  #   'org.slf4j',
-  # ],
   deps = [
     ':buckaroo',
   ],

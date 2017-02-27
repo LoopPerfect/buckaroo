@@ -94,4 +94,35 @@ public class DependencyResolverTest {
 
         assertEquals(expected, actual);
     }
+
+    @Test
+    public void resolveEmpty() throws Exception {
+
+        final DependencyFetcher fetcher = DependencyFetcherFromMap.of(ImmutableMap.of());
+
+        assertEquals(
+                Either.right(ImmutableMap.of()),
+                DependencyResolver.resolve(DependencyGroup.of(), fetcher));
+    }
+
+    @Test
+    public void resolveAll() throws Exception {
+
+        final Identifier a = Identifier.of("alpha");
+        final Identifier b = Identifier.of("bravo");
+        final Identifier c = Identifier.of("charlie");
+
+        final DependencyGroup dependencyGroup = DependencyGroup.of(ImmutableMap.of(
+                a, AnySemanticVersion.of()));
+
+        final DependencyFetcher fetcher = DependencyFetcherFromMap.of(ImmutableMap.of(
+                a, ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of()),
+                b, ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of(
+                        ImmutableMap.of(c, AnySemanticVersion.of()))),
+                c, ImmutableMap.of(SemanticVersion.of(1), DependencyGroup.of())));
+
+        assertEquals(
+                Either.right(ImmutableMap.of(a, SemanticVersion.of(1))),
+                DependencyResolver.resolve(dependencyGroup, fetcher));
+    }
 }

@@ -1,0 +1,3 @@
+[download]
+  maven_repo = http://repo.maven.apache.org/maven2/ 
+  in_build = true
