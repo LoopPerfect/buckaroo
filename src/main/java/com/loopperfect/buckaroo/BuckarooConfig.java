@@ -34,8 +34,8 @@ public final class BuckarooConfig {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("cookBooks", cookBooks)
-                .toString();
+            .add("cookBooks", cookBooks)
+            .toString();
     }
 
     public static BuckarooConfig of(final ImmutableList<RemoteCookBook> cookBooks) {

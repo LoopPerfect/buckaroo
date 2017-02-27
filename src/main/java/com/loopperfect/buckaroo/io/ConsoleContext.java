@@ -32,11 +32,12 @@ public interface ConsoleContext {
     }
 
     static ConsoleContext actual() {
-        return new ConsoleContext() {};
+        return new ConsoleContext() {
+        };
     }
 
     static ConsoleContext fake() {
-        return create(x->null, Optional::empty);
+        return create(x -> null, Optional::empty);
     }
 
     static ConsoleContext create(final Function<String, Void> printer, final Supplier<Optional<String>> reader) {

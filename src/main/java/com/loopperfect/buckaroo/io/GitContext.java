@@ -1,7 +1,6 @@
 package com.loopperfect.buckaroo.io;
 
 import com.google.common.base.Preconditions;
-
 import com.loopperfect.buckaroo.Either;
 import org.eclipse.jgit.api.*;
 
@@ -14,7 +13,7 @@ public interface GitContext {
 
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
-        
+
 
         try {
             final CloneCommand command = Git.cloneRepository()
@@ -75,10 +74,11 @@ public interface GitContext {
     }
 
     static GitContext actual() {
-        return new GitContext(){};
+        return new GitContext() {
+        };
     }
 
-    static GitContext fake(){
+    static GitContext fake() {
         return new GitContext() {
             @Override
             public Optional<Exception> clone(final File localPath, final String gitUrl) {

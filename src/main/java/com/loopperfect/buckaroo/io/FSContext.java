@@ -100,6 +100,16 @@ public interface FSContext {
         }
     }
 
+    default Optional<IOException> deleteFile(final String path) {
+       final Path p = getFS().getPath(path);
+       try {
+           Files.deleteIfExists(p);
+           return Optional.empty();
+       } catch (final IOException e) {
+           return Optional.of(e);
+       }
+    }
+
     default Optional<IOException> writeFile(final String path, final String content) {
         return writeFile(path, content, false);
     }

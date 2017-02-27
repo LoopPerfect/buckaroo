@@ -36,15 +36,15 @@ public final class RemoteCookBook {
         final RemoteCookBook other = (RemoteCookBook) obj;
 
         return Objects.equals(name, other.name) &&
-                Objects.equals(url, other.url);
+            Objects.equals(url, other.url);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("name", name)
-                .add("url", url)
-                .toString();
+            .add("name", name)
+            .add("url", url)
+            .toString();
     }
 
     public static RemoteCookBook of(final Identifier name, final String url) {

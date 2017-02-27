@@ -6,6 +6,7 @@ package com.loopperfect.buckaroo;
 public class DependencyResolverException extends BuckarooException {
 
     protected final Identifier id;
+
     protected DependencyResolverException(final Identifier id, final String message) {
         super(message);
         this.id = id;

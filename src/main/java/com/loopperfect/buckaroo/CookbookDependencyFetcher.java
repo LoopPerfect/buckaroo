@@ -14,26 +14,26 @@ public final class CookbookDependencyFetcher implements DependencyFetcher {
 
     @Override
     public Either<DependencyResolverException, ImmutableMap<SemanticVersion, DependencyGroup>> fetch(
-            final Identifier project, final SemanticVersionRequirement versionRequirement) {
+        final Identifier project, final SemanticVersionRequirement versionRequirement) {
 
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(versionRequirement);
 
         final ImmutableList<Recipe> recipes = cookBooks.stream()
-                .flatMap(x -> x.recipes.stream())
-                .filter(x -> x.name.equals(project))
-                .collect(ImmutableList.toImmutableList());
+            .flatMap(x -> x.recipes.stream())
+            .filter(x -> x.name.equals(project))
+            .collect(ImmutableList.toImmutableList());
 
         if (recipes.isEmpty()) {
             return Either.left(new ProjectNotFoundException(project));
         }
 
         return Either.right(recipes.stream()
-                .flatMap(x -> x.versions.entrySet().stream())
-                .filter(x -> versionRequirement.isSatisfiedBy(x.getKey()))
-                .collect(ImmutableMap.toImmutableMap(
-                        x -> x.getKey(),
-                        x -> x.getValue().dependencies)));
+            .flatMap(x -> x.versions.entrySet().stream())
+            .filter(x -> versionRequirement.isSatisfiedBy(x.getKey()))
+            .collect(ImmutableMap.toImmutableMap(
+                x -> x.getKey(),
+                x -> x.getValue().dependencies)));
     }
 
     public static DependencyFetcher of(final ImmutableList<CookBook> cookBooks) {

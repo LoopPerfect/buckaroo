@@ -21,10 +21,10 @@ public final class DependencyGroupDeserializer implements JsonDeserializer<Depen
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
         return DependencyGroup.of(
-                jsonObject.entrySet()
-                        .stream()
-                        .collect(ImmutableMap.toImmutableMap(
-                            x -> context.deserialize(new JsonPrimitive(x.getKey()), Identifier.class),
-                            x -> context.deserialize(x.getValue(), SemanticVersionRequirement.class))));
+            jsonObject.entrySet()
+                .stream()
+                .collect(ImmutableMap.toImmutableMap(
+                    x -> context.deserialize(new JsonPrimitive(x.getKey()), Identifier.class),
+                    x -> context.deserialize(x.getValue(), SemanticVersionRequirement.class))));
     }
 }

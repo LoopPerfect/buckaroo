@@ -1,7 +1,5 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.base.Preconditions;
-
 import java.util.Objects;
 
 /**
@@ -11,7 +9,7 @@ public final class ProjectNotFoundException extends DependencyResolverException 
 
     public ProjectNotFoundException(final Identifier id){
         super(id, "Project not found " + id.name);
-     }
+    }
 
     @Override
     public boolean equals(final Object obj) {

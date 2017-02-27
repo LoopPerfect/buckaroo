@@ -2,7 +2,7 @@ package com.loopperfect.buckaroo;
 
 import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public final class SemanticVersionTest {
 

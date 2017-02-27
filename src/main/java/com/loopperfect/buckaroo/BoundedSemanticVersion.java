@@ -53,7 +53,7 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
         final BoundedSemanticVersion other = (BoundedSemanticVersion) obj;
 
         return Objects.equals(bound, other.bound) &&
-                Objects.equals(direction, other.direction);
+            Objects.equals(direction, other.direction);
     }
 
     @Override
@@ -64,9 +64,9 @@ public final class BoundedSemanticVersion implements SemanticVersionRequirement 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("bound", bound)
-                .add("direction", direction)
-                .toString();
+            .add("bound", bound)
+            .add("direction", direction)
+            .toString();
     }
 
     public static BoundedSemanticVersion of(final SemanticVersion bound, final AboveOrBelow direction) {

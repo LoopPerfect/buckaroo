@@ -5,7 +5,9 @@ import com.google.common.base.Preconditions;
 public interface IOContext {
 
     FSContext fs();
+
     GitContext git();
+
     ConsoleContext console();
     HttpContext http();
 

@@ -16,17 +16,17 @@ public final class ProjectSerializerTest {
     public void testProjectSerializer1() throws Exception {
 
         final Project project = Project.of(
-                Identifier.of("my-magic-tool"),
-                Optional.of("MIT"),
-                DependencyGroup.of(ImmutableMap.of(
-                        Identifier.of("my-magic-lib"),
-                        ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6)),
-                        Identifier.of("some-other-lib"),
-                        ExactSemanticVersion.of(
-                                SemanticVersion.of(4, 1),
-                                SemanticVersion.of(4, 2)),
-                        Identifier.of("awesome-lib"),
-                        AnySemanticVersion.of())));
+            Identifier.of("my-magic-tool"),
+            Optional.of("MIT"),
+            DependencyGroup.of(ImmutableMap.of(
+                Identifier.of("my-magic-lib"),
+                ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6)),
+                Identifier.of("some-other-lib"),
+                ExactSemanticVersion.of(
+                    SemanticVersion.of(4, 1),
+                    SemanticVersion.of(4, 2)),
+                Identifier.of("awesome-lib"),
+                AnySemanticVersion.of())));
 
         final String serializedProject = Serializers.serialize(project);
 

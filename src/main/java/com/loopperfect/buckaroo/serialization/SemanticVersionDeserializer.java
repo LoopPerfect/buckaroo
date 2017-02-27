@@ -19,6 +19,6 @@ public final class SemanticVersionDeserializer implements JsonDeserializer<Seman
         Preconditions.checkNotNull(context);
 
         return SemanticVersion.parse(jsonElement.getAsString())
-                .orElseThrow(() -> new JsonParseException("\"" + jsonElement.getAsString() + "\" is not a valid verison"));
+            .orElseThrow(() -> new JsonParseException("\"" + jsonElement.getAsString() + "\" is not a valid verison"));
     }
 }

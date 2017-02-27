@@ -2,17 +2,9 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
-import static com.google.common.collect.ImmutableSet.builder;
 
 public final class Project {
 
@@ -47,8 +39,8 @@ public final class Project {
         final Project other = (Project) obj;
 
         return Objects.equals(name, other.name) &&
-                Objects.equals(license, other.license) &&
-                Objects.equals(dependencies, other.dependencies);
+            Objects.equals(license, other.license) &&
+            Objects.equals(dependencies, other.dependencies);
     }
 
     @Override
@@ -59,10 +51,10 @@ public final class Project {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("name", name)
-                .add("license", license)
-                .add("dependencies", dependencies)
-                .toString();
+            .add("name", name)
+            .add("license", license)
+            .add("dependencies", dependencies)
+            .toString();
     }
 
     public static Project of(final Identifier name, final Optional<String> license, final DependencyGroup dependencies) {

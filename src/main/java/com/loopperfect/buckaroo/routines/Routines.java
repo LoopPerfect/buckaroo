@@ -25,7 +25,7 @@ public final class Routines {
             context -> Paths.get(context.fs().userHomeDirectory(), ".buckaroo/").toString();
 
     public static final IO<String> configFilePath =
-            buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
+        buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
 
     public static final IO<String> projectFilePath =
             context -> Paths.get(context.fs().workingDirectory(), "buckaroo.json").toString();
@@ -139,10 +139,10 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(gitCommit);
         return IO.of(context -> context.fs().getPath(path).toFile())
-                .flatMap(file -> IO.sequence(ImmutableList.of(
-                        context -> context.git().clone(file, gitCommit.url),
-                        context -> context.git().checkout(file, gitCommit.commit),
-                        context -> context.git().pull(file)))
-                        .then(context -> context.git().status(file)));
+            .flatMap(file -> IO.sequence(ImmutableList.of(
+                context -> context.git().clone(file, gitCommit.url),
+                context -> context.git().checkout(file, gitCommit.commit),
+                context -> context.git().pull(file)))
+                .then(context -> context.git().status(file)));
     }
 }

@@ -30,7 +30,7 @@ public final class Identifier {
         if (obj == null || !(obj instanceof Identifier)) {
             return false;
         }
-        return equals((Identifier)obj);
+        return equals((Identifier) obj);
     }
 
     @Override

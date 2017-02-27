@@ -127,6 +127,13 @@ public interface IO<T> {
         return writeFile(path, content, false);
     }
 
+    static IO<Optional<IOException>> deleteFile(final String path){
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return context.fs().deleteFile(path);
+        };
+    }
+
     static IO<Either<IOException, String>> readFile(final String path) {
         Preconditions.checkNotNull(path);
         return context -> {

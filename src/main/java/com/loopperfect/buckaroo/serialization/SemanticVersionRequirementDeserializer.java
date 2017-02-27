@@ -21,7 +21,7 @@ public final class SemanticVersionRequirementDeserializer implements JsonDeseria
 
         try {
             return VersioningParsers.semanticVersionRequirementParser
-                    .parse(jsonElement.getAsString());
+                .parse(jsonElement.getAsString());
         } catch (final ParserException e) {
             throw new JsonParseException("Invalid version", e);
         }

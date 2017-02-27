@@ -31,8 +31,8 @@ public final class Recipe {
         final Recipe other = (Recipe) obj;
 
         return Objects.equals(name, other.name) &&
-                Objects.equals(url, other.url) &&
-                Objects.equals(versions, other.versions);
+            Objects.equals(url, other.url) &&
+            Objects.equals(versions, other.versions);
     }
 
     @Override
@@ -43,10 +43,10 @@ public final class Recipe {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("name", name)
-                .add("url", url)
-                .add("versions", versions)
-                .toString();
+            .add("name", name)
+            .add("url", url)
+            .add("versions", versions)
+            .toString();
     }
 
     public static Recipe of(

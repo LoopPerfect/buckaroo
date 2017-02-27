@@ -12,7 +12,7 @@ public final class UpdateCommand implements CLICommand {
 
     public final Optional<Identifier> project;
 
-    private UpdateCommand(final Optional<Identifier>  project) {
+    private UpdateCommand(final Optional<Identifier> project) {
         this.project = Preconditions.checkNotNull(project);
     }
 

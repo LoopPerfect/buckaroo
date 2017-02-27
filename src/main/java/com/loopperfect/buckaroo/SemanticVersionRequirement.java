@@ -4,9 +4,9 @@ import com.google.common.collect.ImmutableSet;
 
 public interface SemanticVersionRequirement {
 
-     boolean isSatisfiedBy(final SemanticVersion version);
+    boolean isSatisfiedBy(final SemanticVersion version);
 
-     ImmutableSet<SemanticVersion> hints();
+    ImmutableSet<SemanticVersion> hints();
 
-     String encode();
+    String encode();
 }

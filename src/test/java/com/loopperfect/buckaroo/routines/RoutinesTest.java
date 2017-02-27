@@ -25,15 +25,15 @@ public final class RoutinesTest {
         IOContext io = IOContext.fake();
 
         Path path = io.fs().getPath(
-                io.fs().userHomeDirectory().toString(),
-                ".buckaroo",
-                "config.json"
+            io.fs().userHomeDirectory().toString(),
+            ".buckaroo",
+            "config.json"
         );
 
         io.fs().createDirectory(path.getParent().toString());
 
         assertTrue(Routines.readConfig(path.toString()).run(io)
-                .join(x -> x, x -> null) instanceof java.nio.file.NoSuchFileException);
+            .join(x -> x, x -> null) instanceof java.nio.file.NoSuchFileException);
     }
 
     @Test
@@ -63,8 +63,8 @@ public final class RoutinesTest {
                 "config.json");
 
         final String content = "{" +
-                "\"cookBooks\":[]" +
-                "}";
+            "\"cookBooks\":[]" +
+            "}";
 
         Files.createDirectories(path.getParent());
         Files.write(path, ImmutableList.of(content), Charset.defaultCharset());
@@ -72,7 +72,7 @@ public final class RoutinesTest {
         System.out.println(path.toString());
 
         assertEquals(Routines.readConfig(path.toString()).run(io).rightProjection(x -> x.cookBooks),
-                Either.right(ImmutableList.of()));
+            Either.right(ImmutableList.of()));
     }
 
 }

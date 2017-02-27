@@ -3,7 +3,10 @@ package com.loopperfect.buckaroo.serialization;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.*;
-import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.Recipe;
+import com.loopperfect.buckaroo.RecipeVersion;
+import com.loopperfect.buckaroo.SemanticVersion;
 
 import java.lang.reflect.Type;
 import java.util.stream.Collectors;
@@ -25,9 +28,9 @@ public final class RecipeDeserializer implements JsonDeserializer<Recipe> {
         final JsonObject jsonObjectVersions = jsonObject.get("versions").getAsJsonObject();
 
         final ImmutableMap<SemanticVersion, RecipeVersion> versions = ImmutableMap.copyOf(
-                jsonObjectVersions.entrySet().stream().collect(Collectors.toMap(
-                        x -> context.deserialize(new JsonPrimitive(x.getKey()), SemanticVersion.class),
-                        x -> context.deserialize(x.getValue(), RecipeVersion.class))));
+            jsonObjectVersions.entrySet().stream().collect(Collectors.toMap(
+                x -> context.deserialize(new JsonPrimitive(x.getKey()), SemanticVersion.class),
+                x -> context.deserialize(x.getValue(), RecipeVersion.class))));
 
         return Recipe.of(name, url, versions);
     }

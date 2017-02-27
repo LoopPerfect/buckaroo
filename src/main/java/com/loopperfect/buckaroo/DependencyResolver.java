@@ -3,12 +3,12 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.*;
 
 /**
- *  Utility for resolving dependencies and transient dependencies.
- *
+ * Utility for resolving dependencies and transient dependencies.
  */
 public final class DependencyResolver {
 
@@ -19,12 +19,12 @@ public final class DependencyResolver {
     private static Optional<Map.Entry<SemanticVersion, DependencyGroup>> getLatest(final ImmutableMap<SemanticVersion, DependencyGroup> versions) {
         Preconditions.checkNotNull(versions);
         return versions.entrySet()
-                .stream()
-                .max(Comparator.comparing(Map.Entry::getKey));
+            .stream()
+            .max(Comparator.comparing(Map.Entry::getKey));
     }
 
     public static Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> resolve(
-            final DependencyGroup dependencyGroup, final DependencyFetcher fetcher) {
+        final DependencyGroup dependencyGroup, final DependencyFetcher fetcher) {
 
         Preconditions.checkNotNull(dependencyGroup);
         Preconditions.checkNotNull(fetcher);
@@ -47,17 +47,17 @@ public final class DependencyResolver {
             }
 
             fetcher.fetch(next).join(
-                    error -> Action.of(() -> unresolved.add(error)),
-                    x -> Action.of(() -> {
-                        final Optional<Map.Entry<SemanticVersion, DependencyGroup>> latest = getLatest(x);
-                        if (latest.isPresent()) {
-                            resolved.put(next.project, latest.get().getKey());
-                            todo.addAll(latest.get().getValue().entries());
-                        } else {
-                            unresolved.add(new VersionRequirementNotSatisfiedException(
-                                    next.project, next.versionRequirement));
-                        }
-                    })).run();
+                error -> Action.of(() -> unresolved.add(error)),
+                x -> Action.of(() -> {
+                    final Optional<Map.Entry<SemanticVersion, DependencyGroup>> latest = getLatest(x);
+                    if (latest.isPresent()) {
+                        resolved.put(next.project, latest.get().getKey());
+                        todo.addAll(latest.get().getValue().entries());
+                    } else {
+                        unresolved.add(new VersionRequirementNotSatisfiedException(
+                            next.project, next.versionRequirement));
+                    }
+                })).run();
         }
 
         if (unresolved.isEmpty()) {
@@ -66,4 +66,29 @@ public final class DependencyResolver {
 
         return Either.left(ImmutableList.copyOf(unresolved));
     }
+
+
+    public static ImmutableSet<Identifier> removableDependencies(
+        final ImmutableMap<Identifier, SemanticVersionRequirement> deps,
+        final Identifier id,
+        final DependencyFetcher fetcher) {
+        if (!deps.containsKey(id))
+            return ImmutableSet.of();
+
+        final SemanticVersionRequirement version = deps.get(id);
+        final ImmutableMap<SemanticVersion, DependencyGroup> removableVersions = fetcher.fetch(id, version)
+            .right()
+            .get();
+
+        return getLatest(removableVersions).map( removable ->
+            removable.getValue().dependencies
+                .keySet()
+                .stream()
+                .filter(x ->
+                    !deps.containsKey(x)
+                ).collect(ImmutableSet.toImmutableSet()))
+            .orElse(ImmutableSet.of());
+
+    }
+
 }

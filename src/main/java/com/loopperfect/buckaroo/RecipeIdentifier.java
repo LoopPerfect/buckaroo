@@ -21,8 +21,8 @@ public final class RecipeIdentifier {
 
     public boolean equals(final RecipeIdentifier other) {
         return this == other ||
-                (Objects.equals(project, other.project) &&
-                        Objects.equals(version, other.version));
+            (Objects.equals(project, other.project) &&
+                Objects.equals(version, other.version));
     }
 
     @Override
@@ -44,9 +44,9 @@ public final class RecipeIdentifier {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("project", project)
-                .add("version", version)
-                .toString();
+            .add("project", project)
+            .add("version", version)
+            .toString();
     }
 
     public static RecipeIdentifier of(final Identifier project, final SemanticVersion version) {

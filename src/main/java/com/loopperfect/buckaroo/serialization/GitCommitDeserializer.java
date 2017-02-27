@@ -19,6 +19,6 @@ public final class GitCommitDeserializer implements JsonDeserializer<GitCommit> 
         Preconditions.checkNotNull(context);
 
         return GitCommit.parse(jsonElement.getAsString())
-                .orElseThrow(() -> new JsonParseException("\"" + jsonElement.getAsString() + "\" is not a valid git commit"));
+            .orElseThrow(() -> new JsonParseException("\"" + jsonElement.getAsString() + "\" is not a valid git commit"));
     }
 }

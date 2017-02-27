@@ -24,10 +24,10 @@ public class BuckFileTest {
     public void list() {
 
         final Either<IOException, String> generatedList = BuckFile.list(
-                "buckarooDeps",
-                ImmutableList.of(
-                        "//buckaroo/awesome/1.0.0:awesome",
-                        "//buckaroo/some-lib/2.0.1:some-lib"));
+            "buckarooDeps",
+            ImmutableList.of(
+                "//buckaroo/awesome/1.0.0:awesome",
+                "//buckaroo/some-lib/2.0.1:some-lib"));
 
         assertTrue(generatedList.join(error -> false, string -> string.length() > 10));
     }
