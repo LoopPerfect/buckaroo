@@ -64,6 +64,10 @@ public final class CLIParsersTest {
                 UpdateCommand.of(),
                 CLIParsers.commandParser.parse("update"));
 
+        assertEquals(
+                QuickstartCommand.of(),
+                CLIParsers.commandParser.parse("quickstart"));
+
         try {
             parser.parse("installsomething");
             assertTrue(false);

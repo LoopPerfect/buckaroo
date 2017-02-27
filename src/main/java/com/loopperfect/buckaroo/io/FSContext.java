@@ -92,7 +92,6 @@ public interface FSContext {
                 if (!Files.exists(path.getParent())) {
                     Files.createDirectories(path.getParent());
                 }
-                Files.createFile(path);
             }
             Files.write(path, ImmutableList.of(content), Charset.defaultCharset(), StandardOpenOption.CREATE);
             return Optional.empty();
