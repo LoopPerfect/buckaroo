@@ -116,6 +116,11 @@ public final class Either<L, R> {
         return new Either<>(LeftOrRight.RIGHT, null, x);
     }
 
+    public static <L extends Throwable, R> R orThrow(final Either<L, R> either) throws L {
+        Preconditions.checkNotNull(either);
+        return either.right().orElseThrow(() -> either.left().get());
+    }
+
     public static <T> T join(final Either<? extends T, ? extends T> either) {
         Preconditions.checkNotNull(either);
         return either.which == LeftOrRight.LEFT ? either.l : either.r;

@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.BoundedSemanticVersion;
 import com.loopperfect.buckaroo.ExactSemanticVersion;
 import com.loopperfect.buckaroo.Identifier;
@@ -7,6 +8,8 @@ import com.loopperfect.buckaroo.SemanticVersion;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 import org.junit.Test;
+
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -19,10 +22,35 @@ public final class CLIParsersTest {
         final Parser<Identifier> parser = CLIParsers.identifierParser;
 
         assertEquals(Identifier.of("abc"), parser.parse("abc"));
-        assertEquals(Identifier.of("123-12"), parser.parse("123-12"));
+        assertEquals(Identifier.of("a123-12"), parser.parse("a123-12"));
         assertEquals(Identifier.of("abc"), parser.parse("abc"));
         assertEquals(Identifier.of("abcde_fgh"), parser.parse("abcde_fgh"));
         assertEquals(Identifier.of("abcde_-"), parser.parse("abcde_-"));
+        assertEquals(Identifier.of("abcde_-+++"), parser.parse("abcde_-+++"));
+
+        final String a30 = String.join("", Collections.nCopies(30, "a"));
+        assertEquals(Identifier.of(a30), parser.parse(a30));
+
+        try {
+            parser.parse("++abcde_-+++");
+            assertTrue(false);
+        } catch (final ParserException e) {
+            assertTrue(true);
+        }
+
+        try {
+            parser.parse("000abc");
+            assertTrue(false);
+        } catch (final ParserException e) {
+            assertTrue(true);
+        }
+
+        try {
+            parser.parse(String.join("", Collections.nCopies(31, "a")));
+            assertTrue(false);
+        } catch (final ParserException e) {
+            assertTrue(true);
+        }
     }
 
     @Test
@@ -67,6 +95,10 @@ public final class CLIParsersTest {
         assertEquals(
             UpdateCommand.of(),
             CLIParsers.commandParser.parse("update"));
+
+        assertEquals(
+                QuickstartCommand.of(),
+                CLIParsers.commandParser.parse("quickstart"));
 
         try {
             parser.parse("installsomething");
