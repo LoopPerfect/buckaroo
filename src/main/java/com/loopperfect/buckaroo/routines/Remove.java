@@ -31,22 +31,9 @@ public final class Remove {
                             project -> writeProject(path, project.removeDependency(identifier), true)
                                 .map(y -> (y.isPresent()) ?
                                     Either.left(y.get()) :
-                                    Either.right(1))
+                                    Either.right(path))
                                 .flatMap(y -> y.join(
                                     error -> IO.println("error writing project file: ").then(IO.println(error)),
-                                    $ -> Routines.readCookBooks(config).flatMap(z-> z.join(
-                                        error-> IO.println("error loading cookbook").then(IO.println(error)),
-                                        books -> {
-                                            final ImmutableSet<Identifier> depsToRemove = DependencyResolver
-                                                .removableDependencies(
-                                                    project.dependencies.dependencies,
-                                                    identifier,
-                                                    CookbookDependencyFetcher.of(books));
-
-                                            return buckarooDirectory.flatMap(
-                                                dir-> IO.sequence(depsToRemove.stream().map(
-                                                    dep->IO.deleteFile(dir+"/"+dep.name)
-                                            ).collect(ImmutableList.toImmutableList())).ignore());
-                                        })))))))));
+                                    p->InstallExisting.routine)))))));
     }
 }
