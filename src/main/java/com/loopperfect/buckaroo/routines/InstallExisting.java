@@ -90,6 +90,16 @@ public final class InstallExisting {
                         content -> IO.writeFile(targetPath, content, true))));
     }
 
+    private static ImmutableMap<Identifier, SemanticVersion> refineDependencies(
+            final Identifier identifier,
+            final ImmutableMap<Identifier, SemanticVersion> resolvedDependencies,
+            final DependencyGroup dependencies) {
+        return resolvedDependencies.entrySet().stream()
+                .filter(entry -> !entry.getKey().equals(identifier))
+                .filter(entry -> dependencies.requires(entry.getKey()))
+                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
     private static IO<Optional<IOException>> installDependency(
             final String dependenciesDirectory,
             final RecipeIdentifier identifier,
@@ -99,10 +109,10 @@ public final class InstallExisting {
         Preconditions.checkNotNull(identifier);
         Preconditions.checkNotNull(recipeVersion);
         Preconditions.checkNotNull(resolvedDependencies);
-        final ImmutableMap<Identifier, SemanticVersion> refinedDependencies = resolvedDependencies.entrySet().stream()
-                .filter(entry -> !entry.getKey().equals(identifier.project))
-                .filter(entry -> recipeVersion.dependencies.requires(entry.getKey()))
-                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+        final ImmutableMap<Identifier, SemanticVersion> refinedDependencies = refineDependencies(
+                identifier.project,
+                resolvedDependencies,
+                recipeVersion.dependencies);
         return continueUntilPresent(ImmutableList.of(
                 IO.println("Installing " + identifier.project + "@" + identifier.version + "... ")
                         .then(IO.value(Optional.empty())),
@@ -154,7 +164,9 @@ public final class InstallExisting {
                 IO::println,
                 resolvedDependencies -> continueUntilPresent(ImmutableList.of(
                         IO.of(x -> x.fs().workingDirectory() + "/BUCKAROO_DEPS")
-                                .flatMap(path -> generateBuckarooDeps(path, resolvedDependencies)),
+                                .flatMap(path -> generateBuckarooDeps(
+                                        path,
+                                        refineDependencies(project.name, resolvedDependencies, project.dependencies))),
                         IO.of(x -> x.fs().workingDirectory() + "/.buckconfig.local")
                                 .flatMap(path -> generateBuckConfig(path, "./buckaroo", resolvedDependencies)),
                         IO.of(x -> x.fs().workingDirectory() + "/buckaroo/")
