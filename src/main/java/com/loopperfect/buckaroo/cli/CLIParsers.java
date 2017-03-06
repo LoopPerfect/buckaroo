@@ -17,7 +17,7 @@ public final class CLIParsers {
             Scanners.isChar(CharPredicates.IS_LETTER).times(1).followedBy(
                     Scanners.isChar(CharPredicates.or(
                             CharPredicates.IS_ALPHA_NUMERIC,
-                            CharPredicates.among("-_+"))).times(2, 29))
+                            CharPredicates.among("-_+"))).times(1, 29))
                     .source()
                     .map(Identifier::of);
 

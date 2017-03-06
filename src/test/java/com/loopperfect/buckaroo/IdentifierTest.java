@@ -11,6 +11,7 @@ public final class IdentifierTest {
     public void isValid() throws Exception {
 
         assertTrue(Identifier.isValid("abc"));
+        assertTrue(Identifier.isValid("xz"));
         assertTrue(Identifier.isValid("abc123"));
         assertTrue(Identifier.isValid("abc-123_"));
         assertTrue(Identifier.isValid("abc-123_++++-"));
@@ -18,6 +19,7 @@ public final class IdentifierTest {
         assertFalse(Identifier.isValid("  ab  c-1 23_"));
         assertFalse(Identifier.isValid("    "));
         assertFalse(Identifier.isValid(""));
+        assertFalse(Identifier.isValid("a"));
         assertFalse(Identifier.isValid("\n"));
         assertFalse(Identifier.isValid("0123"));
         assertFalse(Identifier.isValid("_abc"));

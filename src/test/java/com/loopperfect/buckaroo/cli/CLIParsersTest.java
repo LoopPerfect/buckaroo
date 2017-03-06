@@ -21,6 +21,7 @@ public final class CLIParsersTest {
 
         final Parser<Identifier> parser = CLIParsers.identifierParser;
 
+        assertEquals(Identifier.of("xz"), parser.parse("xz"));
         assertEquals(Identifier.of("abc"), parser.parse("abc"));
         assertEquals(Identifier.of("a123-12"), parser.parse("a123-12"));
         assertEquals(Identifier.of("abc"), parser.parse("abc"));
@@ -33,6 +34,13 @@ public final class CLIParsersTest {
 
         try {
             parser.parse("++abcde_-+++");
+            assertTrue(false);
+        } catch (final ParserException e) {
+            assertTrue(true);
+        }
+
+        try {
+            parser.parse("a");
             assertTrue(false);
         } catch (final ParserException e) {
             assertTrue(true);

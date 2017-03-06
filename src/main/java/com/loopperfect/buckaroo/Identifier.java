@@ -49,7 +49,7 @@ public final class Identifier {
 
     public static boolean isValid(final String x) {
         Preconditions.checkNotNull(x);
-        return x.length() > 2 && x.length() < 31 && x.matches("^[a-zA-Z]+[a-zA-Z0-9-_+]*$");
+        return x.length() > 1 && x.length() < 31 && x.matches("^[a-zA-Z]+[a-zA-Z0-9-_+]*$");
     }
 
     public static Optional<Identifier> parse(final String x) {
