@@ -18,7 +18,7 @@ public final class BuckarooConfigSerializerTest {
         final BuckarooConfig config = BuckarooConfig.of(ImmutableList.of(
                 RemoteCookBook.of(
                         Identifier.of("cookbook"),
-                        "git@github.com:njlr/buckaroo-recipes-test.git")));
+                        "git@github.com:njlr/buckaroo-organizations-test.git")));
         final String serializedConfig = Serializers.serialize(config);
         final Either<JsonParseException, BuckarooConfig> deserializedConfig =
                 Serializers.parseConfig(serializedConfig);

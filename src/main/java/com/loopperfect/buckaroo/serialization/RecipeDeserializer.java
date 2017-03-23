@@ -22,7 +22,7 @@ public final class RecipeDeserializer implements JsonDeserializer<Recipe> {
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final Identifier name = context.deserialize(jsonObject.get("name"), Identifier.class);
+        final String name = jsonObject.get("name").getAsString();
         final String url = jsonObject.get("url").getAsString();
 
         final JsonObject jsonObjectVersions = jsonObject.get("versions").getAsJsonObject();

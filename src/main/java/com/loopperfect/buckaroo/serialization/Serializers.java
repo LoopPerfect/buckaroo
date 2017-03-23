@@ -71,6 +71,8 @@ public final class Serializers {
             .registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementDeserializer())
             .registerTypeAdapter(Identifier.class, new IdentifierSerializer())
             .registerTypeAdapter(Identifier.class, new IdentifierDeserializer())
+            .registerTypeAdapter(RecipeIdentifier.class, new RecipeIdentifierSerializer())
+            .registerTypeAdapter(RecipeIdentifier.class, new RecipeIdentifierDeserializer())
             .registerTypeAdapter(Dependency.class, new DependencySerializer())
             .registerTypeAdapter(Dependency.class, new DependencyDeserializer())
             .registerTypeAdapter(DependencyGroup.class, new DependencyGroupSerializer())

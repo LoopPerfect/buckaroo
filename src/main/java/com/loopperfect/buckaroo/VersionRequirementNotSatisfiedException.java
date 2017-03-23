@@ -4,15 +4,12 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
-/**
- * Created by gaetano on 16/02/17.
- */
 public final class VersionRequirementNotSatisfiedException extends DependencyResolverException {
 
     public final SemanticVersionRequirement requirement;
 
-    public VersionRequirementNotSatisfiedException(final Identifier id, final SemanticVersionRequirement requirement) {
-        super(id, "Cannot satisfy " + id.name + "@"+ requirement.encode());
+    public VersionRequirementNotSatisfiedException(final RecipeIdentifier id, final SemanticVersionRequirement requirement) {
+        super(id, "Cannot satisfy " + id.encode() + "@"+ requirement.encode());
         this.requirement = Preconditions.checkNotNull(requirement);
     }
 

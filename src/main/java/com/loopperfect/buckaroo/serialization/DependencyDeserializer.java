@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.gson.*;
 import com.loopperfect.buckaroo.Dependency;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
 import java.lang.reflect.Type;
@@ -19,7 +20,7 @@ public final class DependencyDeserializer implements JsonDeserializer<Dependency
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final Identifier project = context.deserialize(jsonObject.get("project"), Identifier.class);
+        final RecipeIdentifier project = context.deserialize(jsonObject.get("project"), RecipeIdentifier.class);
 
         final SemanticVersionRequirement versionRequirement =
             context.deserialize(jsonObject.get("version"), SemanticVersionRequirement.class);

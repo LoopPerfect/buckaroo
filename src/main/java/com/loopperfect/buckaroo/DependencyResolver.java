@@ -7,9 +7,6 @@ import com.google.common.collect.ImmutableSet;
 
 import java.util.*;
 
-/**
- * Utility for resolving dependencies and transient dependencies.
- */
 public final class DependencyResolver {
 
     private DependencyResolver() {
@@ -23,14 +20,14 @@ public final class DependencyResolver {
             .max(Comparator.comparing(Map.Entry::getKey));
     }
 
-    public static Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> resolve(
+    public static Either<ImmutableList<DependencyResolverException>, ImmutableMap<RecipeIdentifier, SemanticVersion>> resolve(
         final DependencyGroup dependencyGroup, final DependencyFetcher fetcher) {
 
         Preconditions.checkNotNull(dependencyGroup);
         Preconditions.checkNotNull(fetcher);
 
         final Stack<Dependency> todo = new Stack<>();
-        final Map<Identifier, SemanticVersion> resolved = new HashMap<>();
+        final Map<RecipeIdentifier, SemanticVersion> resolved = new HashMap<>();
         final List<DependencyResolverException> unresolved = new ArrayList<>();
 
         todo.addAll(dependencyGroup.entries());
@@ -68,27 +65,27 @@ public final class DependencyResolver {
     }
 
 
-    public static ImmutableSet<Identifier> removableDependencies(
-        final ImmutableMap<Identifier, SemanticVersionRequirement> deps,
-        final Identifier id,
-        final DependencyFetcher fetcher) {
-        if (!deps.containsKey(id))
-            return ImmutableSet.of();
-
-        final SemanticVersionRequirement version = deps.get(id);
-        final ImmutableMap<SemanticVersion, DependencyGroup> removableVersions = fetcher.fetch(id, version)
-            .right()
-            .get();
-
-        return getLatest(removableVersions).map( removable ->
-            removable.getValue().dependencies
-                .keySet()
-                .stream()
-                .filter(x ->
-                    !deps.containsKey(x)
-                ).collect(ImmutableSet.toImmutableSet()))
-            .orElse(ImmutableSet.of());
-
-    }
-
+//    public static ImmutableSet<Identifier> removableDependencies(
+//        final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies,
+//        final RecipeIdentifier project,
+//        final DependencyFetcher fetcher) {
+//
+//        if (!dependencies.containsKey(project)) {
+//            return ImmutableSet.of();
+//        }
+//
+//        final SemanticVersionRequirement version = dependencies.get(project);
+//        final ImmutableMap<SemanticVersion, DependencyGroup> removableVersions = fetcher.fetch(project, version)
+//            .right()
+//            .get();
+//
+//        return getLatest(removableVersions).map( removable ->
+//            removable.getValue().dependencies
+//                .keySet()
+//                .stream()
+//                .filter(x ->
+//                    !dependencies.containsKey(x)
+//                ).collect(ImmutableSet.toImmutableSet()))
+//            .orElse(ImmutableSet.of());
+//    }
 }

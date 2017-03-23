@@ -20,7 +20,7 @@ public final class ProjectSerializer implements JsonSerializer<Project> {
 
         final JsonObject jsonObject = new JsonObject();
 
-        jsonObject.addProperty("name", project.name.name);
+        jsonObject.addProperty("name", project.name);
 
         if (project.license.isPresent()) {
             jsonObject.addProperty("license", project.license.get());

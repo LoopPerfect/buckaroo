@@ -10,8 +10,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.SemanticVersion;
 
 import java.io.IOException;
 import java.io.StringReader;

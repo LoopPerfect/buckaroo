@@ -69,7 +69,15 @@ public final class RecipeVersion {
         return new RecipeVersion(gitCommit, target, dependencies, Optional.empty());
     }
 
+    public static RecipeVersion of(final GitCommit gitCommit, final DependencyGroup dependencies) {
+        return new RecipeVersion(gitCommit, Optional.empty(), dependencies, Optional.empty());
+    }
+
     public static RecipeVersion of(final GitCommit gitCommit, final String target) {
         return new RecipeVersion(gitCommit, Optional.of(target), DependencyGroup.of(), Optional.empty());
+    }
+
+    public static RecipeVersion of(final GitCommit gitCommit) {
+        return new RecipeVersion(gitCommit, Optional.empty(), DependencyGroup.of(), Optional.empty());
     }
 }

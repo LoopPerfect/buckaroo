@@ -6,21 +6,17 @@ import com.google.common.base.Preconditions;
 
 public final class Dependency {
 
-    public final Identifier project;
+    public final RecipeIdentifier project;
     public final SemanticVersionRequirement versionRequirement;
 
-    private Dependency(final Identifier project, final SemanticVersionRequirement versionRequirement) {
+    private Dependency(final RecipeIdentifier project, final SemanticVersionRequirement versionRequirement) {
 
         this.project = Preconditions.checkNotNull(project);
         this.versionRequirement = Preconditions.checkNotNull(versionRequirement);
     }
 
-    public boolean isSatisfiedBy(final Recipe recipe) {
-
-        Preconditions.checkNotNull(recipe);
-
-        return Objects.equal(recipe.name, project) &&
-            recipe.versions.keySet().stream().anyMatch(x -> versionRequirement.isSatisfiedBy(x));
+    public String encode() {
+        return project.encode() + "@" + versionRequirement.encode();
     }
 
     @Override
@@ -48,7 +44,7 @@ public final class Dependency {
             .toString();
     }
 
-    public static Dependency of(final Identifier project, final SemanticVersionRequirement versionRequirement) {
+    public static Dependency of(final RecipeIdentifier project, final SemanticVersionRequirement versionRequirement) {
         return new Dependency(project, versionRequirement);
     }
 }

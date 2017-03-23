@@ -15,7 +15,7 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final Identifier name = context.deserialize(jsonObject.get("name"), Identifier.class);
+        final String name = jsonObject.get("name").getAsString();
 
         Optional<String> license;
         if (jsonObject.has("license")) {

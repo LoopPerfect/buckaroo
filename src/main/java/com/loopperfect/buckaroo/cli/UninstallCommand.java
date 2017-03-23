@@ -1,17 +1,20 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.routines.Uninstall;
 
 import java.util.Objects;
 
 public final class UninstallCommand implements CLICommand {
 
-    public final Identifier project;
+    public final Either<Identifier, RecipeIdentifier> project;
 
-    private UninstallCommand(final Identifier project) {
+    private UninstallCommand(final Either<Identifier, RecipeIdentifier> project) {
         Preconditions.checkNotNull(project);
         this.project = project;
     }
@@ -35,10 +38,18 @@ public final class UninstallCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return null;
+        return Uninstall.routine(project);
+    }
+
+    public static UninstallCommand of(final Either<Identifier, RecipeIdentifier> project) {
+        return new UninstallCommand(project);
     }
 
     public static UninstallCommand of(final Identifier project) {
-        return new UninstallCommand(project);
+        return new UninstallCommand(Either.left(project));
+    }
+
+    public static UninstallCommand of(final RecipeIdentifier project) {
+        return new UninstallCommand(Either.right(project));
     }
 }

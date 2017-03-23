@@ -8,11 +8,11 @@ import java.util.Optional;
 
 public final class Project {
 
-    public final Identifier name;
+    public final String name;
     public final Optional<String> license;
     public final DependencyGroup dependencies;
 
-    private Project(final Identifier name, final Optional<String> license, final DependencyGroup dependencies) {
+    private Project(final String name, final Optional<String> license, final DependencyGroup dependencies) {
 
         this.name = Preconditions.checkNotNull(name);
         this.license = Preconditions.checkNotNull(license);
@@ -24,7 +24,7 @@ public final class Project {
         return new Project(name, license, dependencies.addDependency(dependency));
     }
 
-    public Project removeDependency(final Identifier identifier) {
+    public Project removeDependency(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         return new Project(name, license, dependencies.removeDependency(identifier));
     }
@@ -57,19 +57,15 @@ public final class Project {
             .toString();
     }
 
-    public static Project of(final Identifier name, final Optional<String> license, final DependencyGroup dependencies) {
+    public static Project of(final String name, final Optional<String> license, final DependencyGroup dependencies) {
         return new Project(name, license, dependencies);
     }
 
-    public static Project of(final Identifier name) {
+    public static Project of(final String name) {
         return new Project(name, Optional.empty(), DependencyGroup.of());
     }
 
     public static Project of(final String name, final DependencyGroup dependencies) {
-        return new Project(Identifier.of(name), Optional.empty(), dependencies);
-    }
-
-    public static Project of(final String name) {
-        return new Project(Identifier.of(name), Optional.empty(), DependencyGroup.of());
+        return new Project(name, Optional.empty(), dependencies);
     }
 }

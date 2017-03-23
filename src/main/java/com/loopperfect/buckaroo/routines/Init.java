@@ -40,7 +40,7 @@ public final class Init {
         }
     };
 
-    private static IO<Optional<IOException>> createProjectFile(final String projectDirectory, final Identifier projectName) {
+    private static IO<Optional<IOException>> createProjectFile(final String projectDirectory, final String projectName) {
         Preconditions.checkNotNull(projectDirectory);
         Preconditions.checkNotNull(projectName);
         return Routines.writeProject(projectDirectory + "/buckaroo.json", Project.of(projectName), false);
@@ -53,7 +53,7 @@ public final class Init {
                         .flatMap(x -> join(
                                 x,
                                 identifier -> IO.println("Creating buckaroo.json... ")
-                                        .then(createProjectFile(projectDirectory, identifier)
+                                        .then(createProjectFile(projectDirectory, identifier.name)
                                                 .flatMap(y -> join(
                                                         y,
                                                         error -> IO.value(left(error)),

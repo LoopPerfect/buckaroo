@@ -21,7 +21,7 @@ public final class DependencySerializer implements JsonSerializer<Dependency> {
 
         final JsonObject jsonObject = new JsonObject();
 
-        jsonObject.addProperty("project", dependency.project.name);
+        jsonObject.addProperty("project", dependency.project.encode());
         jsonObject.add(
             "version",
             context.serialize(dependency.versionRequirement, SemanticVersionRequirement.class));

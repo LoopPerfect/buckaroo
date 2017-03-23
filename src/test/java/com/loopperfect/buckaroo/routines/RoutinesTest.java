@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.routines;
 
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.Routine;
 import com.loopperfect.buckaroo.io.IOContext;
 import org.junit.Test;
 
@@ -53,7 +54,7 @@ public final class RoutinesTest {
     }
 
     @Test
-    public void loadConfigParsesEmptsCookbook() throws Exception {
+    public void loadConfigParsesEmptyCookbook() throws Exception {
 
         final IOContext io = IOContext.fake();
 
@@ -74,5 +75,4 @@ public final class RoutinesTest {
         assertEquals(Routines.readConfig(path.toString()).run(io).rightProjection(x -> x.cookBooks),
             Either.right(ImmutableList.of()));
     }
-
 }

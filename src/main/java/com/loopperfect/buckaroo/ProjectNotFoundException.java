@@ -2,13 +2,10 @@ package com.loopperfect.buckaroo;
 
 import java.util.Objects;
 
-/**
- * Created by gaetano on 16/02/17.
- */
 public final class ProjectNotFoundException extends DependencyResolverException {
 
-    public ProjectNotFoundException(final Identifier id){
-        super(id, "Project not found " + id.name);
+    public ProjectNotFoundException(final RecipeIdentifier id){
+        super(id, "Project not found " + id.encode());
     }
 
     @Override

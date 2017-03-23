@@ -22,7 +22,7 @@ public final class DependencySerializerTest {
     public void testDependencySerializer1() {
 
         serializeDeserialize(Dependency.of(
-            Identifier.of("magic-libs"),
+            RecipeIdentifier.of("org", "magic-libs"),
             ExactSemanticVersion.of(SemanticVersion.of(3, 4))));
     }
 
@@ -30,7 +30,7 @@ public final class DependencySerializerTest {
     public void testDependencySerializer2() {
 
         serializeDeserialize(Dependency.of(
-            Identifier.of("magic-libs"),
+            RecipeIdentifier.of("org", "magic-libs"),
             ExactSemanticVersion.of(SemanticVersion.of(3, 4), SemanticVersion.of(6, 5, 1))));
     }
 
@@ -38,7 +38,7 @@ public final class DependencySerializerTest {
     public void testDependencySerializer3() {
 
         serializeDeserialize(Dependency.of(
-            Identifier.of("magic-libs"),
+            RecipeIdentifier.of("bigco", "magic-libs"),
             AnySemanticVersion.of()));
     }
 
@@ -46,7 +46,7 @@ public final class DependencySerializerTest {
     public void testDependencySerializer4() {
 
         serializeDeserialize(Dependency.of(
-            Identifier.of("magic-libs"),
+            RecipeIdentifier.of("org", "magic-libs"),
             BoundedSemanticVersion.of(SemanticVersion.of(4), AboveOrBelow.ABOVE)));
     }
 }

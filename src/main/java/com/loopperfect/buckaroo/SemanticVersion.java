@@ -40,6 +40,10 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
         return Integer.compare(patch, other.patch);
     }
 
+    public String encode() {
+        return major + "." + minor + "." + patch;
+    }
+
     public boolean equals(final SemanticVersion other) {
         Preconditions.checkNotNull(other);
         return this == other ||

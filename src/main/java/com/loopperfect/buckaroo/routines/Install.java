@@ -17,7 +17,7 @@ public final class Install {
 
     }
 
-    private static Either<ImmutableList<DependencyResolverException>, ImmutableMap<Identifier, SemanticVersion>> resolvedDependencies(
+    private static Either<ImmutableList<DependencyResolverException>, ImmutableMap<RecipeIdentifier, SemanticVersion>> resolvedDependencies(
             final DependencyGroup dependencyGroup, final ImmutableList<CookBook> cookBooks) {
         Preconditions.checkNotNull(dependencyGroup);
         Preconditions.checkNotNull(cookBooks);
@@ -25,14 +25,16 @@ public final class Install {
         return DependencyResolver.resolve(dependencyGroup, fetcher);
     }
 
-    public static IO<Unit> routine(final Identifier identifier, final Optional<SemanticVersionRequirement> version) {
+
+
+    public static IO<Unit> routine(final RecipeIdentifier identifier, final Optional<SemanticVersionRequirement> version) {
         Preconditions.checkNotNull(identifier);
         Preconditions.checkNotNull(version);
         final SemanticVersionRequirement versionRequirementToUse =
                 version.orElseGet(AnySemanticVersion::of);
         final Dependency dependencyToTry = Dependency.of(
                 identifier, versionRequirementToUse);
-        return IO.println("Adding dependency on " + identifier.name +
+        return IO.println("Adding dependency on " + identifier.encode() +
                 Optionals.join(version, x -> "@" + x.encode(), () -> "") + "... ")
                 .then(projectFilePath)
                 .flatMap(path -> Routines.readProject(path)

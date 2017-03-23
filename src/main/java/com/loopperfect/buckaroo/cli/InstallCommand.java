@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
@@ -13,10 +14,10 @@ import java.util.Optional;
 
 public final class InstallCommand implements CLICommand {
 
-    public final Identifier project;
+    public final RecipeIdentifier project;
     public final Optional<SemanticVersionRequirement> versionRequirement;
 
-    private InstallCommand(final Identifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
+    private InstallCommand(final RecipeIdentifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
         this.project = Preconditions.checkNotNull(project);
         this.versionRequirement = Preconditions.checkNotNull(versionRequirement);
     }
@@ -47,15 +48,15 @@ public final class InstallCommand implements CLICommand {
             Objects.equals(versionRequirement, other.versionRequirement);
     }
 
-    public static InstallCommand of(final Identifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
+    public static InstallCommand of(final RecipeIdentifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
         return new InstallCommand(project, versionRequirement);
     }
 
-    public static InstallCommand of(final Identifier project, final SemanticVersionRequirement versionRequirement) {
+    public static InstallCommand of(final RecipeIdentifier project, final SemanticVersionRequirement versionRequirement) {
         return new InstallCommand(project, Optional.of(versionRequirement));
     }
 
-    public static InstallCommand of(final Identifier project) {
+    public static InstallCommand of(final RecipeIdentifier project) {
         return new InstallCommand(project, Optional.empty());
     }
 }

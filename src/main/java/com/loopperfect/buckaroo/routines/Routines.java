@@ -1,9 +1,7 @@
 package com.loopperfect.buckaroo.routines;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
+import com.google.common.collect.*;
 import com.google.common.io.Files;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.IO;
@@ -12,8 +10,8 @@ import org.eclipse.jgit.api.Status;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 public final class Routines {
 
@@ -54,15 +52,12 @@ public final class Routines {
                 });
     }
 
-    private static IO<Either<IOException, Recipe>> readRecipe(final String path, final Identifier identifier) {
+    private static IO<Either<IOException, Recipe>> readRecipe(final String path) {
         Preconditions.checkNotNull(path);
-        Preconditions.checkNotNull(identifier);
-        return IO.of(x -> x.fs().getPath(path, identifier + ".json").toString())
-                .flatMap(IO::readFile)
+        return IO.of(x -> x.fs().readFile(path))
                 .map(x -> x.join(
                         Either::left,
-                        content -> Serializers.parseRecipe(content)
-                                .leftProjection(IOException::new)));
+                        content -> Serializers.parseRecipe(content).leftProjection(IOException::new)));
     }
 
     public static <L, R> IO<Either<L, ImmutableList<R>>> allOrNothing(final ImmutableList<IO<Either<L, R>>> xs) {
@@ -95,11 +90,11 @@ public final class Routines {
         };
     }
 
-    private static IO<Either<IOException, ImmutableList<Identifier>>> listRecipesForCookBook(final String cookBookPath) {
-        Preconditions.checkNotNull(cookBookPath);
+    private static IO<Either<IOException, ImmutableList<Identifier>>> listRecipesForOrganization(final String path) {
+        Preconditions.checkNotNull(path);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.fs().listFiles(cookBookPath + "/recipes/")
+            return context.fs().listFiles(path)
                     .rightProjection(files -> files.stream()
                             .filter(file -> Files.getFileExtension(file).equalsIgnoreCase("json") &&
                                     context.fs().isFile(file))
@@ -112,17 +107,54 @@ public final class Routines {
         };
     }
 
+    private static IO<Either<IOException, ImmutableList<Identifier>>> listOrganizationsForCookBook(final String cookBookPath) {
+        Preconditions.checkNotNull(cookBookPath);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            return context.fs().listFiles(cookBookPath)
+                    .rightProjection(files -> files.stream()
+                            .filter(file -> Files.getFileExtension(file).equalsIgnoreCase("json") &&
+                                    context.fs().isFile(file))
+                            .map(file -> context.fs().getPath(file).getFileName().toString())
+                            .map(file -> file.substring(0, file.length() - ".json".length()))
+                            .filter(Identifier::isValid)
+                            .map(Identifier::of)
+                            .distinct()
+                            .collect(ImmutableList.toImmutableList()));
+        };
+    }
+
+    private static IO<Either<IOException, Organization>> readOrganization(
+        final String path, final Identifier identifier) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(identifier);
+        return listRecipesForOrganization(path + "/" + identifier.name)
+            .flatMap(x -> x.join(
+                error -> IO.value(Either.left(error)),
+                identifiers -> allOrNothing(
+                    identifiers.stream()
+                        .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name)
+                            .map(y -> y.rightProjection(z -> Maps.immutableEntry(i, z))))
+                        .collect(ImmutableList.toImmutableList()))
+                    .map(y -> y.rightProjection(
+                        recipes -> Organization.of("FIXME", recipes.stream()
+                            .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))));
+    }
+
     private static IO<Either<IOException, CookBook>> readCookBook(final String path) {
         Preconditions.checkNotNull(path);
-        return listRecipesForCookBook(path)
-                .flatMap(x -> x.join(
-                        error -> IO.value(Either.left(error)),
-                        identifiers -> allOrNothing(
-                                identifiers.stream()
-                                        .map(identifier -> readRecipe(path + "/recipes", identifier))
-                                        .collect(ImmutableList.toImmutableList()))
-                                .map(y -> y.rightProjection(
-                                        recipes -> CookBook.of(ImmutableSet.copyOf(recipes))))));
+        return listOrganizationsForCookBook(path)
+            .flatMap(x -> x.join(
+                error -> IO.value(Either.left(error)),
+                identifiers -> allOrNothing(
+                    identifiers.stream()
+                        .map(identifier -> readOrganization(path, identifier)
+                            .map(i -> i.rightProjection(j -> Maps.immutableEntry(identifier, j))))
+                        .collect(ImmutableList.toImmutableList()))
+                    .map(y -> y.rightProjection(organizations -> CookBook.of(organizations.stream()
+                        .collect(ImmutableMap.toImmutableMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue)))))));
     }
 
     public static IO<Either<IOException, ImmutableList<CookBook>>> readCookBooks(final BuckarooConfig config) {

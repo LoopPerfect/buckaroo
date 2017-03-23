@@ -20,6 +20,7 @@ public final class IdentifierTest {
         assertFalse(Identifier.isValid("    "));
         assertFalse(Identifier.isValid(""));
         assertFalse(Identifier.isValid("a"));
+        assertFalse(Identifier.isValid("abcd/efg"));
         assertFalse(Identifier.isValid("\n"));
         assertFalse(Identifier.isValid("0123"));
         assertFalse(Identifier.isValid("_abc"));

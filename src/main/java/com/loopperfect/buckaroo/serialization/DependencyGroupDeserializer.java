@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.*;
 import com.loopperfect.buckaroo.DependencyGroup;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
 import java.lang.reflect.Type;
@@ -24,7 +25,7 @@ public final class DependencyGroupDeserializer implements JsonDeserializer<Depen
             jsonObject.entrySet()
                 .stream()
                 .collect(ImmutableMap.toImmutableMap(
-                    x -> context.deserialize(new JsonPrimitive(x.getKey()), Identifier.class),
+                    x -> context.deserialize(new JsonPrimitive(x.getKey()), RecipeIdentifier.class),
                     x -> context.deserialize(x.getValue(), SemanticVersionRequirement.class))));
     }
 }

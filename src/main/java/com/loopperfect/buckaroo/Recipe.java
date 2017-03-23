@@ -8,11 +8,11 @@ import java.util.Objects;
 
 public final class Recipe {
 
-    public final Identifier name;
+    public final String name;
     public final String url;
     public final ImmutableMap<SemanticVersion, RecipeVersion> versions;
 
-    private Recipe(final Identifier name, final String url, final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
+    private Recipe(final String name, final String url, final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
 
         super();
 
@@ -50,7 +50,7 @@ public final class Recipe {
     }
 
     public static Recipe of(
-            final Identifier name,
+            final String name,
             final String url,
             final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
         return new Recipe(name, url, versions);

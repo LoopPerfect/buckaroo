@@ -88,8 +88,9 @@ public interface FSContext {
                 if (!overwrite) {
                     throw new IOException("There is already a file at " + path);
                 }
+                Files.delete(path);
             } else {
-                if (!Files.exists(path.getParent())) {
+                if (path.getParent() != null && !Files.exists(path.getParent())) {
                     Files.createDirectories(path.getParent());
                 }
             }

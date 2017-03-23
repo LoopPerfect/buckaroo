@@ -13,9 +13,9 @@ import java.util.stream.Stream;
 
 public final class DependencyGroup {
 
-    public final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies;
+    public final ImmutableMap<RecipeIdentifier, SemanticVersionRequirement> dependencies;
 
-    private DependencyGroup(final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+    private DependencyGroup(final ImmutableMap<RecipeIdentifier, SemanticVersionRequirement> dependencies) {
         this.dependencies = Preconditions.checkNotNull(dependencies);
     }
 
@@ -23,7 +23,7 @@ public final class DependencyGroup {
         return dependencies.isEmpty();
     }
 
-    public boolean requires(final Identifier identifier) {
+    public boolean requires(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         return dependencies.containsKey(identifier);
     }
@@ -50,7 +50,7 @@ public final class DependencyGroup {
                 .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
-    public DependencyGroup removeDependency(final Identifier identifier) {
+    public DependencyGroup removeDependency(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         if (!dependencies.containsKey(identifier)) {
             return this;
@@ -61,7 +61,7 @@ public final class DependencyGroup {
             .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
-    public boolean isSatisfiedBy(final ImmutableSet<RecipeIdentifier> recipes) {
+    public boolean isSatisfiedBy(final ImmutableSet<RecipeVersionIdentifier> recipes) {
         Preconditions.checkNotNull(recipes);
         return dependencies.entrySet()
             .stream()
@@ -94,7 +94,7 @@ public final class DependencyGroup {
             .toString();
     }
 
-    public static DependencyGroup of(final ImmutableMap<Identifier, SemanticVersionRequirement> dependencies) {
+    public static DependencyGroup of(final ImmutableMap<RecipeIdentifier, SemanticVersionRequirement> dependencies) {
         return new DependencyGroup(dependencies);
     }
 

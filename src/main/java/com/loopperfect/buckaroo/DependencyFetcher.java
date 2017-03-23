@@ -15,7 +15,7 @@ import com.google.common.collect.ImmutableMap;
 public interface DependencyFetcher {
 
     Either<DependencyResolverException, ImmutableMap<SemanticVersion, DependencyGroup>> fetch(
-        final Identifier project, final SemanticVersionRequirement versionRequirement);
+        final RecipeIdentifier project, final SemanticVersionRequirement versionRequirement);
 
     default Either<DependencyResolverException, ImmutableMap<SemanticVersion, DependencyGroup>> fetch(
         final Dependency dependency) {

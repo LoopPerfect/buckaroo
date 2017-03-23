@@ -4,15 +4,12 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
-/**
- * Created by gaetano on 16/02/17.
- */
 public final class VersionNotFoundException extends DependencyResolverException {
     private final SemanticVersion version;
 
-    public VersionNotFoundException(final Identifier id, final SemanticVersion ver) {
-        super(id, "Version " + ver + "of Project " + id.name + "not found");
-        this.version = Preconditions.checkNotNull(ver);
+    public VersionNotFoundException(final RecipeIdentifier project, final SemanticVersion version) {
+        super(project, "Version " + version.encode() + " of " + project.encode() + " not found");
+        this.version = Preconditions.checkNotNull(version);
     }
 
     @Override
