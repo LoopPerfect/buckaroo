@@ -122,7 +122,7 @@ public final class InstallExisting {
                                 resource -> installResource(resource, path + "/BUCK"))
                                         .orElseGet(() -> IO.value(Optional.empty()))),
                 recipePath(dependenciesDirectory, identifier)
-                        .flatMap(path -> generateBuckConfig(path + "/.buckconfig.local", "../..", refinedDependencies)),
+                        .flatMap(path -> generateBuckConfig(path + "/.buckconfig.local", "../../..", refinedDependencies)),
                 recipePath(dependenciesDirectory, identifier)
                         .flatMap(path -> generateBuckarooDeps(path + "/BUCKAROO_DEPS", refinedDependencies))));
     }
