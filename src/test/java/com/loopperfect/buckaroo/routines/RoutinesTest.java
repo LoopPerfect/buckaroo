@@ -1,12 +1,14 @@
 package com.loopperfect.buckaroo.routines;
 
-
 import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.Routine;
+import com.google.common.collect.ImmutableMap;
+import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.io.IOContext;
+import com.loopperfect.buckaroo.serialization.Serializers;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,18 +16,14 @@ import java.nio.file.Path;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-
-/**
- * Created by gaetano on 20/02/17.
- */
 public final class RoutinesTest {
 
     @Test
     public void loadConfigReadFileFailed() throws Exception {
 
-        IOContext io = IOContext.fake();
+        final IOContext io = IOContext.fake();
 
-        Path path = io.fs().getPath(
+        final Path path = io.fs().getPath(
             io.fs().userHomeDirectory().toString(),
             ".buckaroo",
             "config.json"
@@ -74,5 +72,56 @@ public final class RoutinesTest {
 
         assertEquals(Routines.readConfig(path.toString()).run(io).rightProjection(x -> x.cookBooks),
             Either.right(ImmutableList.of()));
+    }
+
+    @Test
+    public void testReadCookBooks() {
+
+        final IOContext io = IOContext.fake();
+
+        final String buckarooDirectory = io.fs().getPath(
+            io.fs().userHomeDirectory(),
+            ".buckaroo").toString();
+
+        final String configPath = io.fs().getPath(
+            buckarooDirectory,
+            "config.json").toString();
+
+        final String configContent = "{" +
+            "\"cookBooks\":[\n" +
+            "    {" +
+            "      \"name\": \"buckaroo-official\", " +
+            "      \"url\": \"git@github.com:njlr/buckaroo-official.git\"" +
+            "    }" +
+            "  ]" +
+            "}";
+
+        io.fs().createDirectory(buckarooDirectory);
+        io.fs().writeFile(configPath, configContent);
+
+        final String buckarooOfficialPath = io.fs().getPath(buckarooDirectory, "buckaroo-official").toString();
+
+        io.fs().createDirectory(buckarooOfficialPath);
+
+        io.fs().writeFile(
+            io.fs().getPath(buckarooOfficialPath, "recipes", "org.json").toString(),
+            "{ \"name\": \"Org\" }");
+
+        io.fs().createDirectory(io.fs().getPath(buckarooOfficialPath, "recipes", "org").toString());
+
+        final Recipe magicRecipe = Recipe.of("Magic", "magic.com", ImmutableMap.of());
+
+        io.fs().writeFile(
+            io.fs().getPath(buckarooOfficialPath, "recipes", "org", "magic.json").toString(),
+            Serializers.serialize(magicRecipe));
+
+        final Either<IOException, BuckarooConfig> config = Routines.readConfig(configPath).run(io);
+
+        assertTrue(config.join(l -> false, r -> true));
+
+        final Either<IOException, ImmutableList<CookBook>> cookBooks =
+            Routines.readCookBooks(config.right().get()).run(io);
+
+        assertTrue(cookBooks.join(l -> false, r -> true));
     }
 }

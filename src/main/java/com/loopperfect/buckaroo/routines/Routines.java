@@ -96,8 +96,8 @@ public final class Routines {
             Preconditions.checkNotNull(context);
             return context.fs().listFiles(path)
                     .rightProjection(files -> files.stream()
-                            .filter(file -> Files.getFileExtension(file).equalsIgnoreCase("json") &&
-                                    context.fs().isFile(file))
+                            .filter(file -> context.fs().isFile(file) &&
+                                    Files.getFileExtension(file).equalsIgnoreCase("json"))
                             .map(file -> context.fs().getPath(file).getFileName().toString())
                             .map(file -> file.substring(0, file.length() - ".json".length()))
                             .filter(Identifier::isValid)
@@ -111,7 +111,7 @@ public final class Routines {
         Preconditions.checkNotNull(cookBookPath);
         return context -> {
             Preconditions.checkNotNull(context);
-            return context.fs().listFiles(cookBookPath)
+            return context.fs().listFiles(context.fs().getPath(cookBookPath, "recipes").toString())
                     .rightProjection(files -> files.stream()
                             .filter(file -> Files.getFileExtension(file).equalsIgnoreCase("json") &&
                                     context.fs().isFile(file))
@@ -124,16 +124,16 @@ public final class Routines {
         };
     }
 
-    private static IO<Either<IOException, Organization>> readOrganization(
+    public static IO<Either<IOException, Organization>> readOrganization(
         final String path, final Identifier identifier) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(identifier);
-        return listRecipesForOrganization(path + "/" + identifier.name)
+        return listRecipesForOrganization(path + "/" + identifier.name + "/")
             .flatMap(x -> x.join(
                 error -> IO.value(Either.left(error)),
                 identifiers -> allOrNothing(
                     identifiers.stream()
-                        .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name)
+                        .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name + ".json")
                             .map(y -> y.rightProjection(z -> Maps.immutableEntry(i, z))))
                         .collect(ImmutableList.toImmutableList()))
                     .map(y -> y.rightProjection(
@@ -148,7 +148,7 @@ public final class Routines {
                 error -> IO.value(Either.left(error)),
                 identifiers -> allOrNothing(
                     identifiers.stream()
-                        .map(identifier -> readOrganization(path, identifier)
+                        .map(identifier -> readOrganization(path + "/recipes", identifier)
                             .map(i -> i.rightProjection(j -> Maps.immutableEntry(identifier, j))))
                         .collect(ImmutableList.toImmutableList()))
                     .map(y -> y.rightProjection(organizations -> CookBook.of(organizations.stream()

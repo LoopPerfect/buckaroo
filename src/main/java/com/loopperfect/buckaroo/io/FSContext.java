@@ -14,9 +14,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * Created by gaetano on 21/02/17.
- */
 @FunctionalInterface
 public interface FSContext {
 
@@ -118,8 +115,10 @@ public interface FSContext {
     default Either<IOException, ImmutableList<String>> listFiles(final String p) {
         Preconditions.checkNotNull(p);
         final Path path = getFS().getPath(p);
-        try (Stream<Path> paths = java.nio.file.Files.list(path)) {
-            return Either.right(paths.map(Path::toString).collect(ImmutableList.toImmutableList()));
+        try (final Stream<Path> paths = java.nio.file.Files.list(path)) {
+            return Either.right(paths
+                .map(x -> x.toString())
+                .collect(ImmutableList.toImmutableList()));
         } catch (final IOException e) {
             return Either.left(e);
         }

@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.io;
 
+import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
 import org.junit.Test;
 
@@ -82,5 +83,31 @@ public final class FSContextTest {
         final Either<IOException, String> result3 = context.readFile("file.txt");
 
         assertEquals(Either.right("abc"), result3);
+    }
+
+    @Test
+    public void testListFiles() {
+
+        final FSContext context = FSContext.fake();
+
+        context.createDirectory("a");
+        context.createDirectory(context.getPath("a", "b").toString());
+        context.createDirectory(context.getPath("a", "b", "c").toString());
+
+        context.writeFile(
+            context.getPath("a", "b", "c", "test.txt").toString(),
+            "Hello, world. ");
+
+        assertEquals(
+            Either.right(ImmutableList.of("a/b")),
+            context.listFiles("a"));
+
+        assertEquals(
+            Either.right(ImmutableList.of("a/b/c")),
+            context.listFiles(context.getPath("a", "b").toString()));
+
+        assertEquals(
+            Either.right(ImmutableList.of("a/b/c/test.txt")),
+            context.listFiles(context.getPath("a", "b", "c").toString()));
     }
 }
