@@ -20,6 +20,42 @@ public final class Files {
         super();
     }
 
+    /*
+     * Unzips a zip file at the given path into the given target path.
+     * Optionally, a sub-path can be supplied which can be used to change the "root" of the zip file.
+     *
+     * For example:
+     *
+     *  source: myZip.zip
+     *  target: myZip
+     *  subPath: stuff
+     *
+     *  Input:
+     *
+     *    +--+ myZip.zip
+     *       +--- file.txt
+     *       +--+ stuff
+     *          +--- hello.txt
+     *          +--+ a
+     *             +--- b.txt
+     *
+     *  Output:
+     *
+     *    +--+ myZip.zip
+     *       +--- file.txt
+     *       +--+ stuff
+     *          +--- hello.txt
+     *          +--+ a
+     *             +--- b.txt
+     *    +--+ myZip
+     *       +--- hello.txt
+     *       +--+ a
+     *          +--- b.txt
+     *
+     *  Note how file.txt is not extracted because it is outside the sub-path, and hello.txt is at the root
+     *  of the target directory.
+     *
+     */
     public static Optional<IOException> unzip(final Path source, final Path target, final Optional<Path> subPath) {
         final File targetDirectory = target.toFile();
         if (!targetDirectory.exists()) {

@@ -11,13 +11,13 @@ public final class RecipeVersion {
     public final Either<GitCommit, RemoteArchive> source;
     public final Optional<String> target;
     public final DependencyGroup dependencies;
-    public final Optional<Resource> buckResource;
+    public final Optional<RemoteFile> buckResource;
 
     private RecipeVersion(
             final Either<GitCommit, RemoteArchive> source,
             final Optional<String> target,
             final DependencyGroup dependencies,
-            final Optional<Resource> buckResource) {
+            final Optional<RemoteFile> buckResource) {
 
         this.source = Preconditions.checkNotNull(source);
         this.target = Preconditions.checkNotNull(target);
@@ -60,17 +60,17 @@ public final class RecipeVersion {
     }
 
     public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target,
-                                   final DependencyGroup dependencies, final Optional<Resource> buckResource) {
+                                   final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(source, target, dependencies, buckResource);
     }
 
     public static RecipeVersion of(final RemoteArchive source, final Optional<String> target,
-                                   final DependencyGroup dependencies, final Optional<Resource> buckResource) {
+                                   final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(Either.right(source), target, dependencies, buckResource);
     }
 
     public static RecipeVersion of(final GitCommit source, final Optional<String> target,
-            final DependencyGroup dependencies, final Optional<Resource> buckResource) {
+            final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(Either.left(source), target, dependencies, buckResource);
     }
 

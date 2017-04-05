@@ -15,6 +15,9 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
+        if (!jsonObject.has("source")) {
+            throw new JsonParseException("A recipe version must have a source. ");
+        }
         final JsonElement sourceJsonElement = jsonObject.get("source");
 
         final Either<GitCommit, RemoteArchive> source = sourceJsonElement.isJsonPrimitive() ?
@@ -29,8 +32,8 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
                 context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class) :
                 DependencyGroup.of();
 
-        final Optional<Resource> buckResource = jsonObject.has("buck") ?
-                Optional.of(context.deserialize(jsonObject.get("buck"), Resource.class)) :
+        final Optional<RemoteFile> buckResource = jsonObject.has("buck") ?
+                Optional.of(context.deserialize(jsonObject.get("buck"), RemoteFile.class)) :
                 Optional.empty();
 
         return RecipeVersion.of(source, target, dependencies, buckResource);

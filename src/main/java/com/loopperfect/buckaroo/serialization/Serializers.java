@@ -94,11 +94,7 @@ public final class Serializers {
         .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookDeserializer())
         .registerTypeAdapter(RemoteFile.class, new RemoteFileSerializer())
         .registerTypeAdapter(RemoteFile.class, new RemoteFileDeserializer())
-        .registerTypeAdapter(Resource.class, new ResourceDeserializer())
-        .registerTypeAdapter(Resource.class, new FileResourceSerializer())
-        .registerTypeAdapter(FileResource.class, new FileResourceSerializer())
         .registerTypeAdapter(URL.class, new UrlDeserializer())
-        .registerTypeAdapter(UrlResource.class, new UrlResourceSerializer())
         .setPrettyPrinting()
         .create();
 }

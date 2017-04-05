@@ -140,10 +140,12 @@ public final class Routines {
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name + ".json")
-                            .map(y -> y.rightProjection(z -> Maps.immutableEntry(i, z))))
+                            .map(y -> y.rightProjection(z -> Maps.immutableEntry(i, z)))
+                            .map(y -> y.leftProjection(z ->
+                                new IOException("Error reading recipe at " + path + "/" + identifier.name + "/" + i.name + ".json", z))))
                         .collect(ImmutableList.toImmutableList()))
                     .map(y -> y.rightProjection(
-                        recipes -> Organization.of("FIXME", recipes.stream()
+                        recipes -> Organization.of(identifier.name, recipes.stream()
                             .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))));
     }
 
@@ -166,11 +168,12 @@ public final class Routines {
     public static IO<Either<IOException, ImmutableList<CookBook>>> readCookBooks(final BuckarooConfig config) {
         Preconditions.checkNotNull(config);
         return allOrNothing(config.cookBooks.stream()
-                .map(remoteCookBook -> buckarooDirectory
-                        .flatMap(path -> context -> context.fs()
-                                .getPath(path, remoteCookBook.name.toString()).toString())
-                        .flatMap(Routines::readCookBook))
-                .collect(ImmutableList.toImmutableList()));
+            .map(remoteCookBook -> buckarooDirectory
+                .flatMap(path -> context -> context.fs()
+                    .getPath(path, remoteCookBook.name.toString()).toString())
+                .flatMap(Routines::readCookBook)
+                .map(x -> x.leftProjection(y -> new IOException("Error reading " + remoteCookBook.name, y))))
+            .collect(ImmutableList.toImmutableList()));
     }
 
     public static IO<Optional<IOException>> fetchSource(final String path, final Either<GitCommit, RemoteArchive> source) {

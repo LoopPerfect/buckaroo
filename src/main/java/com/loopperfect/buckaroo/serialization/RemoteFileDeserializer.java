@@ -19,7 +19,14 @@ public final class RemoteFileDeserializer implements JsonDeserializer<RemoteFile
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
+        if (!jsonObject.has("url")) {
+            throw new JsonParseException("RemoteFile must have a URL. ");
+        }
         final URL url = context.deserialize(jsonObject.get("url"), URL.class);
+
+        if (!jsonObject.has("sha256")) {
+            throw new JsonParseException("RemoteFile must have a sha256. ");
+        }
         final HashCode sha256 = context.deserialize(jsonObject.get("sha256"), HashCode.class);
 
         return RemoteFile.of(url, sha256);

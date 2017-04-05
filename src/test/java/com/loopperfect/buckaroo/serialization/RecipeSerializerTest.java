@@ -1,8 +1,6 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.HashCode;
-import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
@@ -30,7 +28,7 @@ public final class RecipeSerializerTest {
                         ImmutableMap.of(
                             RecipeIdentifier.of("org", "awesome"),
                             AnySemanticVersion.of())),
-                    Optional.of(FileResource.of("./BUCK"))),
+                    Optional.empty()),
                 SemanticVersion.of(1, 1),
                 RecipeVersion.of(
                     GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
@@ -61,7 +59,9 @@ public final class RecipeSerializerTest {
                         ImmutableMap.of(
                             RecipeIdentifier.of("org", "awesome"),
                             AnySemanticVersion.of())),
-                    Optional.of(FileResource.of("./BUCK"))),
+                    Optional.of(RemoteFile.of(
+                        new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
+                        Hash.sha256("Hello, world. ")))),
                 SemanticVersion.of(1, 1),
                 RecipeVersion.of(
                     GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),

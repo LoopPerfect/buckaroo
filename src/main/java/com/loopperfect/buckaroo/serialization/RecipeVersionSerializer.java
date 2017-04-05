@@ -7,7 +7,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.RecipeVersion;
-import com.loopperfect.buckaroo.Resource;
+import com.loopperfect.buckaroo.RemoteFile;
 
 import java.lang.reflect.Type;
 
@@ -39,7 +39,7 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
         }
 
         if (recipeVersion.buckResource.isPresent()) {
-            jsonObject.add("buck", context.serialize(recipeVersion.buckResource.get(), Resource.class));
+            jsonObject.add("buck", context.serialize(recipeVersion.buckResource.get(), RemoteFile.class));
         }
 
         return jsonObject;
