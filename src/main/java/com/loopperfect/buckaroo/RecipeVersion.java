@@ -8,18 +8,18 @@ import java.util.Optional;
 
 public final class RecipeVersion {
 
-    public final GitCommit gitCommit;
+    public final Either<GitCommit, RemoteArchive> source;
     public final Optional<String> target;
     public final DependencyGroup dependencies;
     public final Optional<Resource> buckResource;
 
     private RecipeVersion(
-            final GitCommit gitCommit,
+            final Either<GitCommit, RemoteArchive> source,
             final Optional<String> target,
             final DependencyGroup dependencies,
             final Optional<Resource> buckResource) {
 
-        this.gitCommit = Preconditions.checkNotNull(gitCommit);
+        this.source = Preconditions.checkNotNull(source);
         this.target = Preconditions.checkNotNull(target);
         this.dependencies = Preconditions.checkNotNull(dependencies);
         this.buckResource = Preconditions.checkNotNull(buckResource);
@@ -27,7 +27,7 @@ public final class RecipeVersion {
 
     @Override
     public int hashCode() {
-        return Objects.hash(gitCommit, target, dependencies);
+        return Objects.hash(source, target, dependencies);
     }
 
     @Override
@@ -43,7 +43,7 @@ public final class RecipeVersion {
 
         final RecipeVersion other = (RecipeVersion) obj;
 
-        return Objects.equals(gitCommit, other.gitCommit) &&
+        return Objects.equals(source, other.source) &&
                 Objects.equals(target, other.target) &&
                 Objects.equals(dependencies, other.dependencies) &&
                 Objects.equals(buckResource, other.buckResource);
@@ -52,32 +52,42 @@ public final class RecipeVersion {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("gitCommit", gitCommit)
+                .add("source", source)
                 .add("target", target)
                 .add("dependencies", dependencies)
                 .add("buckResource", buckResource)
                 .toString();
     }
 
-    public static RecipeVersion of(final GitCommit gitCommit, final Optional<String> target,
+    public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target,
+                                   final DependencyGroup dependencies, final Optional<Resource> buckResource) {
+        return new RecipeVersion(source, target, dependencies, buckResource);
+    }
+
+    public static RecipeVersion of(final RemoteArchive source, final Optional<String> target,
+                                   final DependencyGroup dependencies, final Optional<Resource> buckResource) {
+        return new RecipeVersion(Either.right(source), target, dependencies, buckResource);
+    }
+
+    public static RecipeVersion of(final GitCommit source, final Optional<String> target,
             final DependencyGroup dependencies, final Optional<Resource> buckResource) {
-        return new RecipeVersion(gitCommit, target, dependencies, buckResource);
+        return new RecipeVersion(Either.left(source), target, dependencies, buckResource);
     }
 
-    public static RecipeVersion of(final GitCommit gitCommit, final Optional<String> target,
+    public static RecipeVersion of(final GitCommit source, final Optional<String> target,
                                    final DependencyGroup dependencies) {
-        return new RecipeVersion(gitCommit, target, dependencies, Optional.empty());
+        return new RecipeVersion(Either.left(source), target, dependencies, Optional.empty());
     }
 
-    public static RecipeVersion of(final GitCommit gitCommit, final DependencyGroup dependencies) {
-        return new RecipeVersion(gitCommit, Optional.empty(), dependencies, Optional.empty());
+    public static RecipeVersion of(final GitCommit source, final DependencyGroup dependencies) {
+        return new RecipeVersion(Either.left(source), Optional.empty(), dependencies, Optional.empty());
     }
 
-    public static RecipeVersion of(final GitCommit gitCommit, final String target) {
-        return new RecipeVersion(gitCommit, Optional.of(target), DependencyGroup.of(), Optional.empty());
+    public static RecipeVersion of(final GitCommit source, final String target) {
+        return new RecipeVersion(Either.left(source), Optional.of(target), DependencyGroup.of(), Optional.empty());
     }
 
-    public static RecipeVersion of(final GitCommit gitCommit) {
-        return new RecipeVersion(gitCommit, Optional.empty(), DependencyGroup.of(), Optional.empty());
+    public static RecipeVersion of(final GitCommit source) {
+        return new RecipeVersion(Either.left(source), Optional.empty(), DependencyGroup.of(), Optional.empty());
     }
 }

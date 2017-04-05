@@ -22,7 +22,14 @@ public final class RecipeDeserializer implements JsonDeserializer<Recipe> {
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
+        if (!jsonObject.has("name")) {
+            throw new JsonParseException("Recipes must have a name element. ");
+        }
         final String name = jsonObject.get("name").getAsString();
+
+        if (!jsonObject.has("url")) {
+            throw new JsonParseException("Recipes must have a url element. ");
+        }
         final String url = jsonObject.get("url").getAsString();
 
         final JsonObject jsonObjectVersions = jsonObject.get("versions").getAsJsonObject();

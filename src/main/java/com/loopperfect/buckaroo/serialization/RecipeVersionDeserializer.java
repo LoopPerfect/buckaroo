@@ -1,10 +1,7 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.*;
-import com.loopperfect.buckaroo.DependencyGroup;
-import com.loopperfect.buckaroo.GitCommit;
-import com.loopperfect.buckaroo.RecipeVersion;
-import com.loopperfect.buckaroo.Resource;
+import com.loopperfect.buckaroo.*;
 
 import java.lang.reflect.Type;
 import java.util.Optional;
@@ -18,7 +15,11 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final GitCommit url = context.deserialize(jsonObject.get("url"), GitCommit.class);
+        final JsonElement sourceJsonElement = jsonObject.get("source");
+
+        final Either<GitCommit, RemoteArchive> source = sourceJsonElement.isJsonPrimitive() ?
+            Either.left(context.deserialize(sourceJsonElement, GitCommit.class)) :
+            Either.right(context.deserialize(sourceJsonElement, RemoteArchive.class));
 
         final Optional<String> target = jsonObject.has("target") ?
                 Optional.of(jsonObject.get("target").getAsString()) :
@@ -32,6 +33,6 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
                 Optional.of(context.deserialize(jsonObject.get("buck"), Resource.class)) :
                 Optional.empty();
 
-        return RecipeVersion.of(url, target, dependencies, buckResource);
+        return RecipeVersion.of(source, target, dependencies, buckResource);
     }
 }

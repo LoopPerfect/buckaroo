@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.RecipeVersion;
 import com.loopperfect.buckaroo.Resource;
 
@@ -22,7 +23,12 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
 
         final JsonObject jsonObject = new JsonObject();
 
-        jsonObject.add("url", context.serialize(recipeVersion.gitCommit));
+        final JsonElement sourceElement = Either.join(
+            recipeVersion.source,
+            context::serialize,
+            context::serialize);
+
+        jsonObject.add("source", sourceElement);
 
         if (recipeVersion.target.isPresent()) {
             jsonObject.addProperty("target", recipeVersion.target.get());

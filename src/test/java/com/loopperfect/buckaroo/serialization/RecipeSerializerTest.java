@@ -1,10 +1,14 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashCode;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.crypto.Hash;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
@@ -12,7 +16,7 @@ import static org.junit.Assert.assertEquals;
 public final class RecipeSerializerTest {
 
     @org.junit.Test
-    public void testRecipeSerialization() {
+    public void test1() {
 
         final Recipe recipe = Recipe.of(
             "magic-lib",
@@ -36,6 +40,37 @@ public final class RecipeSerializerTest {
 
         final Either<JsonParseException, Recipe> deserializedRecipe =
                 Serializers.parseRecipe(serializedRecipe);
+
+        assertEquals(Either.right(recipe), deserializedRecipe);
+    }
+
+    @org.junit.Test
+    public void test2() throws MalformedURLException {
+
+        final Recipe recipe = Recipe.of(
+            "magic-lib",
+            "https://github.com/magicco/magiclib",
+            ImmutableMap.of(
+                SemanticVersion.of(1, 0),
+                RecipeVersion.of(
+                    RemoteArchive.of(
+                        new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
+                        Hash.sha256("Hello, world. ")),
+                    Optional.of("my-magic-lib"),
+                    DependencyGroup.of(
+                        ImmutableMap.of(
+                            RecipeIdentifier.of("org", "awesome"),
+                            AnySemanticVersion.of())),
+                    Optional.of(FileResource.of("./BUCK"))),
+                SemanticVersion.of(1, 1),
+                RecipeVersion.of(
+                    GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
+                    "my-magic-lib")));
+
+        final String serializedRecipe = Serializers.serialize(recipe);
+
+        final Either<JsonParseException, Recipe> deserializedRecipe =
+            Serializers.parseRecipe(serializedRecipe);
 
         assertEquals(Either.right(recipe), deserializedRecipe);
     }

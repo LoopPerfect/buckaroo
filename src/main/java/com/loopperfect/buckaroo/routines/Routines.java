@@ -2,15 +2,21 @@ package com.loopperfect.buckaroo.routines;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import com.google.common.hash.HashCode;
 import com.google.common.io.Files;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.crypto.Hash;
 import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import org.eclipse.jgit.api.Status;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public final class Routines {
@@ -165,6 +171,74 @@ public final class Routines {
                                 .getPath(path, remoteCookBook.name.toString()).toString())
                         .flatMap(Routines::readCookBook))
                 .collect(ImmutableList.toImmutableList()));
+    }
+
+    public static IO<Optional<IOException>> fetchSource(final String path, final Either<GitCommit, RemoteArchive> source) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(source);
+        return Either.join(
+            source,
+            gitCommit -> ensureCheckout(path, gitCommit).map(x -> x.left().map(IOException::new)),
+            remoteFile -> fetchAndUnzip(path, remoteFile));
+    }
+
+
+    /**
+     * Fetches a remote-file and downloads it to the given path.
+     * If a file is already present, then its hash is checked against what is expected.
+     *
+     * An error is returned if the process failed in any way, and a nothing otherwise.
+     *
+     * The process may fail in a number of ways:
+     *
+     *  - There is already a directory at the target path
+     *  - There is already a file at the target path and it has the wrong hash
+     *  - It was not possible to download the file
+     *  - The file could not be written to the target path
+     *  - The hash of the downloaded file did not match the expected hash
+     *
+     * @return  An error if the process failed in any way,
+     *          and a nothing otherwise.
+     */
+    public static IO<Optional<IOException>> fetchRemoteFile(final String path, final RemoteFile remoteFile) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(remoteFile);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            if (context.fs().exists(path)) {
+                if (context.fs().isDirectory(path)) {
+                    return Optional.of(new IOException("There is a directory at " + path + "! "));
+                }
+            } else {
+                final Optional<IOException> download =
+                    context.http().download(remoteFile.url, context.fs().getPath(path));
+                if (download.isPresent()) {
+                    return download;
+                }
+            }
+            final Either<IOException, HashCode> actual = Hash.sha256(context.fs().getPath(path));
+            if (!Objects.equals(actual, Either.right(remoteFile.sha256))) {
+                return Optional.of(new IOException("Hash mismatch! Expected " + remoteFile.sha256 +
+                    " but got " + actual.join(l -> "<invalid>", HashCode::toString) + ". "));
+            }
+            return Optional.empty();
+        };
+    }
+
+    public static IO<Optional<IOException>> fetchAndUnzip(final String path, final RemoteArchive remoteFile) {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(remoteFile);
+        return context -> {
+            Preconditions.checkNotNull(context);
+            final Optional<IOException> fetchResult = fetchRemoteFile(path + ".zip", remoteFile.asRemoteFile()).run(context);
+            if (fetchResult.isPresent()) {
+                return fetchResult;
+            }
+            final Path zipPath = context.fs().getPath(path + ".zip");
+            final Path targetPath = context.fs().getPath(path);
+            return com.loopperfect.buckaroo.io.Files.unzip(
+                zipPath, targetPath, remoteFile.subPath.map(x -> context.fs().getPath(x)));
+        };
     }
 
     public static IO<Either<Exception, Status>> ensureCheckout(final String path, final GitCommit gitCommit) {

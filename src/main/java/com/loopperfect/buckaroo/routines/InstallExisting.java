@@ -77,8 +77,8 @@ public final class InstallExisting {
         Preconditions.checkNotNull(recipeVersion);
         Preconditions.checkNotNull(resolvedDependencies);
         return recipePath(dependenciesDirectory, identifier)
-                .flatMap(path -> Routines.ensureCheckout(path, recipeVersion.gitCommit))
-                .map(x -> x.leftProjection(IOException::new).left());
+                .flatMap(path -> Routines.fetchSource(path, recipeVersion.source))
+                .map(x -> x.map(IOException::new));
     }
 
     private static IO<Optional<IOException>> installResource(final Resource resource, final String targetPath) {
@@ -185,13 +185,13 @@ public final class InstallExisting {
     }
 
     public static IO<Unit> routine =
-            projectFilePath
-                    .flatMap(Routines::readProject)
-                    .flatMap(x -> x.join(
-                            IO::println,
-                            project -> configFilePath.flatMap(Routines::readConfig).flatMap(y -> y.join(
-                                    IO::println,
-                                    config -> readCookBooks(config).flatMap(z -> z.join(
-                                            IO::println,
-                                            cookBooks -> resolveDependencies(project, config, cookBooks)))))));
+        projectFilePath
+            .flatMap(Routines::readProject)
+            .flatMap(x -> x.join(
+                IO::println,
+                project -> configFilePath.flatMap(Routines::readConfig).flatMap(y -> y.join(
+                    IO::println,
+                    config -> readCookBooks(config).flatMap(z -> z.join(
+                        IO::println,
+                        cookBooks -> resolveDependencies(project, config, cookBooks)))))));
 }

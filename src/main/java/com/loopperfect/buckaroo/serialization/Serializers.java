@@ -1,12 +1,14 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.common.base.Preconditions;
+import com.google.common.hash.HashCode;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 
 import java.io.StringReader;
+import java.net.URL;
 
 public final class Serializers {
 
@@ -63,34 +65,40 @@ public final class Serializers {
     }
 
     private static final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(SemanticVersion.class, new SemanticVersionSerializer())
-            .registerTypeAdapter(SemanticVersion.class, new SemanticVersionDeserializer())
-            .registerTypeAdapter(GitCommit.class, new GitCommitSerializer())
-            .registerTypeAdapter(GitCommit.class, new GitCommitDeserializer())
-            .registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementSerializer())
-            .registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementDeserializer())
-            .registerTypeAdapter(Identifier.class, new IdentifierSerializer())
-            .registerTypeAdapter(Identifier.class, new IdentifierDeserializer())
-            .registerTypeAdapter(RecipeIdentifier.class, new RecipeIdentifierSerializer())
-            .registerTypeAdapter(RecipeIdentifier.class, new RecipeIdentifierDeserializer())
-            .registerTypeAdapter(Dependency.class, new DependencySerializer())
-            .registerTypeAdapter(Dependency.class, new DependencyDeserializer())
-            .registerTypeAdapter(DependencyGroup.class, new DependencyGroupSerializer())
-            .registerTypeAdapter(DependencyGroup.class, new DependencyGroupDeserializer())
-            .registerTypeAdapter(RecipeVersion.class, new RecipeVersionSerializer())
-            .registerTypeAdapter(RecipeVersion.class, new RecipeVersionDeserializer())
-            .registerTypeAdapter(Recipe.class, new RecipeSerializer())
-            .registerTypeAdapter(Recipe.class, new RecipeDeserializer())
-            .registerTypeAdapter(Project.class, new ProjectSerializer())
-            .registerTypeAdapter(Project.class, new ProjectDeserializer())
-            .registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigSerializer())
-            .registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigDeserializer())
-            .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookSerializer())
-            .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookDeserializer())
-            .registerTypeAdapter(Resource.class, new ResourceDeserializer())
-            .registerTypeAdapter(Resource.class, new FileResourceSerializer())
-            .registerTypeAdapter(FileResource.class, new FileResourceSerializer())
-            .registerTypeAdapter(UrlResource.class, new UrlResourceSerializer())
-            .setPrettyPrinting()
-            .create();
+        .registerTypeAdapter(SemanticVersion.class, new SemanticVersionSerializer())
+        .registerTypeAdapter(SemanticVersion.class, new SemanticVersionDeserializer())
+        .registerTypeAdapter(GitCommit.class, new GitCommitSerializer())
+        .registerTypeAdapter(GitCommit.class, new GitCommitDeserializer())
+        .registerTypeAdapter(HashCode.class, new HashCodeDeserializer())
+        .registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementSerializer())
+        .registerTypeAdapter(SemanticVersionRequirement.class, new SemanticVersionRequirementDeserializer())
+        .registerTypeAdapter(Identifier.class, new IdentifierSerializer())
+        .registerTypeAdapter(Identifier.class, new IdentifierDeserializer())
+        .registerTypeAdapter(RecipeIdentifier.class, new RecipeIdentifierSerializer())
+        .registerTypeAdapter(RecipeIdentifier.class, new RecipeIdentifierDeserializer())
+        .registerTypeAdapter(Dependency.class, new DependencySerializer())
+        .registerTypeAdapter(Dependency.class, new DependencyDeserializer())
+        .registerTypeAdapter(DependencyGroup.class, new DependencyGroupSerializer())
+        .registerTypeAdapter(DependencyGroup.class, new DependencyGroupDeserializer())
+        .registerTypeAdapter(RecipeVersion.class, new RecipeVersionSerializer())
+        .registerTypeAdapter(RecipeVersion.class, new RecipeVersionDeserializer())
+        .registerTypeAdapter(Recipe.class, new RecipeSerializer())
+        .registerTypeAdapter(Recipe.class, new RecipeDeserializer())
+        .registerTypeAdapter(Project.class, new ProjectSerializer())
+        .registerTypeAdapter(Project.class, new ProjectDeserializer())
+        .registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigSerializer())
+        .registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigDeserializer())
+        .registerTypeAdapter(RemoteArchive.class, new RemoteArchiveSerializer())
+        .registerTypeAdapter(RemoteArchive.class, new RemoteArchiveDeserializer())
+        .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookSerializer())
+        .registerTypeAdapter(RemoteCookBook.class, new RemoteCookBookDeserializer())
+        .registerTypeAdapter(RemoteFile.class, new RemoteFileSerializer())
+        .registerTypeAdapter(RemoteFile.class, new RemoteFileDeserializer())
+        .registerTypeAdapter(Resource.class, new ResourceDeserializer())
+        .registerTypeAdapter(Resource.class, new FileResourceSerializer())
+        .registerTypeAdapter(FileResource.class, new FileResourceSerializer())
+        .registerTypeAdapter(URL.class, new UrlDeserializer())
+        .registerTypeAdapter(UrlResource.class, new UrlResourceSerializer())
+        .setPrettyPrinting()
+        .create();
 }

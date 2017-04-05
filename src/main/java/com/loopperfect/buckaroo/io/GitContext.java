@@ -14,7 +14,6 @@ public interface GitContext {
         Preconditions.checkNotNull(localPath);
         Preconditions.checkNotNull(gitUrl);
 
-
         try {
             final CloneCommand command = Git.cloneRepository()
                 .setURI(gitUrl)

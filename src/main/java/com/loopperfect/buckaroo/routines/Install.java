@@ -25,47 +25,45 @@ public final class Install {
         return DependencyResolver.resolve(dependencyGroup, fetcher);
     }
 
-
-
     public static IO<Unit> routine(final RecipeIdentifier identifier, final Optional<SemanticVersionRequirement> version) {
         Preconditions.checkNotNull(identifier);
         Preconditions.checkNotNull(version);
         final SemanticVersionRequirement versionRequirementToUse =
-                version.orElseGet(AnySemanticVersion::of);
+            version.orElseGet(AnySemanticVersion::of);
         final Dependency dependencyToTry = Dependency.of(
-                identifier, versionRequirementToUse);
+            identifier, versionRequirementToUse);
         return IO.println("Adding dependency on " + identifier.encode() +
-                Optionals.join(version, x -> "@" + x.encode(), () -> "") + "... ")
-                .then(projectFilePath)
-                .flatMap(path -> Routines.readProject(path)
-                        .flatMap(x -> x.join(
-                                error -> IO.println("Could not read buckaroo.json. Are you in the right folder? ")
+            Optionals.join(version, x -> "@" + x.encode(), () -> "") + "... ")
+            .then(projectFilePath)
+            .flatMap(path -> Routines.readProject(path)
+                .flatMap(x -> x.join(
+                    error -> IO.println("Could not read buckaroo.json. Are you in the right folder? ")
+                        .then(IO.println(error)),
+                    project -> configFilePath.flatMap(Routines::readConfig)
+                        .flatMap(y -> y.join(
+                            error -> IO.println("Could not read the config. ")
+                                .then(IO.println(error)),
+                            config -> Routines.readCookBooks(config).flatMap(z -> z.join(
+                                error -> IO.println("Could not read cookbooks. ")
+                                    .then(IO.println(error)),
+                                cookBooks -> resolvedDependencies(project.dependencies.addDependency(dependencyToTry), cookBooks).join(
+                                    error -> IO.println("Could not resolve a dependency. ")
                                         .then(IO.println(error)),
-                                project -> configFilePath.flatMap(Routines::readConfig)
-                                        .flatMap(y -> y.join(
-                                                error -> IO.println("Could not read the config. ")
-                                                        .then(IO.println(error)),
-                                                config -> Routines.readCookBooks(config).flatMap(z -> z.join(
-                                                        error -> IO.println("Could not read cookbooks. ")
-                                                                .then(IO.println(error)),
-                                                        cookBooks -> resolvedDependencies(project.dependencies.addDependency(dependencyToTry), cookBooks).join(
-                                                                error -> IO.println("Could not resolve a dependency. ")
-                                                                        .then(IO.println(error)),
-                                                                resolvedDependencies ->
-                                                                        Routines.writeProject(
-                                                                                path,
-                                                                                project.addDependency(
-                                                                                        Dependency.of(
-                                                                                                identifier,
-                                                                                                version.orElseGet(() -> ExactSemanticVersion.of(
-                                                                                                        resolvedDependencies.get(identifier))))),
-                                                                                true)
-                                                                                .flatMap(w -> Optionals.join(
-                                                                                        w,
-                                                                                        error -> IO.println("Could not write buckaroo.json. ")
-                                                                                                .then(IO.println(error)),
-                                                                                        () -> IO.println("Done. ")
-                                                                                                .then(IO.println("Installing dependencies... ")
-                                                                                                .then(InstallExisting.routine))))))))))));
+                                    resolvedDependencies ->
+                                        Routines.writeProject(
+                                            path,
+                                            project.addDependency(
+                                                Dependency.of(
+                                                    identifier,
+                                                    version.orElseGet(() -> ExactSemanticVersion.of(
+                                                        resolvedDependencies.get(identifier))))),
+                                            true)
+                                            .flatMap(w -> Optionals.join(
+                                                w,
+                                                error -> IO.println("Could not write buckaroo.json. ")
+                                                    .then(IO.println(error)),
+                                                () -> IO.println("Done. ")
+                                                    .then(IO.println("Installing dependencies... ")
+                                                    .then(InstallExisting.routine))))))))))));
     }
 }
