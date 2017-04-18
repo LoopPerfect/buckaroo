@@ -1,9 +1,11 @@
 package com.loopperfect.buckaroo.routines;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.google.common.hash.HashCode;
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
 import com.loopperfect.buckaroo.io.IO;
@@ -11,8 +13,6 @@ import com.loopperfect.buckaroo.serialization.Serializers;
 import org.eclipse.jgit.api.Status;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -25,14 +25,61 @@ public final class Routines {
 
     }
 
+    public static IO<Optional<IOException>> upgrade(
+        final String buckarooDirectory, final RemoteCookBook cookBook) {
+        Preconditions.checkNotNull(buckarooDirectory);
+        Preconditions.checkNotNull(cookBook);
+        final String cookBookPath = buckarooDirectory + "/" + cookBook.name;
+        return ensureCheckout(cookBookPath, GitCommit.of(cookBook.url, "master"))
+            .map(x -> x.left().map(IOException::new));
+    }
+
+    public static IO<Optional<IOException>> upgradeForConfig(final Path configFilePath) {
+        Preconditions.checkNotNull(configFilePath);
+        return IO.value(configFilePath)
+            .flatMap(x -> readConfig(x.toString()))
+            .flatMap(readConfigResult -> readConfigResult.join(
+                e -> IO.value(Optional.of(e)),
+                config -> buckarooDirectory.flatMap(path -> continueUntilPresent(
+                        config.cookBooks.stream()
+                        .map(cookBook -> IO.println("Upgrading " + cookBook.name + "...")
+                            .then(upgrade(path, cookBook)))
+                        .collect(ImmutableList.toImmutableList())))));
+    }
+
+    public static IO<Optional<IOException>> ensureConfig =
+        IO.of(context -> {
+            Preconditions.checkNotNull(context);
+            return context.fs().getPath(
+                context.fs().homeDirectory(),
+                "/",
+                ".buckaroo",
+                "/",
+                "config.json");
+        }).flatMap(configFile -> IO.of(context -> {
+            Preconditions.checkNotNull(context);
+            try {
+                if (!context.fs().exists(configFile.toString())) {
+                    final String defaultConfig = Resources.toString(
+                        Resources.getResource("com.loopperfect.buckaroo/DefaultConfig.txt"),
+                        Charsets.UTF_8);
+                    context.fs().writeFile(configFile.toString(), defaultConfig);
+                    return upgradeForConfig(configFile).run(context);
+                }
+                return Optional.empty();
+            } catch (final IOException e) {
+                return Optional.of(e);
+            }
+        }));
+
     public static final IO<String> buckarooDirectory =
-            context -> Paths.get(context.fs().userHomeDirectory(), ".buckaroo/").toString();
+        context -> Paths.get(context.fs().homeDirectory(), ".buckaroo/").toString();
 
     public static final IO<String> configFilePath =
         buckarooDirectory.map(x -> Paths.get(x, "config.json").toString());
 
     public static final IO<String> projectFilePath =
-            context -> Paths.get(context.fs().workingDirectory(), "buckaroo.json").toString();
+        context -> Paths.get(context.fs().workingDirectory(), "buckaroo.json").toString();
 
     public static IO<Either<IOException, Project>> readProject(final String path) {
         Preconditions.checkNotNull(path);

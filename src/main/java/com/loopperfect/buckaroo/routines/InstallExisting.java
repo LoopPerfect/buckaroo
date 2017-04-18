@@ -179,10 +179,13 @@ public final class InstallExisting {
         projectFilePath
             .flatMap(Routines::readProject)
             .flatMap(x -> x.join(
-                IO::println,
-                project -> configFilePath.flatMap(Routines::readConfig).flatMap(y -> y.join(
-                    IO::println,
-                    config -> readCookBooks(config).flatMap(z -> z.join(
+                e -> IO.println("Error reading project file... ").then(IO.println(e)),
+                project -> Routines.ensureConfig.flatMap(e -> Optionals.join(
+                    e,
+                    i -> IO.println("Error installing default Buckaroo config... ").then(IO.println(i)),
+                    () -> configFilePath.flatMap(Routines::readConfig).flatMap(y -> y.join(
                         IO::println,
-                        cookBooks -> resolveDependencies(project, config, cookBooks)))))));
+                        config -> readCookBooks(config).flatMap(z -> z.join(
+                            IO::println,
+                            cookBooks -> resolveDependencies(project, config, cookBooks)))))))));
 }

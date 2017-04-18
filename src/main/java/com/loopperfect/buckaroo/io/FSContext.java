@@ -22,7 +22,7 @@ public interface FSContext {
 
     FileSystem getFS();
 
-    default String userHomeDirectory() {
+    default String homeDirectory() {
         return getFS().getPath(System.getProperty("user.home")).toString();
     }
 
@@ -136,7 +136,7 @@ public interface FSContext {
         final Path path = getFS().getPath(p);
         try (final Stream<Path> paths = java.nio.file.Files.list(path)) {
             return Either.right(paths
-                .map(x -> x.toString())
+                .map(Path::toString)
                 .collect(ImmutableList.toImmutableList()));
         } catch (final IOException e) {
             return Either.left(e);
@@ -144,43 +144,15 @@ public interface FSContext {
     }
 
     static FSContext actual() {
-        return of(
-            FileSystems.getDefault(),
-            System.getProperty("user.home"),
-            System.getProperty("user.dir"));
+        return of(FileSystems.getDefault());
     }
 
     static FSContext fake() {
-        return of(
-            Jimfs.newFileSystem(Configuration.unix()),
-            System.getProperty("user.home"),
-            System.getProperty("user.dir"));
+        return of(Jimfs.newFileSystem(Configuration.unix()));
     }
 
-    static FSContext of(final FileSystem fs, final String homeDirectory, final String workingDirectory) {
-
+    static FSContext of(final FileSystem fs) {
         Preconditions.checkNotNull(fs);
-        Preconditions.checkNotNull(homeDirectory);
-        Preconditions.checkNotNull(workingDirectory);
-
-        return new FSContext() {
-
-            @Override
-            public FileSystem getFS() {
-                return fs;
-            }
-
-            @Override
-            public String userHomeDirectory() {
-                return getFS()
-                    .getPath(homeDirectory).toString();
-            }
-
-            @Override
-            public String workingDirectory() {
-                return getFS()
-                    .getPath(workingDirectory).toString();
-            }
-        };
+        return () -> fs;
     }
 }
