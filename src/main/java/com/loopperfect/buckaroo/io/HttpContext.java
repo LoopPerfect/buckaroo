@@ -46,7 +46,12 @@ public interface HttpContext {
             public Optional<IOException> download(final URL source, final Path target) {
                 Preconditions.checkNotNull(source);
                 Preconditions.checkNotNull(target);
+                // TODO: This should take a file-system as a parameter
                 try {
+                    final File parentFile = target.getParent().toFile();
+                    if (!parentFile.exists()) {
+                        parentFile.mkdirs();
+                    }
                     final File targetFile = target.toFile();
                     Resources.asByteSource(source).copyTo(Files.asByteSink(targetFile));
                     return Optional.empty();
