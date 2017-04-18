@@ -2,10 +2,7 @@ package com.loopperfect.buckaroo.routines;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.loopperfect.buckaroo.BuckarooConfig;
-import com.loopperfect.buckaroo.CookBook;
-import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.Recipe;
+import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.IOContext;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import org.junit.Test;
@@ -14,8 +11,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public final class RoutinesTest {
@@ -26,7 +25,7 @@ public final class RoutinesTest {
         final IOContext io = IOContext.fake();
 
         final Path path = io.fs().getPath(
-            io.fs().userHomeDirectory().toString(),
+            io.fs().homeDirectory().toString(),
             ".buckaroo",
             "config.json"
         );
@@ -43,7 +42,7 @@ public final class RoutinesTest {
         final IOContext io = IOContext.fake();
 
         final Path path = io.fs().getPath(
-                io.fs().userHomeDirectory(),
+                io.fs().homeDirectory(),
                 ".buckaroo",
                 "config.json");
 
@@ -59,7 +58,7 @@ public final class RoutinesTest {
         final IOContext io = IOContext.fake();
 
         final Path path = io.fs().getPath(
-                io.fs().userHomeDirectory(),
+                io.fs().homeDirectory(),
                 ".buckaroo/",
                 "config.json");
 
@@ -82,7 +81,7 @@ public final class RoutinesTest {
         final IOContext io = IOContext.fake();
 
         final String buckarooDirectory = io.fs().getPath(
-            io.fs().userHomeDirectory(),
+            io.fs().homeDirectory(),
             ".buckaroo").toString();
 
         final String configPath = io.fs().getPath(

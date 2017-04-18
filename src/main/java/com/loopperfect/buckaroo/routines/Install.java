@@ -32,7 +32,8 @@ public final class Install {
             version.orElseGet(AnySemanticVersion::of);
         final Dependency dependencyToTry = Dependency.of(
             identifier, versionRequirementToUse);
-        return IO.println("Adding dependency on " + identifier.encode() +
+
+        final IO<Unit> installDependency = IO.println("Adding dependency on " + identifier.encode() +
             Optionals.join(version, x -> "@" + x.encode(), () -> "") + "... ")
             .then(projectFilePath)
             .flatMap(path -> Routines.readProject(path)
@@ -65,5 +66,11 @@ public final class Install {
                                                 () -> IO.println("Done. ")
                                                     .then(IO.println("Installing dependencies... ")
                                                     .then(InstallExisting.routine))))))))))));
+
+        return Routines.ensureConfig.flatMap(
+            e -> Optionals.join(
+                e,
+                i -> IO.println("Error installing default Buckaroo config... ").then(IO.println(i)),
+                () -> installDependency));
     }
 }
