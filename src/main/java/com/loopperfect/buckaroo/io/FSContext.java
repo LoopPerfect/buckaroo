@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.Unit;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -94,6 +95,22 @@ public interface FSContext {
                 }
             }
             Files.write(path, ImmutableList.of(content), Charset.defaultCharset(), StandardOpenOption.CREATE);
+            return Optional.empty();
+        } catch (final IOException e) {
+            return Optional.of(e);
+        }
+    }
+
+    default Optional<IOException> touch(final String p) {
+        Preconditions.checkNotNull(p);
+        final Path path = getFS().getPath(p);
+        try {
+            if (!Files.exists(path)) {
+                if (path.getParent() != null && !Files.exists(path.getParent())) {
+                    Files.createDirectories(path.getParent());
+                }
+                Files.createFile(path);
+            }
             return Optional.empty();
         } catch (final IOException e) {
             return Optional.of(e);
