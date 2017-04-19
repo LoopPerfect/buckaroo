@@ -12,6 +12,7 @@ import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import org.eclipse.jgit.api.Status;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,8 +31,7 @@ public final class Routines {
         Preconditions.checkNotNull(buckarooDirectory);
         Preconditions.checkNotNull(cookBook);
         final String cookBookPath = buckarooDirectory + "/" + cookBook.name;
-        return ensureCheckout(cookBookPath, GitCommit.of(cookBook.url, "master"))
-            .map(x -> x.left().map(IOException::new));
+        return ensureCheckout(cookBookPath, GitCommit.of(cookBook.url, "master"));
     }
 
     public static IO<Optional<IOException>> upgradeForConfig(final Path configFilePath) {
@@ -228,7 +228,7 @@ public final class Routines {
         Preconditions.checkNotNull(source);
         return Either.join(
             source,
-            gitCommit -> ensureCheckout(path, gitCommit).map(x -> x.left().map(IOException::new)),
+            gitCommit -> ensureCheckout(path, gitCommit),
             remoteFile -> fetchAndUnzip(path, remoteFile));
     }
 
@@ -291,14 +291,16 @@ public final class Routines {
         };
     }
 
-    public static IO<Either<Exception, Status>> ensureCheckout(final String path, final GitCommit gitCommit) {
+    public static IO<Optional<IOException>> ensureCheckout(final String path, final GitCommit gitCommit) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(gitCommit);
         return IO.of(context -> context.fs().getPath(path).toFile())
+            // Try to clone and pull, ignoring any errors...
             .flatMap(file -> IO.sequence(ImmutableList.of(
                 context -> context.git().clone(file, gitCommit.url),
-                context -> context.git().checkout(file, gitCommit.commit),
                 context -> context.git().pull(file)))
-                .then(context -> context.git().status(file)));
+                // Now if we succeeded, the checkout should not fail...
+                .then(context -> context.git().checkout(file, gitCommit.commit)
+                    .map(e -> new IOException("Could not checkout " + gitCommit.encode() + " to " + path, e))));
     }
 }
