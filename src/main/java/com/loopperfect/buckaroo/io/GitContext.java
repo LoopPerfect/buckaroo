@@ -3,9 +3,15 @@ package com.loopperfect.buckaroo.io;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Either;
 import org.eclipse.jgit.api.*;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.util.FS;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Optional;
+import java.nio.file.Path;
 
 public interface GitContext {
 
@@ -72,6 +78,19 @@ public interface GitContext {
         }
     }
 
+    default Either<Exception, String> remoteOriginUrl(final Path localPath) {
+        Preconditions.checkNotNull(localPath);
+        final Path gitDirectory = localPath.getFileSystem().getPath(localPath.toString(), "/", ".git");
+        try {
+            final Repository repository = new FileRepositoryBuilder()
+                .setGitDir(gitDirectory.toFile())
+                .build();
+            return Either.right(repository.getConfig().getString( "remote", "origin", "url" ));
+        } catch (IOException e) {
+            return Either.left(e);
+        }
+    }
+
     static GitContext actual() {
         return new GitContext() {
         };
@@ -81,22 +100,22 @@ public interface GitContext {
         return new GitContext() {
             @Override
             public Optional<Exception> clone(final File localPath, final String gitUrl) {
-                return Optional.empty();
+                return Optional.of(new RuntimeException("Not implemented"));
             }
 
             @Override
             public Optional<Exception> checkout(final File localPath, final String branch) {
-                return Optional.empty();
+                return Optional.of(new RuntimeException("Not implemented"));
             }
 
             @Override
             public Optional<Exception> pull(final File localPath) {
-                return Optional.empty();
+                return Optional.of(new RuntimeException("Not implemented"));
             }
 
             @Override
             public Either<Exception, Status> status(final File localPath) {
-                return null;
+                return Either.left(new RuntimeException("Not implemented"));
             }
         };
     }

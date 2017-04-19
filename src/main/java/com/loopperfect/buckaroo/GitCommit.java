@@ -22,6 +22,10 @@ public final class GitCommit {
         this.commit = commit;
     }
 
+    public String encode() {
+        return url + "#" + commit;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(url, commit);
