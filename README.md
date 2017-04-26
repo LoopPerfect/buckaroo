@@ -42,6 +42,10 @@ Official packages can be browsed at [buckaroo.pm](https://www.buckaroo.pm/).
 
 Package requests are handled on [the Wishlist](https://github.com/LoopPerfect/buckaroo-wishlist).
 
+### How should I report a bug?
+
+If the bug is for the Buckaroo client, please report it [here](https://github.com/LoopPerfect/buckaroo/issues). If the bug is for a specific package, please report it on [the recipes repo](https://github.com/LoopPerfect/buckaroo-recipes). 
+
 ### What is your contribution policy?
 
 Buckaroo is fully open-source and we are accepting external contributions. If you would like to contribute, please create a pull-request and we will review it promptly. 
