@@ -30,7 +30,7 @@ You can generate project files for your IDE using `buck project`. Please do not 
 
 ## FAQ
 
-### What platforms in Buckaroo available for?
+### What platforms is Buckaroo available for?
 
 Buckaroo is available for macOS, Linux and Windows. Please see [the documentation](http://buckaroo.readthedocs.io/) for more information. 
 
