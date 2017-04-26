@@ -160,12 +160,6 @@ prebuilt_jar(
   binary_jar = ':mustache-jar',
 )
 
-# <dependency>
-#   <groupId>org.apache.httpcomponents</groupId>
-#   <artifactId>httpclient</artifactId>
-#   <version>4.3.6</version>
-# </dependency>
-
 remote_file(
   name = 'httpclient-jar',
   out = 'httpclient-4.3.6.jar',
