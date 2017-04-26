@@ -40,7 +40,7 @@ Official packages can be browsed at [buckaroo.pm](https://www.buckaroo.pm/).
 
 ### How can I request a package?
 
-Package requests are handled on [the Wishlist](https://github.com/LoopPerfect/buckaroo-wishlist).
+Package requests are handled on [the wishlist](https://github.com/LoopPerfect/buckaroo-wishlist).
 
 ### How should I report a bug?
 
