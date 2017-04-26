@@ -9,12 +9,15 @@ import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.RemoteCookBook;
 import org.junit.Test;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import static org.junit.Assert.assertEquals;
 
 public final class BuckarooConfigSerializerTest {
 
     @Test
-    public void testBuckarooConfigSerializer() {
+    public void testBuckarooConfigSerializer1() {
         final BuckarooConfig config = BuckarooConfig.of(ImmutableList.of(
                 RemoteCookBook.of(
                         Identifier.of("cookbook"),
@@ -22,6 +25,19 @@ public final class BuckarooConfigSerializerTest {
         final String serializedConfig = Serializers.serialize(config);
         final Either<JsonParseException, BuckarooConfig> deserializedConfig =
                 Serializers.parseConfig(serializedConfig);
+        assertEquals(Either.right(config), deserializedConfig);
+    }
+
+    @Test
+    public void testBuckarooConfigSerializer2() throws MalformedURLException {
+        final BuckarooConfig config = BuckarooConfig.of(ImmutableList.of(
+            RemoteCookBook.of(
+                Identifier.of("cookbook"),
+                "git@github.com:njlr/buckaroo-organizations-test.git")),
+            new URL("http://localhost:4444/"));
+        final String serializedConfig = Serializers.serialize(config);
+        final Either<JsonParseException, BuckarooConfig> deserializedConfig =
+            Serializers.parseConfig(serializedConfig);
         assertEquals(Either.right(config), deserializedConfig);
     }
 }

@@ -10,15 +10,16 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
 import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.serialization.Serializers;
-import org.eclipse.jgit.api.Status;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+
+import static com.loopperfect.buckaroo.Either.left;
 
 public final class Routines {
 
@@ -121,7 +122,7 @@ public final class Routines {
             for (final IO<Either<L, R>> x : xs) {
                 final Either<L, R> result = x.run(context);
                 if (result.left().isPresent()) {
-                    return Either.left(result.left().get());
+                    return left(result.left().get());
                 }
                 builder.add(result.right().get());
             }
@@ -183,7 +184,7 @@ public final class Routines {
         Preconditions.checkNotNull(identifier);
         return listRecipesForOrganization(path + "/" + identifier.name + "/")
             .flatMap(x -> x.join(
-                error -> IO.value(Either.left(error)),
+                error -> IO.value(left(error)),
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name + ".json")
@@ -200,7 +201,7 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         return listOrganizationsForCookBook(path)
             .flatMap(x -> x.join(
-                error -> IO.value(Either.left(error)),
+                error -> IO.value(left(error)),
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(identifier -> readOrganization(path + "/recipes", identifier)
@@ -303,4 +304,37 @@ public final class Routines {
                 .then(context -> context.git().checkout(file, gitCommit.commit)
                     .map(e -> new IOException("Could not checkout " + gitCommit.encode() + " to " + path, e))));
     }
+
+    /**
+     * Loads the Buckaroo config from the expected path.
+     * If there is no config available, the default config is created automatically.
+     *
+     * @return  An error if the process failed in any way,
+     *          and the Buckaroo config otherwise.
+     */
+    public static IO<Either<IOException, BuckarooConfig>> loadConfig = ensureConfig
+        .flatMap(x -> Optionals.join(x,
+            i -> IO.value(left(i)),
+            () -> configFilePath.flatMap(Routines::readConfig)));
+
+    /**
+     * Gets a UUID for this user on this system.
+     * If the process fails, then a new UUID is generated.
+     *
+     * @return  A random UUID tied to this system
+     */
+    public static final IO<String> getIdentifier = IO.of(context -> {
+        Preconditions.checkNotNull(context);
+        final String path = context.fs().getPath(
+            Routines.buckarooDirectory.run(context),
+            "user-uuid.txt").toString();
+        if (!context.fs().exists(path)) {
+            final String identifier = UUID.randomUUID().toString();
+            context.fs().writeFile(path, identifier);
+            return identifier;
+        }
+        return context.fs().readFile(path).join(
+            e -> UUID.randomUUID().toString(),
+            x -> x.trim());
+    });
 }

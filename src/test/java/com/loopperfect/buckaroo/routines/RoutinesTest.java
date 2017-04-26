@@ -125,4 +125,17 @@ public final class RoutinesTest {
 
         assertTrue(cookBooks.join(l -> false, r -> true));
     }
+
+    @Test
+    public void testIdentifySystem() {
+
+        final IOContext context = IOContext.fake();
+
+        final String a = Routines.getIdentifier.run(context);
+        final String b = Routines.getIdentifier.run(context);
+        final String c = Routines.getIdentifier.run(context);
+
+        assertTrue(a.equals(b));
+        assertTrue(a.equals(c));
+    }
 }
