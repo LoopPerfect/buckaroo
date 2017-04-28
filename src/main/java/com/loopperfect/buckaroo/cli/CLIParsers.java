@@ -1,6 +1,5 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.versioning.VersioningParsers;
@@ -64,6 +63,9 @@ public final class CLIParsers {
 
     static final Parser<Void> quickstartTokenParser =
             Scanners.stringCaseInsensitive("quickstart");
+
+    static final Parser<Void> helpTokenParser =
+        Scanners.stringCaseInsensitive("help");
 
     static final Parser<Void> ignoreParser =
             Scanners.WHITESPACES.skipMany();
@@ -142,18 +144,23 @@ public final class CLIParsers {
             quickstartTokenParser.between(ignoreParser, ignoreParser)
                     .map(x -> QuickstartCommand.of());
 
+    static final Parser<HelpCommand> helpCommandParser =
+        helpTokenParser.between(ignoreParser, ignoreParser)
+            .map(x -> HelpCommand.of());
+
     public static final Parser<CLICommand> commandParser =
-            Parsers.longest(
-                    initCommandParser,
-                    upgradeCommandParser,
-                    installExistingCommandParser,
-                    installCommandParser,
-                    uninstallCommandParser,
-                    updateCommandParser,
-                    recipesCommandParser,
-                    generateCommandParser,
-                    cookbooksCommandParser,
-                    dependenciesCommandParser,
-                    versionCommandParser,
-                    quickstartCommandParser);
+        Parsers.longest(
+            initCommandParser,
+            upgradeCommandParser,
+            installExistingCommandParser,
+            installCommandParser,
+            uninstallCommandParser,
+            updateCommandParser,
+            recipesCommandParser,
+            generateCommandParser,
+            cookbooksCommandParser,
+            dependenciesCommandParser,
+            versionCommandParser,
+            quickstartCommandParser,
+            helpCommandParser);
 }

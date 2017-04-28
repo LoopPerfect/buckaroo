@@ -85,6 +85,8 @@ public final class CLIParsersTest {
 
         assertEquals(VersionCommand.of(), parser.parse("   version "));
 
+        assertEquals(HelpCommand.of(), parser.parse("help "));
+
         assertEquals(
             InstallCommand.of(RecipeIdentifier.of("org", "awesome")),
             CLIParsers.commandParser.parse(" install   org/awesome  "));
