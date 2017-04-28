@@ -186,6 +186,19 @@ prebuilt_jar(
   binary_jar = ':httpcore-jar',
 )
 
+remote_file(
+  name = 'commons-logging-jar',
+  out = 'commons-logging-1.2.jar',
+  url = 'mvn:commons-logging:commons-logging:jar:1.2',
+  sha1 = '4bfc12adfe4842bf07b657f0369c4cb522955686',
+)
+
+prebuilt_jar(
+  name = 'commons-logging',
+  source_jar = ':commons-logging-jar',
+  binary_jar = ':commons-logging-jar',
+)
+
 java_library(
   name = 'buckaroo',
   source = '8',
@@ -211,6 +224,7 @@ java_library(
     ':jimfs',
     ':httpclient',
     ':httpcore',
+    ':commons-logging',
   ],
 )
 
