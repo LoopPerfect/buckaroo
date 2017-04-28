@@ -129,14 +129,14 @@ prebuilt_jar(
 )
 
 # We need to strip out the jar signing
-# TODO: Find a better approach! 
+# TODO: Find a better approach!
 genrule(
   name = 'jgit-jar-fixed',
   srcs = [
     '//:jgit-jar',
   ],
-  cmd = 
-    'cp buck-out/gen/jgit-jar/jgit-4.5.0.jar $OUT && ' + 
+  cmd =
+    'cp buck-out/gen/jgit-jar/jgit-4.5.0.jar $OUT && ' +
     'zip -d $OUT META-INF/*.RSA META-INF/*.SF META-INF/*.MF',
   out = 'jgit-4.5.0-fixed.jar',
 )
@@ -160,6 +160,45 @@ prebuilt_jar(
   binary_jar = ':mustache-jar',
 )
 
+remote_file(
+  name = 'httpclient-jar',
+  out = 'httpclient-4.3.6.jar',
+  url = 'mvn:org.apache.httpcomponents:httpclient:jar:4.3.6',
+  sha1 = '4c47155e3e6c9a41a28db36680b828ced53b8af4',
+)
+
+prebuilt_jar(
+  name = 'httpclient',
+  source_jar = ':httpclient-jar',
+  binary_jar = ':httpclient-jar',
+)
+
+remote_file(
+  name = 'httpcore-jar',
+  out = 'httpcore-4.4.6.jar',
+  url = 'mvn:org.apache.httpcomponents:httpcore:jar:4.4.6',
+  sha1 = 'e3fd8ced1f52c7574af952e2e6da0df8df08eb82',
+)
+
+prebuilt_jar(
+  name = 'httpcore',
+  source_jar = ':httpcore-jar',
+  binary_jar = ':httpcore-jar',
+)
+
+remote_file(
+  name = 'commons-logging-jar',
+  out = 'commons-logging-1.2.jar',
+  url = 'mvn:commons-logging:commons-logging:jar:1.2',
+  sha1 = '4bfc12adfe4842bf07b657f0369c4cb522955686',
+)
+
+prebuilt_jar(
+  name = 'commons-logging',
+  source_jar = ':commons-logging-jar',
+  binary_jar = ':commons-logging-jar',
+)
+
 java_library(
   name = 'buckaroo',
   source = '8',
@@ -170,6 +209,7 @@ java_library(
   resources = glob([
     'src/main/resources/**/*.mustache',
     'src/main/resources/**/*.cpp',
+    'src/main/resources/**/*.txt',
   ]),
   resources_root = 'src/main/resources',
   deps = [
@@ -182,6 +222,9 @@ java_library(
     ':slf4j-nop',
     ':jsch',
     ':jimfs',
+    ':httpclient',
+    ':httpcore',
+    ':commons-logging',
   ],
 )
 

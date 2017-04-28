@@ -8,6 +8,8 @@ import com.loopperfect.buckaroo.BuckarooConfig;
 import com.loopperfect.buckaroo.RemoteCookBook;
 
 import java.lang.reflect.Type;
+import java.net.URL;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public final class BuckarooConfigDeserializer implements JsonDeserializer<BuckarooConfig> {
@@ -23,15 +25,15 @@ public final class BuckarooConfigDeserializer implements JsonDeserializer<Buckar
 
         final JsonArray cookBooksElement = jsonObject.getAsJsonArray("cookBooks");
 
-
-        if (cookBooksElement == null)  // TODO: Return Either
-            return BuckarooConfig.of(ImmutableList.of());
-
         final ImmutableList<RemoteCookBook> cookBooks = ImmutableList.copyOf(
-            Streams.stream(cookBooksElement)
+            Streams.stream(cookBooksElement == null ? ImmutableList.of() : cookBooksElement)
                 .map(x -> (RemoteCookBook) context.deserialize(x, RemoteCookBook.class))
                 .collect(Collectors.toList()));
 
-        return BuckarooConfig.of(cookBooks);
+        final Optional<URL> analyticsServer = jsonObject.has("analytics") ?
+            Optional.of(context.deserialize(jsonObject.get("analytics"), URL.class)) :
+            Optional.empty();
+
+        return BuckarooConfig.of(cookBooks, analyticsServer);
     }
 }

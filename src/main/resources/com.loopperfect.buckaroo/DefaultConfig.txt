@@ -4,5 +4,6 @@
       "name": "buckaroo-recipes",
       "url": "git@github.com:loopperfect/buckaroo-recipes.git"
     }
-  ]
+  ],
+  "analytics": "https://logging-nikhedonia.rhcloud.com/:80"
 }
