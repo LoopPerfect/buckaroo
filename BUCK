@@ -196,6 +196,7 @@ java_library(
   resources = glob([
     'src/main/resources/**/*.mustache',
     'src/main/resources/**/*.cpp',
+    'src/main/resources/**/*.txt',
   ]),
   resources_root = 'src/main/resources',
   deps = [
