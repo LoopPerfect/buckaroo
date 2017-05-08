@@ -3,6 +3,19 @@ A source-only C++ package manager that will take you to your happy place 🏝️
 
 [buckaroo.pm](https://www.buckaroo.pm/)
 
+The Buckaroo workflow looks like this: 
+
+```
+# Create your project file
+buckaroo init
+
+# Install dependencies
+buckaroo install boost/thread
+
+# Run your code
+buck run :my-app
+```
+
 ## Getting Started
 
 ## As a User
