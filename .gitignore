@@ -60,8 +60,7 @@ buck-out/
 
 .idea/
 pom.xml
-buckaroo.iml
-project_root.iml
+*.iml
 
 buckaroo.json
 /buckaroo/
