@@ -15,7 +15,7 @@ public final class CLIParsers {
     }
 
     public static final Parser<Identifier> identifierParser =
-            Scanners.isChar(CharPredicates.IS_LETTER).times(1).followedBy(
+            Scanners.isChar(CharPredicates.IS_ALPHA_NUMERIC).times(1).followedBy(
                     Scanners.isChar(CharPredicates.or(
                             CharPredicates.IS_ALPHA_NUMERIC,
                             CharPredicates.among("-_+"))).times(1, 29))

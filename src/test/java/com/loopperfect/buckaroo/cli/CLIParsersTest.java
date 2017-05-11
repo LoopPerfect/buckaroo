@@ -25,6 +25,7 @@ public final class CLIParsersTest {
         assertEquals(Identifier.of("abcde_fgh"), parser.parse("abcde_fgh"));
         assertEquals(Identifier.of("abcde_-"), parser.parse("abcde_-"));
         assertEquals(Identifier.of("abcde_-+++"), parser.parse("abcde_-+++"));
+        assertEquals(Identifier.of("000abc"), parser.parse("000abc"));
 
         final String a30 = String.join("", Collections.nCopies(30, "a"));
         assertEquals(Identifier.of(a30), parser.parse(a30));
@@ -38,13 +39,6 @@ public final class CLIParsersTest {
 
         try {
             parser.parse("a");
-            assertTrue(false);
-        } catch (final ParserException e) {
-            assertTrue(true);
-        }
-
-        try {
-            parser.parse("000abc");
             assertTrue(false);
         } catch (final ParserException e) {
             assertTrue(true);
@@ -90,6 +84,10 @@ public final class CLIParsersTest {
         assertEquals(
             InstallCommand.of(RecipeIdentifier.of("org", "awesome")),
             CLIParsers.commandParser.parse(" install   org/awesome  "));
+
+        assertEquals(
+            InstallCommand.of(RecipeIdentifier.of("3hren", "blackhole")),
+            CLIParsers.commandParser.parse(" install   3hren/blackhole  "));
 
         assertEquals(
             UninstallCommand.of(RecipeIdentifier.of("org", "some_lib")),
