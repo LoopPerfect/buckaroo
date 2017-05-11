@@ -6,5 +6,6 @@ before_install:
   - sudo yes '' | ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
   - PATH="$HOME/.linuxbrew/bin:$PATH"
   - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
+  - brew tap facebook/fb
   - brew install buck
 script: buck build :buckaroo-cli
