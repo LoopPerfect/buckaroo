@@ -63,3 +63,7 @@ If the bug is for the Buckaroo client, please report it [here](https://github.co
 
 Buckaroo is fully open-source and we are accepting external contributions. If you would like to contribute, please create a pull-request and we will review it promptly. 
 
+Another way to contribute is by writing recipes! Send a PR to [this repo](https://github.com/LoopPerfect/buckaroo-recipes) to add a recipe to the official cookbook. If you are looking for a library to port, [the wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) is a good place to start. 
+
+
+
