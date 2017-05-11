@@ -1,0 +1,7 @@
+language: java
+before_install:
+  - sudo apt-get install default-jdk ant python2 git
+  - git clone https://github.com/facebook/buck.git
+  - cd buck
+  - ant
+script: ./bin/buck build :buckaroo-cli
