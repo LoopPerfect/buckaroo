@@ -1,14 +1,16 @@
-language: java
-jdk:
-  - oraclejdk8
-dist: trusty
-before_install:
-  - sudo apt-get install default-jdk ant python2.7 git
-  - git clone https://github.com/facebook/buck.git
-  - cd buck
-  - ant
-  - cd ../
-script:
-  - ./buck/bin/buck test
-  - ./buck/bin/buck build :buckaroo-cli
 sudo: required
+
+language: java
+
+services:
+  - docker
+
+before_install:
+  - docker pull prelegalwonder/buck-builder:latest
+  - docker run -itd --name build prelegalwonder/buck-builder
+  - docker exec build git clone https://github.com/LoopPerfect/buckaroo.git
+
+script:
+  - docker exec build cd /root/buckaroo && buck test
+  - docker exec build cd /root/buckaroo && buck build :buckaroo
+  - docker exec build cd /root/buckaroo && buck run :buckaroo-cli version
