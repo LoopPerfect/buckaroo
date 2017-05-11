@@ -3,7 +3,8 @@ jdk:
   - oraclejdk8
 before_install:
   - sudo apt-get install default-jdk ant python2.7 git
-  - git clone https://github.com/facebook/buck.git
-  - cd buck
-  - ant
-script: ./bin/buck build :buckaroo-cli
+  - ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
+  - PATH="$HOME/.linuxbrew/bin:$PATH"
+  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
+  - brew install buck
+script: buck build :buckaroo-cli
