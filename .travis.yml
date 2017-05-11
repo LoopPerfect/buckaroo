@@ -1,13 +1,15 @@
 language: java
 jdk:
   - oraclejdk8
+dist: trusty
 before_install:
   - sudo apt-get install default-jdk ant python2.7 git
-  - sudo yes '' | ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
-  - PATH="$HOME/.linuxbrew/bin:$PATH"
-  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
-  - brew tap facebook/fb
-  - brew install --HEAD facebook/fb/buck
+  - git clone https://github.com/facebook/buck.git
+  - cd buck
+  - ant
+  - ./bin/buck --help
+  - cd ../
 script:
-  - buck test
-  - buck build :buckaroo-cli
+  - ./buck/bin/buck test
+  - ./buck/bin/buck build :buckaroo-cli
+sudo: required
