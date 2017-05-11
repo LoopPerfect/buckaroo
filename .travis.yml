@@ -7,7 +7,6 @@ before_install:
   - git clone https://github.com/facebook/buck.git
   - cd buck
   - ant
-  - ./bin/buck --help
   - cd ../
 script:
   - ./buck/bin/buck test
