@@ -7,7 +7,7 @@ before_install:
   - PATH="$HOME/.linuxbrew/bin:$PATH"
   - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
   - brew tap facebook/fb
-  - brew install buck
+  - brew install --HEAD facebook/fb/buck
 script:
   - buck test
   - buck build :buckaroo-cli
