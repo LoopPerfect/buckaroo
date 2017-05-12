@@ -6,11 +6,12 @@ services:
   - docker
 
 before_install:
-  - docker pull prelegalwonder/buck-builder:latest
-  - docker run -itd --name build prelegalwonder/buck-builder
+  - docker pull njlr/buck:v2
+  - docker run -itd --name build njlr/buck:v2
   - docker exec build git clone https://github.com/LoopPerfect/buckaroo.git
 
 script:
-  - docker exec build cd /root/buckaroo && buck test
-  - docker exec build cd /root/buckaroo && buck build :buckaroo
-  - docker exec build cd /root/buckaroo && buck run :buckaroo-cli version
+  - docker exec build /bin/bash -c 'cd /buckaroo && buck test'
+  - docker exec build /bin/bash -c 'cd /buckaroo && buck build :buckaroo'
+  - docker exec build /bin/bash -c 'cd /buckaroo && buck build :buckaroo-cli'
+  - docker exec build /bin/bash -c 'java -jar /buckaroo/buck-out/gen/buckaroo-cli.jar version'
