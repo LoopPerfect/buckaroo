@@ -3,6 +3,8 @@ A source-only C++ package manager that will take you to your happy place 🏝️
 
 [buckaroo.pm](https://www.buckaroo.pm/)
 
+[![Build Status](https://travis-ci.org/LoopPerfect/buckaroo.svg?branch=master)](https://travis-ci.org/LoopPerfect/buckaroo) [![Gitter Chat](http://img.shields.io/badge/chat-online-brightgreen.svg)](https://gitter.im/LoopPerfect/buckaroo)
+
 The Buckaroo workflow looks like this: 
 
 ```
