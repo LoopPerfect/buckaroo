@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -32,7 +31,7 @@ public final class RoutinesTest {
 
         io.fs().createDirectory(path.getParent().toString());
 
-        assertTrue(Routines.readConfig(path.toString()).run(io)
+        assertTrue(Routines.readConfig(path.toString()).apply(io)
             .join(x -> x, x -> null) instanceof java.nio.file.NoSuchFileException);
     }
 
@@ -49,7 +48,7 @@ public final class RoutinesTest {
         io.fs().createDirectory(path.getParent().toString());
         io.fs().writeFile(path.toString(), "");
 
-        assertTrue(Routines.readConfig(path.toString()).run(io).join(x -> true, x -> false));
+        assertTrue(Routines.readConfig(path.toString()).apply(io).join(x -> true, x -> false));
     }
 
     @Test
@@ -71,7 +70,7 @@ public final class RoutinesTest {
 
         System.out.println(path.toString());
 
-        assertEquals(Routines.readConfig(path.toString()).run(io).rightProjection(x -> x.cookBooks),
+        assertEquals(Routines.readConfig(path.toString()).apply(io).rightMap(x -> x.cookBooks),
             Either.right(ImmutableList.of()));
     }
 
@@ -116,12 +115,12 @@ public final class RoutinesTest {
             io.fs().getPath(buckarooOfficialPath, "recipes", "org", "magic.json").toString(),
             Serializers.serialize(magicRecipe));
 
-        final Either<IOException, BuckarooConfig> config = Routines.readConfig(configPath).run(io);
+        final Either<IOException, BuckarooConfig> config = Routines.readConfig(configPath).apply(io);
 
         assertTrue(config.join(l -> false, r -> true));
 
         final Either<IOException, ImmutableList<CookBook>> cookBooks =
-            Routines.readCookBooks(config.right().get()).run(io);
+            Routines.readCookBooks(config.right().get()).apply(io);
 
         assertTrue(cookBooks.join(l -> false, r -> true));
     }
@@ -131,9 +130,9 @@ public final class RoutinesTest {
 
         final IOContext context = IOContext.fake();
 
-        final String a = Routines.getIdentifier.run(context);
-        final String b = Routines.getIdentifier.run(context);
-        final String c = Routines.getIdentifier.run(context);
+        final String a = Routines.getIdentifier.apply(context);
+        final String b = Routines.getIdentifier.apply(context);
+        final String c = Routines.getIdentifier.apply(context);
 
         assertTrue(a.equals(b));
         assertTrue(a.equals(c));

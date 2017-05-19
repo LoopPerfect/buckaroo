@@ -56,6 +56,6 @@ public final class Quickstart {
                             identifier -> createAppSkeleton(path, identifier).flatMap(y -> join(
                                     y,
                                     IO::println,
-                                    () -> InstallExisting.routine.then(IO.println("Done. Run your project with: ")
-                                            .then(IO.println("buck run :" + identifier.name))))))));
+                                    () -> InstallExisting.routine.next(IO.println("Done. Run your project with: ")
+                                            .next(IO.println("buck apply :" + identifier.name))))))));
 }

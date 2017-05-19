@@ -44,7 +44,7 @@ public final class Routines {
                 config -> buckarooDirectory.flatMap(path -> continueUntilPresent(
                         config.cookBooks.stream()
                         .map(cookBook -> IO.println("Upgrading " + cookBook.name + "...")
-                            .then(upgrade(path, cookBook)))
+                            .next(upgrade(path, cookBook)))
                         .collect(ImmutableList.toImmutableList())))));
     }
 
@@ -65,7 +65,7 @@ public final class Routines {
                         Resources.getResource("com.loopperfect.buckaroo/DefaultConfig.txt"),
                         Charsets.UTF_8);
                     context.fs().writeFile(configFile.toString(), defaultConfig);
-                    return upgradeForConfig(configFile).run(context);
+                    return upgradeForConfig(configFile).apply(context);
                 }
                 return Optional.empty();
             } catch (final IOException e) {
@@ -86,7 +86,7 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
                 Either::left,
-                content -> Serializers.parseProject(content).leftProjection(IOException::new));
+                content -> Serializers.parseProject(content).leftMap(IOException::new));
     }
 
     public static IO<Optional<IOException>> writeProject(
@@ -102,7 +102,7 @@ public final class Routines {
                 Either::left,
                 content -> {
                     Preconditions.checkNotNull(content);
-                    return Serializers.parseConfig(content).leftProjection(IOException::new);
+                    return Serializers.parseConfig(content).leftMap(IOException::new);
                 });
     }
 
@@ -111,7 +111,7 @@ public final class Routines {
         return IO.of(x -> x.fs().readFile(path))
                 .map(x -> x.join(
                         Either::left,
-                        content -> Serializers.parseRecipe(content).leftProjection(IOException::new)));
+                        content -> Serializers.parseRecipe(content).leftMap(IOException::new)));
     }
 
     public static <L, R> IO<Either<L, ImmutableList<R>>> allOrNothing(final ImmutableList<IO<Either<L, R>>> xs) {
@@ -120,7 +120,7 @@ public final class Routines {
             Preconditions.checkNotNull(context);
             final ImmutableList.Builder builder = ImmutableList.builder();
             for (final IO<Either<L, R>> x : xs) {
-                final Either<L, R> result = x.run(context);
+                final Either<L, R> result = x.apply(context);
                 if (result.left().isPresent()) {
                     return left(result.left().get());
                 }
@@ -135,7 +135,7 @@ public final class Routines {
         return context -> {
             Preconditions.checkNotNull(context);
             for (final IO<Optional<T>> x : xs) {
-                final Optional<T> result = x.run(context);
+                final Optional<T> result = x.apply(context);
                 if (result.isPresent()) {
                     return result;
                 }
@@ -149,7 +149,7 @@ public final class Routines {
         return context -> {
             Preconditions.checkNotNull(context);
             return context.fs().listFiles(path)
-                    .rightProjection(files -> files.stream()
+                    .rightMap(files -> files.stream()
                             .filter(file -> context.fs().isFile(file) &&
                                     Files.getFileExtension(file).equalsIgnoreCase("json"))
                             .map(file -> context.fs().getPath(file).getFileName().toString())
@@ -166,7 +166,7 @@ public final class Routines {
         return context -> {
             Preconditions.checkNotNull(context);
             return context.fs().listFiles(context.fs().getPath(cookBookPath, "recipes").toString())
-                    .rightProjection(files -> files.stream()
+                    .rightMap(files -> files.stream()
                             .filter(file -> Files.getFileExtension(file).equalsIgnoreCase("json") &&
                                     context.fs().isFile(file))
                             .map(file -> context.fs().getPath(file).getFileName().toString())
@@ -188,11 +188,11 @@ public final class Routines {
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name + ".json")
-                            .map(y -> y.rightProjection(z -> Maps.immutableEntry(i, z)))
-                            .map(y -> y.leftProjection(z ->
+                            .map(y -> y.rightMap(z -> Maps.immutableEntry(i, z)))
+                            .map(y -> y.leftMap(z ->
                                 new IOException("Error reading recipe at " + path + "/" + identifier.name + "/" + i.name + ".json", z))))
                         .collect(ImmutableList.toImmutableList()))
-                    .map(y -> y.rightProjection(
+                    .map(y -> y.rightMap(
                         recipes -> Organization.of(identifier.name, recipes.stream()
                             .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))));
     }
@@ -205,9 +205,9 @@ public final class Routines {
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(identifier -> readOrganization(path + "/recipes", identifier)
-                            .map(i -> i.rightProjection(j -> Maps.immutableEntry(identifier, j))))
+                            .map(i -> i.rightMap(j -> Maps.immutableEntry(identifier, j))))
                         .collect(ImmutableList.toImmutableList()))
-                    .map(y -> y.rightProjection(organizations -> CookBook.of(organizations.stream()
+                    .map(y -> y.rightMap(organizations -> CookBook.of(organizations.stream()
                         .collect(ImmutableMap.toImmutableMap(
                             Map.Entry::getKey,
                             Map.Entry::getValue)))))));
@@ -220,7 +220,7 @@ public final class Routines {
                 .flatMap(path -> context -> context.fs()
                     .getPath(path, remoteCookBook.name.toString()).toString())
                 .flatMap(Routines::readCookBook)
-                .map(x -> x.leftProjection(y -> new IOException("Error reading " + remoteCookBook.name, y))))
+                .map(x -> x.leftMap(y -> new IOException("Error reading " + remoteCookBook.name, y))))
             .collect(ImmutableList.toImmutableList()));
     }
 
@@ -236,7 +236,7 @@ public final class Routines {
 
     /**
      * Fetches a remote-file and downloads it to the given path.
-     * If a file is already present, then its hash is checked against what is expected.
+     * If a file is already present, next its hash is checked against what is expected.
      *
      * An error is returned if the process failed in any way, and a nothing otherwise.
      *
@@ -281,7 +281,7 @@ public final class Routines {
         Preconditions.checkNotNull(remoteFile);
         return context -> {
             Preconditions.checkNotNull(context);
-            final Optional<IOException> fetchResult = fetchRemoteFile(path + ".zip", remoteFile.asRemoteFile()).run(context);
+            final Optional<IOException> fetchResult = fetchRemoteFile(path + ".zip", remoteFile.asRemoteFile()).apply(context);
             if (fetchResult.isPresent()) {
                 return fetchResult;
             }
@@ -301,7 +301,7 @@ public final class Routines {
                 context -> context.git().clone(file, gitCommit.url),
                 context -> context.git().pull(file)))
                 // Now if we succeeded, the checkout should not fail...
-                .then(context -> context.git().checkout(file, gitCommit.commit)
+                .next(context -> context.git().checkout(file, gitCommit.commit)
                     .map(e -> new IOException("Could not checkout " + gitCommit.encode() + " to " + path, e))));
     }
 
@@ -319,14 +319,14 @@ public final class Routines {
 
     /**
      * Gets a UUID for this user on this system.
-     * If the process fails, then a new UUID is generated.
+     * If the process fails, next a new UUID is generated.
      *
      * @return  A random UUID tied to this system
      */
     public static final IO<String> getIdentifier = IO.of(context -> {
         Preconditions.checkNotNull(context);
         final String path = context.fs().getPath(
-            Routines.buckarooDirectory.run(context),
+            Routines.buckarooDirectory.apply(context),
             "user-uuid.txt").toString();
         if (!context.fs().exists(path)) {
             final String identifier = UUID.randomUUID().toString();

@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.io;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.F1;
 import com.loopperfect.buckaroo.Unit;
 import org.jparsec.functors.Map3;
 import org.jparsec.functors.Map4;
@@ -15,16 +16,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 @FunctionalInterface
-public interface IO<T> {
-
-    T run(final IOContext context);
+public interface IO<T> extends F1<IOContext, T> {
 
     default <U> IO<U> flatMap(final Function<T, IO<U>> f) {
         Preconditions.checkNotNull(f);
         return context -> {
             Preconditions.checkNotNull(context);
-            final T t = run(context);
-            return f.apply(t).run(context);
+            final T t = apply(context);
+            return f.apply(t).apply(context);
         };
     }
 
@@ -33,13 +32,13 @@ public interface IO<T> {
         return flatMap(x -> IO.value(f.apply(x)));
     }
 
-    default <U> IO<U> then(final IO<U> io) {
+    default <U> IO<U> next(final IO<U> io) {
         Preconditions.checkNotNull(io);
         return flatMap(ignored -> io);
     }
 
     default IO<Unit> ignore() {
-        return then(noop());
+        return next(noop());
     }
 
     default <U> IO<U> ifThenElse(final Predicate<T> condition, final Function<T, IO<U>> then, final Function<T, IO<U>> otherwise) {
@@ -48,11 +47,11 @@ public interface IO<T> {
         Preconditions.checkNotNull(otherwise);
         return context -> {
             Preconditions.checkNotNull(context);
-            final T t = run(context);
+            final T t = apply(context);
             if (condition.test(t)) {
-                return then.apply(t).run(context);
+                return then.apply(t).apply(context);
             } else {
-                return otherwise.apply(t).run(context);
+                return otherwise.apply(t).apply(context);
             }
         };
     }
@@ -61,9 +60,9 @@ public interface IO<T> {
         Preconditions.checkNotNull(condition);
         return context -> {
             Preconditions.checkNotNull(context);
-            T t = run(context);
+            T t = apply(context);
             while (!condition.test(t)) {
-                t = run(context);
+                t = apply(context);
             }
             return t;
         };
@@ -73,9 +72,9 @@ public interface IO<T> {
         Preconditions.checkNotNull(condition);
         Preconditions.checkNotNull(retry);
         return context -> {
-            final T t = run(context);
+            final T t = apply(context);
             if (condition.test(t)) {
-                return retry.apply(t).run(context);
+                return retry.apply(t).apply(context);
             }
             return t;
         };
@@ -160,7 +159,7 @@ public interface IO<T> {
             Preconditions.checkNotNull(context);
             final ImmutableList.Builder builder = ImmutableList.builder();
             for (final IO<T> t : ts) {
-                final T r = t.run(context);
+                final T r = t.apply(context);
                 builder.add(r);
             }
             return builder.build();
@@ -173,7 +172,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(selector);
         return context -> {
             Preconditions.checkNotNull(context);
-            return selector.apply(a.run(context), b.run(context));
+            return selector.apply(a.apply(context), b.apply(context));
         };
     }
 
@@ -184,7 +183,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(selector);
         return context -> {
             Preconditions.checkNotNull(context);
-            return selector.map(a.run(context), b.run(context), c.run(context));
+            return selector.map(a.apply(context), b.apply(context), c.apply(context));
         };
     }
 
@@ -196,7 +195,7 @@ public interface IO<T> {
         Preconditions.checkNotNull(selector);
         return context -> {
             Preconditions.checkNotNull(context);
-            return selector.map(a.run(context), b.run(context), c.run(context), d.run(context));
+            return selector.map(a.apply(context), b.apply(context), c.apply(context), d.apply(context));
         };
     }
 
@@ -209,12 +208,11 @@ public interface IO<T> {
         Preconditions.checkNotNull(selector);
         return context -> {
             Preconditions.checkNotNull(context);
-            return selector.map(a.run(context), b.run(context), c.run(context), d.run(context), e.run(context));
+            return selector.map(a.apply(context), b.apply(context), c.apply(context), d.apply(context), e.apply(context));
         };
     }
 
-
-    static <T, U> Function<IO<T>, IO<U>> lift(final Function<T, U> f) {
+    static <T, U> F1<IO<T>, IO<U>> lift(final F1<T, U> f) {
         Preconditions.checkNotNull(f);
         return x -> {
             Preconditions.checkNotNull(x);

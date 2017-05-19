@@ -17,7 +17,7 @@ public final class Uninstall {
         return Routines.writeProject(path, project, true)
             .flatMap(x -> Optionals.join(x,
                 error -> IO.println("Error writing project file: ")
-                    .then(IO.println(error)),
+                    .next(IO.println(error)),
                 IO::noop));
     }
 
@@ -30,7 +30,7 @@ public final class Uninstall {
                         IO::println,
                         config -> Routines.readProject(path).flatMap(
                             x -> x.join(
-                                error -> IO.println("Error loading project file: ").then(IO.println(error)),
+                                error -> IO.println("Error loading project file: ").next(IO.println(error)),
                                 project -> identifier.join(i -> {
                                     final ImmutableList<Dependency> candidates = project.dependencies.entries()
                                         .stream()
@@ -41,7 +41,7 @@ public final class Uninstall {
                                     }
                                     if (candidates.size() > 1) {
                                         return IO.println("Multiple dependencies on " + i.name + " were found: ")
-                                            .then(IO.println(candidates.stream()
+                                            .next(IO.println(candidates.stream()
                                                 .map(Dependency::encode)
                                                 .collect(Collectors.joining("\n"))));
                                     }

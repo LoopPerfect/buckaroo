@@ -49,14 +49,14 @@ public final class Either<L, R> {
             g.apply(r);
     }
 
-    public <T> Either<T, R> leftProjection(final Function<L, T> f) {
+    public <T> Either<T, R> leftMap(final Function<L, T> f) {
         Preconditions.checkNotNull(f);
         return which == LeftOrRight.LEFT ?
             Either.left(f.apply(l)) :
             Either.right(r);
     }
 
-    public <T> Either<L, T> rightProjection(final Function<R, T> f) {
+    public <T> Either<L, T> rightMap(final Function<R, T> f) {
         Preconditions.checkNotNull(f);
         return which == LeftOrRight.LEFT ?
             Either.left(l) :
@@ -133,5 +133,21 @@ public final class Either<L, R> {
         return either.which == LeftOrRight.LEFT ?
             f.apply(either.l) :
             g.apply(either.r);
+    }
+
+    public static <A, B, C> F1<Either<A, C>, Either<B, C>> liftLeft(final F1<A, B> f) {
+        Preconditions.checkNotNull(f);
+        return e -> {
+            Preconditions.checkNotNull(e);
+            return e.leftMap(f);
+        };
+    }
+
+    public static <A, B, C> F1<Either<C, A>, Either<C, B>> liftRight(final F1<A, B> f) {
+        Preconditions.checkNotNull(f);
+        return e -> {
+            Preconditions.checkNotNull(e);
+            return e.rightMap(f);
+        };
     }
 }

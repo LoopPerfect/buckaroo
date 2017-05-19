@@ -106,7 +106,7 @@ public final class InstallExisting {
                 recipeVersion.dependencies);
         return continueUntilPresent(ImmutableList.of(
                 IO.println("Installing " + identifier.encode() + "... ")
-                        .then(IO.value(Optional.empty())),
+                        .next(IO.value(Optional.empty())),
                 fetchDependency(dependenciesDirectory, identifier, recipeVersion, refinedDependencies),
                 recipePath(dependenciesDirectory, identifier)
                         .flatMap(path -> recipeVersion.buckResource.map(
@@ -179,10 +179,10 @@ public final class InstallExisting {
         projectFilePath
             .flatMap(Routines::readProject)
             .flatMap(x -> x.join(
-                e -> IO.println("Error reading project file... ").then(IO.println(e)),
+                e -> IO.println("Error reading project file... ").next(IO.println(e)),
                 project -> Routines.ensureConfig.flatMap(e -> Optionals.join(
                     e,
-                    i -> IO.println("Error installing default Buckaroo config... ").then(IO.println(i)),
+                    i -> IO.println("Error installing default Buckaroo config... ").next(IO.println(i)),
                     () -> configFilePath.flatMap(Routines::readConfig).flatMap(y -> y.join(
                         IO::println,
                         config -> readCookBooks(config).flatMap(z -> z.join(

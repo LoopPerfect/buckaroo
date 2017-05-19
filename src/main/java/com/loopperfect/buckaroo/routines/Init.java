@@ -21,7 +21,7 @@ public final class Init {
     private static final IO<Optional<Identifier>> readIdentifier = context -> {
         Preconditions.checkNotNull(context);
         while (true) {
-            final Optional<String> x = IO.read().run(context);
+            final Optional<String> x = IO.read().apply(context);
             if (x.isPresent()) {
                 final String candidate = x.get();
                 if (Identifier.isValid(x.get())) {
@@ -29,10 +29,10 @@ public final class Init {
                 }
                 if (candidate.length() < 3) {
                     IO.println("An identifier must have at least three characters. ")
-                            .run(context);
+                            .apply(context);
                 } else {
                     IO.println("An identifier may only contain letters, numbers, underscores and dashes. ")
-                            .run(context);
+                            .apply(context);
                 }
             } else {
                 return Optional.empty();
@@ -49,16 +49,16 @@ public final class Init {
     public static IO<Either<IOException, Identifier>> askForProjectNameAndCreateProjectFile(final String projectDirectory) {
         Preconditions.checkNotNull(projectDirectory);
         return IO.println("What is the name of your project? ")
-                        .then(readIdentifier)
+                        .next(readIdentifier)
                         .flatMap(x -> join(
                                 x,
                                 identifier -> IO.println("Creating buckaroo.json... ")
-                                        .then(createProjectFile(projectDirectory, identifier.name)
+                                        .next(createProjectFile(projectDirectory, identifier.name)
                                                 .flatMap(y -> join(
                                                         y,
                                                         error -> IO.value(left(error)),
                                                         () -> IO.println("Done. ")
-                                                                .then(IO.value(right(identifier)))))),
+                                                                .next(IO.value(right(identifier)))))),
                                 () -> IO.value(left(new IOException("Could not get a project name. ")))));
     }
 

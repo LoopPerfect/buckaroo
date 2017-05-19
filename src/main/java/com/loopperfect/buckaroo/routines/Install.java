@@ -35,21 +35,21 @@ public final class Install {
 
         final IO<Unit> installDependency = IO.println("Adding dependency on " + identifier.encode() +
             Optionals.join(version, x -> "@" + x.encode(), () -> "") + "... ")
-            .then(projectFilePath)
+            .next(projectFilePath)
             .flatMap(path -> Routines.readProject(path)
                 .flatMap(x -> x.join(
                     error -> IO.println("Could not read buckaroo.json. Are you in the right folder? ")
-                        .then(IO.println(error)),
+                        .next(IO.println(error)),
                     project -> configFilePath.flatMap(Routines::readConfig)
                         .flatMap(y -> y.join(
                             error -> IO.println("Could not read the config. ")
-                                .then(IO.println(error)),
+                                .next(IO.println(error)),
                             config -> Routines.readCookBooks(config).flatMap(z -> z.join(
                                 error -> IO.println("Could not read cookbooks. ")
-                                    .then(IO.println(error)),
+                                    .next(IO.println(error)),
                                 cookBooks -> resolvedDependencies(project.dependencies.addDependency(dependencyToTry), cookBooks).join(
                                     error -> IO.println("Could not resolve a dependency. ")
-                                        .then(IO.println(error)),
+                                        .next(IO.println(error)),
                                     resolvedDependencies ->
                                         Routines.writeProject(
                                             path,
@@ -62,15 +62,15 @@ public final class Install {
                                             .flatMap(w -> Optionals.join(
                                                 w,
                                                 error -> IO.println("Could not write buckaroo.json. ")
-                                                    .then(IO.println(error)),
+                                                    .next(IO.println(error)),
                                                 () -> IO.println("Done. ")
-                                                    .then(IO.println("Installing dependencies... ")
-                                                    .then(InstallExisting.routine))))))))))));
+                                                    .next(IO.println("Installing dependencies... ")
+                                                    .next(InstallExisting.routine))))))))))));
 
         return Routines.ensureConfig.flatMap(
             e -> Optionals.join(
                 e,
-                i -> IO.println("Error installing default Buckaroo config... ").then(IO.println(i)),
+                i -> IO.println("Error installing default Buckaroo config... ").next(IO.println(i)),
                 () -> installDependency));
     }
 }

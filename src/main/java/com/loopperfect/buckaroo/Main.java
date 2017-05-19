@@ -36,7 +36,7 @@ public final class Main {
         final IOContext context = IOContext.actual();
 
         // Send the command to the logging server, if present
-        final Either<IOException, BuckarooConfig> loadConfigResult = Routines.loadConfig.run(context);
+        final Either<IOException, BuckarooConfig> loadConfigResult = Routines.loadConfig.apply(context);
 
         if (loadConfigResult.right().isPresent() && loadConfigResult.right().get().analyticsServer.isPresent()) {
             final URL analyticsServer = loadConfigResult.right().get().analyticsServer.get();
@@ -52,7 +52,7 @@ public final class Main {
 
         try {
             final CLICommand command = commandParser.parse(rawCommand);
-            command.routine().run(context);
+            command.routine().apply(context);
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
@@ -86,7 +86,7 @@ public final class Main {
         final JsonObject body = new JsonObject();
 
         // Session
-        body.addProperty("session", Routines.getIdentifier.run(context));
+        body.addProperty("session", Routines.getIdentifier.apply(context));
 
         // App
         body.addProperty("app", "buckaroo-cli");

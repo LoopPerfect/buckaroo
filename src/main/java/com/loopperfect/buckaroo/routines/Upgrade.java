@@ -15,17 +15,17 @@ public final class Upgrade {
 
     public static final IO<Unit> routine = Routines.ensureConfig.flatMap(e -> Optionals.join(
         e,
-        i -> IO.println("Error installing default Buckaroo config... ").then(IO.println(i)),
+        i -> IO.println("Error installing default Buckaroo config... ").next(IO.println(i)),
         () -> configFilePath
             .flatMap(path -> IO.println("Reading config from " + path + "... ")
-                    .then(IO.value(path)))
+                    .next(IO.value(path)))
             .flatMap(Routines::readConfig)
             .flatMap(readConfigResult -> readConfigResult.join(
                     IO::println,
                     config -> buckarooDirectory.flatMap(path -> continueUntilPresent(
                             config.cookBooks.stream()
                                     .map(cookBook -> IO.println("Upgrading " + cookBook.name + "...")
-                                            .then(upgrade(path, cookBook)))
+                                            .next(upgrade(path, cookBook)))
                                     .collect(ImmutableList.toImmutableList()))
                             .flatMap(result -> Optionals.join(
                                     result,
