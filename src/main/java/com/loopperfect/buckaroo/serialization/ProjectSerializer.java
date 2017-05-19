@@ -20,13 +20,17 @@ public final class ProjectSerializer implements JsonSerializer<Project> {
 
         final JsonObject jsonObject = new JsonObject();
 
-        jsonObject.addProperty("name", project.name);
+        if (project.name.isPresent()) {
+            jsonObject.addProperty("name", project.name.get());
+        }
 
         if (project.license.isPresent()) {
             jsonObject.addProperty("license", project.license.get());
         }
 
-        jsonObject.add("dependencies", context.serialize(project.dependencies));
+        if (!project.dependencies.isEmpty()) {
+            jsonObject.add("dependencies", context.serialize(project.dependencies));
+        }
 
         return jsonObject;
     }

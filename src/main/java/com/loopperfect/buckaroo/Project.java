@@ -8,11 +8,11 @@ import java.util.Optional;
 
 public final class Project {
 
-    public final String name;
+    public final Optional<String> name;
     public final Optional<String> license;
     public final DependencyGroup dependencies;
 
-    private Project(final String name, final Optional<String> license, final DependencyGroup dependencies) {
+    private Project(final Optional<String> name, final Optional<String> license, final DependencyGroup dependencies) {
 
         this.name = Preconditions.checkNotNull(name);
         this.license = Preconditions.checkNotNull(license);
@@ -57,15 +57,23 @@ public final class Project {
             .toString();
     }
 
-    public static Project of(final String name, final Optional<String> license, final DependencyGroup dependencies) {
+    public static Project of(final Optional<String> name, final Optional<String> license, final DependencyGroup dependencies) {
         return new Project(name, license, dependencies);
     }
 
-    public static Project of(final String name) {
+    public static Project of(final Optional<String> name) {
         return new Project(name, Optional.empty(), DependencyGroup.of());
     }
 
+    public static Project of(final String name) {
+        return new Project(Optional.of(name), Optional.empty(), DependencyGroup.of());
+    }
+
     public static Project of(final String name, final DependencyGroup dependencies) {
-        return new Project(name, Optional.empty(), dependencies);
+        return new Project(Optional.of(name), Optional.empty(), dependencies);
+    }
+
+    public static Project of() {
+        return new Project(Optional.empty(), Optional.empty(), DependencyGroup.of());
     }
 }

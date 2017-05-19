@@ -16,7 +16,7 @@ public final class ProjectSerializerTest {
     public void testProjectSerializer1() throws Exception {
 
         final Project project = Project.of(
-            "my-magic-tool",
+            Optional.of("my-magic-tool"),
             Optional.of("MIT"),
             DependencyGroup.of(ImmutableMap.of(
                 RecipeIdentifier.of("org", "my-magic-lib"),
@@ -44,5 +44,18 @@ public final class ProjectSerializerTest {
     @org.junit.Test
     public void testProjectSerializer3() throws Exception {
         assertTrue(Serializers.parseProject("").left().isPresent());
+    }
+
+    @org.junit.Test
+    public void testProjectSerializer4() throws Exception {
+
+        final Project project = Project.of();
+
+        final String serializedProject = Serializers.serialize(project);
+
+        final Either<JsonParseException, Project> deserializedProject =
+            Serializers.parseProject(serializedProject);
+
+        assertEquals(Either.right(project), deserializedProject);
     }
 }

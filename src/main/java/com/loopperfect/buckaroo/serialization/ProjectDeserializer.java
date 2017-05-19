@@ -15,14 +15,13 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final String name = jsonObject.get("name").getAsString();
+        final Optional<String> name = jsonObject.has("name") ?
+            Optional.of(jsonObject.get("name").getAsString()) :
+            Optional.empty();
 
-        Optional<String> license;
-        if (jsonObject.has("license")) {
-            license = Optional.of(jsonObject.get("license").getAsString());
-        } else {
-            license = Optional.empty();
-        }
+        final Optional<String> license = jsonObject.has("license") ?
+            Optional.of(jsonObject.get("license").getAsString()) :
+            Optional.empty();
 
         DependencyGroup dependencies;
         if (jsonObject.has("dependencies")) {

@@ -6,10 +6,8 @@ import com.loopperfect.buckaroo.io.IO;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.nio.file.Path;
 
-import static com.loopperfect.buckaroo.Either.join;
-import static com.loopperfect.buckaroo.Either.left;
-import static com.loopperfect.buckaroo.Either.right;
 import static com.loopperfect.buckaroo.Optionals.join;
 
 public final class Init {
@@ -18,51 +16,32 @@ public final class Init {
 
     }
 
-    private static final IO<Optional<Identifier>> readIdentifier = context -> {
-        Preconditions.checkNotNull(context);
-        while (true) {
-            final Optional<String> x = IO.read().apply(context);
-            if (x.isPresent()) {
-                final String candidate = x.get();
-                if (Identifier.isValid(x.get())) {
-                    return Optional.of(Identifier.of(x.get()));
-                }
-                if (candidate.length() < 3) {
-                    IO.println("An identifier must have at least three characters. ")
-                            .apply(context);
-                } else {
-                    IO.println("An identifier may only contain letters, numbers, underscores and dashes. ")
-                            .apply(context);
-                }
-            } else {
-                return Optional.empty();
-            }
-        }
-    };
-
-    private static IO<Optional<IOException>> createProjectFile(final String projectDirectory, final String projectName) {
+    private static IO<Optional<IOException>> createProjectFile(final String projectDirectory, final Optional<String> projectName) {
         Preconditions.checkNotNull(projectDirectory);
         Preconditions.checkNotNull(projectName);
         return Routines.writeProject(projectDirectory + "/buckaroo.json", Project.of(projectName), false);
     }
 
-    public static IO<Either<IOException, Identifier>> askForProjectNameAndCreateProjectFile(final String projectDirectory) {
+    public static IO<Either<IOException, Optional<String>>> generateProjectNameAndCreateProjectFile(final String projectDirectory) {
         Preconditions.checkNotNull(projectDirectory);
-        return IO.println("What is the name of your project? ")
-                        .next(readIdentifier)
-                        .flatMap(x -> join(
-                                x,
-                                identifier -> IO.println("Creating buckaroo.json... ")
-                                        .next(createProjectFile(projectDirectory, identifier.name)
-                                                .flatMap(y -> join(
-                                                        y,
-                                                        error -> IO.value(left(error)),
-                                                        () -> IO.println("Done. ")
-                                                                .next(IO.value(right(identifier)))))),
-                                () -> IO.value(left(new IOException("Could not get a project name. ")))));
+        return IO.of(c -> c.console().println("Creating buckaroo.json... "))
+            .next(c -> {
+                final Path p = c.fs().getPath(projectDirectory);
+                final Optional<String> projectName = p.getNameCount() > 0 ?
+                    Optional.of(p.getName(p.getNameCount() - 1).toString()) :
+                    Optional.empty();
+                return projectName;
+            })
+            .flatMap(projectName -> createProjectFile(projectDirectory, projectName)
+                .flatMap(e -> e.isPresent() ?
+                    IO.value(Either.left(e.get())) :
+                    IO.of(c -> c.fs().touch(projectDirectory + "/" + ".buckconfig"))
+                        .map(a -> a.isPresent() ?
+                            Either.left(a.get()) :
+                            Either.right(projectName))));
     }
 
     public static final IO<Unit> routine = IO.of(x -> x.fs().workingDirectory())
-            .flatMap(Init::askForProjectNameAndCreateProjectFile)
-            .flatMap(x -> join(x, IO::println, r -> IO.noop()));
+            .flatMap(Init::generateProjectNameAndCreateProjectFile)
+            .flatMap(x -> x.join(e -> IO.println(e), ignored -> IO.println("Done. ")));
 }

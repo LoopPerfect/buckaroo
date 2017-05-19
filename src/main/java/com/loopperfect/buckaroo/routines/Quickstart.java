@@ -49,13 +49,18 @@ public final class Quickstart {
     }
 
     public static final IO<Unit> routine = IO.of(x -> x.fs().workingDirectory())
-            .flatMap(path -> Init.askForProjectNameAndCreateProjectFile(path)
-                    .flatMap(x -> join(
-                            x,
+        .flatMap(path -> Init.generateProjectNameAndCreateProjectFile(path)
+            .flatMap(x -> join(
+                x,
+                IO::println,
+                name -> {
+                    final Identifier identifier = name.flatMap(i -> Identifier.parse(i))
+                        .orElse(Identifier.of("my-project"));
+                    return createAppSkeleton(path, identifier)
+                        .flatMap(y -> join(
+                            y,
                             IO::println,
-                            identifier -> createAppSkeleton(path, identifier).flatMap(y -> join(
-                                    y,
-                                    IO::println,
-                                    () -> InstallExisting.routine.next(IO.println("Done. Run your project with: ")
-                                            .next(IO.println("buck apply :" + identifier.name))))))));
+                            () -> InstallExisting.routine.next(IO.println("Done. Run your project with: ")
+                                .next(IO.println("buck run :" + identifier.name)))));
+                })));
 }
