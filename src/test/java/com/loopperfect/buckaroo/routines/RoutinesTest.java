@@ -62,7 +62,7 @@ public final class RoutinesTest {
                 "config.json");
 
         final String content = "{" +
-            "\"cookBooks\":[]" +
+            "\"cookbooks\":[]" +
             "}";
 
         Files.createDirectories(path.getParent());
@@ -70,7 +70,7 @@ public final class RoutinesTest {
 
         System.out.println(path.toString());
 
-        assertEquals(Routines.readConfig(path.toString()).apply(io).rightMap(x -> x.cookBooks),
+        assertEquals(Routines.readConfig(path.toString()).apply(io).rightMap(x -> x.cookbooks),
             Either.right(ImmutableList.of()));
     }
 
@@ -88,7 +88,7 @@ public final class RoutinesTest {
             "config.json").toString();
 
         final String configContent = "{" +
-            "\"cookBooks\":[\n" +
+            "\"cookbooks\":[\n" +
             "    {" +
             "      \"name\": \"buckaroo-official\", " +
             "      \"url\": \"git@github.com:njlr/buckaroo-official.git\"" +
@@ -119,7 +119,7 @@ public final class RoutinesTest {
 
         assertTrue(config.join(l -> false, r -> true));
 
-        final Either<IOException, ImmutableList<CookBook>> cookBooks =
+        final Either<IOException, ImmutableList<Cookbook>> cookBooks =
             Routines.readCookBooks(config.right().get()).apply(io);
 
         assertTrue(cookBooks.join(l -> false, r -> true));

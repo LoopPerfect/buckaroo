@@ -23,7 +23,7 @@ public final class BuckarooConfigDeserializer implements JsonDeserializer<Buckar
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final JsonArray cookBooksElement = jsonObject.getAsJsonArray("cookBooks");
+        final JsonArray cookBooksElement = jsonObject.getAsJsonArray("cookbooks");
 
         final ImmutableList<RemoteCookBook> cookBooks = ImmutableList.copyOf(
             Streams.stream(cookBooksElement == null ? ImmutableList.of() : cookBooksElement)

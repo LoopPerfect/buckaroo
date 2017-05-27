@@ -5,11 +5,11 @@ import com.google.common.collect.ImmutableMap;
 
 import java.util.Objects;
 
-public final class CookBook {
+public final class Cookbook {
 
     public final ImmutableMap<Identifier, Organization> organizations;
 
-    private CookBook(final ImmutableMap<Identifier, Organization> organizations) {
+    private Cookbook(final ImmutableMap<Identifier, Organization> organizations) {
         this.organizations = Preconditions.checkNotNull(organizations);
     }
 
@@ -18,10 +18,10 @@ public final class CookBook {
         if (this == obj) {
             return true;
         }
-        if (obj == null || !(obj instanceof CookBook)) {
+        if (obj == null || !(obj instanceof Cookbook)) {
             return false;
         }
-        final CookBook other = (CookBook) obj;
+        final Cookbook other = (Cookbook) obj;
         return Objects.equals(organizations, other.organizations);
     }
 
@@ -30,7 +30,7 @@ public final class CookBook {
         return Objects.hash(organizations);
     }
 
-    public static CookBook of(final ImmutableMap<Identifier, Organization> organizations) {
-        return new CookBook(organizations);
+    public static Cookbook of(final ImmutableMap<Identifier, Organization> organizations) {
+        return new Cookbook(organizations);
     }
 }

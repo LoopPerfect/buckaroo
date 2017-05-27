@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.SimplePath;
 import com.loopperfect.buckaroo.Unit;
 
 import java.io.*;
@@ -22,12 +23,22 @@ public interface FSContext {
 
     FileSystem getFS();
 
+    @Deprecated
     default String homeDirectory() {
         return getFS().getPath(System.getProperty("user.home")).toString();
     }
 
+    default SimplePath homeDir() {
+        return SimplePath.of(getFS().getPath(System.getProperty("user.home")));
+    }
+
+    @Deprecated
     default String workingDirectory() {
         return getFS().getPath(System.getProperty("user.dir")).toString();
+    }
+
+    default SimplePath workingDir() {
+        return SimplePath.of(getFS().getPath(System.getProperty("user.dir")));
     }
 
     default Path getPath(String... path) {
@@ -66,11 +77,11 @@ public interface FSContext {
         return Optional.empty();
     }
 
-    default Either<IOException, String> readFile(final String p) {
-        Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p);
+    default Either<IOException, String> readFile(final String path) {
+        Preconditions.checkNotNull(path);
+        final Path q = getFS().getPath(path);
         try {
-            final String content = Files.readAllLines(getFS().getPath(path.toString()), Charset.defaultCharset())
+            final String content = Files.readAllLines(getFS().getPath(q.toString()), Charset.defaultCharset())
                 .stream()
                 .collect(Collectors.joining("\n"));
             return Either.right(content);
@@ -79,6 +90,33 @@ public interface FSContext {
         }
     }
 
+    default Optional<IOException> writeFile(final SimplePath p, final String content, final boolean overwrite) {
+        Preconditions.checkNotNull(p);
+        Preconditions.checkNotNull(content);
+        final Path path = p.toPath(getFS());
+        try {
+            if (Files.exists(path)) {
+                if (!overwrite) {
+                    throw new IOException("There is already a file at " + path);
+                }
+                Files.delete(path);
+            } else {
+                if (path.getParent() != null && !Files.exists(path.getParent())) {
+                    Files.createDirectories(path.getParent());
+                }
+            }
+            Files.write(path, ImmutableList.of(content), Charset.defaultCharset(), StandardOpenOption.CREATE);
+            return Optional.empty();
+        } catch (final IOException e) {
+            return Optional.of(e);
+        }
+    }
+
+    default Optional<IOException> writeFile(final SimplePath path, final String content) {
+        return writeFile(path, content, false);
+    }
+
+        @Deprecated
     default Optional<IOException> writeFile(final String p, final String content, final boolean overwrite) {
         Preconditions.checkNotNull(p);
         Preconditions.checkNotNull(content);

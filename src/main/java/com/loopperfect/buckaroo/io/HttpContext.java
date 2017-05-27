@@ -9,11 +9,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.nio.file.Path;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public interface HttpContext {
@@ -59,6 +61,7 @@ public interface HttpContext {
                     return Optional.of(e);
                 }
             }
+
         };
     }
 

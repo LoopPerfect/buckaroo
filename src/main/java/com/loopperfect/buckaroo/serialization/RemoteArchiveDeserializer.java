@@ -20,6 +20,10 @@ public final class RemoteArchiveDeserializer implements JsonDeserializer<RemoteA
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
+        if (!jsonObject.has("url")) {
+            throw new JsonParseException("A remote archive must have a URL");
+        }
+
         final URL url = context.deserialize(jsonObject.get("url"), URL.class);
         final HashCode sha256 = context.deserialize(jsonObject.get("sha256"), HashCode.class);
         final Optional<String> subPath = jsonObject.has("subPath") ?

@@ -23,7 +23,7 @@ public final class Upgrade {
             .flatMap(readConfigResult -> readConfigResult.join(
                     IO::println,
                     config -> buckarooDirectory.flatMap(path -> continueUntilPresent(
-                            config.cookBooks.stream()
+                            config.cookbooks.stream()
                                     .map(cookBook -> IO.println("Upgrading " + cookBook.name + "...")
                                             .next(upgrade(path, cookBook)))
                                     .collect(ImmutableList.toImmutableList()))

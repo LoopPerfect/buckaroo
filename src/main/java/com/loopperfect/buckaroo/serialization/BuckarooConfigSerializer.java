@@ -20,11 +20,11 @@ public final class BuckarooConfigSerializer implements JsonSerializer<BuckarooCo
 
         final JsonArray cookBooksJsonArray = new JsonArray();
 
-        for (final RemoteCookBook cookBook : buckarooConfig.cookBooks) {
+        for (final RemoteCookBook cookBook : buckarooConfig.cookbooks) {
             cookBooksJsonArray.add(context.serialize(cookBook));
         }
 
-        jsonObject.add("cookBooks", cookBooksJsonArray);
+        jsonObject.add("cookbooks", cookBooksJsonArray);
 
         if (buckarooConfig.analyticsServer.isPresent()) {
             jsonObject.addProperty("analytics", buckarooConfig.analyticsServer.get().toExternalForm());

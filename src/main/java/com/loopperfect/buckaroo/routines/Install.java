@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 
 import java.util.Optional;
 
@@ -17,12 +19,13 @@ public final class Install {
 
     }
 
-    private static Either<ImmutableList<DependencyResolverException>, ImmutableMap<RecipeIdentifier, SemanticVersion>> resolvedDependencies(
-            final DependencyGroup dependencyGroup, final ImmutableList<CookBook> cookBooks) {
+    private static Either<ImmutableList<DependencyResolutionException>, ImmutableMap<RecipeIdentifier, SemanticVersion>> resolvedDependencies(
+            final DependencyGroup dependencyGroup, final ImmutableList<Cookbook> cookBooks) {
         Preconditions.checkNotNull(dependencyGroup);
         Preconditions.checkNotNull(cookBooks);
-        final DependencyFetcher fetcher = CookbookDependencyFetcher.of(cookBooks);
-        return DependencyResolver.resolve(dependencyGroup, fetcher);
+//        final DependencyFetcher fetcher = CookbookDependencyFetcher.of(cookBooks);
+//        return DependencyResolver.resolve(dependencyGroup, fetcher);
+        return null;
     }
 
     public static IO<Unit> routine(final RecipeIdentifier identifier, final Optional<SemanticVersionRequirement> version) {

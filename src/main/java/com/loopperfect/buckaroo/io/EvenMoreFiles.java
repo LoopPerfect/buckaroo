@@ -1,23 +1,45 @@
 package com.loopperfect.buckaroo.io;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.SimplePath;
 
 import java.io.*;
 import java.nio.channels.ByteChannel;
-import java.nio.file.OpenOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.Charset;
+import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Optional;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public final class Files {
+public final class EvenMoreFiles {
 
-    private Files() {
+    private EvenMoreFiles() {
         super();
+    }
+
+    public static void writeFile(final Path path, final CharSequence content, final Charset charset, final boolean overwrite) throws IOException {
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(content);
+        Preconditions.checkNotNull(charset);
+        if (Files.exists(path)) {
+            if (!overwrite) {
+                throw new IOException("There is already a file at " + path);
+            }
+            Files.delete(path);
+        } else {
+            if (path.getParent() != null && !Files.exists(path.getParent())) {
+                Files.createDirectories(path.getParent());
+            }
+        }
+        Files.write(path, ImmutableList.of(content), charset, StandardOpenOption.CREATE);
+    }
+
+    public static void writeFile(final Path path, final CharSequence content) throws IOException {
+        writeFile(path, content, Charset.defaultCharset(), false);
     }
 
     /*
@@ -56,23 +78,21 @@ public final class Files {
      *  of the target directory.
      *
      */
-    public static Optional<IOException> unzip(final Path source, final Path target, final Optional<Path> subPath) {
-        final File targetDirectory = target.toFile();
-        if (!targetDirectory.exists()) {
-            targetDirectory.mkdir();
+    public static void unzip(final Path source, final Path target, final Optional<Path> subPath) throws IOException {
+        if (!Files.exists(target)) {
+            Files.createDirectories(target);
         }
-        try (final ZipInputStream zipIn = new ZipInputStream(new FileInputStream(source.toFile()))) {
+        try (final ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(source))) {
             ZipEntry entry = zipIn.getNextEntry();
             while (entry != null) {
                 final ZipEntry current = entry;
                 // Check that the current entry lives in the sub-path (or there is no sub-path!)
                 if (subPath.map(x -> current.getName().startsWith(x.toString())).orElse(true)) {
                     final Path filePath = Paths.get(
-                        targetDirectory.toPath().toString(),
+                        target.toString(),
                         current.getName().substring(subPath.map(x -> x.toString().length()).orElse(0)));
                     if (current.isDirectory()) {
-                        File dir = filePath.toFile();
-                        dir.mkdir();
+                        Files.createDirectories(filePath);
                     } else {
                         extractFile(zipIn, filePath);
                     }
@@ -80,21 +100,20 @@ public final class Files {
                 zipIn.closeEntry();
                 entry = zipIn.getNextEntry();
             }
-        } catch (final IOException e) {
-            return Optional.of(e);
         }
-        return Optional.empty();
     }
 
     private static final int BUFFER_SIZE = 4096;
 
-    private static void extractFile(final ZipInputStream zipIn, final Path filePath) throws IOException {
-        try (final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filePath.toFile()))) {
-            byte[] bytesIn = new byte[BUFFER_SIZE];
+    private static void extractFile(final ZipInputStream zipIn, final Path path) throws IOException {
+        try (final OutputStream bos = new BufferedOutputStream(Files.newOutputStream(path))) {
+            final byte[] data = new byte[BUFFER_SIZE];
             int read = 0;
-            while ((read = zipIn.read(bytesIn)) != -1) {
-                bos.write(bytesIn, 0, read);
+            while ((read = zipIn.read(data)) != -1) {
+                bos.write(data, 0, read);
             }
+            bos.flush();
+            bos.close();
         }
     }
 

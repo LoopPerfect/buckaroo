@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class Either<L, R> {
 
@@ -119,6 +120,16 @@ public final class Either<L, R> {
     public static <L extends Throwable, R> R orThrow(final Either<L, R> either) throws L {
         Preconditions.checkNotNull(either);
         return either.right().orElseThrow(() -> either.left().get());
+    }
+
+    public static <L, R, E extends Throwable> R orThrow(final Either<L, R> either, final E exception) throws E {
+        Preconditions.checkNotNull(either);
+        return either.right().orElseThrow(() -> exception);
+    }
+
+    public static <L, R, E extends Throwable> R orThrow(final Either<L, R> either, final Supplier<E> exception) throws E {
+        Preconditions.checkNotNull(either);
+        return either.right().orElseThrow(exception::get);
     }
 
     public static <T> T join(final Either<? extends T, ? extends T> either) {

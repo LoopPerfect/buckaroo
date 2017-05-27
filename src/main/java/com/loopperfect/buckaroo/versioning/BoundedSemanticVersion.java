@@ -1,8 +1,11 @@
-package com.loopperfect.buckaroo;
+package com.loopperfect.buckaroo.versioning;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.loopperfect.buckaroo.AboveOrBelow;
+import com.loopperfect.buckaroo.SemanticVersion;
+import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
 import java.util.Objects;
 

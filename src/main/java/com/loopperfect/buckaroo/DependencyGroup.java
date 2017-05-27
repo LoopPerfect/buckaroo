@@ -38,7 +38,7 @@ public final class DependencyGroup {
     public DependencyGroup addDependency(final Dependency dependency) {
         Preconditions.checkNotNull(dependency);
         if (dependencies.containsKey(dependency.project) &&
-            dependencies.get(dependency.project).equals(dependency.versionRequirement)) {
+            dependencies.get(dependency.project).equals(dependency.requirement)) {
             return this;
         }
         return new DependencyGroup(
@@ -46,7 +46,7 @@ public final class DependencyGroup {
                 dependencies.entrySet()
                     .stream()
                     .filter(x -> !x.getKey().equals(dependency.project)),
-                Stream.of(Maps.immutableEntry(dependency.project, dependency.versionRequirement)))
+                Stream.of(Maps.immutableEntry(dependency.project, dependency.requirement)))
                 .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 

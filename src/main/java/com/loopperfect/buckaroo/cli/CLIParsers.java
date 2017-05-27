@@ -67,6 +67,9 @@ public final class CLIParsers {
     static final Parser<Void> helpTokenParser =
         Scanners.stringCaseInsensitive("help");
 
+    static final Parser<Void> resolveTokenParser =
+        Scanners.stringCaseInsensitive("resolve");
+
     static final Parser<Void> ignoreParser =
             Scanners.WHITESPACES.skipMany();
 
@@ -148,6 +151,10 @@ public final class CLIParsers {
         helpTokenParser.between(ignoreParser, ignoreParser)
             .map(x -> HelpCommand.of());
 
+    static final Parser<ResolveCommand> resolveCommandParser =
+        resolveTokenParser.between(ignoreParser, ignoreParser)
+            .map(x -> ResolveCommand.of());
+
     public static final Parser<CLICommand> commandParser =
         Parsers.longest(
             initCommandParser,
@@ -162,5 +169,6 @@ public final class CLIParsers {
             dependenciesCommandParser,
             versionCommandParser,
             quickstartCommandParser,
-            helpCommandParser);
+            helpCommandParser,
+            resolveCommandParser);
 }

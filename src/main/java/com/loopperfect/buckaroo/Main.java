@@ -16,7 +16,6 @@ import org.jparsec.error.ParserException;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Arrays;
 
 public final class Main {
 
@@ -32,7 +31,7 @@ public final class Main {
             return;
         }
 
-        final String rawCommand = String.join(" ", Arrays.stream(args).map(String::trim).toArray(String[]::new));
+        final String rawCommand = String.join(" ", args);
         final IOContext context = IOContext.actual();
 
         // Send the command to the logging server, if present
@@ -57,6 +56,8 @@ public final class Main {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
         }
+
+        context.executor().shutdown();
     }
 
     private static void post(final URL url, final String data) throws Exception {

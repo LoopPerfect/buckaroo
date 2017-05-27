@@ -15,4 +15,8 @@ public class BuckarooException extends Exception {
     public BuckarooException(final String message) {
         super(Preconditions.checkNotNull(message));
     }
+
+    public BuckarooException() {
+        super();
+    }
 }

@@ -1,7 +1,8 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.versioning.BoundedSemanticVersion;
+import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 import org.junit.Test;
@@ -112,6 +113,10 @@ public final class CLIParsersTest {
         assertEquals(
                 QuickstartCommand.of(),
                 CLIParsers.commandParser.parse("quickstart"));
+
+        assertEquals(
+            ResolveCommand.of(),
+            CLIParsers.commandParser.parse("     resolve "));
 
         try {
             parser.parse("installsomething");

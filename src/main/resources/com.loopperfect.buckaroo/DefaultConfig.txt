@@ -1,5 +1,5 @@
 {
-  "cookBooks": [
+  "cookbooks": [
     {
       "name": "buckaroo-recipes",
       "url": "git@github.com:loopperfect/buckaroo-recipes.git"

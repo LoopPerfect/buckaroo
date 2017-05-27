@@ -34,8 +34,8 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
             jsonObject.addProperty("target", recipeVersion.target.get());
         }
 
-        if (!recipeVersion.dependencies.isEmpty()) {
-            jsonObject.add("dependencies", context.serialize(recipeVersion.dependencies));
+        if (recipeVersion.dependencies.map(x -> !x.isEmpty()).orElse(false)) {
+            jsonObject.add("dependencies", context.serialize(recipeVersion.dependencies.get()));
         }
 
         if (recipeVersion.buckResource.isPresent()) {

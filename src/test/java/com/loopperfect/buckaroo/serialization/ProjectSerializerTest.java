@@ -1,9 +1,10 @@
 package com.loopperfect.buckaroo.serialization;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 
 import java.util.Optional;
 

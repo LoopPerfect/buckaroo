@@ -28,9 +28,9 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
                 Optional.of(jsonObject.get("target").getAsString()) :
                 Optional.empty();
 
-        final DependencyGroup dependencies = jsonObject.has("dependencies") ?
-                context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class) :
-                DependencyGroup.of();
+        final Optional<DependencyGroup> dependencies = jsonObject.has("dependencies") ?
+                Optional.of(context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class)) :
+                Optional.empty();
 
         final Optional<RemoteFile> buckResource = jsonObject.has("buck") ?
                 Optional.of(context.deserialize(jsonObject.get("buck"), RemoteFile.class)) :

@@ -64,7 +64,16 @@ public final class Serializers {
         return gson.toJson(dependency);
     }
 
-    private static final Gson gson = new GsonBuilder()
+    public static Either<JsonParseException, DependencyLocks> parseDependencyLocks(final String x) {
+        return parse(x, DependencyLocks.class);
+    }
+
+    public static String serialize(final DependencyLocks dependencyLocks) {
+        Preconditions.checkNotNull(dependencyLocks);
+        return gson.toJson(dependencyLocks);
+    }
+
+    public static final Gson gson = new GsonBuilder()
         .registerTypeAdapter(SemanticVersion.class, new SemanticVersionSerializer())
         .registerTypeAdapter(SemanticVersion.class, new SemanticVersionDeserializer())
         .registerTypeAdapter(GitCommit.class, new GitCommitSerializer())
@@ -80,6 +89,10 @@ public final class Serializers {
         .registerTypeAdapter(Dependency.class, new DependencyDeserializer())
         .registerTypeAdapter(DependencyGroup.class, new DependencyGroupSerializer())
         .registerTypeAdapter(DependencyGroup.class, new DependencyGroupDeserializer())
+        .registerTypeAdapter(DependencyLocks.class, new DependencyLocksSerializer())
+        .registerTypeAdapter(DependencyLocks.class, new DependencyLocksDeserializer())
+        .registerTypeAdapter(ResolvedDependency.class, new ResolvedDependencySerializer())
+        .registerTypeAdapter(ResolvedDependency.class, new ResolvedDependencyDeserializer())
         .registerTypeAdapter(RecipeVersion.class, new RecipeVersionSerializer())
         .registerTypeAdapter(RecipeVersion.class, new RecipeVersionDeserializer())
         .registerTypeAdapter(Recipe.class, new RecipeSerializer())
@@ -95,6 +108,8 @@ public final class Serializers {
         .registerTypeAdapter(RemoteFile.class, new RemoteFileSerializer())
         .registerTypeAdapter(RemoteFile.class, new RemoteFileDeserializer())
         .registerTypeAdapter(URL.class, new UrlDeserializer())
+        .registerTypeAdapterFactory(new ImmutableListTypeAdapterFactory())
+        .registerTypeAdapterFactory(new ImmutableMapTypeAdapterFactory())
         .setPrettyPrinting()
         .create();
 }

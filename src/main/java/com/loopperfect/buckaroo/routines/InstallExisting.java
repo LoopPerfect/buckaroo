@@ -103,7 +103,7 @@ public final class InstallExisting {
         final ImmutableMap<RecipeIdentifier, SemanticVersion> refinedDependencies = refineDependencies(
                 Optional.of(identifier.project),
                 resolvedDependencies,
-                recipeVersion.dependencies);
+                recipeVersion.dependencies.orElse(DependencyGroup.of()));
         return continueUntilPresent(ImmutableList.of(
                 IO.println("Installing " + identifier.encode() + "... ")
                         .next(IO.value(Optional.empty())),
@@ -119,7 +119,7 @@ public final class InstallExisting {
     }
 
     private static Optional<RecipeVersion> fetchRecipeVersion(
-        final ImmutableList<CookBook> cookBooks, final RecipeVersionIdentifier identifier) {
+        final ImmutableList<Cookbook> cookBooks, final RecipeVersionIdentifier identifier) {
         Preconditions.checkNotNull(cookBooks);
         Preconditions.checkNotNull(identifier);
         return cookBooks.stream()
@@ -139,7 +139,7 @@ public final class InstallExisting {
 
     private static IO<Optional<IOException>> installDependencies(
             final String dependenciesDirectory,
-            final ImmutableList<CookBook> cookBooks,
+            final ImmutableList<Cookbook> cookBooks,
             final ImmutableMap<RecipeIdentifier, SemanticVersion> versions) {
         Preconditions.checkNotNull(dependenciesDirectory);
         Preconditions.checkNotNull(cookBooks);
@@ -153,26 +153,27 @@ public final class InstallExisting {
     }
 
     private static IO<Unit> resolveDependencies(
-            final Project project, final BuckarooConfig config, final ImmutableList<CookBook> cookBooks) {
+            final Project project, final BuckarooConfig config, final ImmutableList<Cookbook> cookBooks) {
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(config);
         Preconditions.checkNotNull(cookBooks);
-        final DependencyFetcher fetcher = CookbookDependencyFetcher.of(cookBooks);
-        return DependencyResolver.resolve(project.dependencies, fetcher).join(
-                IO::println,
-                resolvedDependencies -> continueUntilPresent(ImmutableList.of(
-                        IO.of(x -> x.fs().workingDirectory() + "/BUCKAROO_DEPS")
-                                .flatMap(path -> generateBuckarooDeps(
-                                        path,
-                                        refineDependencies(Optional.empty(), resolvedDependencies, project.dependencies))),
-                        IO.of(x -> x.fs().workingDirectory() + "/.buckconfig.local")
-                                .flatMap(path -> generateBuckConfig(path, "./buckaroo", resolvedDependencies)),
-                        IO.of(x -> x.fs().workingDirectory() + "/buckaroo/")
-                                .flatMap(path -> installDependencies(path, cookBooks, resolvedDependencies))))
-                        .flatMap(x -> Optionals.join(
-                                x,
-                                IO::println,
-                                () -> IO.println("Success! "))));
+        return context -> context.console().println("Not implemented");
+//        final DependencyFetcher fetcher = CookbookDependencyFetcher.of(cookBooks);
+//        return DependencyResolver.resolve(project.dependencies, fetcher).join(
+//                IO::println,
+//                resolvedDependencies -> continueUntilPresent(ImmutableList.of(
+//                        IO.of(x -> x.fs().workingDirectory() + "/BUCKAROO_DEPS")
+//                                .flatMap(path -> generateBuckarooDeps(
+//                                        path,
+//                                        refineDependencies(Optional.empty(), resolvedDependencies, project.dependencies))),
+//                        IO.of(x -> x.fs().workingDirectory() + "/.buckconfig.local")
+//                                .flatMap(path -> generateBuckConfig(path, "./buckaroo", resolvedDependencies)),
+//                        IO.of(x -> x.fs().workingDirectory() + "/buckaroo/")
+//                                .flatMap(path -> installDependencies(path, cookBooks, resolvedDependencies))))
+//                        .flatMap(x -> Optionals.join(
+//                                x,
+//                                IO::println,
+//                                () -> IO.println("Success! "))));
     }
 
     public static IO<Unit> routine =
@@ -188,4 +189,5 @@ public final class InstallExisting {
                         config -> readCookBooks(config).flatMap(z -> z.join(
                             IO::println,
                             cookBooks -> resolveDependencies(project, config, cookBooks)))))))));
+
 }

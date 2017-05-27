@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 
 import java.net.MalformedURLException;
 import java.net.URL;

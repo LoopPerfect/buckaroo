@@ -42,7 +42,7 @@ public final class Routines {
             .flatMap(readConfigResult -> readConfigResult.join(
                 e -> IO.value(Optional.of(e)),
                 config -> buckarooDirectory.flatMap(path -> continueUntilPresent(
-                        config.cookBooks.stream()
+                        config.cookbooks.stream()
                         .map(cookBook -> IO.println("Upgrading " + cookBook.name + "...")
                             .next(upgrade(path, cookBook)))
                         .collect(ImmutableList.toImmutableList())))));
@@ -197,7 +197,7 @@ public final class Routines {
                             .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))));
     }
 
-    private static IO<Either<IOException, CookBook>> readCookBook(final String path) {
+    private static IO<Either<IOException, Cookbook>> readCookBook(final String path) {
         Preconditions.checkNotNull(path);
         return listOrganizationsForCookBook(path)
             .flatMap(x -> x.join(
@@ -207,15 +207,15 @@ public final class Routines {
                         .map(identifier -> readOrganization(path + "/recipes", identifier)
                             .map(i -> i.rightMap(j -> Maps.immutableEntry(identifier, j))))
                         .collect(ImmutableList.toImmutableList()))
-                    .map(y -> y.rightMap(organizations -> CookBook.of(organizations.stream()
+                    .map(y -> y.rightMap(organizations -> Cookbook.of(organizations.stream()
                         .collect(ImmutableMap.toImmutableMap(
                             Map.Entry::getKey,
                             Map.Entry::getValue)))))));
     }
 
-    public static IO<Either<IOException, ImmutableList<CookBook>>> readCookBooks(final BuckarooConfig config) {
+    public static IO<Either<IOException, ImmutableList<Cookbook>>> readCookBooks(final BuckarooConfig config) {
         Preconditions.checkNotNull(config);
-        return allOrNothing(config.cookBooks.stream()
+        return allOrNothing(config.cookbooks.stream()
             .map(remoteCookBook -> buckarooDirectory
                 .flatMap(path -> context -> context.fs()
                     .getPath(path, remoteCookBook.name.toString()).toString())
@@ -279,17 +279,18 @@ public final class Routines {
     public static IO<Optional<IOException>> fetchAndUnzip(final String path, final RemoteArchive remoteFile) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(remoteFile);
-        return context -> {
-            Preconditions.checkNotNull(context);
-            final Optional<IOException> fetchResult = fetchRemoteFile(path + ".zip", remoteFile.asRemoteFile()).apply(context);
-            if (fetchResult.isPresent()) {
-                return fetchResult;
-            }
-            final Path zipPath = context.fs().getPath(path + ".zip");
-            final Path targetPath = context.fs().getPath(path);
-            return com.loopperfect.buckaroo.io.Files.unzip(
-                zipPath, targetPath, remoteFile.subPath.map(x -> context.fs().getPath(x)));
-        };
+        return null;
+//        return context -> {
+//            Preconditions.checkNotNull(context);
+//            final Optional<IOException> fetchResult = fetchRemoteFile(path + ".zip", remoteFile.asRemoteFile()).apply(context);
+//            if (fetchResult.isPresent()) {
+//                return fetchResult;
+//            }
+//            final Path zipPath = context.fs().getPath(path + ".zip");
+//            final Path targetPath = context.fs().getPath(path);
+//            return EvenMoreFiles.unzip(
+//                zipPath, targetPath, remoteFile.subPath.map(x -> context.fs().getPath(x)));
+//        };
     }
 
     public static IO<Optional<IOException>> ensureCheckout(final String path, final GitCommit gitCommit) {
