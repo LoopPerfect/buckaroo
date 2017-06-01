@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.google.common.collect.Maps;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.versioning.VersioningParsers;
@@ -7,6 +8,8 @@ import org.jparsec.Parser;
 import org.jparsec.Parsers;
 import org.jparsec.Scanners;
 import org.jparsec.pattern.CharPredicates;
+
+import java.util.Optional;
 
 public final class CLIParsers {
 
@@ -84,15 +87,14 @@ public final class CLIParsers {
                 Parsers.sequence(
                         installTokenParser
                                 .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                    recipeIdentifierParser,
+                    Parsers.sequence(
+                        recipeIdentifierParser,
+                        VersioningParsers.semanticVersionRequirementParser
+                            .map(v -> Optional.of(v))
+                            .optional(Optional.empty()),
+                        (x,y) -> Maps.immutableEntry(x,y)
+                    ).followedBy(Scanners.WHITESPACES.atLeast(0)).many1(),
                         (x, y) -> InstallCommand.of(y))
-                        .between(ignoreParser, ignoreParser),
-                Parsers.sequence(
-                        installTokenParser
-                                .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                    recipeIdentifierParser,
-                        VersioningParsers.semanticVersionRequirementParser,
-                        (x, y, z) -> InstallCommand.of(y, z))
                         .between(ignoreParser, ignoreParser));
 
     static final Parser<UninstallCommand> uninstallCommandParser =

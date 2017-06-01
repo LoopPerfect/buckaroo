@@ -24,6 +24,11 @@ public final class Project {
         return new Project(name, license, dependencies.addDependency(dependency));
     }
 
+    public Project addDependencyGroup(final DependencyGroup dependencyGroup) {
+        Preconditions.checkNotNull(dependencyGroup);
+        return new Project(name, license, dependencies.addDependencyGroup(dependencyGroup));
+    }
+
     public Project removeDependency(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         return new Project(name, license, dependencies.removeDependency(identifier));

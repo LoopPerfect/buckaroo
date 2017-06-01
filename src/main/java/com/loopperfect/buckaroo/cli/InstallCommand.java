@@ -1,35 +1,34 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Identifier;
+import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.routines.Install;
-import com.loopperfect.buckaroo.routines.Routines;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 public final class InstallCommand implements CLICommand {
 
-    public final RecipeIdentifier project;
-    public final Optional<SemanticVersionRequirement> versionRequirement;
+    public final ImmutableMap<RecipeIdentifier, Optional<SemanticVersionRequirement>> targets;
 
-    private InstallCommand(final RecipeIdentifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
-        this.project = Preconditions.checkNotNull(project);
-        this.versionRequirement = Preconditions.checkNotNull(versionRequirement);
+    private InstallCommand(final ImmutableMap<RecipeIdentifier, Optional<SemanticVersionRequirement>> targets) {
+        this.targets = Preconditions.checkNotNull(targets);
     }
 
     @Override
     public IO<Unit> routine() {
-        return Install.routine(project, versionRequirement);
+        return Install.routine(targets);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(project, versionRequirement);
+        return Objects.hash(targets);
     }
 
     @Override
@@ -44,19 +43,24 @@ public final class InstallCommand implements CLICommand {
 
         final InstallCommand other = (InstallCommand) obj;
 
-        return Objects.equals(project, other.project) &&
-            Objects.equals(versionRequirement, other.versionRequirement);
+        return Objects.equals(targets, other.targets);
     }
 
     public static InstallCommand of(final RecipeIdentifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
-        return new InstallCommand(project, versionRequirement);
+        return new InstallCommand(ImmutableMap.of(project, versionRequirement));
     }
 
     public static InstallCommand of(final RecipeIdentifier project, final SemanticVersionRequirement versionRequirement) {
-        return new InstallCommand(project, Optional.of(versionRequirement));
+        return new InstallCommand(ImmutableMap.of(project, Optional.of(versionRequirement)));
     }
 
     public static InstallCommand of(final RecipeIdentifier project) {
-        return new InstallCommand(project, Optional.empty());
+        return new InstallCommand(ImmutableMap.of(project, Optional.empty()));
+    }
+
+    public static InstallCommand of(final List<Map.Entry<RecipeIdentifier,Optional<SemanticVersionRequirement>>> projects) {
+        return new InstallCommand(
+                projects.stream()
+                        .collect(ImmutableMap.toImmutableMap( Map.Entry::getKey, Map.Entry::getValue )));
     }
 }
