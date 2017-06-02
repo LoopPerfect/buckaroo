@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.github.serialization.GitHubSerializer;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
 import io.reactivex.Single;
 
@@ -17,7 +18,7 @@ public final class GitHub {
 
     }
 
-    public static Single<ImmutableList<String>> fetchReleaseNames(final Identifier owner, final Identifier repo) {
+    public static Single<ImmutableList<GitHubRelease>> fetchReleaseNames(final Identifier owner, final Identifier repo) {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(repo);
         return Single.fromCallable(() ->
@@ -26,7 +27,9 @@ public final class GitHub {
             .map(content -> {
                 final JsonArray elements = new JsonParser().parse(content).getAsJsonArray();
                 return StreamSupport.stream(elements.spliterator(), false)
-                    .map(x -> x.getAsJsonObject().get("name").getAsString())
+                    .map(GitHubSerializer::parseGitHubRelease)
+                    .filter(x -> x.right().isPresent())
+                    .map(x -> x.right().get())
                     .collect(ImmutableList.toImmutableList());
             });
     }

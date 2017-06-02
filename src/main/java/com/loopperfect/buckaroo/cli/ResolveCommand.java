@@ -15,7 +15,7 @@ public final class ResolveCommand implements CLICommand {
     public IO<Unit> routine() {
         return context -> {
             System.out.println("Resolve. ");
-            ResolveTasks.resolveDependenciesInWorkingDirectory(context.fs().getFS())
+            ResolveTasks.resolveDependenciesInWorkingDirectory(context.fs().fileSystem())
                 .subscribeOn(Schedulers.from(context.executor()))
                 .subscribe(
                     next -> {

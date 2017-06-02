@@ -6,7 +6,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.EvenMoreFiles;
+import io.reactivex.Completable;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -85,24 +87,44 @@ public final class InstallExistingTasks {
         return downloadResolvedDependency(fs, lock.origin, dependencyFolder);
     }
 
-    public static Observable<Map<DependencyLock, DownloadProgress>> installDependenciesFromLockFileInWorkingDirectory(final FileSystem fs) {
+    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final FileSystem fs) {
 
         Preconditions.checkNotNull(fs);
 
-        return CommonTasks.readLockFile(fs.getPath("buckaroo.lock.json").toAbsolutePath()).toObservable()
-            .flatMap((DependencyLocks locks) -> {
-                final List<Observable<Map.Entry<DependencyLock, DownloadProgress>>> installs = locks.entries()
-                    .stream()
-                    .map(dependencyLock -> installDependencyLock(fs, dependencyLock)
-                        .map(x -> Maps.immutableEntry(dependencyLock, x)))
-                    .collect(ImmutableList.toImmutableList());
+        final Path lockFilePath = fs.getPath("buckaroo.lock.json").toAbsolutePath();
 
-                return Observable.zip(
-                    installs,
-                    x -> ImmutableList.copyOf(x)
+        return Observable.concat(
+
+            // Do we have a lock file?
+            Single.fromCallable(() -> Files.exists(lockFilePath)).flatMapObservable(hasBuckarooLockFile -> {
+                if (hasBuckarooLockFile) {
+                    // No need to generate one
+                    return Observable.empty();
+                }
+                // Generate a lock file
+                return ResolveTasks.resolveDependenciesInWorkingDirectory(fs);
+            }),
+
+            MoreSingles.chainObservable(
+
+                // Read the lock file
+                CommonTasks.readLockFile(fs.getPath("buckaroo.lock.json").toAbsolutePath())
+                    .map(ReadLockFileEvent::of),
+
+                (ReadLockFileEvent event) -> {
+
+                    // Install each entry
+                    final ImmutableList<Observable<Map.Entry<DependencyLock, DownloadProgress>>> installs = event.locks.entries()
                         .stream()
-                        .map(i -> (Map.Entry<DependencyLock, DownloadProgress>)i)
-                        .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
-            });
+                        .map(dependencyLock -> installDependencyLock(fs, dependencyLock)
+                            .map(x -> Maps.immutableEntry(dependencyLock, x)))
+                        .collect(ImmutableList.toImmutableList());
+
+                    return MoreObservables.parallel(installs)
+                        .map(xs -> DependencyInstallationProgress.of(
+                            xs.stream()
+                                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue))));
+                }
+            ));
     }
 }

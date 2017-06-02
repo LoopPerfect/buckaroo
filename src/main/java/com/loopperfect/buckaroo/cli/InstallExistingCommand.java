@@ -29,10 +29,10 @@ public final class InstallExistingCommand implements CLICommand {
         return context -> {
             context.console().println("Starting...");
 
-            final FileSystem fs = context.fs().getFS();
+            final FileSystem fs = context.fs().fileSystem();
             final Scheduler scheduler = Schedulers.from(context.executor());
 
-            InstallExistingTasks.installDependenciesFromLockFileInWorkingDirectory(fs)
+            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs)
                 .subscribeOn(scheduler)
                 .subscribe(
                     next -> {

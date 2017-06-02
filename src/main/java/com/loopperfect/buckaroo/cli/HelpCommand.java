@@ -2,7 +2,6 @@ package com.loopperfect.buckaroo.cli;
 
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Help;
 
 public final class HelpCommand implements CLICommand {
 
@@ -22,7 +21,11 @@ public final class HelpCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Help.routine;
+        return context -> {
+            context.console().println("Read the docs at: ");
+            context.console().println("https://buckaroo.readthedocs.io/en/latest/cli.html");
+            return Unit.of();
+        };
     }
 
     public static HelpCommand of() {

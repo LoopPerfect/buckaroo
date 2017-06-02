@@ -74,4 +74,16 @@ public final class ResolvedDependency {
         final ImmutableList<RecipeIdentifier> dependencies) {
         return new ResolvedDependency(source, target, buckResource, dependencies);
     }
+
+    public static ResolvedDependency from(final RecipeVersion recipeVersion) {
+        Preconditions.checkNotNull(recipeVersion);
+        return of(
+            recipeVersion.source,
+            recipeVersion.target,
+            recipeVersion.buckResource,
+            recipeVersion.dependencies.orElse(DependencyGroup.of()).entries()
+                .stream()
+                .map(x -> x.project)
+                .collect(ImmutableList.toImmutableList()));
+    }
 }

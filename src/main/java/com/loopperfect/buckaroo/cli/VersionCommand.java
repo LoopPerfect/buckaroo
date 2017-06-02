@@ -12,7 +12,10 @@ public final class VersionCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return IO.println(Buckaroo.version);
+        return context -> {
+            context.console().println(Buckaroo.version.toString());
+            return Unit.of();
+        };
     }
 
     @Override

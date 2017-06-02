@@ -1,35 +1,47 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.SemanticVersionRequirement;
+import com.google.common.collect.ImmutableList;
+import com.loopperfect.buckaroo.PartialDependency;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Install;
-import com.loopperfect.buckaroo.routines.Routines;
+import com.loopperfect.buckaroo.tasks.InstallTasks;
 
+import java.nio.file.FileSystem;
+import java.util.Collection;
 import java.util.Objects;
-import java.util.Optional;
 
 public final class InstallCommand implements CLICommand {
 
-    public final RecipeIdentifier project;
-    public final Optional<SemanticVersionRequirement> versionRequirement;
+    public final ImmutableList<PartialDependency> dependencies;
 
-    private InstallCommand(final RecipeIdentifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
-        this.project = Preconditions.checkNotNull(project);
-        this.versionRequirement = Preconditions.checkNotNull(versionRequirement);
+    private InstallCommand(final ImmutableList<PartialDependency> dependencies) {
+        this.dependencies = Preconditions.checkNotNull(dependencies);
     }
 
     @Override
     public IO<Unit> routine() {
-        return Install.routine(project, versionRequirement);
+        return context -> {
+            final FileSystem fs = context.fs().fileSystem();
+            context.console().println("[" + String.join(
+                ", ", dependencies.stream().map(PartialDependency::encode).collect(ImmutableList.toImmutableList())) + "]");
+            InstallTasks.installDependencyInWorkingDirectory(fs, dependencies).subscribe(
+                next -> {
+                    System.out.println(next);
+                },
+                error -> {
+                    error.printStackTrace();
+                },
+                () -> {
+                    System.out.println("Done.");
+                });
+            return Unit.of();
+        };
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(project, versionRequirement);
+        return Objects.hash(dependencies);
     }
 
     @Override
@@ -44,19 +56,14 @@ public final class InstallCommand implements CLICommand {
 
         final InstallCommand other = (InstallCommand) obj;
 
-        return Objects.equals(project, other.project) &&
-            Objects.equals(versionRequirement, other.versionRequirement);
+        return Objects.equals(dependencies, other.dependencies);
     }
 
-    public static InstallCommand of(final RecipeIdentifier project, final Optional<SemanticVersionRequirement> versionRequirement) {
-        return new InstallCommand(project, versionRequirement);
+    public static InstallCommand of(final Collection<PartialDependency> dependencies) {
+        return new InstallCommand(ImmutableList.copyOf(dependencies));
     }
 
-    public static InstallCommand of(final RecipeIdentifier project, final SemanticVersionRequirement versionRequirement) {
-        return new InstallCommand(project, Optional.of(versionRequirement));
-    }
-
-    public static InstallCommand of(final RecipeIdentifier project) {
-        return new InstallCommand(project, Optional.empty());
+    public static InstallCommand of(final PartialDependency... dependencies) {
+        return new InstallCommand(ImmutableList.copyOf(dependencies));
     }
 }

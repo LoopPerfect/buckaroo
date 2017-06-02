@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import static com.loopperfect.buckaroo.routines.Routines.*;
 
+@Deprecated
 public final class InstallExisting {
 
     private InstallExisting() {

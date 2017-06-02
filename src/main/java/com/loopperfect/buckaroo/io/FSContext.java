@@ -6,7 +6,6 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.SimplePath;
-import com.loopperfect.buckaroo.Unit;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -21,51 +20,51 @@ import java.util.stream.Stream;
 @FunctionalInterface
 public interface FSContext {
 
-    FileSystem getFS();
+    FileSystem fileSystem();
 
     @Deprecated
     default String homeDirectory() {
-        return getFS().getPath(System.getProperty("user.home")).toString();
+        return fileSystem().getPath(System.getProperty("user.home")).toString();
     }
 
     default SimplePath homeDir() {
-        return SimplePath.of(getFS().getPath(System.getProperty("user.home")));
+        return SimplePath.of(fileSystem().getPath(System.getProperty("user.home")));
     }
 
     @Deprecated
     default String workingDirectory() {
-        return getFS().getPath(System.getProperty("user.dir")).toString();
+        return fileSystem().getPath(System.getProperty("user.dir")).toString();
     }
 
     default SimplePath workingDir() {
-        return SimplePath.of(getFS().getPath(System.getProperty("user.dir")));
+        return SimplePath.of(fileSystem().getPath(System.getProperty("user.dir")));
     }
 
     default Path getPath(String... path) {
         String[] paths = Arrays
             .stream(path)
             .toArray(String[]::new);
-        return getFS().getPath("", paths);
+        return fileSystem().getPath("", paths);
     }
 
     default boolean isFile(final String path) {
         Preconditions.checkNotNull(path);
-        return Files.isRegularFile(getFS().getPath(path));
+        return Files.isRegularFile(fileSystem().getPath(path));
     }
 
     default boolean isDirectory(final String path) {
         Preconditions.checkNotNull(path);
-        return Files.isDirectory(getFS().getPath(path));
+        return Files.isDirectory(fileSystem().getPath(path));
     }
 
     default boolean exists(final String path) {
         Preconditions.checkNotNull(path);
-        return Files.exists(getFS().getPath(path).toAbsolutePath());
+        return Files.exists(fileSystem().getPath(path).toAbsolutePath());
     }
 
     default Optional<IOException> createDirectory(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p);
+        final Path path = fileSystem().getPath(p);
         try {
             Files.createDirectories(path);
         } catch (IOException e) {
@@ -79,9 +78,9 @@ public interface FSContext {
 
     default Either<IOException, String> readFile(final String path) {
         Preconditions.checkNotNull(path);
-        final Path q = getFS().getPath(path);
+        final Path q = fileSystem().getPath(path);
         try {
-            final String content = Files.readAllLines(getFS().getPath(q.toString()), Charset.defaultCharset())
+            final String content = Files.readAllLines(fileSystem().getPath(q.toString()), Charset.defaultCharset())
                 .stream()
                 .collect(Collectors.joining("\n"));
             return Either.right(content);
@@ -93,7 +92,7 @@ public interface FSContext {
     default Optional<IOException> writeFile(final SimplePath p, final String content, final boolean overwrite) {
         Preconditions.checkNotNull(p);
         Preconditions.checkNotNull(content);
-        final Path path = p.toPath(getFS());
+        final Path path = p.toPath(fileSystem());
         try {
             if (Files.exists(path)) {
                 if (!overwrite) {
@@ -120,7 +119,7 @@ public interface FSContext {
     default Optional<IOException> writeFile(final String p, final String content, final boolean overwrite) {
         Preconditions.checkNotNull(p);
         Preconditions.checkNotNull(content);
-        final Path path = getFS().getPath(p);
+        final Path path = fileSystem().getPath(p);
         try {
             if (Files.exists(path)) {
                 if (!overwrite) {
@@ -141,7 +140,7 @@ public interface FSContext {
 
     default Optional<IOException> touch(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p);
+        final Path path = fileSystem().getPath(p);
         try {
             if (!Files.exists(path)) {
                 if (path.getParent() != null && !Files.exists(path.getParent())) {
@@ -156,7 +155,7 @@ public interface FSContext {
     }
 
     default Optional<IOException> deleteFile(final String path) {
-       final Path p = getFS().getPath(path);
+       final Path p = fileSystem().getPath(path);
        try {
            Files.deleteIfExists(p);
            return Optional.empty();
@@ -171,7 +170,7 @@ public interface FSContext {
 
     default Either<IOException, ImmutableList<String>> listFiles(final String p) {
         Preconditions.checkNotNull(p);
-        final Path path = getFS().getPath(p);
+        final Path path = fileSystem().getPath(p);
         try (final Stream<Path> paths = java.nio.file.Files.list(path)) {
             return Either.right(paths
                 .map(Path::toString)

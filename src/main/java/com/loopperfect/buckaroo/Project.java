@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -22,6 +23,11 @@ public final class Project {
     public Project addDependency(final Dependency dependency) {
         Preconditions.checkNotNull(dependency);
         return new Project(name, license, dependencies.addDependency(dependency));
+    }
+
+    public Project addDependencies(final List<Dependency> dependencies) {
+        Preconditions.checkNotNull(dependencies);
+        return new Project(name, license, this.dependencies.addDependencies(dependencies));
     }
 
     public Project removeDependency(final RecipeIdentifier identifier) {

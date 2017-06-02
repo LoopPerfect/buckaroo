@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
+@Deprecated
 public final class GitHubIdentifier implements DependencyIdentifier {
 
     public final String user;

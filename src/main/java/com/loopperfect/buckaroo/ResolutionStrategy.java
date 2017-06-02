@@ -5,5 +5,5 @@ import java.util.Map;
 @FunctionalInterface
 public interface ResolutionStrategy {
 
-    int score(final Map<RecipeIdentifier, SemanticVersion> resolvedDependencies);
+    int score(final Map<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolvedDependencies);
 }

@@ -7,9 +7,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
+
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.Maps.immutableEntry;
 
 public final class DependencyGroup {
 
@@ -46,8 +50,26 @@ public final class DependencyGroup {
                 dependencies.entrySet()
                     .stream()
                     .filter(x -> !x.getKey().equals(dependency.project)),
-                Stream.of(Maps.immutableEntry(dependency.project, dependency.requirement)))
-                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+                Stream.of(immutableEntry(dependency.project, dependency.requirement)))
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    public DependencyGroup addDependencies(final Collection<Dependency> newDependencies) {
+        Preconditions.checkNotNull(newDependencies);
+        if (newDependencies.stream().allMatch(x ->
+            this.dependencies.containsKey(x.project) &&
+                this.dependencies.get(x.project).equals(x.requirement))) {
+            return this;
+        }
+        return new DependencyGroup(
+            Stream.concat(
+                dependencies.entrySet()
+                    .stream()
+                    .filter(x -> newDependencies.stream().noneMatch(y -> x.getKey().equals(y.project))),
+                newDependencies.stream()
+                    .distinct()
+                    .map(x -> immutableEntry(x.project, x.requirement))
+            ).collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
     public DependencyGroup removeDependency(final RecipeIdentifier identifier) {
@@ -58,7 +80,7 @@ public final class DependencyGroup {
         return new DependencyGroup(dependencies.entrySet()
             .stream()
             .filter(x -> !x.getKey().equals(identifier))
-            .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+            .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
     public boolean isSatisfiedBy(final ImmutableSet<RecipeVersionIdentifier> recipes) {

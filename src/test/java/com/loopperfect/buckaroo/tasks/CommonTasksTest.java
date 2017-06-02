@@ -13,6 +13,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public final class CommonTasksTest {
@@ -72,5 +73,20 @@ public final class CommonTasksTest {
                 });
 
         assertTrue(future.get(30, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void writeAndReadFile() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final Path target = fs.getPath("test.txt").toAbsolutePath();
+        final String content = "This is a test\n Testing... testing... 123\n";
+
+        CommonTasks.writeFile(content, target, false).blockingGet();
+
+        final String readContent = CommonTasks.readFile(target).blockingGet();
+
+        assertEquals(content, readContent);
     }
 }

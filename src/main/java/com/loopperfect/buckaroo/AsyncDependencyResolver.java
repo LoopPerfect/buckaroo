@@ -15,9 +15,9 @@ public final class AsyncDependencyResolver {
 
     }
 
-    private static Single<ImmutableMap<RecipeIdentifier, SemanticVersion>> step(
+    private static Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> step(
         final RecipeSource recipeSource,
-        final ImmutableMap<RecipeIdentifier, SemanticVersion> resolved,
+        final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolved,
         final Dependency next,
         final ResolutionStrategy strategy) {
 
@@ -27,7 +27,7 @@ public final class AsyncDependencyResolver {
         Preconditions.checkNotNull(strategy);
 
         if (resolved.containsKey(next.project)) {
-            final SemanticVersion resolvedVersion = resolved.get(next.project);
+            final SemanticVersion resolvedVersion = resolved.get(next.project).a;
             return next.requirement.isSatisfiedBy(resolvedVersion) ?
                 Single.just(ImmutableMap.copyOf(resolved)) :
                 Single.error(new DependencyResolutionException(
@@ -37,15 +37,15 @@ public final class AsyncDependencyResolver {
         return recipeSource.fetch(next.project)
             .flatMap(recipe -> {
 
-                final Stream<Single<ImmutableMap<RecipeIdentifier, SemanticVersion>>> candidateStream = recipe.versions.entrySet()
+                final Stream<Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>>> candidateStream = recipe.versions.entrySet()
                     .stream()
                     .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
                     .sorted(Comparator.comparing(Map.Entry::getKey))
                     .map(entry -> {
 
-                        final ImmutableMap<RecipeIdentifier, SemanticVersion> nextResolved = MoreMaps.with(
+                        final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> nextResolved = MoreMaps.with(
                             resolved,
-                            next.project, entry.getKey());
+                            next.project, Pair.of(entry.getKey(), ResolvedDependency.from(entry.getValue())));
 
                         final ImmutableList<Dependency> nextDependencies = new ImmutableList.Builder<Dependency>()
                             .addAll(entry.getValue().dependencies.orElse(DependencyGroup.of()).entries())
@@ -66,9 +66,9 @@ public final class AsyncDependencyResolver {
             });
     }
 
-    private static Single<ImmutableMap<RecipeIdentifier, SemanticVersion>> resolve(
+    private static Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> resolve(
         final RecipeSource recipeSource,
-        final ImmutableMap<RecipeIdentifier, SemanticVersion> resolved,
+        final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolved,
         final ImmutableList<Dependency> dependencies,
         final ResolutionStrategy strategy) {
 
@@ -84,7 +84,7 @@ public final class AsyncDependencyResolver {
             (x, y) -> Single.zip(x, y, MoreMaps::merge));
     }
 
-    public static Single<ImmutableMap<RecipeIdentifier, SemanticVersion>> resolve(
+    public static Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> resolve(
         final RecipeSource recipeSource,
         final ImmutableList<Dependency> dependencies) {
         return resolve(recipeSource, ImmutableMap.of(), dependencies, SumResolutionStrategy.of());

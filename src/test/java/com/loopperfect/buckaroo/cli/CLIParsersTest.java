@@ -8,6 +8,7 @@ import org.jparsec.error.ParserException;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -62,6 +63,36 @@ public final class CLIParsersTest {
     }
 
     @Test
+    public void testPartialDependencyParser() {
+
+        final Parser<PartialDependency> parser = CLIParsers.partialDependencyParser;
+
+        assertEquals(
+            PartialDependency.of(Identifier.of("org"), Identifier.of("awesome")),
+            parser.parse("org/awesome"));
+
+        assertEquals(
+            PartialDependency.of(Identifier.of("loopperfect"), Identifier.of("valuable")),
+            parser.parse("  loopperfect/valuable "));
+
+        assertEquals(
+            PartialDependency.of(
+                Optional.empty(),
+                Identifier.of("loopperfect"),
+                Identifier.of("valuable"),
+                Optional.of(ExactSemanticVersion.of(SemanticVersion.of(1)))),
+            parser.parse(" loopperfect /  valuable       1"));
+
+        assertEquals(
+            PartialDependency.of(
+                Optional.of(Identifier.of("github")),
+                Identifier.of("loopperfect"),
+                Identifier.of("neither"),
+                Optional.of(ExactSemanticVersion.of(SemanticVersion.of(1)))),
+            parser.parse("github  + loopperfect /  neither       [ 1 ]"));
+    }
+
+    @Test
     public void testCommandParser() {
 
         final Parser<CLICommand> parser = CLIParsers.commandParser;
@@ -83,24 +114,32 @@ public final class CLIParsersTest {
         assertEquals(HelpCommand.of(), parser.parse("help "));
 
         assertEquals(
-            InstallCommand.of(RecipeIdentifier.of("org", "awesome")),
+            InstallCommand.of(PartialDependency.of(Identifier.of("org"), Identifier.of("awesome"))),
             CLIParsers.commandParser.parse(" install   org/awesome  "));
 
         assertEquals(
-            InstallCommand.of(RecipeIdentifier.of("3hren", "blackhole")),
+            InstallCommand.of(PartialDependency.of(Identifier.of("3hren"), Identifier.of("blackhole"))),
             CLIParsers.commandParser.parse(" install   3hren/blackhole  "));
+
+        assertEquals(
+            InstallCommand.of(PartialDependency.of(
+                Identifier.of("org"), Identifier.of("some_lib"), BoundedSemanticVersion.atLeast(SemanticVersion.of(2)))),
+            CLIParsers.commandParser.parse(" install  org/some_lib>=2  "));
+
+        assertEquals(
+            InstallCommand.of(PartialDependency.of(
+                Identifier.of("org"), Identifier.of("another-lib2"), ExactSemanticVersion.of(SemanticVersion.of(2)))),
+            CLIParsers.commandParser.parse("install org/another-lib2 [ 2 ]  "));
+
+        assertEquals(
+            InstallCommand.of(
+                PartialDependency.of(Identifier.of("org"), Identifier.of("aaa")),
+                PartialDependency.of(Identifier.of("org"), Identifier.of("bbb"))),
+            CLIParsers.commandParser.parse(" install   org/aaa  org/bbb  "));
 
         assertEquals(
             UninstallCommand.of(RecipeIdentifier.of("org", "some_lib")),
             CLIParsers.commandParser.parse(" uninstall   org/some_lib "));
-
-        assertEquals(
-            InstallCommand.of(RecipeIdentifier.of("org", "some_lib"), BoundedSemanticVersion.atLeast(SemanticVersion.of(2))),
-            CLIParsers.commandParser.parse(" install  org/some_lib>=2  "));
-
-        assertEquals(
-            InstallCommand.of(RecipeIdentifier.of("org", "another-lib2"), ExactSemanticVersion.of(SemanticVersion.of(2))),
-            CLIParsers.commandParser.parse("install org/another-lib2 [ 2 ]  "));
 
         assertEquals(
             UpdateCommand.of(Identifier.of("boost-config")),

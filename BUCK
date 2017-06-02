@@ -8,6 +8,13 @@ maven_jar(
 )
 
 maven_jar(
+  name = 'okhttp',
+  id = 'com.squareup.okhttp3:okhttp:3.8.0',
+  src_sha1 = 'db21293949e200f08d5325e8a8eefdcc9134b752',
+  bin_sha1 = '5a11f020cce2d11eb71ba916700600e18c4547e7',
+)
+
+maven_jar(
   name = 'reactive-streams',
   id = 'org.reactivestreams:reactive-streams:1.0.0.final',
   src_sha1 = 'be2d37620962b2c851f2c292d5931b7ee9398d16',
@@ -38,70 +45,70 @@ maven_jar(
 maven_jar(
   name = 'gson',
   id = 'com.google.code.gson:gson:2.8.0',
-  src_sha1 = 'c4ba5371a29ac9b2ad6129b1d39ea38750043eff',
+  src_sha1 = 'baf95d8519fc1a11d388f8543cb40cd2bb9d66dc',
   bin_sha1 = 'c4ba5371a29ac9b2ad6129b1d39ea38750043eff',
 )
 
 maven_jar(
   name = 'jparsec',
   id = 'org.jparsec:jparsec:3.0',
-  src_sha1 = 'd58e152623bb664f4c8e6d7ce8db7fa7fda2f7d5',
+  src_sha1 = '58f1043c4808436dd5a08bd3607d3685ca588b48',
   bin_sha1 = 'd58e152623bb664f4c8e6d7ce8db7fa7fda2f7d5',
 )
 
 maven_jar(
   name = 'jimfs',
   id = 'com.google.jimfs:jimfs:1.1',
-  src_sha1 = '8fbd0579dc68aba6186935cc1bee21d2f3e7ec1c',
+  src_sha1 = 'a2e6f6d75b7fa7e8eedb3062e5bfd24cc9fe8591',
   bin_sha1 = '8fbd0579dc68aba6186935cc1bee21d2f3e7ec1c',
 )
 
 maven_jar(
   name = 'jsch',
   id = 'com.jcraft:jsch:0.1.54',
-  src_sha1 = 'da3584329a263616e277e15462b387addd1b208d',
+  src_sha1 = '91d6069df9be9e076bdb124e82fc2a9af9547616',
   bin_sha1 = 'da3584329a263616e277e15462b387addd1b208d',
 )
 
 maven_jar(
   name = 'mustache',
-  url = 'com.github.spullara.mustache.java:compiler:0.8.9',
-  src_sha1 = 'dba18d9ea10323c02ae5bc4c2121048853b233e1',
+  id = 'com.github.spullara.mustache.java:compiler:0.8.9',
+  src_sha1 = 'bacb2f264f8d920fa9147a6d8c8e4ed68428fd09',
   bin_sha1 = 'dba18d9ea10323c02ae5bc4c2121048853b233e1',
 )
 
 maven_jar(
   name = 'httpclient',
   id = 'org.apache.httpcomponents:httpclient:4.3.6',
-  src_sha1 = '4c47155e3e6c9a41a28db36680b828ced53b8af4',
+  src_sha1 = 'af4d76be0c46ee26b0d9d1d4a34d244a633cac84',
   bin_sha1 = '4c47155e3e6c9a41a28db36680b828ced53b8af4',
 )
 
 maven_jar(
   name = 'httpcore',
   id = 'org.apache.httpcomponents:httpcore:4.4.6',
-  src_sha1 = 'e3fd8ced1f52c7574af952e2e6da0df8df08eb82',
+  src_sha1 = '57cc0a7af46d66754e632bddc558a913b9e66ac3',
   bin_sha1 = 'e3fd8ced1f52c7574af952e2e6da0df8df08eb82',
 )
 
 maven_jar(
   name = 'commons-logging',
   id = 'commons-logging:commons-logging:1.2',
-  src_sha1 = '4bfc12adfe4842bf07b657f0369c4cb522955686',
+  src_sha1 = 'ecf26c7507d67782a3bbd148d170b31dfad001aa',
   bin_sha1 = '4bfc12adfe4842bf07b657f0369c4cb522955686',
 )
 
 maven_jar(
   name = 'slf4j-api',
   id = 'org.slf4j:slf4j-api:1.7.6',
-  src_sha1 = '562424e36df3d2327e8e9301a76027fca17d54ea',
+  src_sha1 = '97bb93c1badeae97a3d37e3c902df2985ee3de34',
   bin_sha1 = '562424e36df3d2327e8e9301a76027fca17d54ea',
 )
 
 maven_jar(
   name = 'slf4j-nop',
   id = 'org.slf4j:slf4j-nop:1.7.6',
-  src_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
+  src_sha1 = 'c9c49df81b8800b3b644e92ae9c8bd50cf891c52',
   bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
 )
 
@@ -145,6 +152,9 @@ java_library(
   ]),
   resources_root = 'src/main/resources',
   deps = [
+    ':rxjava',
+    ':reactive-streams',
+    ':okhttp',
     ':guava',
     ':gson',
     ':jparsec',
@@ -177,6 +187,9 @@ java_test(
   ]),
   deps = [
     ':buckaroo',
+    ':rxjava',
+    ':reactive-streams',
+    ':okhttp',
     ':guava',
     ':gson',
     ':hamcrest',

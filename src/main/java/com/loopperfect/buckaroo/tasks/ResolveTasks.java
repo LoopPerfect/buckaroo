@@ -1,12 +1,9 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.loopperfect.buckaroo.AsyncDependencyResolver;
-import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.RecipeSource;
-import com.loopperfect.buckaroo.sources.GitHubRecipeSource;
-import com.loopperfect.buckaroo.sources.LazyCookbookRecipeSource;
+import com.google.common.collect.ImmutableList;
+import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.sources.RecipeSources;
 import io.reactivex.Observable;
 
@@ -19,27 +16,44 @@ public final class ResolveTasks {
 
     }
 
-    public static Observable<?> resolveDependenciesInWorkingDirectory(final FileSystem fs) {
+    public static Observable<Event> resolveDependenciesInWorkingDirectory(final FileSystem fs) {
+
         Preconditions.checkNotNull(fs);
+
         final Path projectFilePath = fs.getPath("buckaroo.json").toAbsolutePath();
-        return CommonTasks.readAndMaybeGenerateConfigFile(fs).toObservable().flatMap(
-            config -> {
-                return CommonTasks.readProjectFile(projectFilePath).toObservable().flatMap(
-                    project -> {
 
-                        final Path cookbookPath = fs.getPath(
-                            System.getProperty("user.home"),
-                            ".buckaroo",
-                            config.cookbooks.get(0).name.name);
+        return CommonTasks.readAndMaybeGenerateConfigFile(fs).flatMapObservable(config -> MoreObservables.chain(
 
-                        final RecipeSource recipeSource = RecipeSources.routed(
-                            ImmutableMap.of(
-                                Identifier.of("github"), GitHubRecipeSource.of()),
-                            LazyCookbookRecipeSource.of(cookbookPath));
+            // Read the project file
+            CommonTasks.readProjectFile(projectFilePath)
+                    .map(ReadProjectFileEvent::of)
+                    .toObservable(),
 
-                        return AsyncDependencyResolver.resolve(
-                            recipeSource, project.dependencies.entries()).toObservable();
-                    });
-            });
+            // Resolve the dependencies
+            (ReadProjectFileEvent event) ->  {
+
+                final RecipeSource recipeSource = RecipeSources.standard(fs, config.config);
+
+                return AsyncDependencyResolver.resolve(
+                    recipeSource, event.project.dependencies.entries())
+                    .map(ResolvedDependenciesEvent::of2)
+                    .toObservable();
+            },
+
+            // Write the lock file
+            (ResolvedDependenciesEvent event) -> {
+
+                final DependencyLocks locks = DependencyLocks.of(event.dependencies.entrySet()
+                    .stream()
+                    .map(x -> DependencyLock.of(x.getKey(), x.getValue()))
+                    .collect(ImmutableList.toImmutableList()));
+
+                final Path lockFilePath = fs.getPath("buckaroo.lock.json").toAbsolutePath();
+
+                return CommonTasks.writeFile(Serializers.serialize(locks), lockFilePath, true)
+                    .toObservable()
+                    .cast(Event.class);
+            })
+        );
     }
 }

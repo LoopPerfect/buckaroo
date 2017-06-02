@@ -47,6 +47,10 @@ public final class RecipeIdentifier {
         return encode();
     }
 
+    public static RecipeIdentifier of(final Optional<Identifier> source, final Identifier organization, final Identifier recipe) {
+        return new RecipeIdentifier(source, organization, recipe);
+    }
+
     public static RecipeIdentifier of(final Identifier source, final Identifier organization, final Identifier recipe) {
         return new RecipeIdentifier(Optional.of(source), organization, recipe);
     }

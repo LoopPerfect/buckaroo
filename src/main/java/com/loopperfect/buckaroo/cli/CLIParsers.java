@@ -1,7 +1,9 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.PartialDependency;
 import com.loopperfect.buckaroo.RecipeIdentifier;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.VersioningParsers;
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
@@ -13,6 +15,9 @@ public final class CLIParsers {
     private CLIParsers() {
 
     }
+
+    static final Parser<Void> ignoreParser =
+        Scanners.WHITESPACES.skipMany();
 
     public static final Parser<Identifier> identifierParser =
             Scanners.isChar(CharPredicates.IS_ALPHA_NUMERIC).times(1).followedBy(
@@ -27,6 +32,17 @@ public final class CLIParsers {
             identifierParser.followedBy(Scanners.isChar('/')),
             identifierParser,
             RecipeIdentifier::of);
+
+    public static final Parser<PartialDependency> partialDependencyParser =
+        Parsers.sequence(
+            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
+                .between(ignoreParser, ignoreParser).asOptional(),
+            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
+                .between(ignoreParser, ignoreParser),
+            identifierParser.between(ignoreParser, ignoreParser),
+            VersioningParsers.semanticVersionRequirementParser
+                .between(ignoreParser, ignoreParser).asOptional(),
+            PartialDependency::of);
 
     static final Parser<Void> initTokenParser =
             Scanners.stringCaseInsensitive("init");
@@ -70,33 +86,19 @@ public final class CLIParsers {
     static final Parser<Void> resolveTokenParser =
         Scanners.stringCaseInsensitive("resolve");
 
-    static final Parser<Void> ignoreParser =
-            Scanners.WHITESPACES.skipMany();
-
     static final Parser<RecipesCommand> recipesCommandParser =
             recipesTokenParser.between(ignoreParser, ignoreParser)
                     .map(x -> RecipesCommand.of());
 
     static final Parser<InstallExistingCommand> installExistingCommandParser =
-            installTokenParser
-                    .between(ignoreParser, ignoreParser)
-                    .map(x -> InstallExistingCommand.of());
+        installTokenParser
+            .between(ignoreParser, ignoreParser)
+            .map(x -> InstallExistingCommand.of());
 
     static final Parser<InstallCommand> installCommandParser =
-            Parsers.longest(
-                Parsers.sequence(
-                        installTokenParser
-                                .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                    recipeIdentifierParser,
-                        (x, y) -> InstallCommand.of(y))
-                        .between(ignoreParser, ignoreParser),
-                Parsers.sequence(
-                        installTokenParser
-                                .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                    recipeIdentifierParser,
-                        VersioningParsers.semanticVersionRequirementParser,
-                        (x, y, z) -> InstallCommand.of(y, z))
-                        .between(ignoreParser, ignoreParser));
+        installTokenParser.between(ignoreParser, ignoreParser)
+        .next(partialDependencyParser.atLeast(1))
+        .map(InstallCommand::of);
 
     static final Parser<UninstallCommand> uninstallCommandParser =
         Parsers.longest(

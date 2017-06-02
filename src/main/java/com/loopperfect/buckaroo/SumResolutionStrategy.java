@@ -26,9 +26,11 @@ public final class SumResolutionStrategy implements ResolutionStrategy {
     }
 
     @Override
-    public int score(final Map<RecipeIdentifier, SemanticVersion> resolvedDependencies) {
+    public int score(final Map<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolvedDependencies) {
         Preconditions.checkNotNull(resolvedDependencies);
-        return resolvedDependencies.values().stream().mapToInt(SumResolutionStrategy::score).sum();
+        return resolvedDependencies.values().stream()
+            .map(x -> x.a)
+            .mapToInt(SumResolutionStrategy::score).sum();
     }
 
     public static ResolutionStrategy of() {

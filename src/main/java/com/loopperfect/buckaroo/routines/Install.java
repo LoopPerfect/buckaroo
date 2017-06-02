@@ -13,6 +13,7 @@ import java.util.Optional;
 import static com.loopperfect.buckaroo.routines.Routines.configFilePath;
 import static com.loopperfect.buckaroo.routines.Routines.projectFilePath;
 
+@Deprecated
 public final class Install {
 
     private Install() {
