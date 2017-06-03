@@ -50,6 +50,26 @@ public final class DependencyGroup {
                 .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
+    public DependencyGroup addDependencyGroup(final DependencyGroup dependencyGroup) {
+        Preconditions.checkNotNull(dependencyGroup);
+        if(dependencyGroup.dependencies.entrySet()
+            .stream()
+            .allMatch((entry) -> dependencies.containsKey(entry.getKey()) &&
+                                 dependencies.get(entry.getKey()).equals(entry.getValue())))
+        {
+            return this;
+        }
+
+        return new DependencyGroup(
+            Stream.concat(
+                dependencies.entrySet()
+                    .stream()
+                    .filter(x -> !dependencyGroup.dependencies.containsKey(x.getKey())),
+                dependencyGroup.dependencies.entrySet()
+                    .stream())
+                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
     public DependencyGroup removeDependency(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         if (!dependencies.containsKey(identifier)) {

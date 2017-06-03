@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.IO;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static com.loopperfect.buckaroo.routines.Routines.configFilePath;
@@ -25,16 +26,22 @@ public final class Install {
         return DependencyResolver.resolve(dependencyGroup, fetcher);
     }
 
-    public static IO<Unit> routine(final RecipeIdentifier identifier, final Optional<SemanticVersionRequirement> version) {
-        Preconditions.checkNotNull(identifier);
-        Preconditions.checkNotNull(version);
-        final SemanticVersionRequirement versionRequirementToUse =
-            version.orElseGet(AnySemanticVersion::of);
-        final Dependency dependencyToTry = Dependency.of(
-            identifier, versionRequirementToUse);
+    public static IO<Unit> routine(final ImmutableMap<RecipeIdentifier,Optional<SemanticVersionRequirement>> targets) {
+        Preconditions.checkNotNull(targets);
+        final DependencyGroup dependencyGroupToTry = DependencyGroup.of(
+            targets.entrySet()
+                .stream()
+                .collect(ImmutableMap.toImmutableMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().orElseGet(AnySemanticVersion::of)
+                )));
 
-        final IO<Unit> installDependency = IO.println("Adding dependency on " + identifier.encode() +
-            Optionals.join(version, x -> "@" + x.encode(), () -> "") + "... ")
+        final String encodedTargets = targets.entrySet()
+                .stream()
+                .map((entry) -> entry.getKey().encode() + Optionals.join(entry.getValue(), x -> "@" + x.encode(), () -> ""))
+                .reduce((acc,mes) -> acc + "," + mes)
+                .orElse("");
+        final IO<Unit> installDependency = IO.println("Adding dependency on " + encodedTargets + "..." )
             .then(projectFilePath)
             .flatMap(path -> Routines.readProject(path)
                 .flatMap(x -> x.join(
@@ -47,17 +54,20 @@ public final class Install {
                             config -> Routines.readCookBooks(config).flatMap(z -> z.join(
                                 error -> IO.println("Could not read cookbooks. ")
                                     .then(IO.println(error)),
-                                cookBooks -> resolvedDependencies(project.dependencies.addDependency(dependencyToTry), cookBooks).join(
+                                cookBooks -> resolvedDependencies(project.dependencies.addDependencyGroup(dependencyGroupToTry), cookBooks).join(
                                     error -> IO.println("Could not resolve a dependency. ")
                                         .then(IO.println(error)),
                                     resolvedDependencies ->
                                         Routines.writeProject(
                                             path,
-                                            project.addDependency(
-                                                Dependency.of(
-                                                    identifier,
-                                                    version.orElseGet(() -> ExactSemanticVersion.of(
-                                                        resolvedDependencies.get(identifier))))),
+                                            project.addDependencyGroup(
+                                                DependencyGroup.of(
+                                                    targets.entrySet()
+                                                        .stream()
+                                                        .collect(ImmutableMap.toImmutableMap(
+                                                            Map.Entry::getKey,
+                                                            entry -> entry.getValue().orElseGet(() -> ExactSemanticVersion.of(resolvedDependencies.get(entry.getKey())))
+                                                        )))),
                                             true)
                                             .flatMap(w -> Optionals.join(
                                                 w,

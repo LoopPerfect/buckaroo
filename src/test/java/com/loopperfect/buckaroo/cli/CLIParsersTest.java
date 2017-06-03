@@ -1,12 +1,15 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.google.common.collect.Maps;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -100,6 +103,16 @@ public final class CLIParsersTest {
         assertEquals(
             InstallCommand.of(RecipeIdentifier.of("org", "another-lib2"), ExactSemanticVersion.of(SemanticVersion.of(2))),
             CLIParsers.commandParser.parse("install org/another-lib2 [ 2 ]  "));
+
+        assertEquals(
+            InstallCommand.of(Arrays.asList(Maps.immutableEntry(RecipeIdentifier.of("org", "some_lib"), Optional.empty()),
+                                            Maps.immutableEntry(RecipeIdentifier.of("org", "another-lib2"),
+                                                                Optional.of(ExactSemanticVersion.of(SemanticVersion.of(2)))))),
+            CLIParsers.commandParser.parse("install org/some_lib org/another-lib2 [ 2 ]  "));
+
+        assertEquals(
+            InstallCommand.of(Arrays.asList(Maps.immutableEntry(RecipeIdentifier.of("org", "some_lib"), Optional.empty()))),
+            CLIParsers.commandParser.parse("install org/some_lib org/some_lib "));
 
         assertEquals(
             UpdateCommand.of(Identifier.of("boost-config")),
