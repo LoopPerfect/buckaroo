@@ -61,6 +61,7 @@ public final class InstallCommand implements CLICommand {
     public static InstallCommand of(final List<Map.Entry<RecipeIdentifier,Optional<SemanticVersionRequirement>>> projects) {
         return new InstallCommand(
                 projects.stream()
+                        .distinct()
                         .collect(ImmutableMap.toImmutableMap( Map.Entry::getKey, Map.Entry::getValue )));
     }
 }

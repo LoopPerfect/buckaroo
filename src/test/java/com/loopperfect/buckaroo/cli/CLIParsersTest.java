@@ -111,6 +111,10 @@ public final class CLIParsersTest {
             CLIParsers.commandParser.parse("install org/some_lib org/another-lib2 [ 2 ]  "));
 
         assertEquals(
+            InstallCommand.of(Arrays.asList(Maps.immutableEntry(RecipeIdentifier.of("org", "some_lib"), Optional.empty()))),
+            CLIParsers.commandParser.parse("install org/some_lib org/some_lib "));
+
+        assertEquals(
             UpdateCommand.of(Identifier.of("boost-config")),
             CLIParsers.commandParser.parse(" uPdAte  boost-config "));
 
