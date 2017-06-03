@@ -93,7 +93,7 @@ public final class CLIParsers {
                             .map(v -> Optional.of(v))
                             .optional(Optional.empty()),
                         (x,y) -> Maps.immutableEntry(x,y)
-                    ).followedBy(Scanners.WHITESPACES.atLeast(0)).many1(),
+                    ).between(ignoreParser,ignoreParser).many1(),
                         (x, y) -> InstallCommand.of(y))
                         .between(ignoreParser, ignoreParser));
 
