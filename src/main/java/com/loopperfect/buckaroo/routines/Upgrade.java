@@ -7,6 +7,7 @@ import com.loopperfect.buckaroo.io.IO;
 
 import static com.loopperfect.buckaroo.routines.Routines.*;
 
+@Deprecated
 public final class Upgrade {
 
     private Upgrade() {

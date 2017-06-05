@@ -5,12 +5,12 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
-public final class RemoteCookBook {
+public final class RemoteCookbook {
 
     public final Identifier name;
     public final String url;
 
-    private RemoteCookBook(final Identifier name, final String url) {
+    private RemoteCookbook(final Identifier name, final String url) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(url);
         this.name = name;
@@ -29,11 +29,11 @@ public final class RemoteCookBook {
             return true;
         }
 
-        if (obj == null || !(obj instanceof RemoteCookBook)) {
+        if (obj == null || !(obj instanceof RemoteCookbook)) {
             return false;
         }
 
-        final RemoteCookBook other = (RemoteCookBook) obj;
+        final RemoteCookbook other = (RemoteCookbook) obj;
 
         return Objects.equals(name, other.name) &&
             Objects.equals(url, other.url);
@@ -47,7 +47,7 @@ public final class RemoteCookBook {
             .toString();
     }
 
-    public static RemoteCookBook of(final Identifier name, final String url) {
-        return new RemoteCookBook(name, url);
+    public static RemoteCookbook of(final Identifier name, final String url) {
+        return new RemoteCookbook(name, url);
     }
 }

@@ -112,14 +112,7 @@ public final class CLIParsers {
                 (x, y) -> UninstallCommand.of(y)).between(ignoreParser, ignoreParser));
 
     static final Parser<UpdateCommand> updateCommandParser =
-            Parsers.longest(
-                updateTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
-                        .next(identifierParser)
-                        .between(ignoreParser, ignoreParser)
-                        .map(x -> UpdateCommand.of(x)),
-                updateTokenParser
-                        .between(ignoreParser, ignoreParser)
-                        .map(x -> UpdateCommand.of()));
+        updateTokenParser.between(ignoreParser, ignoreParser).map(ignored -> UpdateCommand.of());
 
     static final Parser<InitCommand> initCommandParser =
             initTokenParser.between(ignoreParser, ignoreParser)

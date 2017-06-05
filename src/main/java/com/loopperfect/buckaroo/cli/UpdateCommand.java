@@ -1,56 +1,45 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Identifier;
+import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-
-import java.util.Objects;
-import java.util.Optional;
+import com.loopperfect.buckaroo.tasks.UpdateTasks;
+import io.reactivex.Observable;
 
 public final class UpdateCommand implements CLICommand {
 
-    public final Optional<Identifier> project;
+    private UpdateCommand() {
 
-    private UpdateCommand(final Optional<Identifier> project) {
-        this.project = Preconditions.checkNotNull(project);
     }
 
     @Override
     public IO<Unit> routine() {
-        return null;
+        return context -> {
+            final Observable<Event> observable = UpdateTasks.updateCookbooks(context.fs().fileSystem());
+
+            observable.subscribe(next -> {
+                System.out.println(next);
+            }, error -> {
+                error.printStackTrace();
+            }, () -> {
+                System.out.println("Done. ");
+            });
+
+            return Unit.of();
+        };
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(project);
+        return 0;
     }
 
     @Override
     public boolean equals(final Object obj) {
-
-        if (this == obj) {
-            return true;
-        }
-
-        if (obj == null || !(obj instanceof UpdateCommand)) {
-            return false;
-        }
-
-        final UpdateCommand other = (UpdateCommand) obj;
-
-        return Objects.equals(project, other.project);
-    }
-
-    public static UpdateCommand of(final Optional<Identifier> project) {
-        return new UpdateCommand(project);
-    }
-
-    public static UpdateCommand of(final Identifier project) {
-        return new UpdateCommand(Optional.of(project));
+        return (obj != null) && (obj instanceof UpdateCommand);
     }
 
     public static UpdateCommand of() {
-        return new UpdateCommand(Optional.empty());
+        return new UpdateCommand();
     }
 }

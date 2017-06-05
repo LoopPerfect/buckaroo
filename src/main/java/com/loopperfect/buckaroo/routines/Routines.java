@@ -28,7 +28,7 @@ public final class Routines {
     }
 
     public static IO<Optional<IOException>> upgrade(
-        final String buckarooDirectory, final RemoteCookBook cookBook) {
+        final String buckarooDirectory, final RemoteCookbook cookBook) {
         Preconditions.checkNotNull(buckarooDirectory);
         Preconditions.checkNotNull(cookBook);
         final String cookBookPath = buckarooDirectory + "/" + cookBook.name;

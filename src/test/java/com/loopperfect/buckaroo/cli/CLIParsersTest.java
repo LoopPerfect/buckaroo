@@ -142,12 +142,8 @@ public final class CLIParsersTest {
             CLIParsers.commandParser.parse(" uninstall   org/some_lib "));
 
         assertEquals(
-            UpdateCommand.of(Identifier.of("boost-config")),
-            CLIParsers.commandParser.parse(" uPdAte  boost-config "));
-
-        assertEquals(
             UpdateCommand.of(),
-            CLIParsers.commandParser.parse("update"));
+            CLIParsers.commandParser.parse("     update      "));
 
         assertEquals(
                 QuickstartCommand.of(),

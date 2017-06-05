@@ -3,14 +3,14 @@ package com.loopperfect.buckaroo.serialization;
 import com.google.common.base.Preconditions;
 import com.google.gson.*;
 import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.RemoteCookBook;
+import com.loopperfect.buckaroo.RemoteCookbook;
 
 import java.lang.reflect.Type;
 
-public final class RemoteCookBookDeserializer implements JsonDeserializer<RemoteCookBook> {
+public final class RemoteCookBookDeserializer implements JsonDeserializer<RemoteCookbook> {
 
     @Override
-    public RemoteCookBook deserialize(final JsonElement jsonElement, final Type type, final JsonDeserializationContext context) throws JsonParseException {
+    public RemoteCookbook deserialize(final JsonElement jsonElement, final Type type, final JsonDeserializationContext context) throws JsonParseException {
 
         Preconditions.checkNotNull(jsonElement);
         Preconditions.checkNotNull(type);
@@ -21,6 +21,6 @@ public final class RemoteCookBookDeserializer implements JsonDeserializer<Remote
         final Identifier name = context.deserialize(jsonObject.get("name"), Identifier.class);
         final String url = jsonObject.get("url").getAsString();
 
-        return RemoteCookBook.of(name, url);
+        return RemoteCookbook.of(name, url);
     }
 }

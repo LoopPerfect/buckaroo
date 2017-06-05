@@ -10,10 +10,10 @@ import java.util.Optional;
 
 public final class BuckarooConfig {
 
-    public final ImmutableList<RemoteCookBook> cookbooks;
+    public final ImmutableList<RemoteCookbook> cookbooks;
     public final Optional<URL> analyticsServer;
 
-    private BuckarooConfig(final ImmutableList<RemoteCookBook> cookbooks, final Optional<URL> analyticsServer) {
+    private BuckarooConfig(final ImmutableList<RemoteCookbook> cookbooks, final Optional<URL> analyticsServer) {
         this.cookbooks = Preconditions.checkNotNull(cookbooks);
         this.analyticsServer = Preconditions.checkNotNull(analyticsServer);
     }
@@ -44,15 +44,15 @@ public final class BuckarooConfig {
             .toString();
     }
 
-    public static BuckarooConfig of(final ImmutableList<RemoteCookBook> cookBooks, final Optional<URL> analyticsServer) {
+    public static BuckarooConfig of(final ImmutableList<RemoteCookbook> cookBooks, final Optional<URL> analyticsServer) {
         return new BuckarooConfig(cookBooks, analyticsServer);
     }
 
-    public static BuckarooConfig of(final ImmutableList<RemoteCookBook> cookBooks, final URL analyticsServer) {
+    public static BuckarooConfig of(final ImmutableList<RemoteCookbook> cookBooks, final URL analyticsServer) {
         return new BuckarooConfig(cookBooks, Optional.of(analyticsServer));
     }
 
-    public static BuckarooConfig of(final ImmutableList<RemoteCookBook> cookBooks) {
+    public static BuckarooConfig of(final ImmutableList<RemoteCookbook> cookBooks) {
         return new BuckarooConfig(cookBooks, Optional.empty());
     }
 }
