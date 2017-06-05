@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import static com.loopperfect.buckaroo.routines.Routines.projectFilePath;
 
+@Deprecated
 public final class Uninstall {
 
     private static IO<Unit> writeProject(final String path, final Project project) {

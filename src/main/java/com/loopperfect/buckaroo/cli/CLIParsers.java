@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.cli;
 
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.PartialDependency;
+import com.loopperfect.buckaroo.PartialRecipeIdentifier;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.VersioningParsers;
@@ -23,7 +24,7 @@ public final class CLIParsers {
             Scanners.isChar(CharPredicates.IS_ALPHA_NUMERIC).times(1).followedBy(
                     Scanners.isChar(CharPredicates.or(
                             CharPredicates.IS_ALPHA_NUMERIC,
-                            CharPredicates.among("-_+"))).times(1, 29))
+                            CharPredicates.among("-_"))).times(1, 29))
                     .source()
                     .map(Identifier::of);
 
@@ -43,6 +44,15 @@ public final class CLIParsers {
             VersioningParsers.semanticVersionRequirementParser
                 .between(ignoreParser, ignoreParser).asOptional(),
             PartialDependency::of);
+
+    public static final Parser<PartialRecipeIdentifier> partialRecipeIdentifierParser =
+        Parsers.sequence(
+            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
+                .between(ignoreParser, ignoreParser).asOptional(),
+            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
+                .between(ignoreParser, ignoreParser).asOptional(),
+            identifierParser.between(ignoreParser, ignoreParser),
+            PartialRecipeIdentifier::of);
 
     static final Parser<Void> initTokenParser =
             Scanners.stringCaseInsensitive("init");
@@ -101,15 +111,10 @@ public final class CLIParsers {
         .map(InstallCommand::of);
 
     static final Parser<UninstallCommand> uninstallCommandParser =
-        Parsers.longest(
-            Parsers.sequence(uninstallTokenParser
-                    .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                identifierParser,
-                (x, y) -> UninstallCommand.of(y)).between(ignoreParser, ignoreParser),
-            Parsers.sequence(uninstallTokenParser
-                    .followedBy(Scanners.WHITESPACES.atLeast(1)),
-                recipeIdentifierParser,
-                (x, y) -> UninstallCommand.of(y)).between(ignoreParser, ignoreParser));
+        uninstallTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+            .next(partialRecipeIdentifierParser)
+            .between(ignoreParser, ignoreParser)
+            .map(UninstallCommand::of);
 
     static final Parser<UpdateCommand> updateCommandParser =
         updateTokenParser.between(ignoreParser, ignoreParser).map(ignored -> UpdateCommand.of());

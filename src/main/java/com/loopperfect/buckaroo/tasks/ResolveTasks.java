@@ -26,7 +26,6 @@ public final class ResolveTasks {
 
             // Read the project file
             CommonTasks.readProjectFile(projectFilePath)
-                    .map(ReadProjectFileEvent::of)
                     .toObservable(),
 
             // Resolve the dependencies

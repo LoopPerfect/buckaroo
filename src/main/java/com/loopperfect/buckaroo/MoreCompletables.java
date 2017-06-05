@@ -1,6 +1,7 @@
-package com.loopperfect.buckaroo.tasks;
+package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.tasks.UnsafeRunnable;
 import io.reactivex.Completable;
 
 public final class MoreCompletables {

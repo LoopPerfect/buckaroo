@@ -19,7 +19,7 @@ public final class DependencyGroupTest {
             RecipeIdentifier.of(Identifier.of("google"), Identifier.of("gtest")), AnySemanticVersion.of(),
             RecipeIdentifier.of(Identifier.of("github"), Identifier.of("cmark")), AnySemanticVersion.of()));
 
-        final DependencyGroup c = a.addDependencies(ImmutableList.of(Dependency.of(
+        final DependencyGroup c = a.add(ImmutableList.of(Dependency.of(
             RecipeIdentifier.of(Identifier.of("github"), Identifier.of("cmark")), AnySemanticVersion.of())));
 
         assertEquals(b, c);

@@ -36,10 +36,11 @@ public final class CommonTasks {
         return Single.fromCallable(() -> readEntireFile(path));
     }
 
-    public static Single<Project> readProjectFile(final Path path) {
+    public static Single<ReadProjectFileEvent> readProjectFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseProject(readEntireFile(path))));
+            Either.orThrow(Serializers.parseProject(readEntireFile(path))))
+            .map(ReadProjectFileEvent::of);
     }
 
     public static Single<DependencyLocks> readLockFile(final Path path) {

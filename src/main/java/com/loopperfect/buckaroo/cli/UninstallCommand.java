@@ -1,20 +1,20 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.Unit;
+import com.google.common.collect.ImmutableList;
+import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Uninstall;
+import com.loopperfect.buckaroo.tasks.UninstallTasks;
+import io.reactivex.Observable;
 
 import java.util.Objects;
 
 public final class UninstallCommand implements CLICommand {
 
-    public final Either<Identifier, RecipeIdentifier> project;
+    public final PartialRecipeIdentifier project;
 
-    private UninstallCommand(final Either<Identifier, RecipeIdentifier> project) {
+    private UninstallCommand(final PartialRecipeIdentifier project) {
         Preconditions.checkNotNull(project);
         this.project = project;
     }
@@ -37,19 +37,45 @@ public final class UninstallCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return Uninstall.routine(project);
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("project", project)
+            .toString();
     }
 
-    public static UninstallCommand of(final Either<Identifier, RecipeIdentifier> project) {
+    @Override
+    public IO<Unit> routine() {
+        return context -> {
+
+            final Observable<Event> task = UninstallTasks.uninstallInWorkingDirectory(
+                context.fs().fileSystem(),
+                ImmutableList.of(project));
+
+            task.subscribe(
+                next -> {
+                    System.out.println(next);
+                },
+                error -> {
+                    error.printStackTrace();
+                },
+                () -> {
+                    System.out.println("Done. ");
+                }
+            );
+
+            return Unit.of();
+        };
+    }
+
+    public static UninstallCommand of(final PartialRecipeIdentifier project) {
         return new UninstallCommand(project);
     }
 
     public static UninstallCommand of(final Identifier project) {
-        return new UninstallCommand(Either.left(project));
+        return new UninstallCommand(PartialRecipeIdentifier.of(project));
     }
 
     public static UninstallCommand of(final RecipeIdentifier project) {
-        return new UninstallCommand(Either.right(project));
+        return new UninstallCommand(PartialRecipeIdentifier.of(project));
     }
 }

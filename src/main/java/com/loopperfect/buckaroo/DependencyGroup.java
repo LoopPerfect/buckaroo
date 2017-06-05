@@ -5,7 +5,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 
 import java.util.Collection;
 import java.util.Map;
@@ -23,6 +22,8 @@ public final class DependencyGroup {
         this.dependencies = Preconditions.checkNotNull(dependencies);
     }
 
+    public boolean any() { return !dependencies.isEmpty(); }
+
     public boolean isEmpty() {
         return dependencies.isEmpty();
     }
@@ -39,7 +40,7 @@ public final class DependencyGroup {
             .collect(ImmutableList.toImmutableList());
     }
 
-    public DependencyGroup addDependency(final Dependency dependency) {
+    public DependencyGroup add(final Dependency dependency) {
         Preconditions.checkNotNull(dependency);
         if (dependencies.containsKey(dependency.project) &&
             dependencies.get(dependency.project).equals(dependency.requirement)) {
@@ -54,7 +55,7 @@ public final class DependencyGroup {
                 .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
-    public DependencyGroup addDependencies(final Collection<Dependency> newDependencies) {
+    public DependencyGroup add(final Collection<Dependency> newDependencies) {
         Preconditions.checkNotNull(newDependencies);
         if (newDependencies.stream().allMatch(x ->
             this.dependencies.containsKey(x.project) &&
@@ -72,7 +73,7 @@ public final class DependencyGroup {
             ).collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
-    public DependencyGroup removeDependency(final RecipeIdentifier identifier) {
+    public DependencyGroup remove(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         if (!dependencies.containsKey(identifier)) {
             return this;
@@ -81,6 +82,20 @@ public final class DependencyGroup {
             .stream()
             .filter(x -> !x.getKey().equals(identifier))
             .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+    }
+
+    public DependencyGroup remove(final Collection<Dependency> toRemove) {
+        Preconditions.checkNotNull(toRemove);
+        if (toRemove.stream().noneMatch(x ->
+            this.dependencies.containsKey(x.project) &&
+                this.dependencies.get(x.project).equals(x.requirement))) {
+            return this;
+        }
+        return new DependencyGroup(
+            dependencies.entrySet()
+                .stream()
+                .filter(x -> toRemove.stream().noneMatch(y -> x.getKey().equals(y.project)))
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
     public boolean isSatisfiedBy(final ImmutableSet<RecipeVersionIdentifier> recipes) {

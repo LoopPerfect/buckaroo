@@ -22,17 +22,24 @@ public final class Project {
 
     public Project addDependency(final Dependency dependency) {
         Preconditions.checkNotNull(dependency);
-        return new Project(name, license, dependencies.addDependency(dependency));
+        return new Project(name, license, dependencies.add(dependency));
     }
 
     public Project addDependencies(final List<Dependency> dependencies) {
         Preconditions.checkNotNull(dependencies);
-        return new Project(name, license, this.dependencies.addDependencies(dependencies));
+        return new Project(name, license, this.dependencies.add(dependencies));
     }
 
     public Project removeDependency(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
-        return new Project(name, license, dependencies.removeDependency(identifier));
+        return new Project(name, license, dependencies.remove(identifier));
+    }
+
+    public Project removeDependencies(final List<Dependency> dependencies) {
+
+        Preconditions.checkNotNull(dependencies);
+
+        return new Project(name, license, this.dependencies.remove(dependencies));
     }
 
     @Override

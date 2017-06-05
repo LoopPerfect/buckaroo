@@ -1,18 +1,15 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
-import io.reactivex.*;
+import io.reactivex.Emitter;
+import io.reactivex.Maybe;
 import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.annotations.NonNull;
-import io.reactivex.disposables.Disposable;
+import io.reactivex.Single;
 import io.reactivex.functions.Action;
 import io.reactivex.subjects.PublishSubject;
-import io.reactivex.subjects.ReplaySubject;
 import io.reactivex.subjects.Subject;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -79,10 +76,7 @@ public final class MoreObservables {
     public static <A extends T, T> Observable<T> chain(final Observable<A> a, final Function<A, Observable<T>> f) {
         Objects.requireNonNull(a);
         Objects.requireNonNull(f);
-        return Observable.concat(
-            a,
-            a.takeLast(1).flatMap(f::apply)
-        );
+        return a.compose(PublishAndMergeTransformer.of(f));
     }
 
     public static <A extends T, B extends T, T> Observable<T> chain(
@@ -90,10 +84,7 @@ public final class MoreObservables {
         Objects.requireNonNull(a);
         Objects.requireNonNull(f);
         Objects.requireNonNull(g);
-        return Observable.concat(
-            a,
-            a.takeLast(1).flatMap(x -> chain(f.apply(x), g))
-        );
+        return chain(a, i -> chain(f.apply(i), g));
     }
 
     public static <A extends T, B extends T, C extends T, T> Observable<T> chain(
@@ -102,18 +93,15 @@ public final class MoreObservables {
         Objects.requireNonNull(f);
         Objects.requireNonNull(g);
         Objects.requireNonNull(h);
-        return Observable.concat(
-            a,
-            a.takeLast(1).flatMap(x -> chain(f.apply(x), g, h))
-        );
+        return chain(a, i -> chain(f.apply(i), g, h));
     }
 
-    public static <T> Observable<T> chain(final Observable<T> a, final Function<T, Observable<T>>... fs) {
+    public static <T> Observable<T> chainN(final Observable<T> a, final Function<T, Observable<T>>... fs) {
         Preconditions.checkNotNull(a);
         Preconditions.checkNotNull(fs);
         return Arrays.stream(fs).reduce(
             a,
-            (x, f) -> Observable.concat(x, x.takeLast(1).flatMap(f::apply)),
+            (x, f) -> x.compose(PublishAndMergeTransformer.of(f)),
             Observable::concat);
     }
 

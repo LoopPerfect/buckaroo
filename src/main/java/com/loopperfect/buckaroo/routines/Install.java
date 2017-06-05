@@ -51,7 +51,7 @@ public final class Install {
                             config -> Routines.readCookBooks(config).flatMap(z -> z.join(
                                 error -> IO.println("Could not read cookbooks. ")
                                     .next(IO.println(error)),
-                                cookBooks -> resolvedDependencies(project.dependencies.addDependency(dependencyToTry), cookBooks).join(
+                                cookBooks -> resolvedDependencies(project.dependencies.add(dependencyToTry), cookBooks).join(
                                     error -> IO.println("Could not resolve a dependency. ")
                                         .next(IO.println(error)),
                                     resolvedDependencies ->

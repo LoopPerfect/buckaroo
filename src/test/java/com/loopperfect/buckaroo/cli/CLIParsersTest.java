@@ -63,6 +63,40 @@ public final class CLIParsersTest {
     }
 
     @Test
+    public void testPartialRecipeIdentifierParser() {
+
+        final Parser<PartialRecipeIdentifier> parser = CLIParsers.partialRecipeIdentifierParser;
+
+        assertEquals(
+            PartialRecipeIdentifier.of(Identifier.of("org"), Identifier.of("awesome")),
+            parser.parse("org/awesome"));
+
+        assertEquals(
+            PartialRecipeIdentifier.of(Identifier.of("loopperfect"), Identifier.of("valuable")),
+            parser.parse("  loopperfect/valuable "));
+
+        assertEquals(
+            PartialRecipeIdentifier.of(
+                Identifier.of("loopperfect"),
+                Identifier.of("valuable")),
+            parser.parse(" loopperfect /  valuable       "));
+
+        assertEquals(
+            PartialRecipeIdentifier.of(
+                Identifier.of("github"),
+                Identifier.of("loopperfect"),
+                Identifier.of("neither")),
+            parser.parse(" github  + loopperfect /  neither       "));
+
+        assertEquals(
+            PartialRecipeIdentifier.of(
+                Identifier.of("github"),
+                Identifier.of("loopperfect"),
+                Identifier.of("neither")),
+            parser.parse("github+loopperfect/neither       "));
+    }
+
+    @Test
     public void testPartialDependencyParser() {
 
         final Parser<PartialDependency> parser = CLIParsers.partialDependencyParser;
@@ -140,6 +174,12 @@ public final class CLIParsersTest {
         assertEquals(
             UninstallCommand.of(RecipeIdentifier.of("org", "some_lib")),
             CLIParsers.commandParser.parse(" uninstall   org/some_lib "));
+
+
+        assertEquals(
+            UninstallCommand.of(PartialRecipeIdentifier.of(
+                Identifier.of("github"), Identifier.of("org"), Identifier.of("some_lib"))),
+            CLIParsers.commandParser.parse(" uninstall   github+org/some_lib "));
 
         assertEquals(
             UpdateCommand.of(),

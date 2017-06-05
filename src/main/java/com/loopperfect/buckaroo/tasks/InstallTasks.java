@@ -59,7 +59,7 @@ public final class InstallTasks {
                     return MoreSingles.chainObservable(
 
                         // Read the project file
-                        CommonTasks.readProjectFile(projectFilePath).map(ReadProjectFileEvent::of),
+                        CommonTasks.readProjectFile(projectFilePath),
 
                         (ReadProjectFileEvent readProjectFileEvent) -> {
 
@@ -72,7 +72,7 @@ public final class InstallTasks {
                                     // Resolve the dependencies
                                     AsyncDependencyResolver.resolve(
                                         recipeSource,
-                                        project.dependencies.addDependencies(proposedDependencies).entries())
+                                        project.dependencies.add(proposedDependencies).entries())
                                         .map(ResolvedDependenciesEvent::of2),
 
                                     // Write the project and lock files
