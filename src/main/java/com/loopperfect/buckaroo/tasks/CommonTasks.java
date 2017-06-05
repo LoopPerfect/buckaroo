@@ -20,6 +20,8 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.Optional;
 
 public final class CommonTasks {
@@ -66,6 +68,17 @@ public final class CommonTasks {
             final ByteSink sink = MoreFiles.asByteSink(path);
             sink.write(content.getBytes());
             return FileWriteEvent.of(path, content.length() < 1024 ? Optional.of(content) : Optional.empty());
+        });
+    }
+
+    public static Single<TouchFileEvent> touchFile(final Path path) {
+        return Single.fromCallable(() -> {
+            if (Files.exists(path)) {
+                Files.setLastModifiedTime(path, FileTime.from(Instant.now()));
+            } else {
+                Files.createFile(path);
+            }
+            return TouchFileEvent.of(path);
         });
     }
 

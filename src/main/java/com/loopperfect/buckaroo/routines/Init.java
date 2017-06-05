@@ -10,6 +10,7 @@ import java.nio.file.Path;
 
 import static com.loopperfect.buckaroo.Optionals.join;
 
+@Deprecated
 public final class Init {
 
     private Init() {

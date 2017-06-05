@@ -1,8 +1,11 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Init;
+import com.loopperfect.buckaroo.io.IOContext;
+import com.loopperfect.buckaroo.tasks.InitTasks;
+import io.reactivex.Observable;
 
 public final class InitCommand implements CLICommand {
 
@@ -12,7 +15,21 @@ public final class InitCommand implements CLICommand {
 
     @Override
     public IO<Unit> routine() {
-        return Init.routine;
+
+        return (IOContext context) -> {
+
+            final Observable<Event> task = InitTasks.initWorkingDirectory(context.fs().fileSystem());
+
+            task.subscribe(next -> {
+                System.out.println(next);
+            }, error -> {
+                error.printStackTrace();
+            }, () -> {
+                System.out.println("Done. ");
+            });
+
+            return Unit.of();
+        };
     }
 
     @Override
