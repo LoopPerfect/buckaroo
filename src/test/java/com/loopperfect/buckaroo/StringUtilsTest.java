@@ -7,6 +7,12 @@ import static org.junit.Assert.*;
 public final class StringUtilsTest {
 
     @Test
+    public void escapeStringGitHubStyle() {
+
+        assertEquals("a--bc-d", StringUtils.escapeStringGitHubStyle("a--bc%%#*d"));
+    }
+
+    @Test
     public void escapeStringAsFilename() throws Exception {
 
         // %2Fa%2F%5C%2B%40az

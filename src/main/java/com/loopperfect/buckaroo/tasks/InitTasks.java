@@ -17,6 +17,18 @@ public final class InitTasks {
 
     }
 
+    public static Single<Project> generateProjectForDirectory(final Path path) {
+
+        Preconditions.checkNotNull(path);
+
+        return Single.fromCallable(() -> {
+            final Optional<String> projectName = path.getNameCount() > 0 ?
+                Optional.of(path.getName(path.getNameCount() - 1).toString()) :
+                Optional.empty();
+            return Project.of(projectName);
+        });
+    }
+
     public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
 
         Preconditions.checkNotNull(fs);
@@ -24,13 +36,7 @@ public final class InitTasks {
         return Observable.concat(
 
             // Create an empty project from the working directory
-            Single.fromCallable(() -> {
-                final Path path = fs.getPath("").toAbsolutePath();
-                final Optional<String> projectName = path.getNameCount() > 0 ?
-                    Optional.of(path.getName(path.getNameCount() - 1).toString()) :
-                    Optional.empty();
-                return Project.of(projectName);
-            }).flatMap(project ->
+            generateProjectForDirectory(fs.getPath("").toAbsolutePath()).flatMap(project ->
 
                 // Write the project file
                 CommonTasks.writeFile(

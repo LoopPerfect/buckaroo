@@ -15,6 +15,7 @@ import java.util.Optional;
 import static com.loopperfect.buckaroo.Either.join;
 import static com.loopperfect.buckaroo.Optionals.join;
 
+@Deprecated
 public final class Quickstart {
 
     private Quickstart() {
