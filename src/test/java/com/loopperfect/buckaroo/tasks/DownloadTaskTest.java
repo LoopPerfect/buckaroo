@@ -7,9 +7,10 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.nio.file.FileSystem;
-import java.nio.file.Path;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public final class DownloadTaskTest {
@@ -36,6 +37,22 @@ public final class DownloadTaskTest {
                 });
 
         assertTrue(future.get());
+    }
+
+    @Test
+    public void notifiesAboutProgress() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final SettableFuture<Integer> future = SettableFuture.create();
+
+        int y = DownloadTask.download(
+            new URL("http://www.google.com"),
+            fs.getPath("test.txt").toAbsolutePath())
+            .reduce(0, (x,p) -> x+1)
+            .blockingGet();
+
+        assertTrue ( y > 5 );
     }
 
     @Test
