@@ -138,6 +138,9 @@ genrule(
   cmd =
     'cp buck-out/gen/jgit-jar/jgit-4.5.0.jar $OUT && ' +
     'zip -d $OUT META-INF/*.RSA META-INF/*.SF META-INF/*.MF',
+  cmd_exe =
+    'copy $SRCDIR\\buck-out\\gen\\jgit-jar\\jgit-4.5.0.jar $OUT && ' +
+    'zip -d $OUT META-INF/*.RSA META-INF/*.SF META-INF/*.MF',
   out = 'jgit-4.5.0-fixed.jar',
 )
 
