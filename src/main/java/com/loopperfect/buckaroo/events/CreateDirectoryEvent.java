@@ -1,7 +1,8 @@
-package com.loopperfect.buckaroo;
+package com.loopperfect.buckaroo.events;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.Event;
 
 import java.nio.file.Path;
 

@@ -1,21 +1,18 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.base.Preconditions;
-import com.google.gson.JsonObject;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
-import com.loopperfect.buckaroo.io.IOContext;
-import com.loopperfect.buckaroo.routines.Routines;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
+import com.loopperfect.buckaroo.tasks.LoggingTasks;
+import io.reactivex.Observable;
+import io.reactivex.Scheduler;
+import io.reactivex.schedulers.Schedulers;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
-import java.io.IOException;
-import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class Main {
 
@@ -31,79 +28,44 @@ public final class Main {
             return;
         }
 
+        final FileSystem fs = FileSystems.getDefault();
+
         final String rawCommand = String.join(" ", args);
-        final IOContext context = IOContext.actual();
 
         // Send the command to the logging server, if present
-        final Either<IOException, BuckarooConfig> loadConfigResult = Routines.loadConfig.apply(context);
-
-        if (loadConfigResult.right().isPresent() && loadConfigResult.right().get().analyticsServer.isPresent()) {
-            final URL analyticsServer = loadConfigResult.right().get().analyticsServer.get();
-            try {
-                post(analyticsServer, generateLogString(context, rawCommand));
-            } catch (final Exception ignored) {
-                // A failure to log should not be reported to the user.
-            }
-        }
+        LoggingTasks.log(fs, rawCommand).subscribe(); // Ignore any results
 
         // Parse the command
         final Parser<CLICommand> commandParser = CLIParsers.commandParser;
 
         try {
+
             final CLICommand command = commandParser.parse(rawCommand);
-            command.routine().apply(context);
+            final Observable<Event> task = command.routine().apply(fs);
+
+            final ExecutorService executorService = Executors.newCachedThreadPool();
+            final Scheduler scheduler = Schedulers.from(executorService);
+
+            task.subscribeOn(scheduler).subscribe(
+                next -> {
+                    System.out.println(next);
+                },
+                error -> {
+                    error.printStackTrace();
+
+                    executorService.shutdown();
+                    scheduler.shutdown();
+                },
+                () -> {
+                    System.out.println("Done.");
+
+                    executorService.shutdown();
+                    scheduler.shutdown();
+                });
+
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
         }
-
-        context.executor().shutdown();
-    }
-
-    private static void post(final URL url, final String data) throws Exception {
-
-        Preconditions.checkNotNull(url);
-        Preconditions.checkNotNull(data);
-
-        final String charset = "UTF-8";
-
-        final HttpClient httpClient = HttpClientBuilder.create().build();
-
-        final HttpPost request = new HttpPost(url.toURI());
-        final StringEntity params = new StringEntity(data);
-
-        request.addHeader("Content-Type", "application/json; charset=" + charset);
-        request.setEntity(params);
-
-        final HttpResponse response = httpClient.execute(request);
-    }
-
-    private static String generateLogString(final IOContext context, final String command) {
-
-        Preconditions.checkNotNull(context);
-        Preconditions.checkNotNull(command);
-
-        // Body
-        final JsonObject body = new JsonObject();
-
-        // Session
-        body.addProperty("session", Routines.getIdentifier.apply(context));
-
-        // App
-        body.addProperty("app", "buckaroo-cli");
-
-        // Event
-        body.addProperty("event", "command");
-
-        // Data
-        final JsonObject data = new JsonObject();
-
-        data.addProperty("version", Buckaroo.version.encode());
-        data.addProperty("os", System.getProperty("os.name"));
-        data.addProperty("command", command);
-
-        body.add("data", data);
-
-        return body.toString();
     }
 }

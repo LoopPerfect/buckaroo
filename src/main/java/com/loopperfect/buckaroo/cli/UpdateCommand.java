@@ -2,9 +2,11 @@ package com.loopperfect.buckaroo.cli;
 
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.tasks.UpdateTasks;
 import io.reactivex.Observable;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class UpdateCommand implements CLICommand {
 
@@ -13,20 +15,8 @@ public final class UpdateCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return context -> {
-            final Observable<Event> observable = UpdateTasks.updateCookbooks(context.fs().fileSystem());
-
-            observable.subscribe(next -> {
-                System.out.println(next);
-            }, error -> {
-                error.printStackTrace();
-            }, () -> {
-                System.out.println("Done. ");
-            });
-
-            return Unit.of();
-        };
+    public Function<FileSystem, Observable<Event>> routine() {
+        return UpdateTasks::updateCookbooks;
     }
 
     @Override

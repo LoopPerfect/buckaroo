@@ -1,6 +1,5 @@
 package com.loopperfect.buckaroo.tasks;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
@@ -10,7 +9,8 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.io.EvenMoreFiles;
+import com.loopperfect.buckaroo.EvenMoreFiles;
+import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -30,10 +30,6 @@ public final class CommonTasks {
 
     private CommonTasks() {
         super();
-    }
-
-    private static String readEntireFile(final Path path) throws IOException {
-        return MoreFiles.asCharSource(path, Charsets.UTF_8).read();
     }
 
     public static String toFolderName(final RecipeIdentifier identifier) {
@@ -56,20 +52,20 @@ public final class CommonTasks {
     }
 
     public static Single<String> readFile(final Path path) {
-        return Single.fromCallable(() -> readEntireFile(path));
+        return Single.fromCallable(() -> EvenMoreFiles.read(path));
     }
 
     public static Single<ReadProjectFileEvent> readProjectFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseProject(readEntireFile(path))))
+            Either.orThrow(Serializers.parseProject(EvenMoreFiles.read(path))))
             .map(ReadProjectFileEvent::of);
     }
 
     public static Single<DependencyLocks> readLockFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseDependencyLocks(readEntireFile(path))));
+            Either.orThrow(Serializers.parseDependencyLocks(EvenMoreFiles.read(path))));
     }
 
     public static Single<FileWriteEvent> writeFile(final String content, final Path path, final boolean overwrite) {
@@ -118,13 +114,13 @@ public final class CommonTasks {
     public static Single<Recipe> readRecipeFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseRecipe(readEntireFile(path))));
+            Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path))));
     }
 
     public static Single<ReadConfigFileEvent> readConfigFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseConfig(readEntireFile(path))))
+            Either.orThrow(Serializers.parseConfig(EvenMoreFiles.read(path))))
             .map(ReadConfigFileEvent::of);
     }
 
@@ -142,7 +138,7 @@ public final class CommonTasks {
                 EvenMoreFiles.writeFile(configFilePath, defaulConfigString);
                 return Either.orThrow(Serializers.parseConfig(defaulConfigString));
             }
-            return Either.orThrow(Serializers.parseConfig(readEntireFile(configFilePath)));
+            return Either.orThrow(Serializers.parseConfig(EvenMoreFiles.read(configFilePath)));
         }).map(ReadConfigFileEvent::of);
     }
 

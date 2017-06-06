@@ -1,9 +1,13 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.tasks.ResolveTasks;
+import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class ResolveCommand implements CLICommand {
 
@@ -12,24 +16,8 @@ public final class ResolveCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return context -> {
-            System.out.println("Resolve. ");
-            ResolveTasks.resolveDependenciesInWorkingDirectory(context.fs().fileSystem())
-                .subscribeOn(Schedulers.from(context.executor()))
-                .subscribe(
-                    next -> {
-                        System.out.println(next);
-                    },
-                    error -> {
-                        error.printStackTrace();
-                    },
-                    () -> {
-                        System.out.println("Done. ");
-                    });
-
-            return Unit.of();
-        };
+    public Function<FileSystem, Observable<Event>> routine() {
+        return ResolveTasks::resolveDependenciesInWorkingDirectory;
     }
 
     @Override

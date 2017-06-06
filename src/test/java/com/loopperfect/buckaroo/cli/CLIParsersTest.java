@@ -26,7 +26,6 @@ public final class CLIParsersTest {
         assertEquals(Identifier.of("abc"), parser.parse("abc"));
         assertEquals(Identifier.of("abcde_fgh"), parser.parse("abcde_fgh"));
         assertEquals(Identifier.of("abcde_-"), parser.parse("abcde_-"));
-        assertEquals(Identifier.of("abcde_-+++"), parser.parse("abcde_-+++"));
         assertEquals(Identifier.of("000abc"), parser.parse("000abc"));
 
         final String a30 = String.join("", Collections.nCopies(30, "a"));

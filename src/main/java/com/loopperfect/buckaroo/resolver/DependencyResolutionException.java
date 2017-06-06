@@ -1,4 +1,4 @@
-package com.loopperfect.buckaroo;
+package com.loopperfect.buckaroo.resolver;
 
 import com.google.common.base.Preconditions;
 

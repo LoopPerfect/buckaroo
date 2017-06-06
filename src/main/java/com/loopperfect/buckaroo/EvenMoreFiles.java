@@ -1,11 +1,12 @@
-package com.loopperfect.buckaroo.io;
+package com.loopperfect.buckaroo;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.SimplePath;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.channels.ByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.*;
@@ -128,5 +129,9 @@ public final class EvenMoreFiles {
         } catch (final IOException e) {
             return Either.left(e);
         }
+    }
+
+    public static String read(final Path path) throws IOException {
+        return com.google.common.io.MoreFiles.asCharSource(path, Charsets.UTF_8).read();
     }
 }

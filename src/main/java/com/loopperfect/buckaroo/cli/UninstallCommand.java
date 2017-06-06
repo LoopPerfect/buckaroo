@@ -4,11 +4,12 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.tasks.UninstallTasks;
 import io.reactivex.Observable;
 
+import java.nio.file.FileSystem;
 import java.util.Objects;
+import java.util.function.Function;
 
 public final class UninstallCommand implements CLICommand {
 
@@ -44,27 +45,10 @@ public final class UninstallCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return context -> {
-
-            final Observable<Event> task = UninstallTasks.uninstallInWorkingDirectory(
-                context.fs().fileSystem(),
-                ImmutableList.of(project));
-
-            task.subscribe(
-                next -> {
-                    System.out.println(next);
-                },
-                error -> {
-                    error.printStackTrace();
-                },
-                () -> {
-                    System.out.println("Done. ");
-                }
-            );
-
-            return Unit.of();
-        };
+    public Function<FileSystem, Observable<Event>> routine() {
+        return fs -> UninstallTasks.uninstallInWorkingDirectory(
+            fs,
+            ImmutableList.of(project));
     }
 
     public static UninstallCommand of(final PartialRecipeIdentifier project) {

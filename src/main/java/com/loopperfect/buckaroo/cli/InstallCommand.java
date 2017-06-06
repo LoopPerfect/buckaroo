@@ -2,14 +2,16 @@ package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.PartialDependency;
 import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
 import com.loopperfect.buckaroo.tasks.InstallTasks;
+import io.reactivex.Observable;
 
 import java.nio.file.FileSystem;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.function.Function;
 
 public final class InstallCommand implements CLICommand {
 
@@ -20,23 +22,8 @@ public final class InstallCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return context -> {
-            final FileSystem fs = context.fs().fileSystem();
-            context.console().println("[" + String.join(
-                ", ", dependencies.stream().map(PartialDependency::encode).collect(ImmutableList.toImmutableList())) + "]");
-            InstallTasks.installDependencyInWorkingDirectory(fs, dependencies).subscribe(
-                next -> {
-                    System.out.println(next);
-                },
-                error -> {
-                    error.printStackTrace();
-                },
-                () -> {
-                    System.out.println("Done.");
-                });
-            return Unit.of();
-        };
+    public Function<FileSystem, Observable<Event>> routine() {
+        return fs -> InstallTasks.installDependencyInWorkingDirectory(fs, dependencies);
     }
 
     @Override

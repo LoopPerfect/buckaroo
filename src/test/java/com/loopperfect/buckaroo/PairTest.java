@@ -21,12 +21,4 @@ public final class PairTest {
 
         assertEquals(Pair.of(1, 2), object);
     }
-
-    @Test
-    public void equalsRespectsTypes() {
-        final Pair<Integer, Object> a = Pair.of(1, (Object)("abc"));
-        final Pair<Integer, String> b = Pair.of(1, "abc");
-
-        assertNotEquals(a, b);
-    }
 }

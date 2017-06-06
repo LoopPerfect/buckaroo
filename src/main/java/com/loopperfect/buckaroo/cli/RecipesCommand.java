@@ -1,7 +1,10 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.Event;
+import io.reactivex.Observable;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class RecipesCommand implements CLICommand {
 
@@ -10,7 +13,7 @@ public final class RecipesCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
+    public Function<FileSystem, Observable<Event>> routine() {
         return null;
     }
 

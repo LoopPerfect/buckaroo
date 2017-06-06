@@ -146,7 +146,7 @@ public final class Either<L, R> {
             g.apply(either.r);
     }
 
-    public static <A, B, C> F1<Either<A, C>, Either<B, C>> liftLeft(final F1<A, B> f) {
+    public static <A, B, C> Function<Either<A, C>, Either<B, C>> liftLeft(final Function<A, B> f) {
         Preconditions.checkNotNull(f);
         return e -> {
             Preconditions.checkNotNull(e);
@@ -154,7 +154,7 @@ public final class Either<L, R> {
         };
     }
 
-    public static <A, B, C> F1<Either<C, A>, Either<C, B>> liftRight(final F1<A, B> f) {
+    public static <A, B, C> Function<Either<C, A>, Either<C, B>> liftRight(final Function<A, B> f) {
         Preconditions.checkNotNull(f);
         return e -> {
             Preconditions.checkNotNull(e);

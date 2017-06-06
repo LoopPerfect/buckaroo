@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
 import io.reactivex.Observable;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;

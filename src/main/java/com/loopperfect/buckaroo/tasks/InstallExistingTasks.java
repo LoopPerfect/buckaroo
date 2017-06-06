@@ -5,8 +5,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.io.EvenMoreFiles;
-import io.reactivex.Completable;
+import com.loopperfect.buckaroo.EvenMoreFiles;
+import com.loopperfect.buckaroo.events.ReadLockFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
@@ -15,9 +15,7 @@ import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public final class InstallExistingTasks {
 

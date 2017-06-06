@@ -1,6 +1,10 @@
-package com.loopperfect.buckaroo;
+package com.loopperfect.buckaroo.resolver;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.Pair;
+import com.loopperfect.buckaroo.RecipeIdentifier;
+import com.loopperfect.buckaroo.ResolvedDependency;
+import com.loopperfect.buckaroo.SemanticVersion;
 
 import java.util.Map;
 

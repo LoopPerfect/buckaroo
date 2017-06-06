@@ -1,9 +1,12 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.Event;
+import io.reactivex.Observable;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public interface CLICommand {
 
-    IO<Unit> routine();
+    Function<FileSystem, Observable<Event>> routine();
 }

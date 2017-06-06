@@ -1,12 +1,11 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.tasks.InstallExistingTasks;
-import io.reactivex.Scheduler;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.Observable;
 
 import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class InstallExistingCommand implements CLICommand {
 
@@ -25,28 +24,8 @@ public final class InstallExistingCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return context -> {
-            context.console().println("Starting...");
-
-            final FileSystem fs = context.fs().fileSystem();
-            final Scheduler scheduler = Schedulers.from(context.executor());
-
-            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs)
-                .subscribeOn(scheduler)
-                .subscribe(
-                    next -> {
-                        context.console().println(next.toString());
-                    },
-                    error -> {
-                        error.printStackTrace();
-                    },
-                    () -> {
-                        context.console().println("Done. ");
-                    });
-
-            return Unit.of();
-        };
+    public Function<FileSystem, Observable<Event>> routine() {
+        return InstallExistingTasks::installExistingDependenciesInWorkingDirectory;
     }
 
     public static InstallExistingCommand of() {

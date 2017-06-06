@@ -1,8 +1,11 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.MoreObjects;
-import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
+import com.loopperfect.buckaroo.Event;
+import io.reactivex.Observable;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class DependenciesCommand implements CLICommand {
 
@@ -11,7 +14,7 @@ public final class DependenciesCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
+    public Function<FileSystem, Observable<Event>> routine() {
         return null;
     }
 

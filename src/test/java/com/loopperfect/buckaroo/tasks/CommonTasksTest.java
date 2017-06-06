@@ -4,7 +4,7 @@ import com.google.common.hash.HashCode;
 import com.google.common.jimfs.Jimfs;
 import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.RemoteFile;
-import com.loopperfect.buckaroo.io.EvenMoreFiles;
+import com.loopperfect.buckaroo.EvenMoreFiles;
 import org.junit.Test;
 
 import java.net.URL;

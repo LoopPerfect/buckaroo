@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
 

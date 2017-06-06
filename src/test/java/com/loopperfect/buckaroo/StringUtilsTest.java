@@ -9,6 +9,7 @@ public final class StringUtilsTest {
     @Test
     public void escapeStringGitHubStyle() {
 
+        assertEquals("abc", StringUtils.escapeStringGitHubStyle("abc"));
         assertEquals("a--bc-d", StringUtils.escapeStringGitHubStyle("a--bc%%#*d"));
     }
 

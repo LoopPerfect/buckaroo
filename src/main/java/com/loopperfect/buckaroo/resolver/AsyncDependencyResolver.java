@@ -1,8 +1,9 @@
-package com.loopperfect.buckaroo;
+package com.loopperfect.buckaroo.resolver;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.loopperfect.buckaroo.*;
 import io.reactivex.*;
 import io.reactivex.Observable;
 

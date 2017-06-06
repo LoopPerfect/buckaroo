@@ -8,10 +8,17 @@ maven_jar(
 )
 
 maven_jar(
+  name = 'okio',
+  id = 'com.squareup.okio:okio:1.6.0',
+  src_sha1 = 'fb6ec0fbaa0229088b0d3dfe3b1f9d24add3e775',
+  bin_sha1 = '98476622f10715998eacf9240d6b479f12c66143',
+)
+
+maven_jar(
   name = 'okhttp',
-  id = 'com.squareup.okhttp3:okhttp:3.8.0',
-  src_sha1 = 'db21293949e200f08d5325e8a8eefdcc9134b752',
-  bin_sha1 = '5a11f020cce2d11eb71ba916700600e18c4547e7',
+  id = 'com.squareup.okhttp3:okhttp:3.2.0',
+  src_sha1 = 'c6e2cb305d0da8820c335f20db73bfc69b2156ed',
+  bin_sha1 = 'f7873a2ebde246a45c2a8d6f3247108b4c88a879',
 )
 
 maven_jar(
@@ -154,6 +161,7 @@ java_library(
   deps = [
     ':rxjava',
     ':reactive-streams',
+    ':okio',
     ':okhttp',
     ':guava',
     ':gson',

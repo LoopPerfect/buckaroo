@@ -7,6 +7,8 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.nio.file.FileSystem;
+import java.nio.file.Path;
+import java.nio.file.Files;
 
 import static org.junit.Assert.assertTrue;
 
@@ -44,9 +46,11 @@ public final class DownloadTaskTest {
         final SettableFuture<Boolean> a = SettableFuture.create();
         final SettableFuture<Boolean> b = SettableFuture.create();
 
+        final Path path = fs.getPath("test.txt").toAbsolutePath();
+
         final Observable<DownloadProgress> observable = DownloadTask.download(
             new URL("http://www.google.com"),
-            fs.getPath("test.txt").toAbsolutePath());
+            path);
 
         observable.subscribe(
                 next -> {
@@ -61,6 +65,8 @@ public final class DownloadTaskTest {
 
         // Wait for the observable to complete...
         assertTrue(a.get());
+
+        Files.delete(path);
 
         // ... then add another subscription
         observable.subscribe(
