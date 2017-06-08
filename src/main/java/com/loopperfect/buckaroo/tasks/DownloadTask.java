@@ -91,14 +91,18 @@ public final class DownloadTask {
                 emitter.onNext(DownloadProgress.of(total, contentLength));
 
                 int count;
+                long lastCount = 0;
+                long lastEmissionCount = 0;
                 while ((count = input.read(data)) != -1) {
 
                     total += count;
                     output.write(data, 0, count);
 
-                    if (total % PROGRESS_REPORT_EVERY_N_BYTES == 0) {
+                    if ((total - lastCount) >= PROGRESS_REPORT_EVERY_N_BYTES) {
+                        lastEmissionCount = total;
                         emitter.onNext(DownloadProgress.of(total, contentLength));
                     }
+                    lastCount = total;
                 }
 
                 output.flush();
@@ -106,7 +110,9 @@ public final class DownloadTask {
 
                 input.close();
 
-                emitter.onNext(DownloadProgress.of(total, contentLength));
+                if (lastEmissionCount != total) {
+                    emitter.onNext(DownloadProgress.of(total, contentLength));
+                }
                 emitter.onComplete();
             } catch (final Throwable e) {
                 emitter.onError(e);
