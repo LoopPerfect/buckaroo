@@ -46,13 +46,13 @@ public final class DownloadTaskTest {
 
         final SettableFuture<Integer> future = SettableFuture.create();
 
-        int y = DownloadTask.download(
+        int count = DownloadTask.download(
             new URL("http://www.google.com"),
             fs.getPath("test.txt").toAbsolutePath())
-            .reduce(0, (x,p) -> x+1)
+            .reduce(0, (x, p) -> x+1)
             .blockingGet();
 
-        assertTrue ( y > 5 );
+        assertTrue ( count > 5 );
     }
 
     @Test

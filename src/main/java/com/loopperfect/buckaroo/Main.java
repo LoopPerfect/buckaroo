@@ -48,7 +48,8 @@ public final class Main {
 
             task.subscribeOn(scheduler).subscribe(
                 next -> {
-                    System.out.println(next);
+
+                    System.out.println( next.getClass().getSimpleName() );
                 },
                 error -> {
                     error.printStackTrace();

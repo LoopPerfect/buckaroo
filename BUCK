@@ -36,7 +36,7 @@ maven_jar(
 )
 
 maven_jar(
-  name = 'junit',
+  name = 'junit-jar',
   id = 'junit:junit:4.12',
   src_sha1 = 'a6c32b40bf3d76eca54e3c601e5d1470c86fcdfa',
   bin_sha1 = '2973d150c0dc1fefe998f834810d68f278ea58ec',
@@ -145,6 +145,59 @@ prebuilt_jar(
   binary_jar = ':jgit-jar-fixed',
 )
 
+remote_file(
+  name = 'jansi-jar',
+  out = 'jansi-1.15.jar',
+  url = 'mvn:org.fusesource.jansi:jansi:jar:1.15',
+  sha1 = '5292bc138cb1412ea940551c667f8ec4da52d249',
+)
+
+prebuilt_jar(
+  name = 'jansi',
+  source_jar = ':jansi-jar',
+  binary_jar = ':jansi-jar'
+)
+
+prebuilt_jar(
+  name = 'junit',
+  source_jar = ':junit-jar',
+  binary_jar = ':junit-jar'
+)
+
+java_library(
+  name = 'reflex',
+  srcs = glob([
+    'src/com/loopperfect/buckaroo/reflex/**/*.java',
+  ]),
+  source = '8',
+  target = '1.8',
+  visibility = [
+    'PUBLIC',
+  ],
+  deps = [
+    ':guava',
+    ':jansi',
+  ],
+)
+
+java_library(
+  name = 'virtualterminal',
+  srcs = glob([
+    'src/com/loopperfect/buckaroo/virtualterminal/**/*.java',
+  ]),
+  source = '8',
+  target = '1.8',
+  visibility = [
+    'PUBLIC',
+  ],
+  deps = [
+    ':guava',
+    ':jansi',
+  ],
+)
+
+
+
 java_library(
   name = 'buckaroo',
   source = '8',
@@ -175,6 +228,9 @@ java_library(
     ':httpclient',
     ':httpcore',
     ':commons-logging',
+    ':jansi',
+    ':virtualterminal',
+    ':reflex'
   ],
 )
 
@@ -204,5 +260,8 @@ java_test(
     ':junit',
     ':jimfs',
     ':jparsec',
+    ':virtualterminal',
+    ':reflex',
+    ':jansi',
   ],
 )
