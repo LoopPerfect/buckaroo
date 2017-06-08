@@ -1,10 +1,10 @@
 package com.loopperfect.buckaroo.resolver;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Pair;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.ResolvedDependency;
 import com.loopperfect.buckaroo.SemanticVersion;
+import org.javatuples.Pair;
 
 import java.util.Map;
 
@@ -33,7 +33,7 @@ public final class SumResolutionStrategy implements ResolutionStrategy {
     public int score(final Map<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolvedDependencies) {
         Preconditions.checkNotNull(resolvedDependencies);
         return resolvedDependencies.values().stream()
-            .map(x -> x.a)
+            .map(Pair::getValue0)
             .mapToInt(SumResolutionStrategy::score).sum();
     }
 

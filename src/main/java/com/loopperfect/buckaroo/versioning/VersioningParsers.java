@@ -16,23 +16,23 @@ public final class VersioningParsers {
     static final Parser<?> ignoreParser = Scanners.WHITESPACES.skipMany();
 
     static final Parser<Integer> integerParser = Scanners.INTEGER
-        .map(x -> Integer.parseUnsignedInt(x));
+        .map(Integer::parseUnsignedInt);
 
     static final Parser<SemanticVersion> semanticVersionParser1 =
-        integerParser.map(x -> SemanticVersion.of(x));
+        integerParser.map(SemanticVersion::of);
 
     static final Parser<SemanticVersion> semanticVersionParser2 =
         Parsers.sequence(
             integerParser.followedBy(Scanners.isChar('.')),
             integerParser,
-            (x, y) -> SemanticVersion.of(x, y));
+            SemanticVersion::of);
 
     static final Parser<SemanticVersion> semanticVersionParser3 =
         Parsers.sequence(
             integerParser.followedBy(Scanners.isChar('.')),
             integerParser.followedBy(Scanners.isChar('.')),
             integerParser,
-            (x, y, z) -> SemanticVersion.of(x, y, z));
+            SemanticVersion::of);
 
     static final Parser<EqualsToken> equalsTokenParser =
         Scanners.string("=").map(x -> EqualsToken.of());
@@ -58,10 +58,14 @@ public final class VersioningParsers {
     static final Parser<WildCardToken> wildCardTokenParser =
         Scanners.string("*").map(x -> WildCardToken.of());
 
-    public static final Parser<SemanticVersion> semanticVersionParser = Parsers.longest(
-        semanticVersionParser1,
-        semanticVersionParser2,
-        semanticVersionParser3);
+    public static final Parser<SemanticVersion> semanticVersionParser =
+        Scanners.WHITESPACES.skipMany().next(
+            Scanners.stringCaseInsensitive("v").times(0, 1).next(
+                Parsers.longest(
+                    semanticVersionParser1,
+                    semanticVersionParser2,
+                    semanticVersionParser3)))
+            .followedBy(Scanners.WHITESPACES.skipMany());
 
     public static final Parser<ImmutableList<Token>> versionRequirementTokenizer =
         Scanners.WHITESPACES.skipMany().next(
@@ -76,7 +80,7 @@ public final class VersioningParsers {
                 wildCardTokenParser,
                 semanticVersionParser.map(SemanticVersionToken::of))
                 .sepEndBy(Scanners.WHITESPACES.skipMany()))
-            .map(x -> ImmutableList.copyOf(x));
+            .map(ImmutableList::copyOf);
 
     static final Parser<AnySemanticVersion> anySemanticVersionParser =
         wildCardTokenParser.between(ignoreParser, ignoreParser).map(x -> AnySemanticVersion.of());

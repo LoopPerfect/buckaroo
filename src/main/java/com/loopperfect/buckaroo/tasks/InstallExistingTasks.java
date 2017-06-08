@@ -9,12 +9,14 @@ import com.loopperfect.buckaroo.EvenMoreFiles;
 import com.loopperfect.buckaroo.events.ReadLockFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import org.javatuples.Pair;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 public final class InstallExistingTasks {
@@ -23,18 +25,18 @@ public final class InstallExistingTasks {
 
     }
 
-    private static Observable<DownloadProgress> downloadResolvedDependency(final FileSystem fs, final ResolvedDependency resolvedDependency, final Path target) {
+    private static Observable<Event> downloadResolvedDependency(final FileSystem fs, final ResolvedDependency resolvedDependency, final Path target) {
 
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(resolvedDependency);
         Preconditions.checkNotNull(target);
 
-        final Observable<DownloadProgress> downloadSourceCode = resolvedDependency.source.join(
+        final Observable<Event> downloadSourceCode = resolvedDependency.source.join(
             gitCommit -> Observable.error(new IOException("Git commit not supported yet. ")),
             remoteArchive -> CommonTasks.downloadRemoteArchive(fs, remoteArchive, target));
 
         final Path buckFilePath = fs.getPath(target.toString(), "BUCK");
-        final Observable<DownloadProgress> downloadBuckFile = Files.exists(buckFilePath) ?
+        final Observable<Event> downloadBuckFile = Files.exists(buckFilePath) ?
             Observable.empty() :
             resolvedDependency.buckResource
                 .map(x -> CommonTasks.downloadRemoteFile(fs, x, buckFilePath))
@@ -52,10 +54,10 @@ public final class InstallExistingTasks {
         return Observable.concat(
             downloadSourceCode,
             downloadBuckFile,
-            writeBuckarooDeps);
+            writeBuckarooDeps.cast(Event.class));
     }
 
-    private static Observable<DownloadProgress> installDependencyLock(final FileSystem fs, final DependencyLock lock) {
+    private static Observable<Event> installDependencyLock(final FileSystem fs, final DependencyLock lock) {
 
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(lock);
@@ -92,17 +94,12 @@ public final class InstallExistingTasks {
 
                 (ReadLockFileEvent event) -> {
 
-                    // Install each entry
-                    final ImmutableList<Observable<Map.Entry<DependencyLock, DownloadProgress>>> installs = event.locks.entries()
+                    final ImmutableMap<DependencyLock, Observable<Event>> installs = event.locks.entries()
                         .stream()
-                        .map(dependencyLock -> installDependencyLock(fs, dependencyLock)
-                            .map(x -> Maps.immutableEntry(dependencyLock, x)))
-                        .collect(ImmutableList.toImmutableList());
+                        .collect(ImmutableMap.toImmutableMap(i -> i, i -> installDependencyLock(fs, i)));
 
-                    return MoreObservables.parallel(installs)
-                        .map(xs -> DependencyInstallationProgress.of(
-                            xs.stream()
-                                .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue))));
+                    return MoreObservables.zipMaps(installs)
+                        .map(x -> DependencyInstallationProgress.of(ImmutableMap.copyOf(x)));
                 }
             ));
     }

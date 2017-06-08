@@ -3,6 +3,11 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
+import com.google.common.io.MoreFiles;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -10,9 +15,10 @@ import java.io.OutputStream;
 import java.nio.channels.ByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -43,14 +49,26 @@ public final class EvenMoreFiles {
         writeFile(path, content, Charset.defaultCharset(), false);
     }
 
+    public static HashCode hashFile(final Path path) throws IOException {
+
+        Preconditions.checkNotNull(path);
+
+        final HashFunction hashFunction = Hashing.sha256();
+        final HashCode hashCode = hashFunction.newHasher()
+            .putBytes(MoreFiles.asByteSource(path).read())
+            .hash();
+
+        return hashCode;
+    }
+
     /*
      * Unzips a zip file at the given path into the given target path.
      * Optionally, a sub-path can be supplied which can be used to change the "root" of the zip file.
      *
      * For example:
      *
-     *  source: myZip.zip
-     *  target: myZip
+     *  source: /User/Bob/myZip.zip
+     *  target: /User/Bob/myZip
      *  subPath: stuff
      *
      *  Input:
@@ -79,59 +97,98 @@ public final class EvenMoreFiles {
      *  of the target directory.
      *
      */
-    public static void unzip(final Path source, final Path target, final Optional<Path> subPath) throws IOException {
-        if (!Files.exists(target)) {
-            Files.createDirectories(target);
-        }
-        try (final ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(source))) {
-            ZipEntry entry = zipIn.getNextEntry();
-            while (entry != null) {
-                final ZipEntry current = entry;
-                // Check that the current entry lives in the sub-path (or there is no sub-path!)
-                if (subPath.map(x -> current.getName().startsWith(x.toString())).orElse(true)) {
-                    final Path filePath = Paths.get(
-                        target.toString(),
-                        current.getName().substring(subPath.map(x -> x.toString().length()).orElse(0)));
-                    if (current.isDirectory()) {
-                        Files.createDirectories(filePath);
-                    } else {
-                        extractFile(zipIn, filePath);
-                    }
-                }
-                zipIn.closeEntry();
-                entry = zipIn.getNextEntry();
-            }
-        }
+    public static void unzip(
+        final Path source, final Path target, final Optional<Path> subPath, CopyOption... copyOptions) throws IOException {
+
+        Preconditions.checkNotNull(source);
+        Preconditions.checkNotNull(target);
+        Preconditions.checkNotNull(subPath);
+        Preconditions.checkNotNull(copyOptions);
+
+        final FileSystem zipFs = FileSystems.newFileSystem(
+            source,
+            null);
+
+        EvenMoreFiles.copyDirectory(
+            subPath.map(x -> switchFileSystem(zipFs, x)).orElse(zipFs.getPath("/")).toAbsolutePath(),
+            target,
+            copyOptions);
     }
 
-    private static final int BUFFER_SIZE = 4096;
+    public static Stream<Path> walkZip(final Path source, final int maxDepth) throws IOException {
 
-    private static void extractFile(final ZipInputStream zipIn, final Path path) throws IOException {
-        try (final OutputStream bos = new BufferedOutputStream(Files.newOutputStream(path))) {
-            final byte[] data = new byte[BUFFER_SIZE];
-            int read = 0;
-            while ((read = zipIn.read(data)) != -1) {
-                bos.write(data, 0, read);
-            }
-            bos.flush();
-            bos.close();
-        }
-    }
+        Preconditions.checkNotNull(source);
 
-    public static Either<IOException, ByteChannel> openByteChannel(
-        final Path path, Set<? extends OpenOption > options, FileAttribute<?>... attrs) {
-        Preconditions.checkNotNull(path);
-        try {
-            final ByteChannel channel = path.getFileSystem()
-                .provider()
-                .newByteChannel(path, options, attrs);
-            return Either.right(channel);
-        } catch (final IOException e) {
-            return Either.left(e);
-        }
+        final FileSystem zipFs = FileSystems.newFileSystem(
+            source,
+            null);
+
+        return Files.walk(zipFs.getPath("/"), maxDepth);
     }
 
     public static String read(final Path path) throws IOException {
         return com.google.common.io.MoreFiles.asCharSource(path, Charsets.UTF_8).read();
+    }
+
+    public static void copyDirectory(final Path source, final Path target, final CopyOption... copyOptions) throws IOException {
+        final CopyFileVisitor visitor = new CopyFileVisitor(source, target, copyOptions);
+        Files.walkFileTree(source, visitor);
+        if (visitor.error.isPresent()) {
+            throw visitor.error.get();
+        }
+    }
+
+    private static final class CopyFileVisitor extends SimpleFileVisitor<Path> {
+
+        private final Path source;
+        private final Path target;
+        private final CopyOption[] copyOptions;
+
+        public Optional<IOException> error;
+
+        public CopyFileVisitor(final Path source, final Path target, final CopyOption... copyOptions) {
+
+            this.source = source;
+            this.target = target;
+            this.copyOptions = copyOptions;
+
+            this.error = Optional.empty();
+        }
+
+        @Override
+        public FileVisitResult visitFile(final Path file, final BasicFileAttributes attributes) {
+            try {
+                Path targetFile = target.resolve(switchFileSystem(
+                    target.getFileSystem(), source.relativize(file)));
+                Files.copy(file, targetFile, copyOptions);
+                return FileVisitResult.CONTINUE;
+            } catch (final IOException exception) {
+                this.error = Optional.of(exception);
+                return FileVisitResult.TERMINATE;
+            }
+        }
+
+        @Override
+        public FileVisitResult preVisitDirectory(final Path directory, final BasicFileAttributes attributes) {
+            try {
+                final Path nextDirectory = target.resolve(switchFileSystem(
+                    target.getFileSystem(), source.relativize(directory)));
+                Files.createDirectories(nextDirectory);
+                return FileVisitResult.CONTINUE;
+            } catch (final IOException exception) {
+                this.error = Optional.of(exception);
+                return FileVisitResult.TERMINATE;
+            }
+        }
+    }
+
+    public static Path switchFileSystem(final FileSystem fs, final Path path) {
+
+        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(path);
+
+        return Streams.stream(path).reduce(
+            fs.getPath(path.isAbsolute() ? fs.getSeparator() : ""),
+            (state, next) -> state.resolve(next.getFileName().toString()));
     }
 }

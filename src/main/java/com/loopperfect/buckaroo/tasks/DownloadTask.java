@@ -34,7 +34,7 @@ public final class DownloadTask {
         });
     }
 
-    public static Observable<DownloadProgress> download(final URL url, final Path target) {
+    public static Observable<DownloadProgress> download(final URL url, final Path target, final boolean overwrite) {
 
         Preconditions.checkNotNull(url);
         Preconditions.checkNotNull(target);
@@ -42,7 +42,11 @@ public final class DownloadTask {
         return Single.fromCallable(() -> {
 
             if (Files.exists(target)) {
-                throw new IOException("There is already a file at " + target + ". ");
+                if (overwrite) {
+                    Files.deleteIfExists(target);
+                } else {
+                    throw new IOException("There is already a file at " + target + ". ");
+                }
             }
 
             if (!Files.exists(target.getParent())) {
@@ -51,6 +55,10 @@ public final class DownloadTask {
 
             return Files.newOutputStream(target);
         }).flatMapObservable(outputStream -> download(url, outputStream));
+    }
+
+    public static Observable<DownloadProgress> download(final URL url, final Path target) {
+        return download(url, target, false);
     }
 
     public static Observable<DownloadProgress> download(final URL url, final OutputStream output) {

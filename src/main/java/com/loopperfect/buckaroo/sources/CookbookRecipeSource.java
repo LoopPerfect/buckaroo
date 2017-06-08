@@ -32,12 +32,10 @@ public final class CookbookRecipeSource implements RecipeSource {
                     .filter(x -> x.getKey().equals(identifier.organization))
                     .map(Map.Entry::getValue));
 
-                final Recipe recipe = MoreStreams.single(organization.recipes.entrySet()
+                return MoreStreams.single(organization.recipes.entrySet()
                     .stream()
                     .filter(x -> x.getKey().equals(identifier.recipe))
                     .map(Map.Entry::getValue));
-
-                return recipe;
             } catch (final Throwable throwable) {
                 throw new IOException("Could not find " + identifier.encode(), throwable);
             }

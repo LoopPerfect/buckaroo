@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.versioning.VersioningParsers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,34 +93,10 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
 
         Preconditions.checkNotNull(x);
 
-        final String[] parts = x.trim().split(Pattern.quote("."), -1); // -1 enables empty parts
-
-        if (parts.length == 0 || parts.length > 3) {
+        try {
+            return Optional.of(VersioningParsers.semanticVersionParser.parse(x));
+        } catch (final Throwable e) {
             return Optional.empty();
         }
-
-        final List<Integer> numbers = new ArrayList<>();
-
-        for (final String part : parts) {
-            try {
-                numbers.add(Integer.parseUnsignedInt(part));
-            } catch (final NumberFormatException e) {
-                return Optional.empty();
-            }
-        }
-
-        if (numbers.size() == 3) {
-            return Optional.of(SemanticVersion.of(numbers.get(0), numbers.get(1), numbers.get(2)));
-        }
-
-        if (numbers.size() == 2) {
-            return Optional.of(SemanticVersion.of(numbers.get(0), numbers.get(1)));
-        }
-
-        if (numbers.size() == 1) {
-            return Optional.of(SemanticVersion.of(numbers.get(0)));
-        }
-
-        return Optional.empty();
     }
 }

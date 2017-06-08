@@ -2,8 +2,9 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.Event;
 
-public final class DownloadProgress {
+public final class DownloadProgress implements Event {
 
     public final long downloaded;
     public final long contentLength;
