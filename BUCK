@@ -167,7 +167,7 @@ prebuilt_jar(
 java_library(
   name = 'reflex',
   srcs = glob([
-    'src/com/loopperfect/buckaroo/reflex/**/*.java',
+    'src/main/java/com/loopperfect/buckaroo/reflex/**/*.java',
   ]),
   source = '8',
   target = '1.8',
@@ -183,7 +183,7 @@ java_library(
 java_library(
   name = 'virtualterminal',
   srcs = glob([
-    'src/com/loopperfect/buckaroo/virtualterminal/**/*.java',
+    'src/main/java/com/loopperfect/buckaroo/virtualterminal/**/*.java',
   ]),
   source = '8',
   target = '1.8',
@@ -265,3 +265,36 @@ java_test(
     ':jansi',
   ],
 )
+
+
+java_library(
+  name = 'demos',
+  srcs = glob([
+    'demos/com/loopperfect/buckaroo/virtualterminal/**/*.java',
+  ]),
+  source = '8',
+  target = '1.8',
+  deps = [
+    ':reflex',
+    ':guava',
+    ':jansi',
+    ':virtualterminal',
+  ],
+)
+
+java_binary(
+  name = 'progressbar',
+  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.progressbar.Main',
+  deps = [
+     ':demos',
+  ],
+)
+
+java_binary(
+  name = 'flash',
+  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.flash.Main',
+  deps = [
+    ':demos',
+  ],
+)
+

@@ -6,6 +6,7 @@ import io.reactivex.Single;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class Process<S, T> {
 
@@ -50,5 +51,14 @@ public final class Process<S, T> {
 
     public static <S, T> Process<S, T> of(final Observable<Either<S, T>> observable) {
         return new Process<>(observable);
+    }
+
+    public static <S, T, U> Process<S, U> chain(final Process<S, T> x, final Function<T, Process<S, U>> f) {
+        Objects.requireNonNull(x, "x is null");
+        Objects.requireNonNull(f, "f is null");
+        return of(Observable.concat(
+            x.states().map(Either::left),
+            x.result().flatMapObservable(i -> f.apply(i).toObservable())
+        ));
     }
 }
