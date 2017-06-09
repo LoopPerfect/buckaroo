@@ -164,38 +164,6 @@ prebuilt_jar(
   binary_jar = ':junit-jar'
 )
 
-java_library(
-  name = 'reflex',
-  srcs = glob([
-    'src/main/java/com/loopperfect/buckaroo/reflex/**/*.java',
-  ]),
-  source = '8',
-  target = '1.8',
-  visibility = [
-    'PUBLIC',
-  ],
-  deps = [
-    ':guava',
-    ':jansi',
-  ],
-)
-
-java_library(
-  name = 'virtualterminal',
-  srcs = glob([
-    'src/main/java/com/loopperfect/buckaroo/virtualterminal/**/*.java',
-  ]),
-  source = '8',
-  target = '1.8',
-  visibility = [
-    'PUBLIC',
-  ],
-  deps = [
-    ':guava',
-    ':jansi',
-  ],
-)
-
 
 
 java_library(
@@ -229,8 +197,6 @@ java_library(
     ':httpcore',
     ':commons-logging',
     ':jansi',
-    ':virtualterminal',
-    ':reflex'
   ],
 )
 
@@ -267,6 +233,7 @@ java_test(
 )
 
 
+
 java_library(
   name = 'demos',
   srcs = glob([
@@ -275,16 +242,33 @@ java_library(
   source = '8',
   target = '1.8',
   deps = [
-    ':reflex',
+    ':buckaroo',
+    ':rxjava',
     ':guava',
     ':jansi',
-    ':virtualterminal',
   ],
 )
 
 java_binary(
   name = 'progressbar',
   main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.progressbar.Main',
+  deps = [
+     ':demos',
+  ],
+)
+
+java_binary(
+  name = 'process',
+  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.process.Main',
+
+  deps = [
+     ':demos',
+  ],
+)
+
+java_binary(
+  name = 'varyingheights',
+  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.varyingheights.Main',
   deps = [
      ':demos',
   ],

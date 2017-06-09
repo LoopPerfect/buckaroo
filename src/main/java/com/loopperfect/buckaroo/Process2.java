@@ -1,6 +1,5 @@
-package com.loopperfect;
+package com.loopperfect.buckaroo;
 
-import com.loopperfect.buckaroo.Either;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
@@ -8,11 +7,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-public final class Process<S, T> {
+public final class Process2<S, T> {
 
     private final Observable<Either<S, T>> observable;
 
-    private Process(final Observable<Either<S, T>> observable) {
+    private Process2(final Observable<Either<S, T>> observable) {
         Objects.requireNonNull(observable, "observable is null");
         this.observable = observable;
     }
@@ -34,26 +33,26 @@ public final class Process<S, T> {
         return observable;
     }
 
-    public static <S, T> Process<S, T> just(final T result) {
+    public static <S, T> Process2<S, T> just(final T result) {
         return of(Observable.just(Either.right(result)));
     }
 
     @SafeVarargs
-    public static <S, T> Process<S, T> just(final T result, S... states) {
+    public static <S, T> Process2<S, T> just(final T result, S... states) {
         return of(Observable.concat(
             Observable.fromArray(states).map(Either::left),
             Observable.just(Either.right(result))));
     }
 
-    public static <S, T> Process<S, T> error(final Throwable error) {
+    public static <S, T> Process2<S, T> error(final Throwable error) {
         return of(Observable.error(error));
     }
 
-    public static <S, T> Process<S, T> of(final Observable<Either<S, T>> observable) {
-        return new Process<>(observable);
+    public static <S, T> Process2<S, T> of(final Observable<Either<S, T>> observable) {
+        return new Process2<>(observable);
     }
 
-    public static <S, T, U> Process<S, U> chain(final Process<S, T> x, final Function<T, Process<S, U>> f) {
+    public static <S, T, U> Process2<S, U> chain(final Process2<S, T> x, final Function<T, Process2<S, U>> f) {
         Objects.requireNonNull(x, "x is null");
         Objects.requireNonNull(f, "f is null");
         return of(Observable.concat(
