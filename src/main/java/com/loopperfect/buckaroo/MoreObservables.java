@@ -1,17 +1,23 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.reactivex.Emitter;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.functions.Action;
+import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
+import org.javatuples.Pair;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -62,15 +68,21 @@ public final class MoreObservables {
         });
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T> Observable<List<T>> parallel(final Iterable<Observable<T>> xs) {
-        Preconditions.checkNotNull(xs);
-        return Observable.zip(
-            xs,
-            objects -> Arrays.stream(objects)
-                .map(x -> (T) x)
-                .collect(toImmutableList())
-        );
+    public static <T, S> Observable<Map<T, S>> zipMaps(final Map<T, Observable<S>> tasks) {
+
+        Objects.requireNonNull(tasks, "tasks is null");
+
+        return Observable.combineLatest(
+            tasks.entrySet()
+                .stream()
+                .map(entry -> Observable.combineLatest(
+                    Observable.just(entry.getKey()),
+                    entry.getValue(),
+                    Pair::with))
+                .collect(ImmutableList.toImmutableList()),
+            xs -> Arrays.stream(xs)
+                .map(x -> (Pair<T, S>)x)
+                .collect(ImmutableMap.toImmutableMap(Pair::getValue0, Pair::getValue1)));
     }
 
     public static <A extends T, T> Observable<T> chain(final Observable<A> a, final Function<A, Observable<T>> f) {
@@ -85,15 +97,6 @@ public final class MoreObservables {
         Objects.requireNonNull(f);
         Objects.requireNonNull(g);
         return chain(a, i -> chain(f.apply(i), g));
-    }
-
-    public static <A extends T, B extends T, C extends T, T> Observable<T> chain(
-        final Observable<A> a, final Function<A, Observable<B>> f, final Function<B, Observable<C>> g, final Function<C, Observable<T>> h) {
-        Objects.requireNonNull(a);
-        Objects.requireNonNull(f);
-        Objects.requireNonNull(g);
-        Objects.requireNonNull(h);
-        return chain(a, i -> chain(f.apply(i), g, h));
     }
 
     public static <T> Observable<T> chainN(final Observable<T> a, final Function<T, Observable<T>>... fs) {

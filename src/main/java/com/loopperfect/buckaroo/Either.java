@@ -92,7 +92,7 @@ public final class Either<L, R> {
             return false;
         }
 
-        final Either<L, R> other = (Either<L, R>) obj;
+        final Either<?, ?> other = (Either<?, ?>) obj;
 
         return Objects.equals(which, other.which) &&
             (which == LeftOrRight.LEFT ?
@@ -109,7 +109,7 @@ public final class Either<L, R> {
 
     public static <L, R> Either<L, R> left(final L x) {
         Preconditions.checkNotNull(x);
-        return new Either<>(LeftOrRight.LEFT, x, null);
+        return new Either<L, R>(LeftOrRight.LEFT, x, null);
     }
 
     public static <L, R> Either<L, R> right(final R x) {

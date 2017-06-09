@@ -3,24 +3,19 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import com.google.common.io.ByteSink;
 import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.EvenMoreFiles;
 import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
+import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Optional;
@@ -88,6 +83,10 @@ public final class CommonTasks {
         });
     }
 
+    public static Single<FileWriteEvent> writeFile(final String content, final Path path) {
+        return writeFile(content, path, false);
+    }
+
     public static Single<TouchFileEvent> touchFile(final Path path) {
         return Single.fromCallable(() -> {
             if (Files.exists(path)) {
@@ -99,8 +98,14 @@ public final class CommonTasks {
         });
     }
 
-    public static Single<FileWriteEvent> writeFile(final String content, final Path path) {
-        return writeFile(content, path, false);
+    public static Maybe<DeleteFileEvent> deleteIfExists(final Path path) {
+        return MoreMaybes.fromOptionalSingle(Single.fromCallable(() -> {
+            final boolean somethingWasDeleted = Files.deleteIfExists(path);
+            if (somethingWasDeleted) {
+                return Optional.of(DeleteFileEvent.of(path));
+            }
+            return Optional.empty();
+        }));
     }
 
     public static Single<CreateDirectoryEvent> createDirectory(final Path path) {
@@ -108,6 +113,25 @@ public final class CommonTasks {
         return Single.fromCallable(() -> {
             Files.createDirectories(path);
             return CreateDirectoryEvent.of(path);
+        });
+    }
+
+    public static Single<FileCopyEvent> copy(final Path source, final Path destination) {
+        Preconditions.checkNotNull(source);
+        Preconditions.checkNotNull(destination);
+        return Single.fromCallable(() -> {
+            Files.copy(source, destination);
+            return FileCopyEvent.of(source, destination);
+        });
+    }
+
+    public static Single<FileUnzipEvent> unzip(final Path source, final Path target, final Optional<Path> subPath, CopyOption... copyOptions) {
+        Preconditions.checkNotNull(source);
+        Preconditions.checkNotNull(target);
+        Preconditions.checkNotNull(subPath);
+        return Single.fromCallable(() -> {
+            EvenMoreFiles.unzip(source, target, subPath, copyOptions);
+            return FileUnzipEvent.of(source, target);
         });
     }
 
@@ -142,42 +166,61 @@ public final class CommonTasks {
         }).map(ReadConfigFileEvent::of);
     }
 
-    public static HashCode hashFile(final Path path) throws IOException {
+    public static Single<FileHashEvent> hash(final Path path) {
 
         Preconditions.checkNotNull(path);
 
-        final HashFunction hashFunction = Hashing.sha256();
-        final HashCode hashCode = hashFunction.newHasher()
-            .putBytes(MoreFiles.asByteSource(path).read())
-            .hash();
-
-        return hashCode;
+        return Single.fromCallable(() -> {
+            final HashCode hash = EvenMoreFiles.hashFile(path);
+            return FileHashEvent.of(path, hash);
+        });
     }
 
-    public static Observable<DownloadProgress> downloadRemoteFile(final FileSystem fs, final RemoteFile remoteFile, final Path target) {
+    /**
+     * Verifies the hash of a given file.
+     *
+     * If the check succeeds, then the Observable will complete.
+     *
+     * Progress in running the check is reported by the Observable.
+     *
+     * @param path
+     * @param expected
+     * @return
+     */
+    public static Observable<Event> ensureHash(final Path path, final HashCode expected) {
+
+        Preconditions.checkNotNull(path);
+        Preconditions.checkNotNull(expected);
+
+        return MoreObservables.chain(
+            hash(path).toObservable(),
+            event -> event.sha256.equals(expected) ?
+                Observable.empty() :
+                Observable.error(new HashMismatchException(expected, event.sha256)));
+    }
+
+    public static Observable<Event> downloadRemoteFile(final FileSystem fs, final RemoteFile remoteFile, final Path target) {
 
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(remoteFile);
         Preconditions.checkNotNull(target);
 
         return Observable.concat(
+
             // Does the file exist?
             Observable.fromCallable(() -> Files.exists(target))
                 .flatMap(exists -> exists ?
                     // Then skip the download
                     Observable.empty() :
                     // Otherwise, download the file
-                    DownloadTask.download(remoteFile.url, target)),
+                    DownloadTask.download(remoteFile.url, target)).cast(Event.class),
+
             // Verify the hash
-            MoreCompletables.fromRunnable(() -> {
-                final HashCode hashCode = CommonTasks.hashFile(target);
-                if (!hashCode.equals(remoteFile.sha256)) {
-                    throw new HashMismatchException(remoteFile.sha256, hashCode);
-                }
-            }).toObservable());
+            ensureHash(target, remoteFile.sha256)
+        );
     }
 
-    public static Observable<DownloadProgress> downloadRemoteArchive(final FileSystem fs, final RemoteArchive remoteArchive, final Path targetDirectory) {
+    public static Observable<Event> downloadRemoteArchive(final FileSystem fs, final RemoteArchive remoteArchive, final Path targetDirectory) {
 
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(remoteArchive);
@@ -186,14 +229,17 @@ public final class CommonTasks {
         final Path zipFilePath = Paths.get(targetDirectory + ".zip");
 
         return Observable.concat(
+
             // Download the file
             CommonTasks.downloadRemoteFile(fs, remoteArchive.asRemoteFile(), zipFilePath),
+
             // Unpack the zip
             MoreCompletables.fromRunnable(() -> {
                 EvenMoreFiles.unzip(
                     zipFilePath,
                     targetDirectory,
-                    remoteArchive.subPath.map(subPath -> fs.getPath(subPath)));
+                    remoteArchive.subPath.map(subPath -> fs.getPath(fs.getSeparator(), subPath)),
+                    StandardCopyOption.REPLACE_EXISTING);
             }).toObservable());
     }
 }

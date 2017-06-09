@@ -1,6 +1,13 @@
 include_defs('//maven_jar.bucklet')
 
 maven_jar(
+  name = 'javatuples',
+  id = 'org.javatuples:javatuples:1.2',
+  src_sha1 = 'a7495f5370bdfcf46c6f3c6ed0badf52877aa467',
+  bin_sha1 = '507312ac4b601204a72a83380badbca82683dd36',
+)
+
+maven_jar(
   name = 'guava',
   id = 'com.google.guava:guava:21.0',
   src_sha1 = 'b9ed26b8c23fe7cd3e6b463b34e54e5c6d9536d5',
@@ -180,6 +187,7 @@ java_library(
   ]),
   resources_root = 'src/main/resources',
   deps = [
+    ':javatuples',
     ':rxjava',
     ':reactive-streams',
     ':okio',

@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.sources;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.DependencyResolutionException;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import io.reactivex.Observable;
@@ -51,7 +52,7 @@ public final class RecipeSources {
 
         return RecipeSources.routed(
             ImmutableMap.of(
-                Identifier.of("github"), GitHubRecipeSource.of()),
+                Identifier.of("github"), GitHubRecipeSource.of(fs)),
             LazyCookbookRecipeSource.of(cookbookPath));
     }
 

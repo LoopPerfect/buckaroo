@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import io.reactivex.*;
 import io.reactivex.Observable;
+import org.javatuples.Pair;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -28,7 +29,7 @@ public final class AsyncDependencyResolver {
         Preconditions.checkNotNull(strategy);
 
         if (resolved.containsKey(next.project)) {
-            final SemanticVersion resolvedVersion = resolved.get(next.project).a;
+            final SemanticVersion resolvedVersion = resolved.get(next.project).getValue0();
             return next.requirement.isSatisfiedBy(resolvedVersion) ?
                 Single.just(ImmutableMap.copyOf(resolved)) :
                 Single.error(new DependencyResolutionException(
@@ -46,7 +47,7 @@ public final class AsyncDependencyResolver {
 
                         final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> nextResolved = MoreMaps.with(
                             resolved,
-                            next.project, Pair.of(entry.getKey(), ResolvedDependency.from(entry.getValue())));
+                            next.project, Pair.with(entry.getKey(), ResolvedDependency.from(entry.getValue())));
 
                         final ImmutableList<Dependency> nextDependencies = new ImmutableList.Builder<Dependency>()
                             .addAll(entry.getValue().dependencies.orElse(DependencyGroup.of()).entries())

@@ -1,9 +1,9 @@
 package com.loopperfect.buckaroo.resolver;
 
-import com.loopperfect.buckaroo.Pair;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.ResolvedDependency;
 import com.loopperfect.buckaroo.SemanticVersion;
+import org.javatuples.Pair;
 
 import java.util.Map;
 

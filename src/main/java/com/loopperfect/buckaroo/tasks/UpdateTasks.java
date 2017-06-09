@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
 import io.reactivex.Observable;
@@ -115,11 +116,10 @@ public final class UpdateTasks {
             .toObservable()
             .compose(new PublishAndMergeTransformer<ReadConfigFileEvent, Event, Event>(event -> {
 
-                final ImmutableList<Observable<Event>> updateCookbookTasks = event.config.cookbooks.stream()
-                    .map(cookbook -> updateCookbook(buckarooFolder, cookbook))
-                    .collect(ImmutableList.toImmutableList());
+                final ImmutableMap<RemoteCookbook, Observable<Event>> updateCookbookTasks = event.config.cookbooks.stream()
+                    .collect(ImmutableMap.toImmutableMap(i -> i, i -> updateCookbook(buckarooFolder, i)));
 
-                return MoreObservables.parallel(updateCookbookTasks)
+                return MoreObservables.zipMaps(updateCookbookTasks)
                     .map(x -> Notification.of(x.toString()));
             }));
     }

@@ -7,9 +7,9 @@ import com.loopperfect.buckaroo.tasks.DownloadProgress;
 
 public final class DependencyInstallationProgress implements Event {
 
-    public final ImmutableMap<DependencyLock, DownloadProgress> progress;
+    public final ImmutableMap<DependencyLock, Event> progress;
 
-    private DependencyInstallationProgress(final ImmutableMap<DependencyLock, DownloadProgress> progress) {
+    private DependencyInstallationProgress(final ImmutableMap<DependencyLock, Event> progress) {
         super();
         Preconditions.checkNotNull(progress);
         this.progress = progress;
@@ -24,7 +24,7 @@ public final class DependencyInstallationProgress implements Event {
             .toString();
     }
 
-    public static DependencyInstallationProgress of(final ImmutableMap<DependencyLock, DownloadProgress> progress) {
+    public static DependencyInstallationProgress of(final ImmutableMap<DependencyLock, Event> progress) {
         return new DependencyInstallationProgress(progress);
     }
 }
