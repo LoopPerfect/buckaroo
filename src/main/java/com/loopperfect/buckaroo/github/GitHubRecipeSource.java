@@ -1,8 +1,8 @@
 package com.loopperfect.buckaroo.github;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.tasks.CacheTasks;
@@ -49,6 +49,7 @@ public final class GitHubRecipeSource implements RecipeSource {
                     final Path projectFilePath = fs.getPath(unzipTargetPath.toString(), "buckaroo.json");
 
                     return CommonTasks.readProjectFile(projectFilePath)
+                        .onErrorResumeNext(error -> Single.error(new FetchRecipeException(error)))
                         .map((ReadProjectFileEvent readProjectFileEvent) -> {
 
                             final RemoteArchive remoteArchive = RemoteArchive.of(
@@ -73,7 +74,15 @@ public final class GitHubRecipeSource implements RecipeSource {
 
         return GitHub.fetchReleaseNames(identifier.organization, identifier.recipe).flatMap(releases -> {
 
-            final ImmutableMap<GitHubRelease, Single<RecipeVersion>> tasks = releases.stream()
+            final ImmutableList<GitHubRelease> semanticVersionReleases = releases.stream()
+                .filter(x -> SemanticVersion.parse(x.name).isPresent())
+                .collect(ImmutableList.toImmutableList());
+
+            if (semanticVersionReleases.isEmpty()) {
+                return Single.error(() -> new FetchRecipeException("No releases found for " + identifier.encode() + ". "));
+            }
+
+            final ImmutableMap<GitHubRelease, Single<RecipeVersion>> tasks = semanticVersionReleases.stream()
                 .collect(ImmutableMap.toImmutableMap(x -> x, x -> fetchRecipeVersion(fs, x)));
 
             final Single<ImmutableMap<SemanticVersion, RecipeVersion>> identity = Single.just(ImmutableMap.of());

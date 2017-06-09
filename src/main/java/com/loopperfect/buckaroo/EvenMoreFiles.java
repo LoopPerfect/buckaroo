@@ -8,19 +8,16 @@ import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.MoreFiles;
+import com.google.common.jimfs.Jimfs;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.channels.ByteChannel;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileAttribute;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Optional;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public final class EvenMoreFiles {
 
@@ -59,6 +56,19 @@ public final class EvenMoreFiles {
             .hash();
 
         return hashCode;
+    }
+
+    public static FileSystem zipFileSystem(final Path pathToZipFile) throws IOException {
+        Preconditions.checkNotNull(pathToZipFile);
+        try {
+            return FileSystems.getFileSystem(pathToZipFile.toUri());
+        } catch (Exception e) {
+            try {
+                return FileSystems.getFileSystem(URI.create("jar:" + pathToZipFile.toUri()));
+            } catch (Exception e2) {
+                return FileSystems.newFileSystem(URI.create("jar:" + pathToZipFile.toUri()), new HashMap<>());
+            }
+        }
     }
 
     /*
@@ -104,26 +114,22 @@ public final class EvenMoreFiles {
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(subPath);
         Preconditions.checkNotNull(copyOptions);
+        Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute());
 
-        final FileSystem zipFs = FileSystems.newFileSystem(
-            source,
-            null);
+        try (final FileSystem zipFileSystem = zipFileSystem(source)) {
 
-        EvenMoreFiles.copyDirectory(
-            subPath.map(x -> switchFileSystem(zipFs, x)).orElse(zipFs.getPath("/")).toAbsolutePath(),
-            target,
-            copyOptions);
+            EvenMoreFiles.copyDirectory(
+                subPath.map(x -> switchFileSystem(zipFileSystem, x))
+                    .orElse(zipFileSystem.getPath(zipFileSystem.getSeparator())).toAbsolutePath(),
+                target,
+                copyOptions);
+        }
     }
 
     public static Stream<Path> walkZip(final Path source, final int maxDepth) throws IOException {
-
         Preconditions.checkNotNull(source);
-
-        final FileSystem zipFs = FileSystems.newFileSystem(
-            source,
-            null);
-
-        return Files.walk(zipFs.getPath("/"), maxDepth);
+        final FileSystem zipFileSystem = zipFileSystem(source);
+        return Files.walk(zipFileSystem.getPath("/"), maxDepth);
     }
 
     public static String read(final Path path) throws IOException {
@@ -171,8 +177,8 @@ public final class EvenMoreFiles {
         @Override
         public FileVisitResult preVisitDirectory(final Path directory, final BasicFileAttributes attributes) {
             try {
-                final Path nextDirectory = target.resolve(switchFileSystem(
-                    target.getFileSystem(), source.relativize(directory)));
+                final Path nextDirectory = target.resolve(
+                    switchFileSystem(target.getFileSystem(), source.relativize(directory)));
                 Files.createDirectories(nextDirectory);
                 return FileVisitResult.CONTINUE;
             } catch (final IOException exception) {
