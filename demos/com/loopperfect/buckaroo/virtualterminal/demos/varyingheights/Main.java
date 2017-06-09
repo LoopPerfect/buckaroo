@@ -24,10 +24,18 @@ public class Main {
             Text.of("3333")
         );
 
+        final Component c3 = StackLayout.of(
+            Text.of("#######"),
+            Text.of("#######"),
+            Text.of("#######")
+        );
+
         for(int i=0; i<10; ++i) {
             buffer.flip(c1.render(100));
             Thread.sleep(500);
             buffer.flip(c2.render(100));
+            Thread.sleep(500);
+            buffer.flip(c3.render(100));
             Thread.sleep(500);
         }
 

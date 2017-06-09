@@ -27,9 +27,10 @@ public final class TerminalBuffer {
 
     private static void clear(final Map2D<TerminalPixel> image) {
         Preconditions.checkNotNull(image);
-        System.out.print(Ansi.ansi().cursorUpLine(image.height()));
+        //System.out.print(Ansi.ansi().cursorUpLine(image.height()));
         for (int y = 0; y < image.height(); y++) {
-            System.out.print(Ansi.ansi().eraseLine(Ansi.Erase.BACKWARD));
+            System.out.print(Ansi.ansi().eraseLine(Ansi.Erase.ALL));
+            System.out.print(Ansi.ansi().cursorUpLine(1));
         }
     }
 
