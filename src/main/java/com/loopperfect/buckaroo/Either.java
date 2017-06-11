@@ -26,11 +26,11 @@ public final class Either<L, R> {
     }
 
     public Optional<L> left() {
-        return join(Optional::of, x -> Optional.empty());
+        return join(Optional::<L>of, x -> Optional.<L>empty());
     }
 
     public Optional<R> right() {
-        return join(x -> Optional.empty(), Optional::of);
+        return join(x -> Optional.<R>empty(), Optional::<R>of);
     }
 
     public <T, U> Either<T, U> map(final Function<L, T> f, final Function<R, U> g) {

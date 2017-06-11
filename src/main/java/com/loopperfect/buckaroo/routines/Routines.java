@@ -85,7 +85,7 @@ public final class Routines {
     public static IO<Either<IOException, Project>> readProject(final String path) {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
-                Either::left,
+                Either::<IOException, Project>left,
                 content -> Serializers.parseProject(content).leftProjection(IOException::new));
     }
 
@@ -99,7 +99,7 @@ public final class Routines {
     public static IO<Either<IOException, BuckarooConfig>> readConfig(final String path) {
         Preconditions.checkNotNull(path);
         return context -> context.fs().readFile(path).join(
-                Either::left,
+                Either::<IOException, BuckarooConfig>left,
                 content -> {
                     Preconditions.checkNotNull(content);
                     return Serializers.parseConfig(content).leftProjection(IOException::new);
@@ -110,7 +110,7 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         return IO.of(x -> x.fs().readFile(path))
                 .map(x -> x.join(
-                        Either::left,
+                        Either::<IOException, Recipe>left,
                         content -> Serializers.parseRecipe(content).leftProjection(IOException::new)));
     }
 
@@ -184,7 +184,7 @@ public final class Routines {
         Preconditions.checkNotNull(identifier);
         return listRecipesForOrganization(path + "/" + identifier.name + "/")
             .flatMap(x -> x.join(
-                error -> IO.value(left(error)),
+                error -> IO.value(Either.<IOException, Organization>left(error)),
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(i -> readRecipe(path + "/" + identifier.name + "/" + i.name + ".json")
@@ -201,7 +201,7 @@ public final class Routines {
         Preconditions.checkNotNull(path);
         return listOrganizationsForCookBook(path)
             .flatMap(x -> x.join(
-                error -> IO.value(left(error)),
+                error -> IO.value(Either.<IOException, CookBook>left(error)),
                 identifiers -> allOrNothing(
                     identifiers.stream()
                         .map(identifier -> readOrganization(path + "/recipes", identifier)
