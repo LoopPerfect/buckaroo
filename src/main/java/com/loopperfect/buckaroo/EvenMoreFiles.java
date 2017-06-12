@@ -33,7 +33,7 @@ public final class EvenMoreFiles {
             if (!overwrite) {
                 throw new IOException("There is already a file at " + path);
             }
-            Files.delete(path);
+            Files.deleteIfExists(path);
         } else {
             if (path.getParent() != null && !Files.exists(path.getParent())) {
                 Files.createDirectories(path.getParent());
@@ -58,7 +58,7 @@ public final class EvenMoreFiles {
         return hashCode;
     }
 
-    public static FileSystem zipFileSystem(final Path pathToZipFile) throws IOException {
+    public static synchronized FileSystem zipFileSystem(final Path pathToZipFile) throws IOException {
         Preconditions.checkNotNull(pathToZipFile);
         try {
             return FileSystems.getFileSystem(pathToZipFile.toUri());
@@ -117,7 +117,6 @@ public final class EvenMoreFiles {
         Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute());
 
         try (final FileSystem zipFileSystem = zipFileSystem(source)) {
-
             EvenMoreFiles.copyDirectory(
                 subPath.map(x -> switchFileSystem(zipFileSystem, x))
                     .orElse(zipFileSystem.getPath(zipFileSystem.getSeparator())).toAbsolutePath(),

@@ -33,7 +33,12 @@ public final class InstallExistingTasks {
 
         final Observable<Event> downloadSourceCode = resolvedDependency.source.join(
             gitCommit -> Observable.error(new IOException("Git commit not supported yet. ")),
-            remoteArchive -> CommonTasks.downloadRemoteArchive(fs, remoteArchive, target));
+            remoteArchive -> {
+                if( Files.exists(target) ) {
+                    return Observable.empty();
+                }
+                return CommonTasks.downloadRemoteArchive(fs, remoteArchive, target);
+            });
 
         final Path buckFilePath = fs.getPath(target.toString(), "BUCK");
         final Observable<Event> downloadBuckFile = Files.exists(buckFilePath) ?
