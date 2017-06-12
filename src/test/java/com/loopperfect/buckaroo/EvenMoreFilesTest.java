@@ -1,20 +1,43 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.Charsets;
 import com.google.common.jimfs.Jimfs;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.zip.ZipOutputStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public final class EvenMoreFilesTest {
+
+    @Test
+    public void copyDirectory() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final String expected = "Hello, world";
+
+        Files.createDirectories(fs.getPath("a", "b", "c"));
+        Files.write(fs.getPath("a", "b", "hello.txt"), expected.getBytes(Charsets.UTF_8));
+
+        EvenMoreFiles.copyDirectory(fs.getPath("a"), fs.getPath("x"));
+
+        assertTrue(Files.exists(fs.getPath("x")));
+        assertTrue(Files.exists(fs.getPath("x", "b", "c")));
+        assertTrue(Files.exists(fs.getPath("x", "b", "hello.txt")));
+
+        final String actual = Charsets.UTF_8.decode(ByteBuffer.wrap(
+            Files.readAllBytes(fs.getPath("x", "b", "hello.txt")))).toString();
+
+        assertEquals(expected, actual);
+    }
 
     @Test
     public void unzip1() throws Exception {
@@ -36,9 +59,9 @@ public final class EvenMoreFilesTest {
         }
 
         // Add the test file to the zip.
-        try (final FileSystem zipfs = FileSystems.newFileSystem(fs.getPath("stuff.zip"), null)) {
+        try (final FileSystem zipFileSystem = EvenMoreFiles.zipFileSystem(fs.getPath("stuff.zip"))) {
 
-            Files.copy(fs.getPath("hello.txt"), zipfs.getPath("message.txt"),
+            Files.copy(fs.getPath("hello.txt"), zipFileSystem.getPath("message.txt"),
                 StandardCopyOption.REPLACE_EXISTING);
         }
 
@@ -72,11 +95,11 @@ public final class EvenMoreFilesTest {
         }
 
         // Add the test file to the zip.
-        try (final FileSystem zipfs = FileSystems.newFileSystem(fs.getPath("stuff.zip"), null)) {
+        try (final FileSystem zipFileSystem = EvenMoreFiles.zipFileSystem(fs.getPath("stuff.zip"))) {
 
-            Files.createDirectories(zipfs.getPath("a", "b", "c"));
+            Files.createDirectories(zipFileSystem.getPath("a", "b", "c"));
 
-            Files.copy(fs.getPath("hello.txt"), zipfs.getPath("a", "b", "c", "message.txt"),
+            Files.copy(fs.getPath("hello.txt"), zipFileSystem.getPath("a", "b", "c", "message.txt"),
                 StandardCopyOption.REPLACE_EXISTING);
         }
 

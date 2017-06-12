@@ -143,6 +143,9 @@ genrule(
   cmd =
     'cp buck-out/gen/jgit-jar/jgit-4.5.0.jar $OUT && ' +
     'zip -d $OUT META-INF/*.RSA META-INF/*.SF META-INF/*.MF',
+  cmd_exe =
+    'copy $SRCDIR\\buck-out\\gen\\jgit-jar\\jgit-4.5.0.jar $OUT && ' +
+    'zip -d $OUT META-INF/*.RSA META-INF/*.SF META-INF/*.MF',
   out = 'jgit-4.5.0-fixed.jar',
 )
 
@@ -217,7 +220,7 @@ java_binary(
 )
 
 java_test(
-  name = 'buckaroo-test',
+  name = 'buckaroo-unit',
   source = '8',
   target = '8',
   srcs = glob([
@@ -225,6 +228,29 @@ java_test(
   ]),
   deps = [
     ':buckaroo',
+    ':javatuples',
+    ':rxjava',
+    ':reactive-streams',
+    ':okhttp',
+    ':guava',
+    ':gson',
+    ':hamcrest',
+    ':junit',
+    ':jimfs',
+    ':jparsec',
+  ],
+)
+
+java_test(
+  name = 'buckaroo-integration',
+  source = '8',
+  target = '8',
+  srcs = glob([
+    'src/integration/java/com/**/*.java',
+  ]),
+  deps = [
+    ':buckaroo',
+    ':javatuples',
     ':rxjava',
     ':reactive-streams',
     ':okhttp',
