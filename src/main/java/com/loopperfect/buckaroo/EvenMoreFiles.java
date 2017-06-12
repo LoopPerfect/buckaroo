@@ -21,6 +21,8 @@ import java.util.stream.Stream;
 
 public final class EvenMoreFiles {
 
+    private static final Object LOCK = new Object();
+
     private EvenMoreFiles() {
         super();
     }
@@ -58,15 +60,17 @@ public final class EvenMoreFiles {
         return hashCode;
     }
 
-    public static synchronized FileSystem zipFileSystem(final Path pathToZipFile) throws IOException {
-        Preconditions.checkNotNull(pathToZipFile);
-        try {
-            return FileSystems.getFileSystem(pathToZipFile.toUri());
-        } catch (Exception e) {
+    public static FileSystem zipFileSystem(final Path pathToZipFile) throws IOException {
+        synchronized (LOCK) {
+            Preconditions.checkNotNull(pathToZipFile);
             try {
-                return FileSystems.getFileSystem(URI.create("jar:" + pathToZipFile.toUri()));
-            } catch (Exception e2) {
-                return FileSystems.newFileSystem(URI.create("jar:" + pathToZipFile.toUri()), new HashMap<>());
+                return FileSystems.getFileSystem(pathToZipFile.toUri());
+            } catch (Exception e) {
+                try {
+                    return FileSystems.getFileSystem(URI.create("jar:" + pathToZipFile.toUri()));
+                } catch (Exception e2) {
+                    return FileSystems.newFileSystem(URI.create("jar:" + pathToZipFile.toUri()), new HashMap<>());
+                }
             }
         }
     }
