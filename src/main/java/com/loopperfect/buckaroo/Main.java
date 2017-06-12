@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.loopperfect.buckaroo.virtualterminal.TerminalPixel.fill;
 
 public final class Main {
 
@@ -75,6 +76,8 @@ public final class Main {
 
             final Observable<Event> events$ = task.subscribeOn(scheduler);
 
+
+
             final Observable<ReadProjectFileEvent> projectFiles$ = events$
                 .filter(e-> e instanceof ReadProjectFileEvent)
                 .cast(ReadProjectFileEvent.class);
@@ -109,15 +112,15 @@ public final class Main {
             final Observable<Component> current$ = Observable.combineLatest(
                 projects$,
                 writes$
-                    .map(w->Text.of("modified: "+ w, Color.YELLOW, Color.RED)),
+                    .map(w->FlowLayout.of(Text.of("modified: "), Text.of(w, Color.YELLOW))),
                 deps$
                     .map(s->s.stream())
                     .map(s->FlowLayout.of(
-                        s.map(Text::of).collect(toImmutableList()))),
+                         s.map(x->Text.of(x, Color.GREEN)).collect(toImmutableList()))),
                 (p,w,d) -> StackLayout.of(
-                    Text.of("resolving dependencies", Color.YELLOW, Color.RED),
+                    Text.of("resolving dependencies", Color.BLUE),
                     p, w,
-                    Text.of("resolved deps: ", Color.YELLOW, Color.RED),
+                    Text.of("resolved deps: "),
                     d
                 ));
 
@@ -145,7 +148,7 @@ public final class Main {
 
                     final List<Component> modifiedFiles = writes$.reduce(
                         new ArrayList<Component>(),
-                        (list, file)->{
+                        (list, file) -> {
                             list.add(Text.of(file));
                             return list;
                     }).blockingGet();

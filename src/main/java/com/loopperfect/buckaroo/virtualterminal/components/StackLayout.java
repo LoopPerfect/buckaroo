@@ -37,7 +37,7 @@ public final class StackLayout implements Component {
         int y = 0;
 
         for (final Map2D<TerminalPixel> componentRender : componentRenders) {
-            render = Map2DUtils.drawOn(render, 0, y, componentRender);
+            render = Map2DUtils.drawOnBackground(render, 0, y, componentRender);
             y += componentRender.height();
         }
 

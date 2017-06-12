@@ -15,7 +15,7 @@ public final class Text implements Component {
     private Text(final String text) {
         this.text = Preconditions.checkNotNull(text);
         this.foreground = Preconditions.checkNotNull(Color.DEFAULT);
-        this.background = Preconditions.checkNotNull(Color.DEFAULT);
+        this.background = Preconditions.checkNotNull(Color.TRANSPARENT);
     }
 
     private Text(final String text, final Color foreground, final Color background) {
@@ -54,6 +54,9 @@ public final class Text implements Component {
 
     public static Text of(final String text) {
         return new Text(text);
+    }
+    public static Text of(final String text, final Color foreground) {
+        return new Text(text, foreground, Color.TRANSPARENT);
     }
     public static Text of(final String text, final Color foreground, final Color background) {
         return new Text(text, foreground, background);

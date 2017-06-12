@@ -23,13 +23,12 @@ public final class Map2DUtils {
     public static Map2D<TerminalPixel> drawOnBackground(final Map2D<TerminalPixel> a, final int x, final int y, final Map2D<TerminalPixel> b) {
         Preconditions.checkNotNull(a);
         Preconditions.checkNotNull(b);
-        return a.modify((i, j, v) -> {
+        return a.modify((i, j, bg) -> {
             if (b.isInBounds(i - x, j - y)) {
-                final TerminalPixel bg = a.get(i-x,j-y);
                 final TerminalPixel top = b.get(i - x, j - y);
                 return TerminalPixel.of(top.character, top.foreground, top.background.isTransparent() ? bg.background : top.background  );
             }
-            return v;
+            return bg;
         });
     }
 

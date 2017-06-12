@@ -61,7 +61,7 @@ public final class FlowLayout implements Component {
                 if (element.height() > lineHeight) {
                     lineHeight = element.height();
                 }
-                render = Map2DUtils.drawOn(render, x, y, element);
+                render = Map2DUtils.drawOnBackground(render, x, y, element);
                 x += element.width();
             }
             y += lineHeight;
