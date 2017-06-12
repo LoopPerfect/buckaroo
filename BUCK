@@ -206,6 +206,7 @@ java_test(
   ]),
   deps = [
     ':buckaroo',
+    ':javatuples',
     ':rxjava',
     ':reactive-streams',
     ':okhttp',
@@ -227,6 +228,7 @@ java_test(
   ]),
   deps = [
     ':buckaroo',
+    ':javatuples',
     ':rxjava',
     ':reactive-streams',
     ':okhttp',

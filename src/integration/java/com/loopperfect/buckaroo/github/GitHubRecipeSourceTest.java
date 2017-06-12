@@ -24,7 +24,7 @@ public final class GitHubRecipeSourceTest {
         final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
 
         final Single<Recipe> task = recipeSource.fetch(
-            RecipeIdentifier.of("github", "njlr", "test-lib-a"));
+            RecipeIdentifier.of("github", "njlr", "test-lib-c"));
 
         task.timeout(90, TimeUnit.SECONDS).blockingGet();
     }
