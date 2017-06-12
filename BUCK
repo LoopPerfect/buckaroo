@@ -234,8 +234,6 @@ java_test(
     ':junit',
     ':jimfs',
     ':jparsec',
-    ':virtualterminal',
-    ':reflex',
     ':jansi',
   ],
 )

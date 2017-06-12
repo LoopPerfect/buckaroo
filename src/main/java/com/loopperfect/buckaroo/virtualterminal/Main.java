@@ -39,7 +39,7 @@ public final class Main {
         final TerminalBuffer buffer = new TerminalBuffer();
 
         final Component app = StackLayout.of(
-            TerminalPixel.of(UnicodeChar.of('*'), Ansi.Color.WHITE, Ansi.Color.BLUE),
+            TerminalPixel.of(UnicodeChar.of('*'), Color.WHITE, Color.BLUE),
             Text.of("Hello, how are you today? "),
             Text.of("Here are some nifty progress bars... "),
             ProgressBar.of(0.00f),
@@ -48,9 +48,9 @@ public final class Main {
             ProgressBar.of(1.00f),
             Text.of("And here is a flow layout... "),
             FlowLayout.of(
-                Box.of(TerminalPixel.of(UnicodeChar.of('*'), Ansi.Color.MAGENTA, Ansi.Color.GREEN)),
-                Box.of(TerminalPixel.of(UnicodeChar.of('*'), Ansi.Color.WHITE, Ansi.Color.BLUE), 3, 7),
-                Box.of(TerminalPixel.of(UnicodeChar.of('*'), Ansi.Color.RED, Ansi.Color.CYAN), 5, 5)));
+                Box.of(TerminalPixel.of(UnicodeChar.of('*'), Color.MAGENTA, Color.GREEN)),
+                Box.of(TerminalPixel.of(UnicodeChar.of('*'), Color.WHITE, Color.BLUE), 3, 7),
+                Box.of(TerminalPixel.of(UnicodeChar.of('*'), Color.RED, Color.CYAN), 5, 5)));
 
         buffer.flip(app.render(50));
 

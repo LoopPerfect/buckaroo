@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.virtualterminal.demos.process;
 import com.loopperfect.buckaroo.Process2;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
@@ -106,8 +107,8 @@ public class Main {
         final Scheduler scheduler = Schedulers.from(executorService);
 
         final TerminalBuffer buffer = new TerminalBuffer();
-        final TerminalPixel green = TerminalPixel.of(UnicodeChar.of(' '), Ansi.Color.DEFAULT, Ansi.Color.GREEN);
-        final TerminalPixel blue = TerminalPixel.of(UnicodeChar.of(' '), Ansi.Color.DEFAULT, Ansi.Color.BLUE);
+        final TerminalPixel green = TerminalPixel.of(UnicodeChar.of(' '), Color.DEFAULT, Color.GREEN);
+        final TerminalPixel blue = TerminalPixel.of(UnicodeChar.of(' '), Color.DEFAULT, Color.BLUE);
 
 
         Process2<Event, Boolean> p = Process2.chain(

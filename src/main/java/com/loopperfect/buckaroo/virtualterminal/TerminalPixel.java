@@ -9,10 +9,10 @@ import java.util.Objects;
 public final class TerminalPixel {
 
     public final UnicodeChar character;
-    public final Ansi.Color foreground;
-    public final Ansi.Color background;
+    public final Color foreground;
+    public final Color background;
 
-    private TerminalPixel(final UnicodeChar character, final Ansi.Color foreground, final Ansi.Color background) {
+    private TerminalPixel(final UnicodeChar character, final Color foreground, final Color background) {
 
         super();
 
@@ -37,7 +37,7 @@ public final class TerminalPixel {
         return TerminalPixel.of(character, foreground, background);
     }
 
-    public TerminalPixel setForeground(final Ansi.Color foreground) {
+    public TerminalPixel setForeground(final Color foreground) {
         Preconditions.checkNotNull(foreground);
         if (this.foreground.equals(foreground)) {
             return this;
@@ -45,7 +45,7 @@ public final class TerminalPixel {
         return TerminalPixel.of(character, foreground, background);
     }
 
-    public TerminalPixel setBackground(final Ansi.Color background) {
+    public TerminalPixel setBackground(final Color background) {
         Preconditions.checkNotNull(background);
         if (this.background.equals(background)) {
             return this;
@@ -75,11 +75,11 @@ public final class TerminalPixel {
             .toString();
     }
 
-    public static TerminalPixel of(final UnicodeChar character, final Ansi.Color foreground, final Ansi.Color background) {
+    public static TerminalPixel of(final UnicodeChar character, final Color foreground, final Color background) {
         return new TerminalPixel(character, foreground, background);
     }
 
     public static TerminalPixel of(final UnicodeChar character) {
-        return new TerminalPixel(character, Ansi.Color.DEFAULT, Ansi.Color.DEFAULT);
+        return new TerminalPixel(character, Color.DEFAULT, Color.DEFAULT);
     }
 }

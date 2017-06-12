@@ -14,9 +14,9 @@ import java.util.Map;
 
 public final class ResolvedDependenciesEvent implements Event {
 
-    public final ImmutableMap<RecipeIdentifier, ResolvedDependency> dependencies;
+    public final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies;
 
-    private ResolvedDependenciesEvent(final ImmutableMap<RecipeIdentifier, ResolvedDependency> dependencies) {
+    private ResolvedDependenciesEvent(final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
         Preconditions.checkNotNull(dependencies);
         this.dependencies = dependencies;
     }
@@ -30,7 +30,7 @@ public final class ResolvedDependenciesEvent implements Event {
             .toString();
     }
 
-    public static ResolvedDependenciesEvent of(final ImmutableMap<RecipeIdentifier, ResolvedDependency> dependencies) {
+    public static ResolvedDependenciesEvent of(final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
         return new ResolvedDependenciesEvent(dependencies);
     }
 
@@ -38,7 +38,7 @@ public final class ResolvedDependenciesEvent implements Event {
     public static ResolvedDependenciesEvent of2(final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
         return new ResolvedDependenciesEvent(dependencies.entrySet()
             .stream()
-            .map(x -> Maps.immutableEntry(x.getKey(), x.getValue().getValue1()))
+            .map(x -> Maps.immutableEntry(x.getKey(), x.getValue()))
             .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 }

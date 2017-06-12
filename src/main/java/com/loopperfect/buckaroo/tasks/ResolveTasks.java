@@ -47,7 +47,7 @@ public final class ResolveTasks {
 
                 final DependencyLocks locks = DependencyLocks.of(event.dependencies.entrySet()
                     .stream()
-                    .map(x -> DependencyLock.of(x.getKey(), x.getValue()))
+                    .map(x -> DependencyLock.of(x.getKey(), x.getValue().getValue1()))
                     .collect(ImmutableList.toImmutableList()));
 
                 final Path lockFilePath = fs.getPath("buckaroo.lock.json").toAbsolutePath();

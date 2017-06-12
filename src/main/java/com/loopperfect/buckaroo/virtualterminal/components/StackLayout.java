@@ -59,4 +59,10 @@ public final class StackLayout implements Component {
             TerminalPixel.of(UnicodeChar.of(' ')),
             Arrays.stream(components).collect(ImmutableList.toImmutableList()));
     }
+
+    public static StackLayout of(final Iterable<Component> components) {
+        return new StackLayout(
+            TerminalPixel.of(UnicodeChar.of(' ')),
+            ImmutableList.copyOf(components));
+    }
 }

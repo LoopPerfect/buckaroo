@@ -1,9 +1,6 @@
 package com.loopperfect.buckaroo.virtualterminal.demos.progressbar;
 
-import com.loopperfect.buckaroo.virtualterminal.Map2D;
-import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
-import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
-import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
+import com.loopperfect.buckaroo.virtualterminal.*;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 
@@ -35,6 +32,6 @@ public final class Main {
     private static Map2D<TerminalPixel> render(final int width, final int height, final int progress) {
         return Map2D.of(
             width, height, TerminalPixel.class, TerminalPixel.of(UnicodeChar.of(' ')))
-            .modify((x, y, v) -> y == 0 ? (x <= progress ? v.setBackground(Ansi.Color.BLACK) : v) : v);
+            .modify((x, y, v) -> y == 0 ? (x <= progress ? v.setBackground(Color.BLACK) : v) : v);
     }
 }

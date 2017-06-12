@@ -85,7 +85,7 @@ public final class InstallTasks {
                                         final DependencyLocks locks = DependencyLocks.of(
                                             resolvedDependenciesEvent.dependencies.entrySet()
                                                 .stream()
-                                                .map(i -> DependencyLock.of(i.getKey(), i.getValue()))
+                                                .map(i -> DependencyLock.of(i.getKey(), i.getValue().getValue1()))
                                                 .collect(toImmutableList()));
 
                                         return Single.concat(

@@ -8,6 +8,7 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -69,7 +70,25 @@ public final class FlowLayout implements Component {
         return render;
     }
 
-    public static FlowLayout of(Component... children) {
-        return new FlowLayout(TerminalPixel.of(UnicodeChar.of(' ')), ImmutableList.copyOf(children));
+    public static FlowLayout of(final TerminalPixel background, final ImmutableList<Component> components) {
+        return new FlowLayout(background, components);
+    }
+
+    public static FlowLayout of(final TerminalPixel background, final Component... components) {
+        return new FlowLayout(
+            background,
+            Arrays.stream(components).collect(ImmutableList.toImmutableList()));
+    }
+
+    public static FlowLayout of(final Component... components) {
+        return new FlowLayout(
+            TerminalPixel.of(UnicodeChar.of(' ')),
+            Arrays.stream(components).collect(ImmutableList.toImmutableList()));
+    }
+
+    public static FlowLayout of(final Iterable<Component> components) {
+        return new FlowLayout(
+            TerminalPixel.of(UnicodeChar.of(' ')),
+            ImmutableList.copyOf(components));
     }
 }

@@ -40,7 +40,7 @@ public final class TerminalBuffer {
         for (int y = 0; y < image.height(); y++) {
             for (int x = 0; x < image.width(); x++) {
                 final TerminalPixel pixel = image.get(x, y);
-                System.out.print(Ansi.ansi().bg(pixel.background).fg(pixel.foreground).a((char) pixel.character.characterCode));
+                System.out.print(Ansi.ansi().bg(pixel.background.toAnsi()).fg(pixel.foreground.toAnsi()).a((char) pixel.character.characterCode));
             }
             System.out.print(Ansi.ansi().reset().newline());
         }

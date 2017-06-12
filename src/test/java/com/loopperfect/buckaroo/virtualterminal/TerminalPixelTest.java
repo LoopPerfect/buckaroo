@@ -14,28 +14,28 @@ public final class TerminalPixelTest {
 
         final TerminalPixel a = TerminalPixel.of(
             UnicodeChar.of('h'),
-            Ansi.Color.CYAN,
-            Ansi.Color.MAGENTA);
+            Color.CYAN,
+            Color.MAGENTA);
 
         final TerminalPixel b = TerminalPixel.of(
             UnicodeChar.of('h'),
-            Ansi.Color.CYAN,
-            Ansi.Color.MAGENTA);
+            Color.CYAN,
+            Color.MAGENTA);
 
         final TerminalPixel c = TerminalPixel.of(
             UnicodeChar.of('e'),
-            Ansi.Color.RED,
-            Ansi.Color.MAGENTA);
+            Color.RED,
+            Color.MAGENTA);
 
         final TerminalPixel d = TerminalPixel.of(
             UnicodeChar.of('h'),
-            Ansi.Color.CYAN,
-            Ansi.Color.BLACK);
+            Color.CYAN,
+            Color.BLACK);
 
         final TerminalPixel e = TerminalPixel.of(
             UnicodeChar.of('l'),
-            Ansi.Color.GREEN,
-            Ansi.Color.BLUE);
+            Color.GREEN,
+            Color.BLUE);
 
         assertEquals(a, a);
         assertEquals(b, a);

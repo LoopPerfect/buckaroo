@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.virtualterminal.components;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.Map2D;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
@@ -22,12 +23,12 @@ public final class ProgressBar implements Component {
 
         final TerminalPixel filled = TerminalPixel.of(
             UnicodeChar.of(' '),
-            Ansi.Color.DEFAULT,
-            Ansi.Color.CYAN);
+            Color.DEFAULT,
+            Color.CYAN);
         final TerminalPixel background = TerminalPixel.of(
             UnicodeChar.of(' '),
-            Ansi.Color.DEFAULT,
-            Ansi.Color.BLUE);
+            Color.DEFAULT,
+            Color.BLUE);
         final int p = (int)Math.ceil(width * progress);
         return Map2D.of(width, 1, TerminalPixel.class, background)
             .modify((x, y, v) -> x <= p ? filled : v);
