@@ -1,6 +1,8 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.events.FileWriteEvent;
@@ -18,8 +20,11 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
+import io.reactivex.Single;
+import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.schedulers.Schedulers;
 
+import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
@@ -29,10 +34,12 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.loopperfect.buckaroo.virtualterminal.TerminalPixel.fill;
@@ -53,7 +60,7 @@ public final class Main {
             return;
         }
 
-        AnsiConsole.systemInstall();
+        //AnsiConsole.systemInstall();
         final FileSystem fs = FileSystems.getDefault();
 
         final String rawCommand = String.join(" ", args);
@@ -66,8 +73,9 @@ public final class Main {
 
         try {
 
+            System.out.println("start");
             final CLICommand command = commandParser.parse(rawCommand);
-            final Observable<Event> task = command.routine().apply(fs).publish().share();
+            final Observable<Event> task = command.routine().apply(fs);
 
             final ExecutorService executorService = Executors.newCachedThreadPool();
             final Scheduler scheduler = Schedulers.from(executorService);
@@ -75,7 +83,7 @@ public final class Main {
             TerminalBuffer buffer = new TerminalBuffer();
 
 
-            final Observable<Event> events$ = task.subscribeOn(scheduler);
+            final ConnectableObservable<Event> events$ = task.subscribeOn(scheduler).publish();
 
 
 
@@ -87,7 +95,7 @@ public final class Main {
                 .filter(e-> e instanceof DownloadProgress)
                 .cast(DownloadProgress.class);
 
-               // downloads$.subscribe(x->{System.out.println(x);});
+                downloads$.subscribe(x->{System.out.println(x);});
 
             final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
                 .filter(e-> e instanceof ResolvedDependenciesEvent)
@@ -137,11 +145,45 @@ public final class Main {
             );
 */
 
-            events$
-                .delay(2000, TimeUnit.MILLISECONDS)
-                .subscribe(
+            final Observable<ImmutableList<Component>> modifiedSummary = writes$.scan(
+                ImmutableList.of(),
+                (ImmutableList<String> list, String file) -> Streams
+                    .concat(list.stream(), Stream.of(file))
+                    .collect(toImmutableList())
+              ).map( (ImmutableList<String> modifiedFiles) -> ImmutableList.of(
+                Text.of("modified Files("+modifiedFiles.size()+") :"),
+                FlowLayout.of(
+                   Text.of("    "),
+                   StackLayout.of(
+                       modifiedFiles.stream().map(Text::of).collect(toImmutableList()))
+                )));
+
+
+            final Observable<ImmutableList<Component>> depsSummary = deps$
+                .lastElement()
+                .toObservable()
+                .map(deps -> ImmutableList.of(
+                    Text.of("resolved dependencies("+deps.size()+") :"),
+                    FlowLayout.of(
+                        Text.of("    "),
+                        StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList()))
+                    )));
+
+            Observable
+                .combineLatest(modifiedSummary, depsSummary , (m, d) -> new ImmutableList.Builder<Component>()
+                    .addAll(m)
+                    .addAll(d)
+                    .build()
+                ).subscribe( Summary -> buffer.flip(StackLayout.of(Summary).render(100)));
+
+
+
+
+
+
+            events$.subscribe(
                 next -> {
-                    //System.out.println( next.getClass().getSimpleName() );
+                    System.out.println( next.getClass().getSimpleName() );
                 },
                 error -> {
                     error.printStackTrace();
@@ -150,40 +192,11 @@ public final class Main {
                     scheduler.shutdown();
                 },
                 () -> {
-
-                    ArrayList<Component> Summary = new ArrayList<>();
-
-                    final List<Component> modifiedFiles = writes$.reduce(
-                        new ArrayList<Component>(),
-                        (list, file) -> {
-                            list.add(Text.of(file));
-                            return list;
-                    }).blockingGet();
-
-                    if(modifiedFiles.size() > 0) {
-                        Summary.add(Text.of("modified Files("+modifiedFiles.size()+") :"));
-                        Summary.add(
-                            FlowLayout.of(
-                                Text.of("    "),
-                                StackLayout.of(modifiedFiles)
-                            ));
-                    }
-
-                    final ImmutableList<String> deps = deps$.last(ImmutableList.of()).blockingGet();
-                    if(deps.size()>0) {
-                        Summary.add(Text.of("resolved dependencies("+deps.size()+") :"));
-                        Summary.add(
-                            FlowLayout.of(
-                              Text.of("    "),
-                              StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList()))
-                        ));
-                    }
-
-                    buffer.flip(StackLayout.of(Summary).render(100));
                     executorService.shutdown();
                     scheduler.shutdown();
                 });
 
+            events$.connect();
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
