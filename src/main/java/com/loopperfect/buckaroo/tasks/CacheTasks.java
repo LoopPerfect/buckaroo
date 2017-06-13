@@ -9,6 +9,7 @@ import io.reactivex.Observable;
 import io.reactivex.Single;
 
 import java.net.URL;
+import java.nio.file.CopyOption;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -119,9 +120,16 @@ public final class CacheTasks {
         final FileSystem fs = target.getFileSystem();
         final Path cachePath = getCachePath(fs, file);
 
+        if(Files.exists(target)) {
+            return CommonTasks.copy(cachePath, target)
+                .toObservable()
+                .cast(Event.class);
+        }
+
         return Observable.concat(
             downloadToCache(fs, file),
-            CommonTasks.copy(cachePath, target).toObservable()
+            CommonTasks.copy(cachePath, target)
+                .toObservable()
         );
     }
 

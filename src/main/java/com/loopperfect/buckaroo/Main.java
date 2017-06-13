@@ -6,6 +6,7 @@ import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.events.FileWriteEvent;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
+import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
@@ -66,7 +67,7 @@ public final class Main {
         try {
 
             final CLICommand command = commandParser.parse(rawCommand);
-            final Observable<Event> task = command.routine().apply(fs);
+            final Observable<Event> task = command.routine().apply(fs).publish().share();
 
             final ExecutorService executorService = Executors.newCachedThreadPool();
             final Scheduler scheduler = Schedulers.from(executorService);
@@ -81,6 +82,12 @@ public final class Main {
             final Observable<ReadProjectFileEvent> projectFiles$ = events$
                 .filter(e-> e instanceof ReadProjectFileEvent)
                 .cast(ReadProjectFileEvent.class);
+
+            final Observable<DownloadProgress> downloads$ = events$
+                .filter(e-> e instanceof DownloadProgress)
+                .cast(DownloadProgress.class);
+
+               // downloads$.subscribe(x->{System.out.println(x);});
 
             final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
                 .filter(e-> e instanceof ResolvedDependenciesEvent)
@@ -124,11 +131,11 @@ public final class Main {
                     d
                 ));
 
-
+/*
             current$.subscribe(
                 c-> buffer.flip(c.render(100))
             );
-
+*/
 
             events$
                 .delay(2000, TimeUnit.MILLISECONDS)
