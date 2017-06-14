@@ -240,7 +240,7 @@ java_binary(
 )
 
 java_test(
-  name = 'buckaroo-test',
+  name = 'buckaroo-unit',
   source = '8',
   target = '8',
   srcs = glob([
