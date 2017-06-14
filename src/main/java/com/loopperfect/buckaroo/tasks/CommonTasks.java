@@ -116,11 +116,11 @@ public final class CommonTasks {
         });
     }
 
-    public static Single<FileCopyEvent> copy(final Path source, final Path destination) {
+    public static Single<FileCopyEvent> copy(final Path source, final Path destination, CopyOption... copyOptions) {
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(destination);
         return Single.fromCallable(() -> {
-            Files.copy(source, destination);
+            Files.copy(source, destination, copyOptions);
             return FileCopyEvent.of(source, destination);
         });
     }

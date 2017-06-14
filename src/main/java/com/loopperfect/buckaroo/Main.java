@@ -26,12 +26,14 @@ import io.reactivex.schedulers.Schedulers;
 
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.fusesource.jansi.AnsiConsole;
+import org.javatuples.Pair;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
 import java.awt.*;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -83,7 +85,7 @@ public final class Main {
             TerminalBuffer buffer = new TerminalBuffer();
 
 
-            final ConnectableObservable<Event> events$ = task.subscribeOn(scheduler).publish();
+            final Observable<Event> events$ = task.subscribeOn(scheduler);
 
 
 
@@ -139,12 +141,6 @@ public final class Main {
                     d
                 ));
 
-/*
-            current$.subscribe(
-                c-> buffer.flip(c.render(100))
-            );
-*/
-
             final Observable<ImmutableList<Component>> modifiedSummary = writes$.scan(
                 ImmutableList.of(),
                 (ImmutableList<String> list, String file) -> Streams
@@ -169,34 +165,59 @@ public final class Main {
                         StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList()))
                     )));
 
-            Observable
-                .combineLatest(modifiedSummary, depsSummary , (m, d) -> new ImmutableList.Builder<Component>()
-                    .addAll(m)
-                    .addAll(d)
-                    .build()
-                ).subscribe( Summary -> buffer.flip(StackLayout.of(Summary).render(100)));
+            //current$.concatWith(
+
+            Observable<Either<Event, Component>> result =    Observable.merge(
+
+                events$
+                    .map(x->{ Either<Event, Component> e = Either.left(x); return e;}),
+
+                Observable
+                .combineLatest(
+                    modifiedSummary,
+                    depsSummary,
+                    (m, d) -> new ImmutableList.Builder<Component>()
+                        .addAll(m)
+                        .addAll(d)
+                        .build())
+                .lastElement()
+                .map(StackLayout::of)
+                .map(x->{ Either<Event, Component> e = Either.right(x); return e;})
+                .toObservable()
+
+            );
 
 
+            //)
+                result.subscribe(
+                    S -> {
+                        if(S.left().isPresent()) {
+                            System.out.println(S.left().get().getClass().getSimpleName().toString());
+                        } else {
+                            buffer.flip(S.right().get().render(100));
+                        }
+                    },
+                    error -> {
+                        error.printStackTrace();
 
+                        executorService.shutdown();
+                        scheduler.shutdown();
+                    },
+                    () -> {
+                        executorService.shutdown();
+                        scheduler.shutdown();
+                    }
+                );
 
-
-
+/*
             events$.subscribe(
                 next -> {
                     System.out.println( next.getClass().getSimpleName() );
-                },
-                error -> {
-                    error.printStackTrace();
-
-                    executorService.shutdown();
-                    scheduler.shutdown();
-                },
-                () -> {
-                    executorService.shutdown();
-                    scheduler.shutdown();
                 });
+*/
 
-            events$.connect();
+
+           // events$.connect();
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());

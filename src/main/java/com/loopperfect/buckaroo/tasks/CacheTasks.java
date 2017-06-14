@@ -9,10 +9,7 @@ import io.reactivex.Observable;
 import io.reactivex.Single;
 
 import java.net.URL;
-import java.nio.file.CopyOption;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.Optional;
 
 public final class CacheTasks {
@@ -109,6 +106,10 @@ public final class CacheTasks {
 
         final Path cachePath = getCachePath(fs, url);
 
+        if (Files.exists(cachePath)) {
+            return Observable.empty();
+        }
+
         return DownloadTask.download(url, cachePath).cast(Event.class);
     }
 
@@ -120,15 +121,9 @@ public final class CacheTasks {
         final FileSystem fs = target.getFileSystem();
         final Path cachePath = getCachePath(fs, file);
 
-        if(Files.exists(target)) {
-            return CommonTasks.copy(cachePath, target)
-                .toObservable()
-                .cast(Event.class);
-        }
-
         return Observable.concat(
             downloadToCache(fs, file),
-            CommonTasks.copy(cachePath, target)
+            CommonTasks.copy(cachePath, target, StandardCopyOption.REPLACE_EXISTING)
                 .toObservable()
         );
     }
@@ -142,7 +137,8 @@ public final class CacheTasks {
             getCacheFolder(fs).toString(),
             StringUtils.escapeStringAsFilename(commit.url));
 
-        return GitTasks.ensureCloneAndCheckout(commit, cachePath)
+        return GitTasks
+            .ensureCloneAndCheckout(commit, cachePath)
             .andThen(CommonTasks.copy(cachePath, target));
     }
 }

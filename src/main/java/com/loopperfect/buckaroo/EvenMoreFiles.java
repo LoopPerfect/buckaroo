@@ -120,13 +120,13 @@ public final class EvenMoreFiles {
         Preconditions.checkNotNull(copyOptions);
         Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute());
 
-        try (final FileSystem zipFileSystem = zipFileSystem(source)) {
+        final FileSystem zipFileSystem = zipFileSystem(source);
             EvenMoreFiles.copyDirectory(
                 subPath.map(x -> switchFileSystem(zipFileSystem, x))
                     .orElse(zipFileSystem.getPath(zipFileSystem.getSeparator())).toAbsolutePath(),
                 target,
                 copyOptions);
-        }
+
     }
 
     public static Stream<Path> walkZip(final Path source, final int maxDepth) throws IOException {
