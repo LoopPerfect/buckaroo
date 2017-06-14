@@ -1,11 +1,15 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.Either;
+import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.Process;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+
 
 import java.io.*;
 import java.net.URL;
@@ -23,15 +27,24 @@ public final class DownloadTask {
 
     }
 
-    public static Single<String> download(final URL url) {
+    public static Process<Event, String> download(final URL url) {
         Preconditions.checkNotNull(url);
-        return Single.fromCallable(() -> {
-            final URLConnection conn = url.openConnection();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                conn.getInputStream(), StandardCharsets.UTF_8))) {
-                return reader.lines().collect(Collectors.joining("\n"));
-            }
-        });
+        return Process.of(Observable.using(
+            ByteArrayOutputStream::new,
+            (ByteArrayOutputStream x) -> Observable.concat(
+                download(url, x).map(p-> {
+                    final Either<Event, String> e = Either
+                        .left(p);
+                    return e;
+                }),
+                Observable.fromCallable(()-> {
+                    final Either<Event, String> e = Either
+                        .right(new String(x.toByteArray(), "UTF-8"));
+                    return e;
+                })
+
+            ),
+            ByteArrayOutputStream::close));
     }
 
     public static Observable<DownloadProgress> download(final URL url, final Path target, final boolean overwrite) {
