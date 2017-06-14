@@ -24,7 +24,8 @@ public final class GitHubRecipeSourceTest {
         final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
 
         final Single<Recipe> task = recipeSource.fetch(
-            RecipeIdentifier.of("github", "njlr", "test-lib-c"));
+            RecipeIdentifier.of("github", "njlr", "test-lib-c"))
+            .result();
 
         task.timeout(90, TimeUnit.SECONDS).blockingGet();
     }
@@ -37,7 +38,8 @@ public final class GitHubRecipeSourceTest {
         final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
 
         final Single<Recipe> task = recipeSource.fetch(
-            RecipeIdentifier.of("github", "njlr", "test-lib-no-releases"));
+            RecipeIdentifier.of("github", "njlr", "test-lib-no-releases"))
+            .result();
 
         task.timeout(90, TimeUnit.SECONDS).subscribe(
             result -> {
@@ -55,7 +57,8 @@ public final class GitHubRecipeSourceTest {
         final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
 
         final Single<Recipe> task = recipeSource.fetch(
-            RecipeIdentifier.of("github", "njlr", "test-lib-no-project"));
+            RecipeIdentifier.of("github", "njlr", "test-lib-no-project"))
+            .result();
 
         task.timeout(90, TimeUnit.SECONDS).subscribe(
             result -> {

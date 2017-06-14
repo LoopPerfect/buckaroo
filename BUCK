@@ -242,6 +242,29 @@ java_test(
 )
 
 java_test(
+  name = 'resolver',
+  source = '8',
+  target = '8',
+  srcs = glob([
+    'src/test/java/com/**/AsyncDependencyResolverTest.java',
+  ]),
+  deps = [
+    ':buckaroo',
+    ':javatuples',
+    ':rxjava',
+    ':reactive-streams',
+    ':okhttp',
+    ':guava',
+    ':gson',
+    ':hamcrest',
+    ':junit',
+    ':jimfs',
+    ':jparsec',
+  ],
+)
+
+
+java_test(
   name = 'buckaroo-integration',
   source = '8',
   target = '8',

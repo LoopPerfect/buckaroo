@@ -1,6 +1,5 @@
 package com.loopperfect.buckaroo.virtualterminal;
 
-import org.fusesource.jansi.Ansi;
 import org.junit.Test;
 
 

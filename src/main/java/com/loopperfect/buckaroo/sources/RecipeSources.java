@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.sources;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.DependencyResolutionException;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
@@ -22,7 +23,7 @@ public final class RecipeSources {
 
     public static RecipeSource empty() {
         return identifier ->
-            Single.error(new IOException(identifier.encode() + " not found. This source is empty. "));
+            Process.error(new IOException(identifier.encode() + " not found. This source is empty. "));
     }
 
     public static RecipeSource routed(final ImmutableMap<Identifier, RecipeSource> routes, final RecipeSource otherwise) {
@@ -33,7 +34,7 @@ public final class RecipeSources {
                 if (routes.containsKey(identifier.source.get())) {
                     return routes.get(identifier.source.get()).fetch(identifier);
                 }
-                return Single.error(new DependencyResolutionException(
+                return Process.error(new DependencyResolutionException(
                     "Could not fetch " + identifier.encode() + " because " + identifier.source.get() + " is not routed. "));
             }
             return otherwise.fetch(identifier);
@@ -56,16 +57,17 @@ public final class RecipeSources {
             LazyCookbookRecipeSource.of(cookbookPath));
     }
 
-    public static Observable<Dependency> resolve(final RecipeSource source, final PartialDependency dependency) {
+    public static Process<Event, Dependency> resolve(final RecipeSource source, final PartialDependency dependency) {
 
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(dependency);
 
+
         return source.fetch(RecipeIdentifier.of(dependency.organization, dependency.project))
-            .map(x -> Dependency.of(
+            .chain(s -> Process.of( Single.just(s).map(x -> Dependency.of(
                 RecipeIdentifier.of(dependency.source, dependency.organization, dependency.project),
                 ExactSemanticVersion.of(x.versions.keySet().stream().max(Comparator.naturalOrder())
-                    .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! ")))))
-            .toObservable();
+                    .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! "))
+                )))));
     }
 }

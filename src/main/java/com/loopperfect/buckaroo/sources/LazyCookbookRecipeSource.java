@@ -1,9 +1,8 @@
 package com.loopperfect.buckaroo.sources;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Recipe;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.RecipeSource;
+import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import io.reactivex.Single;
 
@@ -19,11 +18,11 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
     }
 
     @Override
-    public Single<Recipe> fetch(final RecipeIdentifier identifier) {
+    public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
 
         Preconditions.checkNotNull(identifier);
 
-        return Single.fromCallable(() -> {
+        return Process.of( Single.fromCallable(() -> {
             if (identifier.source.isPresent()) {
                 throw new IllegalArgumentException(identifier.encode() + " should be found on " + identifier.source.get());
             }
@@ -32,7 +31,7 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
                 "recipes",
                 identifier.organization.name,
                 identifier.recipe.name + ".json");
-        }).flatMap(CommonTasks::readRecipeFile);
+        }).flatMap(CommonTasks::readRecipeFile));
     }
 
     public static RecipeSource of(final Path pathToCookbook) {

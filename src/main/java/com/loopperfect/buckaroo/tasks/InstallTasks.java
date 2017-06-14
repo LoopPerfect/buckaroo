@@ -31,7 +31,7 @@ public final class InstallTasks {
 
         return Single.concat(
             partialDependencies.stream()
-                .map(x -> RecipeSources.resolve(recipeSource, x).singleOrError())
+                .map(x -> RecipeSources.resolve(recipeSource, x).result())
                 .collect(toImmutableList()))
             .toList()
             .map(x -> x.stream()
@@ -77,7 +77,8 @@ public final class InstallTasks {
                                     AsyncDependencyResolver.resolve(
                                         recipeSource,
                                         project.dependencies.add(proposedDependencies).entries())
-                                        .map(ResolvedDependenciesEvent::of2),
+                                        .map(ResolvedDependenciesEvent::of)
+                                        .result(),
 
                                     // Write the project and lock files
                                     (ResolvedDependenciesEvent resolvedDependenciesEvent) -> {

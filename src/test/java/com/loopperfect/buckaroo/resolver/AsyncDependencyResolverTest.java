@@ -14,6 +14,6 @@ public final class AsyncDependencyResolverTest {
 
         assertEquals(
             ImmutableMap.of(),
-            AsyncDependencyResolver.resolve(RecipeSources.empty(), ImmutableList.of()).blockingGet());
+            AsyncDependencyResolver.resolve(RecipeSources.empty(), ImmutableList.of()).result().blockingGet());
     }
 }

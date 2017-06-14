@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.tasks.CacheTasks;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
@@ -68,18 +69,18 @@ public final class GitHubRecipeSource implements RecipeSource {
     }
 
     @Override
-    public Single<Recipe> fetch(final RecipeIdentifier identifier) {
+    public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
 
         Preconditions.checkNotNull(identifier);
 
-        return GitHub.fetchReleaseNames(identifier.organization, identifier.recipe).flatMap(releases -> {
-
+        return GitHub.fetchReleaseNames(identifier.organization, identifier.recipe).chain(
+            releases -> {
             final ImmutableList<GitHubRelease> semanticVersionReleases = releases.stream()
                 .filter(x -> SemanticVersion.parse(x.name).isPresent())
                 .collect(ImmutableList.toImmutableList());
 
             if (semanticVersionReleases.isEmpty()) {
-                return Single.error(() -> new FetchRecipeException("No releases found for " + identifier.encode() + ". "));
+                return Process.error(new FetchRecipeException("No releases found for " + identifier.encode() + ". "));
             }
 
             final ImmutableMap<GitHubRelease, Single<RecipeVersion>> tasks = semanticVersionReleases.stream()
@@ -87,7 +88,7 @@ public final class GitHubRecipeSource implements RecipeSource {
 
             final Single<ImmutableMap<SemanticVersion, RecipeVersion>> identity = Single.just(ImmutableMap.of());
 
-            return tasks.entrySet().stream().reduce(
+            final Single<Recipe> xxx = tasks.entrySet().stream().reduce(
                 identity,
                 (state, next) -> state.flatMap(map -> next.getValue().map(recipeVersion -> {
                     final SemanticVersion version = SemanticVersion.parse(next.getKey().name).get();
@@ -98,6 +99,8 @@ public final class GitHubRecipeSource implements RecipeSource {
                     identifier.recipe.name,
                     "https://github.com/" + identifier.organization + "/" + identifier.recipe,
                     recipeVersions));
+
+            return Process.of(xxx);
         });
     }
 

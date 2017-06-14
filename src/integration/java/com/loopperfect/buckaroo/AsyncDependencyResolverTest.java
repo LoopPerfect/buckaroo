@@ -26,7 +26,8 @@ public final class AsyncDependencyResolverTest {
 
         final Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> task = AsyncDependencyResolver.resolve(
             recipeSource,
-            ImmutableList.of(Dependency.of(RecipeIdentifier.of("github", "njlr", "test-lib-a"), AnySemanticVersion.of())));
+            ImmutableList.of(Dependency.of(RecipeIdentifier.of("github", "njlr", "test-lib-a"), AnySemanticVersion.of())))
+            .result();
 
         final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolved =
             task.timeout(120, TimeUnit.SECONDS).blockingGet();

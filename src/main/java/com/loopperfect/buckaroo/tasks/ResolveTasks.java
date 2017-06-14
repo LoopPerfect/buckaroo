@@ -38,6 +38,7 @@ public final class ResolveTasks {
 
                 return AsyncDependencyResolver.resolve(
                     recipeSource, event.project.dependencies.entries())
+                    .result()
                     .map(ResolvedDependenciesEvent::of)
                     .toObservable();
             },

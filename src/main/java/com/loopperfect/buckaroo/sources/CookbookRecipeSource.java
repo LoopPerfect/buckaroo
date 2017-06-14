@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.sources;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Process;
 import io.reactivex.Single;
 
 import java.io.IOException;
@@ -16,11 +17,11 @@ public final class CookbookRecipeSource implements RecipeSource {
     }
 
     @Override
-    public Single<Recipe> fetch(final RecipeIdentifier identifier) {
+    public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
 
         Preconditions.checkNotNull(identifier);
 
-        return Single.fromCallable(() -> {
+        return Process.of(Single.fromCallable(() -> {
 
             if (identifier.source.isPresent()) {
                 throw new IllegalArgumentException(identifier.encode() + " should be found on " + identifier.source.get());
@@ -39,7 +40,7 @@ public final class CookbookRecipeSource implements RecipeSource {
             } catch (final Throwable throwable) {
                 throw new IOException("Could not find " + identifier.encode(), throwable);
             }
-        });
+        }));
     }
 
     public static RecipeSource of(final Cookbook cookbook) {
