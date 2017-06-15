@@ -242,29 +242,6 @@ java_test(
 )
 
 java_test(
-  name = 'resolver',
-  source = '8',
-  target = '8',
-  srcs = glob([
-    'src/test/java/com/**/AsyncDependencyResolverTest.java',
-  ]),
-  deps = [
-    ':buckaroo',
-    ':javatuples',
-    ':rxjava',
-    ':reactive-streams',
-    ':okhttp',
-    ':guava',
-    ':gson',
-    ':hamcrest',
-    ':junit',
-    ':jimfs',
-    ':jparsec',
-  ],
-)
-
-
-java_test(
   name = 'buckaroo-integration',
   source = '8',
   target = '8',
@@ -286,54 +263,3 @@ java_test(
     ':jansi',
   ],
 )
-
-
-
-java_library(
-  name = 'demos',
-  srcs = glob([
-    'demos/com/loopperfect/buckaroo/virtualterminal/**/*.java',
-  ]),
-  source = '8',
-  target = '1.8',
-  deps = [
-    ':buckaroo',
-    ':rxjava',
-    ':guava',
-    ':jansi',
-  ],
-)
-
-java_binary(
-  name = 'progressbar',
-  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.progressbar.Main',
-  deps = [
-     ':demos',
-  ],
-)
-
-java_binary(
-  name = 'process',
-  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.process.Main',
-
-  deps = [
-     ':demos',
-  ],
-)
-
-java_binary(
-  name = 'varyingheights',
-  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.varyingheights.Main',
-  deps = [
-     ':demos',
-  ],
-)
-
-java_binary(
-  name = 'flash',
-  main_class = 'com.loopperfect.buckaroo.virtualterminal.demos.flash.Main',
-  deps = [
-    ':demos',
-  ],
-)
-

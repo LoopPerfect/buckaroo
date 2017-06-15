@@ -1,8 +1,9 @@
-package com.loopperfect.buckaroo;
+package com.loopperfect.buckaroo.github;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
+import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
