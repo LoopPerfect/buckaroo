@@ -4,10 +4,12 @@ import com.google.common.base.Charsets;
 import com.google.common.jimfs.Jimfs;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.zip.ZipOutputStream;
@@ -114,5 +116,30 @@ public final class EvenMoreFilesTest {
         final String actual = Charset.defaultCharset().decode(ByteBuffer.wrap(bytes)).toString();
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void writeAndReadFile() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final String expected = "Hello, world. \nHow are you?\n\n\nend.";
+        final Path path = fs.getPath("a/b/c/test.txt").toAbsolutePath();
+
+        EvenMoreFiles.writeFile(path, expected);
+
+        final String actual = EvenMoreFiles.read(path);
+
+        assertEquals(expected, actual);
+    }
+
+    @Test(expected=IOException.class)
+    public void writeDoesNotOverwrite() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+        final Path path = fs.getPath("test.txt");
+
+        EvenMoreFiles.writeFile(path, "Testing... testing...");
+        EvenMoreFiles.writeFile(path, "123");
     }
 }

@@ -81,7 +81,7 @@ public final class CommonTasksTest {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final Path target = fs.getPath("test.txt").toAbsolutePath();
-        final String content = "This is a test\n Testing... testing... 123\n";
+        final String content = "This is a test\n Testing... testing... 123";
 
         CommonTasks.writeFile(content, target, false).blockingGet();
 

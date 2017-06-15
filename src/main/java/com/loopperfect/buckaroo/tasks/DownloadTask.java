@@ -12,7 +12,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.stream.Collectors;
 
 public final class DownloadTask {
@@ -35,25 +37,17 @@ public final class DownloadTask {
     }
 
     public static Observable<DownloadProgress> download(final URL url, final Path target, final boolean overwrite) {
-
         Preconditions.checkNotNull(url);
         Preconditions.checkNotNull(target);
-
         return Single.fromCallable(() -> {
-
-            if (Files.exists(target)) {
-                if (overwrite) {
-                    Files.deleteIfExists(target);
-                } else {
-                    throw new IOException("There is already a file at " + target + ". ");
-                }
+            final Path parent = target.getParent();
+            if (parent != null && !Files.exists(parent)) {
+                Files.createDirectories(parent);
             }
-
-            if (!Files.exists(target.getParent())) {
-                Files.createDirectories(target.getParent());
+            if (overwrite) {
+                return Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             }
-
-            return Files.newOutputStream(target);
+            return Files.newOutputStream(target, StandardOpenOption.CREATE_NEW);
         }).flatMapObservable(outputStream -> download(url, outputStream));
     }
 

@@ -57,22 +57,23 @@ public final class InstallExistingTasks {
             writeBuckarooDeps.cast(Event.class));
     }
 
-    private static Observable<Event> installDependencyLock(final FileSystem fs, final DependencyLock lock) {
+    private static Observable<Event> installDependencyLock(final Path projectDirectory, final DependencyLock lock) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(projectDirectory);
         Preconditions.checkNotNull(lock);
 
-        final Path dependencyFolder = fs.getPath(
-            "buckaroo", CommonTasks.toFolderName(lock.identifier)).toAbsolutePath();
+        final Path dependencyFolder = projectDirectory.resolve("buckaroo")
+            .resolve(CommonTasks.toFolderName(lock.identifier))
+            .toAbsolutePath();
 
-        return downloadResolvedDependency(fs, lock.origin, dependencyFolder);
+        return downloadResolvedDependency(projectDirectory.getFileSystem(), lock.origin, dependencyFolder);
     }
 
-    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final FileSystem fs) {
+    public static Observable<Event> installExistingDependencies(final Path projectDirectory) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(projectDirectory);
 
-        final Path lockFilePath = fs.getPath("buckaroo.lock.json").toAbsolutePath();
+        final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
 
         return Observable.concat(
 
@@ -83,24 +84,31 @@ public final class InstallExistingTasks {
                     return Observable.empty();
                 }
                 // Generate a lock file
-                return ResolveTasks.resolveDependenciesInWorkingDirectory(fs);
+                return ResolveTasks.resolveDependencies(projectDirectory);
             }),
 
             MoreSingles.chainObservable(
 
                 // Read the lock file
-                CommonTasks.readLockFile(fs.getPath("buckaroo.lock.json").toAbsolutePath())
+                CommonTasks.readLockFile(projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath())
                     .map(ReadLockFileEvent::of),
 
                 (ReadLockFileEvent event) -> {
 
                     final ImmutableMap<DependencyLock, Observable<Event>> installs = event.locks.entries()
                         .stream()
-                        .collect(ImmutableMap.toImmutableMap(i -> i, i -> installDependencyLock(fs, i)));
+                        .collect(ImmutableMap.toImmutableMap(
+                            i -> i,
+                            i -> installDependencyLock(projectDirectory, i)));
 
                     return MoreObservables.zipMaps(installs)
                         .map(x -> DependencyInstallationProgress.of(ImmutableMap.copyOf(x)));
                 }
             ));
+    }
+
+    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return installExistingDependencies(fs.getPath(""));
     }
 }

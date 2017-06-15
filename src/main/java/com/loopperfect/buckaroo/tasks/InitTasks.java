@@ -29,24 +29,29 @@ public final class InitTasks {
         });
     }
 
-    public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
+    public static Observable<Event> init(final Path projectDirectory) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(projectDirectory);
 
         return Observable.concat(
 
             // Create an empty project from the working directory
-            generateProjectForDirectory(fs.getPath("").toAbsolutePath()).flatMap(project ->
+            generateProjectForDirectory(projectDirectory.toAbsolutePath()).flatMap(project ->
 
                 // Write the project file
                 CommonTasks.writeFile(
                     Serializers.serialize(project),
-                    fs.getPath("buckaroo.json").toAbsolutePath(),
+                    projectDirectory.resolve("buckaroo.json").toAbsolutePath(),
                     false)).toObservable(),
 
             // Touch .buckconfig
-            CommonTasks.touchFile(fs.getPath(".buckconfig").toAbsolutePath())
+            CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
                 .toObservable()
         );
+    }
+
+    public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return init(fs.getPath(""));
     }
 }

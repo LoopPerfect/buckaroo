@@ -27,16 +27,16 @@ public final class PublishAndMergeTransformer<A extends C, B extends C, C> imple
         Objects.requireNonNull(x, "x is null");
         return x.publish(i -> Observable.merge(
             i,
-            i.flatMap(f::apply)));
+            i.lastOrError().toObservable().flatMap(f::apply)));
     }
 
     public static <A extends C, B extends C, C> ObservableTransformer<A, C> of(final Function<A, Observable<B>> f) {
         Objects.requireNonNull(f, "f is null");
-        return new PublishAndMergeTransformer<A, B, C>(f);
+        return new PublishAndMergeTransformer<>(f);
     }
 
     public static <A extends C, B extends C, C> ObservableTransformer<A, C> ofSingle(final Function<A, Single<B>> f) {
         Objects.requireNonNull(f, "f is null");
-        return new PublishAndMergeTransformer<A, B, C>(f.andThen(Single::toObservable));
+        return new PublishAndMergeTransformer<>(f.andThen(Single::toObservable));
     }
 }

@@ -100,4 +100,30 @@ public final class DownloadTaskTest {
         // It should also get called!
         assertTrue(b.get());
     }
+
+    @Test
+    public void createsParentDirectories() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final Path target = fs.getPath("/a/b/c/test.txt");
+
+        DownloadTask.download(new URL("http://www.google.com"), target).toList()
+            .blockingGet();
+
+        assertTrue(Files.exists(target));
+    }
+
+    @Test
+    public void createsParentDirectories2() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final Path target = fs.getPath("a/b/c/test.txt").toAbsolutePath();
+
+        DownloadTask.download(new URL("http://www.google.com"), target).toList()
+            .blockingGet();
+
+        assertTrue(Files.exists(target));
+    }
 }

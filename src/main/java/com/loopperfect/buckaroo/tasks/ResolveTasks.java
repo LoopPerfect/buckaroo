@@ -19,22 +19,22 @@ public final class ResolveTasks {
 
     }
 
-    public static Observable<Event> resolveDependenciesInWorkingDirectory(final FileSystem fs) {
+    public static Observable<Event> resolveDependencies(final Path projectDirectory) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(projectDirectory);
 
-        final Path projectFilePath = fs.getPath("buckaroo.json").toAbsolutePath();
+        final Path projectFilePath = projectDirectory.resolve("buckaroo.json").toAbsolutePath();
 
-        return CommonTasks.readAndMaybeGenerateConfigFile(fs).flatMapObservable(config -> MoreObservables.chain(
+        return CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()).flatMapObservable(config -> MoreObservables.chain(
 
             // Read the project file
             CommonTasks.readProjectFile(projectFilePath)
-                    .toObservable(),
+                .toObservable(),
 
             // Resolve the dependencies
-            (ReadProjectFileEvent event) ->  {
+            (ReadProjectFileEvent event) -> {
 
-                final RecipeSource recipeSource = RecipeSources.standard(fs, config.config);
+                final RecipeSource recipeSource = RecipeSources.standard(projectDirectory.getFileSystem(), config.config);
 
                 return AsyncDependencyResolver.resolve(
                     recipeSource, event.project.dependencies.entries())
@@ -50,12 +50,17 @@ public final class ResolveTasks {
                     .map(x -> DependencyLock.of(x.getKey(), x.getValue()))
                     .collect(ImmutableList.toImmutableList()));
 
-                final Path lockFilePath = fs.getPath("buckaroo.lock.json").toAbsolutePath();
+                final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
 
                 return CommonTasks.writeFile(Serializers.serialize(locks), lockFilePath, true)
                     .toObservable()
                     .cast(Event.class);
             })
         );
+    }
+
+    public static Observable<Event> resolveDependenciesInWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return resolveDependencies(fs.getPath(""));
     }
 }

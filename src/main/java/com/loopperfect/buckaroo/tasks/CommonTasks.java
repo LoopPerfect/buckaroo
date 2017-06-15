@@ -89,11 +89,7 @@ public final class CommonTasks {
 
     public static Single<TouchFileEvent> touchFile(final Path path) {
         return Single.fromCallable(() -> {
-            if (Files.exists(path)) {
-                Files.setLastModifiedTime(path, FileTime.from(Instant.now()));
-            } else {
-                Files.createFile(path);
-            }
+            MoreFiles.touch(path);
             return TouchFileEvent.of(path);
         });
     }

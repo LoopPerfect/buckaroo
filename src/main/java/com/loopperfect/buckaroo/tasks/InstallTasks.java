@@ -39,13 +39,13 @@ public final class InstallTasks {
                 .collect(toImmutableList()));
     }
 
-    public static Observable<Event> installDependencyInWorkingDirectory(final FileSystem fs, final ImmutableList<PartialDependency> partialDependencies) {
+    public static Observable<Event> installDependency(final Path projectDirectory, final ImmutableList<PartialDependency> partialDependencies) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(projectDirectory);
         Preconditions.checkNotNull(partialDependencies);
 
-        final Path projectFilePath = fs.getPath("buckaroo.json").toAbsolutePath();
-        final Path lockFilePath = fs.getPath("buckaroo.lock.json").toAbsolutePath();
+        final Path projectFilePath = projectDirectory.resolve("buckaroo.json").toAbsolutePath();
+        final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
 
         return Observable.concat(
 
@@ -53,12 +53,12 @@ public final class InstallTasks {
             MoreSingles.chainObservable(
 
                 // Read the config file
-                CommonTasks.readAndMaybeGenerateConfigFile(fs),
+                CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()),
 
                 (ReadConfigFileEvent readConfigFileEvent) -> {
 
                     final BuckarooConfig config = readConfigFileEvent.config;
-                    final RecipeSource recipeSource = RecipeSources.standard(fs, config);
+                    final RecipeSource recipeSource = RecipeSources.standard(projectDirectory.getFileSystem(), config);
 
                     return MoreSingles.chainObservable(
 
@@ -106,12 +106,17 @@ public final class InstallTasks {
                                             .toObservable();
                                     }));
                         }
-                );
-            }),
+                    );
+                }),
 
             // Next, run the install routine!
-            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs)
+            InstallExistingTasks.installExistingDependencies(projectDirectory)
         );
+    }
+
+    public static Observable<Event> installDependencyInWorkingDirectory(final FileSystem fs, final ImmutableList<PartialDependency> partialDependencies) {
+        Preconditions.checkNotNull(fs);
+        return installDependency(fs.getPath(""), partialDependencies);
     }
 }
 
