@@ -1,10 +1,12 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -73,10 +75,10 @@ public final class Process<S, T> {
         return new Process<>(observable.map(x -> x.flatMap(Either::left, Either::right)));
     }
 
-    public static <S, T> Process<S, T> of(final Observable<S> states, final T result) {
+    public static <S, T> Process<S, T> of(final Observable<S> states, final Single<T> result) {
         return new Process<>(Observable.concat(
             states.map(Either::left),
-            Observable.just(Either.right(result))
+            result.toObservable().map(Either::right)
         ));
     }
 
@@ -138,5 +140,27 @@ public final class Process<S, T> {
         Objects.requireNonNull(g, "g is null");
 
         return chain(chain(x, f), g);
+    }
+
+    public static <S, T> Process<S, T> chainN(final Process<S, T> a, final Function<T, Process<S, T>>... fs) {
+
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(fs);
+
+        return Arrays.stream(fs).reduce(
+            a,
+            (x, f) -> Process.chain(x, f),
+            Process::concat);
+    }
+
+    public static <S, T> Process<S, T> chainN(final Process<S, T> a, final Iterable<Function<T, Process<S, T>>> fs) {
+
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(fs);
+
+        return Streams.stream(fs).reduce(
+            a,
+            (x, f) -> Process.chain(x, f),
+            Process::concat);
     }
 }

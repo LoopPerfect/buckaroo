@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.resolver;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -11,6 +12,8 @@ import org.javatuples.Pair;
 
 import java.util.*;
 import java.util.stream.Stream;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class AsyncDependencyResolver {
 
@@ -84,16 +87,28 @@ public final class AsyncDependencyResolver {
         Process<Event, ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> p =
             Process.just(resolved);
 
-        for(final Dependency next : dependencies) {
+        for (final Dependency next : dependencies) {
             p = p.chain(x -> step(recipeSource, x, next, strategy));
         }
-        /*
-        dependencies.stream().reduce(
-            Process.just(resolved),
-            (p, next) -> p.chain(x -> step(recipeSource, x, next, strategy))
-        );
-        */
+
         return p;
+/*
+        final Process<Event, ImmutableMap<RecipeIdentifier,Pair<SemanticVersion,ResolvedDependency>>>
+            resolvedProcess = Process.just(resolved);
+
+        return Process.chainN(
+            resolvedProcess,
+            dependencies.stream().map(next->
+               p -> process(p).chain(
+                   (final ImmutableMap<RecipeIdentifier,Pair<SemanticVersion,ResolvedDependency>> x)
+                       -> step(recipeSource, x, next, strategy))
+            ).collect(toImmutableList())
+        );
+*/
+    }
+
+    public static <t, u> Process<t, u> process(final Process<t, u> f) {
+        return f;
     }
 
     public static Process<Event, ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> resolve(
