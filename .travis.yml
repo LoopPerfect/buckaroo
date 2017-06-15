@@ -1,17 +1,28 @@
-sudo: required
-
-language: java
-
-services:
-  - docker
+dist: trusty
+language: generic
 
 before_install:
-  - docker pull njlr/buck:v2
-  - docker run -itd --name build njlr/buck:v2
-  - docker exec build git clone https://github.com/LoopPerfect/buckaroo.git
+  # Install Linuxbrew
+  - test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git $HOME/.linuxbrew
+  - PATH="$HOME/.linuxbrew/bin:$PATH"
+  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
+  - export MANPATH="$(brew --prefix)/share/man:$MANPATH"
+  - export INFOPATH="$(brew --prefix)/share/info:$INFOPATH"
+  - brew --version
+  # Install Buck
+  - brew tap facebook/fb
+  - brew install buck
+  - buck --version
 
 script:
-  - docker exec build /bin/bash -c 'cd /buckaroo && buck test'
-  - docker exec build /bin/bash -c 'cd /buckaroo && buck build :buckaroo'
-  - docker exec build /bin/bash -c 'cd /buckaroo && buck build :buckaroo-cli'
-  - docker exec build /bin/bash -c 'java -jar /buckaroo/buck-out/gen/buckaroo-cli.jar version'
+  - buck build :buckaroo
+  - buck test :buckaroo-unit
+  - buck run :buckaroo-cli
+
+branches:
+  except:
+    - gh-pages
+
+cache:
+  directories:
+    - $HOME/.linuxbrew/

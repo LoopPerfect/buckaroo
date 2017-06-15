@@ -90,6 +90,6 @@ public final class QuickstartTasks {
         Preconditions.checkNotNull(fs);
 
         return InitTasks.generateProjectForDirectory(fs.getPath("").toAbsolutePath())
-            .flatMapObservable(project -> createAppSkeleton(fs.getPath("").toAbsolutePath(), project));
+            .flatMapObservable(event -> createAppSkeleton(fs.getPath("").toAbsolutePath(), event.project));
     }
 }

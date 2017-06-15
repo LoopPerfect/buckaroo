@@ -1,15 +1,13 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.MoreFiles;
-import com.google.common.jimfs.Jimfs;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
@@ -27,7 +25,7 @@ public final class EvenMoreFiles {
         super();
     }
 
-    public static void writeFile(final Path path, final CharSequence content, final Charset charset, final boolean overwrite) throws IOException {
+    public static void writeFile(final Path path, final String content, final Charset charset, final boolean overwrite) throws IOException {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(content);
         Preconditions.checkNotNull(charset);
@@ -41,10 +39,13 @@ public final class EvenMoreFiles {
                 Files.createDirectories(path.getParent());
             }
         }
-        Files.write(path, ImmutableList.of(content), charset, StandardOpenOption.CREATE);
+        try (final BufferedWriter writer = Files.newBufferedWriter(
+            path, charset, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            writer.write(content);
+        }
     }
 
-    public static void writeFile(final Path path, final CharSequence content) throws IOException {
+    public static void writeFile(final Path path, final String content) throws IOException {
         writeFile(path, content, Charset.defaultCharset(), false);
     }
 
@@ -135,8 +136,12 @@ public final class EvenMoreFiles {
         return Files.walk(zipFileSystem.getPath("/"), maxDepth);
     }
 
+    public static String read(final Path path, final Charset charset) throws IOException {
+        return String.join("\n", Files.readAllLines(path, charset));
+    }
+
     public static String read(final Path path) throws IOException {
-        return com.google.common.io.MoreFiles.asCharSource(path, Charsets.UTF_8).read();
+        return read(path, Charset.defaultCharset());
     }
 
     public static void copyDirectory(final Path source, final Path target, final CopyOption... copyOptions) throws IOException {

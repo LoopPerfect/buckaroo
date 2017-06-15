@@ -2,7 +2,9 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.MoreObservables;
 import com.loopperfect.buckaroo.Project;
+import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -17,7 +19,7 @@ public final class InitTasks {
 
     }
 
-    public static Single<Project> generateProjectForDirectory(final Path path) {
+    public static Single<ReadProjectFileEvent> generateProjectForDirectory(final Path path) {
 
         Preconditions.checkNotNull(path);
 
@@ -25,28 +27,39 @@ public final class InitTasks {
             final Optional<String> projectName = path.getNameCount() > 0 ?
                 Optional.of(path.getName(path.getNameCount() - 1).toString()) :
                 Optional.empty();
-            return Project.of(projectName);
+            return ReadProjectFileEvent.of(Project.of(projectName));
         });
     }
 
-    public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
+    public static Observable<Event> init(final Path projectDirectory) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(projectDirectory);
 
-        return Observable.concat(
+        return MoreObservables.chain(
 
             // Create an empty project from the working directory
-            generateProjectForDirectory(fs.getPath("").toAbsolutePath()).flatMap(project ->
+            generateProjectForDirectory(projectDirectory.toAbsolutePath()).toObservable(),
 
-                // Write the project file
+            readProjectFileEvent -> {
+
+                return Observable.concat(
+
+                    // Write the project file
                 CommonTasks.writeFile(
-                    Serializers.serialize(project),
-                    fs.getPath("buckaroo.json").toAbsolutePath(),
-                    false)).toObservable(),
+                    Serializers.serialize(readProjectFileEvent.project),
+                    projectDirectory.resolve("buckaroo.json").toAbsolutePath(),
+                    false).toObservable(),
 
-            // Touch .buckconfig
-            CommonTasks.touchFile(fs.getPath(".buckconfig").toAbsolutePath())
-                .toObservable()
+                // Touch .buckconfig
+                CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
+                    .toObservable()
+                );
+            }
         );
+    }
+
+    public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return init(fs.getPath(""));
     }
 }

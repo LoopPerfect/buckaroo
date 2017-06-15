@@ -62,7 +62,6 @@ public final class RecipeSources {
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(dependency);
 
-
         return source.fetch(RecipeIdentifier.of(dependency.source, dependency.organization, dependency.project))
             .chain(s -> Process.of( Single.just(s).map(x -> Dependency.of(
                 RecipeIdentifier.of(dependency.source, dependency.organization, dependency.project),
