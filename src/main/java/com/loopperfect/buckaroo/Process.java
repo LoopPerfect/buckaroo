@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.observables.ConnectableObservable;
 
 import java.util.Arrays;
 import java.util.Objects;

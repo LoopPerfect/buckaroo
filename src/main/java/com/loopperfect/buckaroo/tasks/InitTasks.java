@@ -2,7 +2,9 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.MoreObservables;
 import com.loopperfect.buckaroo.Project;
+import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -17,7 +19,7 @@ public final class InitTasks {
 
     }
 
-    public static Single<Project> generateProjectForDirectory(final Path path) {
+    public static Single<ReadProjectFileEvent> generateProjectForDirectory(final Path path) {
 
         Preconditions.checkNotNull(path);
 
@@ -25,7 +27,7 @@ public final class InitTasks {
             final Optional<String> projectName = path.getNameCount() > 0 ?
                 Optional.of(path.getName(path.getNameCount() - 1).toString()) :
                 Optional.empty();
-            return Project.of(projectName);
+            return ReadProjectFileEvent.of(Project.of(projectName));
         });
     }
 
@@ -33,20 +35,26 @@ public final class InitTasks {
 
         Preconditions.checkNotNull(projectDirectory);
 
-        return Observable.concat(
+        return MoreObservables.chain(
 
             // Create an empty project from the working directory
-            generateProjectForDirectory(projectDirectory.toAbsolutePath()).flatMap(project ->
+            generateProjectForDirectory(projectDirectory.toAbsolutePath()).toObservable(),
 
-                // Write the project file
+            readProjectFileEvent -> {
+
+                return Observable.concat(
+
+                    // Write the project file
                 CommonTasks.writeFile(
-                    Serializers.serialize(project),
+                    Serializers.serialize(readProjectFileEvent.project),
                     projectDirectory.resolve("buckaroo.json").toAbsolutePath(),
-                    false)).toObservable(),
+                    false).toObservable(),
 
-            // Touch .buckconfig
-            CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
-                .toObservable()
+                // Touch .buckconfig
+                CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
+                    .toObservable()
+                );
+            }
         );
     }
 
