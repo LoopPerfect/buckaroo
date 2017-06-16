@@ -10,6 +10,7 @@ import io.reactivex.observables.ConnectableObservable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public final class Process<S, T> {
@@ -19,6 +20,10 @@ public final class Process<S, T> {
     private Process(final Observable<Either<S, T>> observable) {
         Objects.requireNonNull(observable, "observable is null");
         this.observable = observable;
+            /*publish()
+            .autoConnect()
+            .delay(50, TimeUnit.MILLISECONDS);
+            */
     }
 
     public Observable<S> states() {
@@ -85,7 +90,7 @@ public final class Process<S, T> {
 
     public static <S> Process<S, S> usingLastAsResult(final Observable<S> observable) {
         return new Process<>(Observable.concat(
-            observable.skipLast(1).map(x -> {
+            observable.map(x -> {
                 final Either<S, S> either = Either.left(x);
                 return either;
             }),

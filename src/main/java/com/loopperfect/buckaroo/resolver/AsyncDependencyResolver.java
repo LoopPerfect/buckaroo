@@ -11,6 +11,7 @@ import io.reactivex.Observable;
 import org.javatuples.Pair;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -41,10 +42,8 @@ public final class AsyncDependencyResolver {
         }
 
         return recipeSource.fetch(next.project)
-            .chain(s-> Process.of(
-                Single.just(s)
-                .flatMap(recipe -> {
-                    final Stream<Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>>> candidateStream = recipe.versions.entrySet()
+            .chain(recipe -> {
+                    final ImmutableList<Process<Event, ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>>> candidateStream = recipe.versions.entrySet()
                         .stream()
                         .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
                         .sorted(Comparator.comparing(Map.Entry::getKey))
@@ -62,15 +61,22 @@ public final class AsyncDependencyResolver {
                                 recipeSource,
                                 nextResolved,
                                 nextDependencies,
-                                strategy).result();
-                        });
+                                strategy);
+                        }).collect(toImmutableList());
 
-                    return MoreObservables.findMax(
-                        MoreObservables.skipErrors(Observable.fromIterable(candidateStream::iterator)),
+                final Observable<Event> states =
+                    Observable.merge(candidateStream
+                        .stream()
+                        .map(Process::states)
+                        .collect(toImmutableList()));
+
+                return Process.of(states, MoreObservables.findMax(
+                    MoreObservables.skipErrors(Observable.fromIterable(
+                        candidateStream.stream().map(Process::result)::iterator)),
                         Comparator.comparing(strategy::score))
                         .toSingle()
-                        .onErrorResumeNext(error -> Single.error(new DependencyResolutionException("Could not satisfy " + next, error)));
-            })));
+                        .onErrorResumeNext(error -> Single.error(new DependencyResolutionException("Could not satisfy " + next, error))));
+            });
     }
 
     private static Process<Event, ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> resolve(
