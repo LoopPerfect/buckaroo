@@ -112,8 +112,8 @@ public final class InstallExistingTasks {
             ));
     }
 
-    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final FileSystem fs) {
-        Preconditions.checkNotNull(fs);
-        return installExistingDependencies(fs.getPath(""));
+    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final Context ctx) {
+        Preconditions.checkNotNull(ctx);
+        return installExistingDependencies(ctx.fs.getPath(""));
     }
 }

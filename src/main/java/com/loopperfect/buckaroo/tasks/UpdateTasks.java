@@ -100,9 +100,11 @@ public final class UpdateTasks {
         });
     }
 
-    public static Observable<Event> updateCookbooks(final FileSystem fs) {
+    public static Observable<Event> updateCookbooks(final Context ctx) {
 
-        Preconditions.checkNotNull(fs);
+        Preconditions.checkNotNull(ctx);
+
+        final FileSystem fs = ctx.fs;
 
         final Path buckarooFolder = fs.getPath(
             System.getProperty("user.home"),

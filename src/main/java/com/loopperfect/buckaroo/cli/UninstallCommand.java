@@ -45,9 +45,9 @@ public final class UninstallCommand implements CLICommand {
     }
 
     @Override
-    public Function<FileSystem, Observable<Event>> routine() {
-        return fs -> UninstallTasks.uninstallInWorkingDirectory(
-            fs,
+    public Function<Context, Observable<Event>> routine() {
+        return ctx -> UninstallTasks.uninstallInWorkingDirectory(
+            ctx,
             ImmutableList.of(project));
     }
 

@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
+import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.MoreObservables;
 import com.loopperfect.buckaroo.Project;
@@ -58,8 +59,8 @@ public final class InitTasks {
         );
     }
 
-    public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
-        Preconditions.checkNotNull(fs);
-        return init(fs.getPath(""));
+    public static Observable<Event> initWorkingDirectory(final Context ctx) {
+        Preconditions.checkNotNull(ctx);
+        return init(ctx.fs.getPath(""));
     }
 }

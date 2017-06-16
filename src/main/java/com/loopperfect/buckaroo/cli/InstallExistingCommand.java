@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.tasks.InstallExistingTasks;
 import io.reactivex.Observable;
@@ -24,7 +25,7 @@ public final class InstallExistingCommand implements CLICommand {
     }
 
     @Override
-    public Function<FileSystem, Observable<Event>> routine() {
+    public Function<Context, Observable<Event>> routine() {
         return InstallExistingTasks::installExistingDependenciesInWorkingDirectory;
     }
 

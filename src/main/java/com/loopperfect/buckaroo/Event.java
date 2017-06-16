@@ -19,7 +19,7 @@ public abstract class Event {
     public final Date date = Date.from(Instant.now());
     public final long threadId = Thread.currentThread().getId();
 
-    public String toString() {
+    public String toDebugString() {
         return MoreObjects
             .toStringHelper(this)
             .add("type", "Event")

@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.MoreObjects;
+import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.tasks.QuickstartTasks;
 import io.reactivex.Observable;
@@ -15,7 +16,7 @@ public final class QuickstartCommand implements CLICommand {
     }
 
     @Override
-    public Function<FileSystem, Observable<Event>> routine() {
+    public Function<Context, Observable<Event>> routine() {
         return QuickstartTasks::quickstartInWorkingDirectory;
     }
 

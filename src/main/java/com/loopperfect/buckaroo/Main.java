@@ -77,10 +77,14 @@ public final class Main {
 
             System.out.println("start");
             final CLICommand command = commandParser.parse(rawCommand);
-            final Observable<Event> task = command.routine().apply(fs);
 
             final ExecutorService executorService = Executors.newCachedThreadPool();
             final Scheduler scheduler = Schedulers.from(executorService);
+
+            final Context ctx = Context.of(fs, scheduler);
+            final Observable<Event> task = command.routine().apply(ctx);
+
+
 
             TerminalBuffer buffer = new TerminalBuffer();
 
@@ -195,7 +199,7 @@ public final class Main {
                 result.subscribe(
                     S -> {
                         if(S.left().isPresent()) {
-                            System.out.println(S.left().get().getClass().getSimpleName().toString());
+                            System.out.println(S.left().get().toDebugString());
                         } else {
                             buffer.flip(S.right().get().render(100));
                         }

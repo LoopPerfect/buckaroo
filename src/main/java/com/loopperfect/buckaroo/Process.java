@@ -4,12 +4,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.observables.ConnectableObservable;
+import io.reactivex.schedulers.Schedulers;
 
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -20,10 +24,11 @@ public final class Process<S, T> {
     private Process(final Observable<Either<S, T>> observable) {
         Objects.requireNonNull(observable, "observable is null");
         this.observable = observable;
-            /*publish()
-            .autoConnect()
-            .delay(50, TimeUnit.MILLISECONDS);
-            */
+            //.subscribeOn(Schedulers.newThread())
+            //.publish()
+            //.autoConnect();
+            //.delay(50, TimeUnit.MILLISECONDS);
+
     }
 
     public Observable<S> states() {

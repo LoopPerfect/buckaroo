@@ -1,9 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Buckaroo;
-import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.Notification;
-import com.loopperfect.buckaroo.Unit;
+import com.loopperfect.buckaroo.*;
 import io.reactivex.Observable;
 
 import java.nio.file.FileSystem;
@@ -16,7 +13,7 @@ public final class VersionCommand implements CLICommand {
     }
 
     @Override
-    public Function<FileSystem, Observable<Event>> routine() {
+    public Function<Context, Observable<Event>> routine() {
         return fs -> Observable.just(Notification.of(Buckaroo.version.toString()));
     }
 

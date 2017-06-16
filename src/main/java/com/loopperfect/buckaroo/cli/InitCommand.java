@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.tasks.InitTasks;
@@ -15,7 +16,7 @@ public final class InitCommand implements CLICommand {
     }
 
     @Override
-    public Function<FileSystem, Observable<Event>> routine() {
+    public Function<Context, Observable<Event>> routine() {
 
         return InitTasks::initWorkingDirectory;
     }

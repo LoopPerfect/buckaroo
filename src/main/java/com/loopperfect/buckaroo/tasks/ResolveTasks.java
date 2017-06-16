@@ -59,8 +59,8 @@ public final class ResolveTasks {
             }).states();
     }
 
-    public static Observable<Event> resolveDependenciesInWorkingDirectory(final FileSystem fs) {
-        Preconditions.checkNotNull(fs);
-        return resolveDependencies(fs.getPath(""));
+    public static Observable<Event> resolveDependenciesInWorkingDirectory(final Context ctx) {
+        Preconditions.checkNotNull(ctx);
+        return resolveDependencies(ctx.fs.getPath(""));
     }
 }

@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.cli;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.PartialDependency;
 import com.loopperfect.buckaroo.Unit;
@@ -22,8 +23,8 @@ public final class InstallCommand implements CLICommand {
     }
 
     @Override
-    public Function<FileSystem, Observable<Event>> routine() {
-        return fs -> InstallTasks.installDependencyInWorkingDirectory(fs, dependencies);
+    public Function<Context, Observable<Event>> routine() {
+        return ctx -> InstallTasks.installDependencyInWorkingDirectory(ctx.fs, dependencies);
     }
 
     @Override
