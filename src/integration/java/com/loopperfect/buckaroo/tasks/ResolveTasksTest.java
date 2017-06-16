@@ -6,6 +6,8 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
+import io.reactivex.schedulers.Schedulers;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
@@ -19,6 +21,7 @@ public final class ResolveTasksTest {
     public void emptyProject() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
+        final Scheduler scheduler = Schedulers.newThread();
 
         final Project project = Project.of();
 
@@ -26,7 +29,7 @@ public final class ResolveTasksTest {
             fs.getPath("buckaroo.json"),
             Serializers.serialize(project));
 
-        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(fs);
+        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(Context.of(fs, scheduler));
 
         task.toList().blockingGet();
 
@@ -39,6 +42,7 @@ public final class ResolveTasksTest {
     public void simpleProject() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
+        final Scheduler scheduler = Schedulers.newThread();
 
         final Recipe recipe = Recipe.of(
             "example",
@@ -62,7 +66,7 @@ public final class ResolveTasksTest {
             fs.getPath("buckaroo.json"),
             Serializers.serialize(project));
 
-        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(fs);
+        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(Context.of(fs, scheduler));
 
         task.toList().blockingGet();
 
