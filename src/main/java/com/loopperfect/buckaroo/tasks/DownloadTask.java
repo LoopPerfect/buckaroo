@@ -10,16 +10,12 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-
 import java.io.*;
 import java.net.URL;
-import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.stream.Collectors;
 
 public final class DownloadTask {
 
@@ -33,19 +29,10 @@ public final class DownloadTask {
         Preconditions.checkNotNull(url);
         return Process.of(Observable.using(
             ByteArrayOutputStream::new,
-            (ByteArrayOutputStream x) -> Observable.concat(
-                download(url, x).map(p-> {
-                    final Either<Event, String> e = Either
-                        .left(p);
-                    return e;
-                }),
-                Observable.fromCallable(()-> {
-                    final Either<Event, String> e = Either
-                        .right(new String(x.toByteArray(), "UTF-8"));
-                    return e;
-                })
-
-            ),
+            byteArrayOutputStream -> Observable.concat(
+                download(url, byteArrayOutputStream).map(Either::left),
+                Observable.fromCallable(() -> Either.<Event, String>right(
+                    new String(byteArrayOutputStream.toByteArray(), Charset.defaultCharset())))),
             ByteArrayOutputStream::close));
     }
 
@@ -100,6 +87,7 @@ public final class DownloadTask {
                 int count;
                 long lastCount = 0;
                 long lastEmissionCount = 0;
+
                 while ((count = input.read(data)) != -1) {
 
                     total += count;

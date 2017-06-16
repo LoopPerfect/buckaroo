@@ -222,7 +222,7 @@ public final class CommonTasks {
         Preconditions.checkNotNull(remoteArchive);
         Preconditions.checkNotNull(targetDirectory);
 
-        final Path zipFilePath = Paths.get(targetDirectory + ".zip");
+        final Path zipFilePath = targetDirectory.getParent().resolve(targetDirectory.getFileName() + ".zip");
 
         return Observable.concat(
 
