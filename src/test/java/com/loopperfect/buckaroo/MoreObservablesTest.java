@@ -46,6 +46,26 @@ public final class MoreObservablesTest {
             .blockingGet());
 
         assertEquals(expected , actual);
+    }
 
+    @Test
+    public void mergeMaps() throws Exception {
+
+        final Map<String, Observable<Integer>> o = ImmutableMap.of(
+            "a", Observable.just(1),
+            "b", Observable.just(1, 2, 3),
+            "c", Observable.empty()
+        );
+
+        final ImmutableMap<String, Integer> expected = ImmutableMap.of(
+            "a", 1,
+            "b", 3
+        );
+
+        final ImmutableMap<String, Integer> actual = MoreObservables.mergeMaps(o)
+            .lastElement()
+            .blockingGet();
+
+        assertEquals(expected , actual);
     }
 }
