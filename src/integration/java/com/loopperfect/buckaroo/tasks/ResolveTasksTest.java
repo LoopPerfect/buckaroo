@@ -6,6 +6,7 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
@@ -18,27 +19,31 @@ public final class ResolveTasksTest {
     @Test
     public void emptyProject() throws Exception {
 
-        final FileSystem fs = Jimfs.newFileSystem();
+        final Context context = Context.of(
+            Jimfs.newFileSystem(),
+            Schedulers.newThread());
 
         final Project project = Project.of();
 
         EvenMoreFiles.writeFile(
-            fs.getPath("buckaroo.json"),
+            context.fs.getPath("buckaroo.json"),
             Serializers.serialize(project));
 
-        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(fs);
+        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(context);
 
         task.toList().blockingGet();
 
         assertEquals(
             right(DependencyLocks.of()),
-            Serializers.parseDependencyLocks(EvenMoreFiles.read(fs.getPath("buckaroo.lock.json"))));
+            Serializers.parseDependencyLocks(EvenMoreFiles.read(context.fs.getPath("buckaroo.lock.json"))));
     }
 
     @Test
     public void simpleProject() throws Exception {
 
-        final FileSystem fs = Jimfs.newFileSystem();
+        final Context context = Context.of(
+            Jimfs.newFileSystem(),
+            Schedulers.newThread());
 
         final Recipe recipe = Recipe.of(
             "example",
@@ -49,7 +54,7 @@ public final class ResolveTasksTest {
                     GitCommit.of("https://github.com/org/example/commit", "c7355d5"),
                     "example")));
 
-        EvenMoreFiles.writeFile(fs.getPath(System.getProperty("user.home"),
+        EvenMoreFiles.writeFile(context.fs.getPath(System.getProperty("user.home"),
             ".buckaroo", "buckaroo-recipes", "recipes", "org", "example.json"),
             Serializers.serialize(recipe));
 
@@ -59,10 +64,10 @@ public final class ResolveTasksTest {
                 RecipeIdentifier.of("org", "example"), AnySemanticVersion.of())));
 
         EvenMoreFiles.writeFile(
-            fs.getPath("buckaroo.json"),
+            context.fs.getPath("buckaroo.json"),
             Serializers.serialize(project));
 
-        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(fs);
+        final Observable<Event> task = ResolveTasks.resolveDependenciesInWorkingDirectory(context);
 
         task.toList().blockingGet();
 
@@ -72,6 +77,6 @@ public final class ResolveTasksTest {
 
         assertEquals(
             right(expected),
-            Serializers.parseDependencyLocks(EvenMoreFiles.read(fs.getPath("buckaroo.lock.json"))));
+            Serializers.parseDependencyLocks(EvenMoreFiles.read(context.fs.getPath("buckaroo.lock.json"))));
     }
 }
