@@ -1,7 +1,12 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
+import java.util.stream.Collectors;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class MoreMaps {
 
@@ -17,7 +22,10 @@ public final class MoreMaps {
         Preconditions.checkNotNull(x);
         Preconditions.checkNotNull(y);
         return new ImmutableMap.Builder<K, V>()
-            .putAll(x)
+            .putAll(x.entrySet()
+                .stream()
+                .filter(i -> !y.containsKey(i.getKey()))
+                .collect(toImmutableList()))
             .putAll(y)
             .build();
     }
