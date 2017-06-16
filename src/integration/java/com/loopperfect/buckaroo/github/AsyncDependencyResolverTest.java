@@ -25,16 +25,16 @@ public final class AsyncDependencyResolverTest {
 
         final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
 
-        final Single<ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>>> task = AsyncDependencyResolver.resolve(
+        final Single<ResolvedDependencies> task = AsyncDependencyResolver.resolve(
             recipeSource,
             ImmutableList.of(Dependency.of(RecipeIdentifier.of("github", "njlr", "test-lib-a"), AnySemanticVersion.of())))
             .result();
 
-        final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> resolved =
+        final ResolvedDependencies resolved =
             task.timeout(120, TimeUnit.SECONDS).blockingGet();
 
-        assertTrue(resolved.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-a")));
-        assertTrue(resolved.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-b")));
-        assertTrue(resolved.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-c")));
+        assertTrue(resolved.dependencies.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-a")));
+        assertTrue(resolved.dependencies.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-b")));
+        assertTrue(resolved.dependencies.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-c")));
     }
 }

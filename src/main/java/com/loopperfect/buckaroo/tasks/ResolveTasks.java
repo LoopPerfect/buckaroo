@@ -43,7 +43,7 @@ public final class ResolveTasks {
                     return AsyncDependencyResolver.resolve(
                         recipeSource, event.project.dependencies.entries());
                 }).chain( event -> {
-                    final DependencyLocks locks = DependencyLocks.of(event.entrySet()
+                    final DependencyLocks locks = DependencyLocks.of(event.dependencies.entrySet()
                         .stream()
                         .map(x -> DependencyLock.of(x.getKey(), x.getValue().getValue1()))
                         .collect(ImmutableList.toImmutableList()));

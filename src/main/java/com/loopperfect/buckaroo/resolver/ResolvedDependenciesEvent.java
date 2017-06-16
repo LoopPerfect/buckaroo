@@ -2,21 +2,14 @@ package com.loopperfect.buckaroo.resolver;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.ResolvedDependency;
-import com.loopperfect.buckaroo.SemanticVersion;
-import org.javatuples.Pair;
-
-import java.util.Map;
+import com.loopperfect.buckaroo.ResolvedDependencies;
 
 public final class ResolvedDependenciesEvent implements Event {
 
-    public final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies;
+    public final ResolvedDependencies dependencies;
 
-    private ResolvedDependenciesEvent(final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
+    private ResolvedDependenciesEvent(final ResolvedDependencies dependencies) {
         Preconditions.checkNotNull(dependencies);
         this.dependencies = dependencies;
     }
@@ -30,15 +23,7 @@ public final class ResolvedDependenciesEvent implements Event {
             .toString();
     }
 
-    public static ResolvedDependenciesEvent of(final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
+    public static ResolvedDependenciesEvent of(final ResolvedDependencies dependencies) {
         return new ResolvedDependenciesEvent(dependencies);
-    }
-
-    @Deprecated
-    public static ResolvedDependenciesEvent of2(final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
-        return new ResolvedDependenciesEvent(dependencies.entrySet()
-            .stream()
-            .map(x -> Maps.immutableEntry(x.getKey(), x.getValue()))
-            .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 }
