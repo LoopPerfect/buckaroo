@@ -6,7 +6,7 @@ import com.loopperfect.buckaroo.Event;
 
 import java.nio.file.Path;
 
-public final class CreateDirectoryEvent implements Event {
+public final class CreateDirectoryEvent extends Event {
 
     public final Path path;
 

@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 
-public final class DependencyInstallationProgress implements Event {
+public final class DependencyInstallationProgress extends Event {
 
     public final ImmutableMap<DependencyLock, Event> progress;
 

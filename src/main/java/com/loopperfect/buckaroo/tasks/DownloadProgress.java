@@ -4,7 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
 
-public final class DownloadProgress implements Event {
+public final class DownloadProgress extends Event {
 
     public final long downloaded;
     public final long contentLength;

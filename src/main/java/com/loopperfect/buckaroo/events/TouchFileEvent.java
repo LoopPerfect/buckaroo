@@ -6,7 +6,7 @@ import com.loopperfect.buckaroo.Event;
 
 import java.nio.file.Path;
 
-public final class TouchFileEvent implements Event {
+public final class TouchFileEvent extends Event {
 
     public final Path path;
 

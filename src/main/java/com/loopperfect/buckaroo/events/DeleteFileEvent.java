@@ -5,7 +5,7 @@ import com.loopperfect.buckaroo.Event;
 
 import java.nio.file.Path;
 
-public final class DeleteFileEvent implements Event {
+public final class DeleteFileEvent extends Event {
 
     public final Path path;
 

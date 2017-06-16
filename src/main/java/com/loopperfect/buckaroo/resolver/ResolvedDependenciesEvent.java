@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.ResolvedDependencies;
 
-public final class ResolvedDependenciesEvent implements Event {
+public final class ResolvedDependenciesEvent extends Event {
 
     public final ResolvedDependencies dependencies;
 

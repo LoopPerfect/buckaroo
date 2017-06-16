@@ -2,7 +2,7 @@ package com.loopperfect.buckaroo.events;
 
 import com.loopperfect.buckaroo.Event;
 
-public final class PostRequestEvent implements Event {
+public final class PostRequestEvent extends Event {
 
     private PostRequestEvent() {
 

@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Project;
 
-public final class ReadProjectFileEvent implements Event {
+public final class ReadProjectFileEvent extends Event {
 
     public final Project project;
 
