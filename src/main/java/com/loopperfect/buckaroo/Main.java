@@ -124,7 +124,7 @@ public final class Main {
 
             final Observable<ImmutableList<String>>  deps$ = resolvedDependencies$
                 .map(deps->deps.dependencies)
-                .map(deps->deps.entrySet().stream())
+                .map(deps->deps.dependencies.entrySet().stream())
                 .map(s->s.map( kv ->
                     kv.getKey().organization.toString()
                     + "/"

@@ -124,7 +124,7 @@ public final class EvenMoreFilesTest {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final String expected = "Hello, world. \nHow are you?\n\n\nend.";
-        final Path path = fs.getPath("a/b/c/test.txt").toAbsolutePath();
+        final Path path = fs.getPath("a", "b", "c", "test.txt").toAbsolutePath();
 
         EvenMoreFiles.writeFile(path, expected);
 

@@ -4,5 +4,4 @@ package com.loopperfect.buckaroo;
 public interface RecipeSource {
 
     Process<Event, Recipe> fetch(final RecipeIdentifier identifier);
-
 }

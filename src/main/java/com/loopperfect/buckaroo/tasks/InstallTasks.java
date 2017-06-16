@@ -83,9 +83,9 @@ public final class InstallTasks {
                         recipeSource,
                         project.dependencies.add(proposedDependencies).entries()),
 
-                    (ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> deps) -> {
+                    (ResolvedDependencies deps) -> {
                         final DependencyLocks locks = DependencyLocks.of(
-                            deps.entrySet().stream()
+                            deps.dependencies.entrySet().stream()
                                 .map(i -> DependencyLock.of(i.getKey(), i.getValue().getValue1()))
                                 .collect(toImmutableList())
                         );
