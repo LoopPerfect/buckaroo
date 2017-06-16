@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.DependencyLocks;
 import com.loopperfect.buckaroo.Event;
 
-public final class ReadLockFileEvent implements Event {
+public final class ReadLockFileEvent extends Event {
 
     public final DependencyLocks locks;
 

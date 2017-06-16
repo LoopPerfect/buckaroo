@@ -6,7 +6,7 @@ import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Project;
 
-public final class FetchReleaseEvent implements Event {
+public final class FetchReleaseEvent extends Event {
 
     public final Either<Event, Project> value;
 

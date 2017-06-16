@@ -7,7 +7,7 @@ import com.loopperfect.buckaroo.Event;
 
 import java.nio.file.Path;
 
-public final class FileHashEvent implements Event {
+public final class FileHashEvent extends Event {
 
     public final Path file;
     public final HashCode sha256;

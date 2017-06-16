@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.nio.file.Path;
 
-public final class FileWriteEvent implements Event {
+public final class FileWriteEvent extends Event {
 
     public final Path path;
     public final Optional<String> content;

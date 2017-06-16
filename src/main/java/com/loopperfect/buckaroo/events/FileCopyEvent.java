@@ -6,7 +6,7 @@ import com.loopperfect.buckaroo.Event;
 
 import java.nio.file.Path;
 
-public final class FileCopyEvent implements Event {
+public final class FileCopyEvent extends Event {
 
     public final Path source;
     public final Path destination;

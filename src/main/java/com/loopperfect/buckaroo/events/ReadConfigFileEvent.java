@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.BuckarooConfig;
 import com.loopperfect.buckaroo.Event;
 
-public final class ReadConfigFileEvent implements Event {
+public final class ReadConfigFileEvent extends Event {
 
     public final BuckarooConfig config;
 

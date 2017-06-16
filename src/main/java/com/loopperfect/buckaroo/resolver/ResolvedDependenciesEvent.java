@@ -12,7 +12,7 @@ import org.javatuples.Pair;
 
 import java.util.Map;
 
-public final class ResolvedDependenciesEvent implements Event {
+public final class ResolvedDependenciesEvent extends Event {
 
     public final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies;
 

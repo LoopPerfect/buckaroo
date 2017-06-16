@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 
 import java.util.Objects;
 
-public final class Notification implements Event {
+public final class Notification extends Event {
 
     public final String message;
 
