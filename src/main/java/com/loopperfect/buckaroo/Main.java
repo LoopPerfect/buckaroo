@@ -62,7 +62,7 @@ public final class Main {
             return;
         }
 
-        //AnsiConsole.systemInstall();
+        AnsiConsole.systemInstall();
         final FileSystem fs = FileSystems.getDefault();
 
         final String rawCommand = String.join(" ", args);
@@ -85,7 +85,10 @@ public final class Main {
             TerminalBuffer buffer = new TerminalBuffer();
 
 
-            final ConnectableObservable<Event> events$ = task.subscribeOn(scheduler).publish();
+            final ConnectableObservable<Event> events$ = task
+                .observeOn(scheduler)
+                .subscribeOn(scheduler)
+                .publish();
 
 
 
