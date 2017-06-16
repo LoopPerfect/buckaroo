@@ -75,6 +75,10 @@ public final class ResolvedDependency {
         return new ResolvedDependency(source, target, buckResource, dependencies);
     }
 
+    public static ResolvedDependency of(final Either<GitCommit, RemoteArchive> source) {
+        return new ResolvedDependency(source, Optional.empty(), Optional.empty(), ImmutableList.of());
+    }
+
     public static ResolvedDependency from(final RecipeVersion recipeVersion) {
         Preconditions.checkNotNull(recipeVersion);
         return of(
