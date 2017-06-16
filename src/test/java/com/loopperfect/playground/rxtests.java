@@ -55,22 +55,50 @@ public class rxtests {
             .reduce(0, (x,y) -> x+y)
             .subscribeOn(ss);
 
-
-
-          Single
+        Single
             .zip(a,b, (x, y) -> x + y)
             .subscribe(r->result.set(r));
-
-
 
         Assert.assertTrue(f.get());
         Assert.assertEquals(10, (int)result.get());
 
 
         s.shutdown();
+    }
 
-        //o.connect();
-        //
+
+    @Test
+    public void subscriptions2() throws ExecutionException, InterruptedException {
+
+        final Counter c = new Counter();
+
+        ExecutorService s = Executors.newCachedThreadPool();
+        Scheduler ss = Schedulers.from(s);
+
+        Observable<Integer> x = Observable
+            .just(1,2,3,4)
+            .doOnNext(y-> System.out.print(y) )
+            .doOnSubscribe( y -> c.inc())
+            .cache();
+
+        Observable<Integer> y = Observable.concat(
+            x.skip(1),
+            x.skipLast(1)
+        );
+
+
+        //final SettableFuture<Integer> result = SettableFuture.create();
+        y.subscribe(
+          //  n->{},
+          //  e->{},
+          //  ()->{ result.set(c.get()); }
+        );
+
+
+        //Thread.yield();
+        //result.wait();
+
+        Assert.assertEquals(1, (int)c.get());
 
 
     }
