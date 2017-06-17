@@ -27,16 +27,84 @@ public class ProgressView {
 
     private ProgressView(){}
 
+    public static Observable<Component> dependencyView(final Observable<Event> events$) {
+        return events$.ofType(ResolvedDependenciesEvent.class)
+            .map(deps->deps.dependencies)
+            .map(deps->deps.dependencies.entrySet().stream())
+            .map(s->s.map( kv ->
+                kv.getKey().organization.toString()
+                    + "/"
+                    + kv.getKey().recipe.toString()
+                    + "@" + kv.getValue().getValue0().toString()+" "))
+            .map(s->s.collect(toImmutableList()))
+            .map(Collection::stream)
+            .map(s->FlowLayout.of(
+                s.map(x->Text.of(x, Color.GREEN)).collect(toImmutableList())))
+            .startWith(FlowLayout.of())
+            .cast(Component.class);
+    }
+
+    public static Observable<Component> installationProgressView(final Observable<Event> events$) {
+        return events$.ofType(DependencyInstallationProgress.class).map(d-> {
+                final ImmutableList<Triplet<String, Long, Long>> downloading = d.progress
+                    .entrySet()
+                    .stream()
+                    .filter(e -> e.getValue() instanceof DownloadProgress)
+                    .map(e -> Pair.with(e.getKey(),(DownloadProgress)e.getValue()))
+                    .map(e -> Triplet.with(
+                        "downloading " + e.getValue0().identifier.toString(),
+                        e.getValue1().downloaded,
+                        e.getValue1().contentLength))
+                    .collect(toImmutableList());
+
+                final long completed = downloading
+                    .stream()
+                    .map(Triplet::getValue1)
+                    .reduce(1l, (a, b) -> a + b);
+
+                final long toDownload = downloading
+                    .stream()
+                    .map(Triplet::getValue2)
+                    .reduce(1l, (a, b) -> a + b);
+
+                final Triplet<String, Long, Long> total = Triplet.with(
+                    "total progress",
+                    completed,
+                    toDownload
+                );
+
+                final Comparator<Triplet<String, Long, Long>> comparator = Comparator.comparingDouble( a ->
+                    1.0 - (double)a.getValue1() / (double)a.getValue2()
+                );
+
+                final ImmutableList<Triplet<String, Long, Long>> downloadView = downloading
+                    .stream()
+                    .filter(e-> e.getValue2() > e.getValue1())
+                    .sorted(comparator)
+                    .limit(5)
+                    .collect(toImmutableList());
+
+                final ImmutableList<Triplet<String, Long, Long>> combined =
+                    new ImmutableList.Builder<Triplet<String, Long, Long>>()
+                        .addAll(downloadView)
+                        .add(total)
+                        .build();
+
+                return StackLayout.of(combined.stream()
+                    .map(e-> StackLayout.of(
+                        Text.of(e.getValue0()+" : "),
+                        ProgressBar.of(
+                            Math.min(
+                                (float)1,
+                                (float)e.getValue1() / Math.max((float)1,(float)e.getValue2())))))
+                    .collect(toImmutableList()));
+            });
+    }
+
     public static Observable<Component> progressView(final Observable<Event> events$) {
 
         final Observable<ReadProjectFileEvent> projectFiles$ = events$
             .ofType(ReadProjectFileEvent.class);
-
-        final Observable<DependencyInstallationProgress> downloads$ = events$
-            .ofType(DependencyInstallationProgress.class);
-
-        final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
-            .ofType(ResolvedDependenciesEvent.class);
 
         final Observable<FileWriteEvent> fileWrites$ = events$
             .ofType(FileWriteEvent.class);
@@ -49,87 +117,15 @@ public class ProgressView {
         final Observable<String> writes$  = fileWrites$
             .map(file -> file.path.toString());
 
-        final Observable<ImmutableList<String>>  deps$ = resolvedDependencies$
-            .map(deps->deps.dependencies)
-            .map(deps->deps.dependencies.entrySet().stream())
-            .map(s->s.map( kv ->
-                kv.getKey().organization.toString()
-                    + "/"
-                    + kv.getKey().recipe.toString()
-                    + "@" + kv.getValue().getValue0().toString()+" "))
-            .map(s->s.collect(toImmutableList()));
-
         return Observable.combineLatest(
-            projects$.startWith(FlowLayout.of()),
             writes$
                 .map(w->FlowLayout.of(Text.of("modified: "), Text.of(w, Color.YELLOW)))
                 .startWith(FlowLayout.of()),
 
-            downloads$.map(
-                (DependencyInstallationProgress d)-> {
-                    final ImmutableList<Triplet<String, Long, Long>> downloading = d.progress
-                        .entrySet()
-                        .stream()
-                        .filter(e -> e.getValue() instanceof DownloadProgress)
-                        .map(e -> Pair.with(e.getKey(),(DownloadProgress)e.getValue()))
-                        .map(e -> Triplet.with(
-                            "downloading " + e.getValue0().identifier.toString(),
-                            e.getValue1().downloaded,
-                            e.getValue1().contentLength))
-                        .collect(toImmutableList());
-
-                    final long completed = downloading
-                        .stream()
-                        .map(Triplet::getValue1)
-                        .reduce(1l, (a, b) -> a + b);
-
-                    final long toDownload = downloading
-                        .stream()
-                        .map(Triplet::getValue2)
-                        .reduce(1l, (a, b) -> a + b);
-
-                    final Triplet<String, Long, Long> total = Triplet.with(
-                        "total progress",
-                        completed,
-                        toDownload
-                    );
-
-                    final Comparator<Triplet<String, Long, Long>> comparator = Comparator.comparingDouble( a ->
-                        1.0 - (double)a.getValue1() / (double)a.getValue2()
-                    );
-
-                    final ImmutableList<Triplet<String, Long, Long>> downloadView = downloading
-                        .stream()
-                        .filter(e-> e.getValue2() > e.getValue1())
-                        .sorted(comparator)
-                        .limit(5)
-                        .collect(toImmutableList());
-
-                    final ImmutableList<Triplet<String, Long, Long>> combined =
-                        new ImmutableList.Builder<Triplet<String, Long, Long>>()
-                            .addAll(downloadView)
-                            .add(total)
-                            .build();
-
-                    return StackLayout.of(combined.stream()
-                        .map(e-> StackLayout.of(
-                            Text.of(e.getValue0()+" : "),
-                            ProgressBar.of(
-                                Math.min(
-                                    (float)1,
-                                    (float)e.getValue1() / Math.max((float)1,(float)e.getValue2())))))
-                        .collect(toImmutableList()));
-                }),
-
-
-            deps$
-                .map(Collection::stream)
-                .map(s->FlowLayout.of(
-                    s.map(x->Text.of(x, Color.GREEN)).collect(toImmutableList())))
-                .startWith(FlowLayout.of()),
-
+            installationProgressView(events$),
+            dependencyView(events$),
             StackLayout::of)
             .cast(Component.class)
-            .sample(100, TimeUnit.MILLISECONDS, Schedulers.io());
+            .sample(100, TimeUnit.MILLISECONDS, Schedulers.computation());
     }
 }
