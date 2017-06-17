@@ -104,7 +104,8 @@ public final class InstallExistingTasks {
                         .stream()
                         .collect(ImmutableMap.toImmutableMap(
                             i -> i,
-                            i -> installDependencyLock(projectDirectory, i)));
+                            i -> installDependencyLock(projectDirectory, i)
+                                .filter(x->x instanceof DownloadProgress)));
 
                     return MoreObservables.mergeMaps(installs)
                         .map(x -> DependencyInstallationProgress.of(ImmutableMap.copyOf(x)));

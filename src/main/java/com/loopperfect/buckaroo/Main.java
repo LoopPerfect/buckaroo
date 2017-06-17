@@ -14,10 +14,9 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 import com.loopperfect.buckaroo.virtualterminal.Color;
+import com.loopperfect.buckaroo.virtualterminal.components.*;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import com.loopperfect.buckaroo.virtualterminal.components.FlowLayout;
-import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
-import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
 import io.reactivex.Single;
@@ -27,14 +26,14 @@ import io.reactivex.schedulers.Schedulers;
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.fusesource.jansi.AnsiConsole;
 import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
 import java.awt.*;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.util.AbstractMap;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -96,15 +95,14 @@ public final class Main {
 
 
 
+
             final Observable<ReadProjectFileEvent> projectFiles$ = events$
                 .filter(e-> e instanceof ReadProjectFileEvent)
                 .cast(ReadProjectFileEvent.class);
 
-            final Observable<DownloadProgress> downloads$ = events$
-                .filter(e-> e instanceof DownloadProgress)
-                .cast(DownloadProgress.class);
-
-                downloads$.subscribe(x->{System.out.println(x);});
+            final Observable<DependencyInstallationProgress> downloads$ = events$
+                .filter(e-> e instanceof DependencyInstallationProgress)
+                .cast(DependencyInstallationProgress.class);
 
             final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
                 .filter(e-> e instanceof ResolvedDependenciesEvent)
@@ -134,20 +132,94 @@ public final class Main {
 
 
             final Observable<Component> current$ = Observable.combineLatest(
-                projects$,
+                projects$.startWith(FlowLayout.of()),
                 writes$
-                    .map(w->FlowLayout.of(Text.of("modified: "), Text.of(w, Color.YELLOW))),
+                    .map(w->FlowLayout.of(Text.of("modified: "), Text.of(w, Color.YELLOW)))
+                    .startWith(FlowLayout.of()),
+
+                downloads$.map(
+                    (DependencyInstallationProgress d)-> {
+                        final ImmutableList<Triplet<String, Long, Long>> downloading = d.progress
+                            .entrySet()
+                            .stream()
+                            .filter(e -> e.getValue() instanceof DownloadProgress)
+                            .map(e -> Pair.with(e.getKey(),(DownloadProgress)e.getValue()))
+                            .map(e -> Triplet.with(
+                                e.getValue0().identifier.toString(),
+                                e.getValue1().downloaded,
+                                e.getValue1().contentLength))
+                            .collect(toImmutableList());
+
+
+                        final long completed = downloading
+                            .stream()
+                            .map(x-> x.getValue1())
+                            .reduce(1l, (a , b)-> a + b);
+
+                        final long toDownload = downloading
+                            .stream()
+                            .map(x-> x.getValue2())
+                            .reduce(1l, (a , b)-> a + b);
+
+                        final Triplet<String, Long, Long> total = Triplet.with(
+                            "total",
+                            completed,
+                            toDownload
+                        );
+
+
+
+                        final Comparator<Triplet<String, Long, Long>> comparator
+                            = Comparator.comparingDouble( a ->
+                            1.0 - (double)a.getValue1() / (double)a.getValue2()
+                        );
+
+                        final ImmutableList<Triplet<String, Long, Long>> downloadView = downloading
+                           .stream()
+                           .filter(e-> e.getValue2() > e.getValue1())
+                           .sorted(comparator)
+                           .limit(5)
+                           .collect(toImmutableList());
+
+                        final ImmutableList<Triplet<String, Long, Long>> combined =
+                            new ImmutableList.Builder<Triplet<String, Long, Long>>()
+                                .addAll(downloadView)
+                                .add(total)
+                                .build();
+
+                        /*Text.of(e.getValue0()+" : "),
+                            Text.of(e.getValue1().toString()+" / "),
+                            Text.of(e.getValue2().toString())*/
+
+                        return StackLayout.of(combined.stream().map(e-> StackLayout.of(
+                            Text.of(e.getValue0()+" : "),
+                            ProgressBar.of(
+                                Math.min(
+                                    (float)1,
+                                    (float)e.getValue1() / Math.max((float)1,(float)e.getValue2())
+                        )))).collect(toImmutableList()));
+                    }),
+
+
                 deps$
                     .map(s->s.stream())
                     .map(s->FlowLayout.of(
-                         s.map(x->Text.of(x, Color.GREEN)).collect(toImmutableList()))),
-                (p,w,d) -> StackLayout.of(
+                         s.map(x->Text.of(x, Color.GREEN)).collect(toImmutableList())))
+                    .startWith(FlowLayout.of()),
+
+                (p, w, i, d) -> (Component)StackLayout.of(
                     Text.of("resolving dependencies", Color.BLUE),
                     p, w,
+                    Text.of("downloading : "), i,
                     Text.of("resolved deps: "),
                     d
-                ));
+                )).sample(100, TimeUnit.MILLISECONDS, Schedulers.io());
 
+            /*.compose(d-> Observable.zip(
+                    Observable.interval(5, TimeUnit.MILLISECONDS),
+                    d, (a, b)-> b)
+                );
+*/
             final Observable<ImmutableList<Component>> modifiedSummary = writes$.scan(
                 ImmutableList.of(),
                 (ImmutableList<String> list, String file) -> Streams
@@ -172,13 +244,16 @@ public final class Main {
                         StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList()))
                     )));
 
-            //current$.concatWith(
+
 
             Observable<Either<Event, Component>> result =    Observable.merge(
 
+                current$.map(x->{ Either<Event, Component> e = Either.right(x); return e;}),
+
+                /*
                 events$
                     .map(x->{ Either<Event, Component> e = Either.left(x); return e;}),
-
+*/
                 Observable
                 .combineLatest(
                     modifiedSummary,
@@ -193,13 +268,17 @@ public final class Main {
                 .toObservable()
 
             );
+/*
+            current$.subscribe(
+                c-> buffer.flip(c.render(100))
+            );
+*/
 
 
-            //)
                 result.subscribe(
                     S -> {
                         if(S.left().isPresent()) {
-                            System.out.println(S.left().get().toDebugString());
+                            //System.out.println(S.left().get().toDebugString());
                         } else {
                             buffer.flip(S.right().get().render(100));
                         }
