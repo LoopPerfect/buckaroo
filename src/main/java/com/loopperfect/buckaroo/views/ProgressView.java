@@ -10,13 +10,11 @@ import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
 import io.reactivex.Observable;
-import io.reactivex.schedulers.Schedulers;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -125,7 +123,6 @@ public class ProgressView {
             installationProgressView(events$),
             dependencyView(events$),
             StackLayout::of)
-            .cast(Component.class)
-            .sample(100, TimeUnit.MILLISECONDS, Schedulers.computation());
+            .cast(Component.class);
     }
 }

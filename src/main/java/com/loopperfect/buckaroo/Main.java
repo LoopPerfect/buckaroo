@@ -17,6 +17,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static com.loopperfect.buckaroo.views.ProgressView.progressView;
 import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
@@ -57,7 +58,8 @@ public final class Main {
                 .subscribeOn(scheduler)
                 .publish();
 
-            final Observable<Component> current$ = progressView(events$);
+            final Observable<Component> current$ = progressView(events$)
+                .sample(100, TimeUnit.MILLISECONDS, Schedulers.computation());
             final Observable<Component> summary$ = summaryView(events$);
 
             AnsiConsole.systemInstall();
