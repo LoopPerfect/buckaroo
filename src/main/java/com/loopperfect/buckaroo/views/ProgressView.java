@@ -30,20 +30,16 @@ public class ProgressView {
     public static Observable<Component> progressView(final Observable<Event> events$) {
 
         final Observable<ReadProjectFileEvent> projectFiles$ = events$
-            .filter(e-> e instanceof ReadProjectFileEvent)
-            .cast(ReadProjectFileEvent.class);
+            .ofType(ReadProjectFileEvent.class);
 
         final Observable<DependencyInstallationProgress> downloads$ = events$
-            .filter(e-> e instanceof DependencyInstallationProgress)
-            .cast(DependencyInstallationProgress.class);
+            .ofType(DependencyInstallationProgress.class);
 
         final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
-            .filter(e-> e instanceof ResolvedDependenciesEvent)
-            .cast(ResolvedDependenciesEvent.class);
+            .ofType(ResolvedDependenciesEvent.class);
 
         final Observable<FileWriteEvent> fileWrites$ = events$
-            .filter(e-> e instanceof FileWriteEvent)
-            .cast(FileWriteEvent.class);
+            .ofType(FileWriteEvent.class);
 
         final Observable<Component> projects$ = projectFiles$
             .map(file -> Text.of(

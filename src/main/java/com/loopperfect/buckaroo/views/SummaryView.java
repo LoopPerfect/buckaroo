@@ -23,12 +23,10 @@ public class SummaryView {
     public static Observable<Component> summaryView(Observable<Event> events$) {
 
         final Observable<FileWriteEvent> fileWrites$ = events$
-            .filter(e -> e instanceof FileWriteEvent)
-            .cast(FileWriteEvent.class);
+            .ofType(FileWriteEvent.class);
 
         final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
-            .filter(e -> e instanceof ResolvedDependenciesEvent)
-            .cast(ResolvedDependenciesEvent.class);
+            .ofType(ResolvedDependenciesEvent.class);
 
         final Observable<ImmutableList<String>> deps$ = resolvedDependencies$
             .map(deps -> deps.dependencies)
