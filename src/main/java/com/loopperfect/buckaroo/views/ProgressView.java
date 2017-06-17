@@ -60,7 +60,7 @@ public class ProgressView {
                 kv.getKey().organization.toString()
                     + "/"
                     + kv.getKey().recipe.toString()
-                    + "@" + kv.getValue().getValue0().toString()))
+                    + "@" + kv.getValue().getValue0().toString()+" "))
             .map(s->s.collect(toImmutableList()));
 
         final Observable<Component> current$ = Observable.combineLatest(
@@ -77,7 +77,7 @@ public class ProgressView {
                         .filter(e -> e.getValue() instanceof DownloadProgress)
                         .map(e -> Pair.with(e.getKey(),(DownloadProgress)e.getValue()))
                         .map(e -> Triplet.with(
-                            e.getValue0().identifier.toString(),
+                            "downloading " + e.getValue0().identifier.toString(),
                             e.getValue1().downloaded,
                             e.getValue1().contentLength))
                         .collect(toImmutableList());
@@ -94,7 +94,7 @@ public class ProgressView {
                         .reduce(1l, (a , b)-> a + b);
 
                     final Triplet<String, Long, Long> total = Triplet.with(
-                        "total",
+                        "total progress",
                         completed,
                         toDownload
                     );
@@ -137,9 +137,8 @@ public class ProgressView {
 
             (p, w, i, d) -> (Component)StackLayout.of(
                 Text.of("resolving dependencies", Color.BLUE),
-                p, w,
-                Text.of("downloading : "), i,
-                Text.of("resolved deps: "),
+                p, w, i,
+                Text.of("installing deps: "),
                 d
             )).sample(100, TimeUnit.MILLISECONDS, Schedulers.io());
 

@@ -48,8 +48,6 @@ public final class Main {
         final Parser<CLICommand> commandParser = CLIParsers.commandParser;
 
         try {
-
-            System.out.println("start");
             final CLICommand command = commandParser.parse(rawCommand);
 
             final ExecutorService executorService = Executors.newCachedThreadPool();

@@ -33,7 +33,9 @@ public final class AsyncDependencyResolver {
 
         if (resolved.dependencies.containsKey(next.project)) {
             final SemanticVersion resolvedVersion = resolved.dependencies.get(next.project).getValue0();
-            return Process.of(next.requirement.isSatisfiedBy(resolvedVersion) ?
+            return Process.of(
+                Observable.just(ResolvedDependenciesEvent.of(resolved)),
+                next.requirement.isSatisfiedBy(resolvedVersion) ?
                 Single.just(resolved) :
                 Single.error(new DependencyResolutionException(
                     next.project.encode() + "@" + resolvedVersion.encode() + " does not satisfy " + next.encode())));
