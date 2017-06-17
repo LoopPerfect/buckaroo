@@ -16,9 +16,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class AsyncDependencyResolver {
 
-    private AsyncDependencyResolver() {
-
-    }
+    private AsyncDependencyResolver() {}
 
     private static Process<Event, ResolvedDependencies> step(
         final RecipeSource recipeSource,
@@ -75,7 +73,8 @@ public final class AsyncDependencyResolver {
                         candidateStream.stream().map(Process::result)::iterator)),
                         Comparator.comparing(strategy::score))
                         .toSingle()
-                        .onErrorResumeNext(error -> Single.error(new DependencyResolutionException("Could not satisfy " + next, error))));
+                        .onErrorResumeNext(error ->
+                            Single.error(new DependencyResolutionException("Could not satisfy " + next, error))));
             });
     }
 

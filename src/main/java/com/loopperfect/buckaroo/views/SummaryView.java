@@ -46,14 +46,13 @@ public class SummaryView {
             ImmutableList.of(),
             (ImmutableList<String> list, String file) -> Streams
                 .concat(list.stream(), Stream.of(file))
-                .collect(toImmutableList())
-        ).map((ImmutableList<String> modifiedFiles) -> ImmutableList.of(
-            Text.of("modified Files(" + modifiedFiles.size() + ") :"),
-            FlowLayout.of(
-                Text.of("    "),
-                StackLayout.of(
-                    modifiedFiles.stream().map(Text::of).collect(toImmutableList()))
-            )));
+                .collect(toImmutableList()))
+            .map((ImmutableList<String> modifiedFiles) -> ImmutableList.of(
+                Text.of("modified Files(" + modifiedFiles.size() + ") :"),
+                FlowLayout.of(
+                    Text.of("    "),
+                    StackLayout.of(
+                        modifiedFiles.stream().map(Text::of).collect(toImmutableList())))));
 
 
         final Observable<ImmutableList<Component>> depsSummary = deps$
@@ -63,8 +62,7 @@ public class SummaryView {
                 Text.of("resolved dependencies(" + deps.size() + ") :"),
                 FlowLayout.of(
                     Text.of("    "),
-                    StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList()))
-                )))
+                    StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList())))))
             .startWith(ImmutableList.of(FlowLayout.of()));
 
 

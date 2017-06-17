@@ -10,11 +10,11 @@ import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
 import io.reactivex.Observable;
-import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.schedulers.Schedulers;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
@@ -59,7 +59,7 @@ public class ProgressView {
                     + "@" + kv.getValue().getValue0().toString()+" "))
             .map(s->s.collect(toImmutableList()));
 
-        final Observable<Component> current$ = Observable.combineLatest(
+        return Observable.combineLatest(
             projects$.startWith(FlowLayout.of()),
             writes$
                 .map(w->FlowLayout.of(Text.of("modified: "), Text.of(w, Color.YELLOW)))
@@ -78,16 +78,15 @@ public class ProgressView {
                             e.getValue1().contentLength))
                         .collect(toImmutableList());
 
-
                     final long completed = downloading
                         .stream()
-                        .map(x-> x.getValue1())
-                        .reduce(1l, (a , b)-> a + b);
+                        .map(Triplet::getValue1)
+                        .reduce(1l, (a, b) -> a + b);
 
                     final long toDownload = downloading
                         .stream()
-                        .map(x-> x.getValue2())
-                        .reduce(1l, (a , b)-> a + b);
+                        .map(Triplet::getValue2)
+                        .reduce(1l, (a, b) -> a + b);
 
                     final Triplet<String, Long, Long> total = Triplet.with(
                         "total progress",
@@ -95,10 +94,7 @@ public class ProgressView {
                         toDownload
                     );
 
-
-
-                    final Comparator<Triplet<String, Long, Long>> comparator
-                        = Comparator.comparingDouble( a ->
+                    final Comparator<Triplet<String, Long, Long>> comparator = Comparator.comparingDouble( a ->
                         1.0 - (double)a.getValue1() / (double)a.getValue2()
                     );
 
@@ -115,29 +111,25 @@ public class ProgressView {
                             .add(total)
                             .build();
 
-                    return StackLayout.of(combined.stream().map(e-> StackLayout.of(
-                        Text.of(e.getValue0()+" : "),
-                        ProgressBar.of(
-                            Math.min(
-                                (float)1,
-                                (float)e.getValue1() / Math.max((float)1,(float)e.getValue2())
-                            )))).collect(toImmutableList()));
+                    return StackLayout.of(combined.stream()
+                        .map(e-> StackLayout.of(
+                            Text.of(e.getValue0()+" : "),
+                            ProgressBar.of(
+                                Math.min(
+                                    (float)1,
+                                    (float)e.getValue1() / Math.max((float)1,(float)e.getValue2())))))
+                        .collect(toImmutableList()));
                 }),
 
 
             deps$
-                .map(s->s.stream())
+                .map(Collection::stream)
                 .map(s->FlowLayout.of(
                     s.map(x->Text.of(x, Color.GREEN)).collect(toImmutableList())))
                 .startWith(FlowLayout.of()),
 
-            (p, w, i, d) -> (Component)StackLayout.of(
-                Text.of("resolving dependencies", Color.BLUE),
-                p, w, i,
-                Text.of("installing deps: "),
-                d
-            )).sample(100, TimeUnit.MILLISECONDS, Schedulers.io());
-
-        return current$;
+            StackLayout::of)
+            .cast(Component.class)
+            .sample(100, TimeUnit.MILLISECONDS, Schedulers.io());
     }
 }

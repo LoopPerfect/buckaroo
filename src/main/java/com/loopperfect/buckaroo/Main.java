@@ -22,11 +22,7 @@ import static com.loopperfect.buckaroo.views.ProgressView.progressView;
 import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
 
 public final class Main {
-
-    private Main() {
-
-    }
-
+    private Main() {}
 
     public static void main(final String[] args) {
 
@@ -36,7 +32,7 @@ public final class Main {
             return;
         }
 
-        AnsiConsole.systemInstall();
+
         final FileSystem fs = FileSystems.getDefault();
 
         final String rawCommand = String.join(" ", args);
@@ -56,10 +52,6 @@ public final class Main {
             final Context ctx = Context.of(fs, scheduler);
             final Observable<Event> task = command.routine().apply(ctx);
 
-
-            TerminalBuffer buffer = new TerminalBuffer();
-
-
             final ConnectableObservable<Event> events$ = task
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
@@ -68,25 +60,20 @@ public final class Main {
             final Observable<Component> current$ = progressView(events$);
             final Observable<Component> summary$ = summaryView(events$);
 
-
-
+            AnsiConsole.systemInstall();
+            TerminalBuffer buffer = new TerminalBuffer();
             Observable
                 .merge(current$, summary$)
-                .subscribe(
-                c -> {
-                    buffer.flip(c.render(100));
-                },
-                error -> {
+                .map(c -> c.render(100))
+                .doOnNext(buffer::flip)
+                .doOnError(error -> {
                     error.printStackTrace();
-
                     executorService.shutdown();
                     scheduler.shutdown();
-                },
-                () -> {
+                }).doOnComplete(() -> {
                     executorService.shutdown();
                     scheduler.shutdown();
-                }
-            );
+                }).subscribe();
 
             events$.connect();
         } catch (final ParserException e) {
