@@ -21,12 +21,11 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public final class GitHub {

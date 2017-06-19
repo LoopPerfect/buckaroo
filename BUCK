@@ -257,6 +257,7 @@ java_test(
     ':guava',
     ':gson',
     ':hamcrest',
+    ':jgit',
     ':junit',
     ':jimfs',
     ':jparsec',
