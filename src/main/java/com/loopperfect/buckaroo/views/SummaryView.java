@@ -74,9 +74,7 @@ public class SummaryView {
                     .addAll(m)
                     .addAll(d)
                     .build())
-            .lastElement()
             .map(StackLayout::of)
-            .cast(Component.class)
-            .toObservable();
+            .cast(Component.class);
     }
 }

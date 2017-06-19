@@ -13,6 +13,7 @@ import com.loopperfect.buckaroo.github.serialization.GitHubSerializer;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 
 import java.net.MalformedURLException;
 import java.net.URL;

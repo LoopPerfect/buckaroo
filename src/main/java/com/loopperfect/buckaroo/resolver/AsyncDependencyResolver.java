@@ -34,33 +34,33 @@ public final class AsyncDependencyResolver {
             return Process.of(
                 Observable.just(ResolvedDependenciesEvent.of(resolved)),
                 next.requirement.isSatisfiedBy(resolvedVersion) ?
-                Single.just(resolved) :
-                Single.error(new DependencyResolutionException(
-                    next.project.encode() + "@" + resolvedVersion.encode() + " does not satisfy " + next.encode())));
+                    Single.just(resolved) :
+                    Single.error(new DependencyResolutionException(
+                        next.project.encode() + "@" + resolvedVersion.encode() + " does not satisfy " + next.encode())));
         }
 
         return recipeSource.fetch(next.project)
             .chain(recipe -> {
-                    final ImmutableList<Process<Event, ResolvedDependencies>> candidateStream = recipe.versions.entrySet()
-                        .stream()
-                        .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
-                        .sorted(Comparator.comparing(Map.Entry::getKey))
-                        .map(entry -> {
+                final ImmutableList<Process<Event, ResolvedDependencies>> candidateStream = recipe.versions.entrySet()
+                    .stream()
+                    .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
+                    .sorted(Comparator.comparing(Map.Entry::getKey))
+                    .map(entry -> {
 
-                            final ResolvedDependencies nextResolved = resolved.add(
-                                next.project,
-                                Pair.with(entry.getKey(), ResolvedDependency.from(entry.getValue())));
+                        final ResolvedDependencies nextResolved = resolved.add(
+                            next.project,
+                            Pair.with(entry.getKey(), ResolvedDependency.from(entry.getValue())));
 
-                            final ImmutableList<Dependency> nextDependencies = new ImmutableList.Builder<Dependency>()
-                                .addAll(entry.getValue().dependencies.orElse(DependencyGroup.of()).entries())
-                                .build();
+                        final ImmutableList<Dependency> nextDependencies = new ImmutableList.Builder<Dependency>()
+                            .addAll(entry.getValue().dependencies.orElse(DependencyGroup.of()).entries())
+                            .build();
 
-                            return resolve(
-                                recipeSource,
-                                nextResolved,
-                                nextDependencies,
-                                strategy);
-                        }).collect(toImmutableList());
+                        return resolve(
+                            recipeSource,
+                            nextResolved,
+                            nextDependencies,
+                            strategy);
+                    }).collect(toImmutableList());
 
                 final Observable<Event> states =
                     Observable.merge(candidateStream
@@ -71,10 +71,10 @@ public final class AsyncDependencyResolver {
                 return Process.of(states, MoreObservables.findMax(
                     MoreObservables.skipErrors(Observable.fromIterable(
                         candidateStream.stream().map(Process::result)::iterator)),
-                        Comparator.comparing(strategy::score))
-                        .toSingle()
-                        .onErrorResumeNext(error ->
-                            Single.error(new DependencyResolutionException("Could not satisfy " + next, error))));
+                    Comparator.comparing(strategy::score))
+                    .toSingle()
+                    .onErrorResumeNext(error ->
+                        Single.error(new DependencyResolutionException("Could not satisfy " + next, error))));
             });
     }
 
@@ -96,10 +96,6 @@ public final class AsyncDependencyResolver {
                     (Function<ResolvedDependencies, Process<Event, ResolvedDependencies>>) x ->
                         step(recipeSource, x, dependency, strategy))
                 .collect(ImmutableList.toImmutableList()));
-    }
-
-    public static <t, u> Process<t, u> process(final Process<t, u> f) {
-        return f;
     }
 
     public static Process<Event, ResolvedDependencies> resolve(

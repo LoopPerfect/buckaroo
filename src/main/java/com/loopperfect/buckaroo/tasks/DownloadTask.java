@@ -115,6 +115,6 @@ public final class DownloadTask {
             }
 
             emitter.onComplete();
-        }).subscribeOn(Schedulers.io()).cast(DownloadProgress.class);
+        }).cast(DownloadProgress.class).subscribeOn(Schedulers.io());
     }
 }

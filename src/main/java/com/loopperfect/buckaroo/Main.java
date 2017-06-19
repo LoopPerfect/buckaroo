@@ -59,8 +59,13 @@ public final class Main {
                 .publish();
 
             final Observable<Component> current$ = progressView(events$)
-                .sample(100, TimeUnit.MILLISECONDS, Schedulers.computation());
-            final Observable<Component> summary$ = summaryView(events$);
+                .subscribeOn(Schedulers.computation())
+                .sample(100, TimeUnit.MILLISECONDS)
+                .distinctUntilChanged();
+
+            final Observable<Component> summary$ = summaryView(events$)
+                .subscribeOn(Schedulers.computation())
+                .lastElement().toObservable();
 
             AnsiConsole.systemInstall();
             TerminalBuffer buffer = new TerminalBuffer();
