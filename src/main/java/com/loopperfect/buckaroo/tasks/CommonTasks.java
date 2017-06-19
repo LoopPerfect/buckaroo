@@ -205,11 +205,16 @@ public final class CommonTasks {
 
             // Does the file exist?
             Observable.fromCallable(() -> Files.exists(target))
-                .flatMap(exists -> exists ?
-                    // Then skip the download
-                    Observable.empty() :
-                    // Otherwise, download the file
-                    DownloadTask.download(remoteFile.url, target)).cast(Event.class),
+                .flatMap(
+                    exists -> {
+                        if(exists)
+                            // Then skip the download
+                            return Observable.empty() ;
+                        else
+                            // Otherwise, download the file
+                            return DownloadTask.download(remoteFile.url, target);
+
+                    }).cast(Event.class),
 
             // Verify the hash
             ensureHash(target, remoteFile.sha256)

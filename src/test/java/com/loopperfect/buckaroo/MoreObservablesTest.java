@@ -2,11 +2,14 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.reactivex.Observable;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -25,5 +28,44 @@ public final class MoreObservablesTest {
         final List<Map<String, Integer>> actual = MoreObservables.zipMaps(o).toList().blockingGet();
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void zipMapsWithEmpty() throws Exception {
+
+        final Map<String, Observable<Integer>> o = ImmutableMap.of(
+            "a", Observable.just(1, 2, 3).delay(1, TimeUnit.MILLISECONDS),
+            "b", Observable.just(1, 2, 3),
+            "c", Observable.empty()
+        );
+
+        final ImmutableSet<Map<String, Integer>> expected = ImmutableSet.of();
+
+        final ImmutableSet<Map<String, Integer>> actual = ImmutableSet.copyOf(MoreObservables.zipMaps(o)
+            .toList()
+            .blockingGet());
+
+        assertEquals(expected , actual);
+    }
+
+    @Test
+    public void mergeMaps() throws Exception {
+
+        final Map<String, Observable<Integer>> o = ImmutableMap.of(
+            "a", Observable.just(1),
+            "b", Observable.just(1, 2, 3),
+            "c", Observable.empty()
+        );
+
+        final ImmutableMap<String, Integer> expected = ImmutableMap.of(
+            "a", 1,
+            "b", 3
+        );
+
+        final ImmutableMap<String, Integer> actual = MoreObservables.mergeMaps(o)
+            .lastElement()
+            .blockingGet();
+
+        assertEquals(expected , actual);
     }
 }

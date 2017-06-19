@@ -106,7 +106,7 @@ public final class InstallExistingTasks {
                             i -> i,
                             i -> installDependencyLock(projectDirectory, i)));
 
-                    return MoreObservables.zipMaps(installs)
+                    return MoreObservables.mergeMaps(installs)
                         .map(x -> DependencyInstallationProgress.of(ImmutableMap.copyOf(x)));
                 }
             ));

@@ -85,6 +85,20 @@ public final class MoreObservables {
                 .collect(ImmutableMap.toImmutableMap(Pair::getValue0, Pair::getValue1)));
     }
 
+    public static <T, S> Observable<ImmutableMap<T, S>> mergeMaps(final Map<T, Observable<S>> tasks) {
+
+        Objects.requireNonNull(tasks, "tasks is null");
+
+        final ImmutableMap<T,S> initialValue = ImmutableMap.of();
+        return Observable.merge(
+            tasks.entrySet()
+                .stream()
+                .map(entry -> entry.getValue()
+                    .map(x -> ImmutableMap.of(entry.getKey(), x))
+                ).collect(ImmutableList.toImmutableList())
+        ).scan(initialValue, (x, y) -> MoreMaps.merge(x, y));
+    }
+
     public static <A extends T, T> Observable<T> chain(final Observable<A> a, final Function<A, Observable<T>> f) {
         Objects.requireNonNull(a);
         Objects.requireNonNull(f);
