@@ -26,7 +26,7 @@ public final class DownloadProgress extends Event {
 
     @Override
     public int hashCode() {
-        return Long.hashCode(downloaded) * Long.hashCode(contentLength);
+        return Long.hashCode(downloaded) * Long.hashCode(contentLength) * super.hashCode();
     }
 
     @Override
@@ -39,6 +39,8 @@ public final class DownloadProgress extends Event {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+            .add("date", date)
+            .add("threadId", threadId)
             .add("downloaded", downloaded)
             .add("contentLength", contentLength)
             .toString();

@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * Marker interface for objects that represent events that may
@@ -19,15 +20,26 @@ public abstract class Event {
     public final Date date = Date.from(Instant.now());
     public final long threadId = Thread.currentThread().getId();
 
-    public String toDebugString() {
-        return MoreObjects
-            .toStringHelper(this)
-            .add("type", "Event")
+    private boolean equals(final Event other) {
+        return Objects.equals(date, other.date) &&
+            (threadId == other.threadId);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj || obj instanceof Event && equals((Event)obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(date, threadId);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
             .add("date", date)
             .add("threadId", threadId)
             .toString();
     }
-
-    // TODO: Implement the visitor pattern?
-
 }

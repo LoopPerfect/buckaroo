@@ -89,17 +89,12 @@ public final class GitHub {
                 x -> GitCommitHash.of(x.getObjectId().getName())));
     }
 
-    public static Process<Event, ImmutableMap<String, URL>> fetchReleases(final Identifier owner, final Identifier repo)  {
+    public static Process<Event, ImmutableMap<String, GitCommitHash>> fetchReleases(final Identifier owner, final Identifier repo)  {
 
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(repo);
 
-        return Process.of(Single.fromCallable(() -> fetchTags(owner, repo))
-            .map(x -> x.entrySet()
-                .stream()
-                .collect(ImmutableMap.toImmutableMap(
-                    Map.Entry::getKey,
-                    i -> zipURL(owner, repo, i.getValue())))));
+        return Process.of(Single.fromCallable(() -> fetchTags(owner, repo)));
     }
 
     // We are not using this because the GitHub API limits are quite strict without an access token.

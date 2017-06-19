@@ -32,7 +32,7 @@ public final class DownloadTask {
             ByteArrayOutputStream::new,
             byteArrayOutputStream -> Observable.concat(
                 download(url, byteArrayOutputStream).map(Either::left),
-                Observable.fromCallable(() -> Either.<Event, String>right(
+                Observable.fromCallable(() -> Either.right(
                     new String(byteArrayOutputStream.toByteArray(), Charset.defaultCharset())))),
             ByteArrayOutputStream::close));
     }

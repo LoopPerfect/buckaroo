@@ -3,10 +3,12 @@ package com.loopperfect.buckaroo.github;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -78,5 +80,20 @@ public final class GitHubRecipeSourceTest {
             }, error -> {
                 assertTrue(error instanceof FetchRecipeException);
             });
+    }
+
+    @Test
+    public void fetchGivesProgressEvents() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+
+        final Observable<Event> task = recipeSource.fetch(
+            RecipeIdentifier.of("github", "njlr", "test-lib-c")).states();
+
+        final List<Event> actual = task.timeout(90, TimeUnit.SECONDS).toList().blockingGet();
+
+        assertTrue(actual.size() > 1);
     }
 }
