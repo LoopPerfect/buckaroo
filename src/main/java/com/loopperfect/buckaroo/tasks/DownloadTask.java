@@ -6,6 +6,7 @@ import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Process;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -114,6 +115,6 @@ public final class DownloadTask {
             }
 
             emitter.onComplete();
-        });
+        }).subscribeOn(Schedulers.io()).cast(DownloadProgress.class);
     }
 }

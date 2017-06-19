@@ -24,11 +24,6 @@ public final class Process<S, T> {
     private Process(final Observable<Either<S, T>> observable) {
         Objects.requireNonNull(observable, "observable is null");
         this.observable = observable.cache();
-            //.subscribeOn(Schedulers.newThread())
-            //.publish()
-            //.autoConnect();
-            //.delay(50, TimeUnit.MILLISECONDS);
-
     }
 
     public Observable<S> states() {

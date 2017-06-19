@@ -13,9 +13,7 @@ public final class Recipe {
     public final ImmutableMap<SemanticVersion, RecipeVersion> versions;
 
     private Recipe(final String name, final String url, final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
-
         super();
-
         this.name = Preconditions.checkNotNull(name);
         this.url = Preconditions.checkNotNull(url);
         this.versions = Preconditions.checkNotNull(versions);
