@@ -1,20 +1,32 @@
 package com.loopperfect.buckaroo.github;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
-import com.loopperfect.buckaroo.FetchRecipeException;
-import com.loopperfect.buckaroo.Recipe;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.RecipeSource;
+import com.loopperfect.buckaroo.*;
 import io.reactivex.Single;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
-import java.nio.file.NoSuchFileException;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public final class GitHubRecipeSourceTest {
+
+    @Test
+    public void fetchTags() throws Exception {
+
+        final ImmutableMap<String, GitCommitHash> expected = ImmutableMap.of(
+            "v2", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"),
+            "v0.1.0", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"),
+            "v1.0.0-rc1", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"));
+
+        final ImmutableMap<String, GitCommitHash> actual = GitHub.fetchTags(
+            Identifier.of("njlr"), Identifier.of("test-lib-tags"));
+
+        assertEquals(expected, actual);
+    }
 
     @Test
     public void fetch() throws Exception {
