@@ -163,6 +163,20 @@ public final class DependencyResolverTest {
             DependencyResolver.resolve(project.dependencies, fetcher);
 
         assertEquals(expected, actual);
+
+        final Project project2 = Project.of("project", DependencyGroup.of(ImmutableMap.of(
+                RecipeIdentifier.of("org", "fo"), AnySemanticVersion.of())));
+
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<RecipeIdentifier, SemanticVersion>> expected2 =
+                Either.left(ImmutableList.of(
+                        new ProjectNotFoundException(
+                                RecipeIdentifier.of("org", "fo"),
+                                ImmutableList.of(RecipeIdentifier.of("org", "foo")))));
+
+        final Either<ImmutableList<DependencyResolverException>, ImmutableMap<RecipeIdentifier, SemanticVersion>> actual2 =
+                DependencyResolver.resolve(project2.dependencies, fetcher);
+
+        assertEquals(expected2, actual2);
     }
 
     @Test
