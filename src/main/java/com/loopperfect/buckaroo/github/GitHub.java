@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.github;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Streams;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import com.loopperfect.buckaroo.*;
@@ -21,9 +22,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public final class GitHub {
@@ -40,6 +43,24 @@ public final class GitHub {
 
         try {
             return new URL("https://github.com/" + owner.name + "/" + project.name + "/archive/" + commit.hash + ".zip");
+        } catch (final MalformedURLException e) {
+            // Should not happen because we build the URL from sanitized inputs
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public static URL fileURL(final Identifier owner, final Identifier project, final GitCommitHash commit, final Path path) {
+
+        Objects.requireNonNull(owner);
+        Objects.requireNonNull(project);
+        Objects.requireNonNull(commit);
+
+//        https://raw.githubusercontent.com/njlr/test-lib-tags/138252fac310b976a5ee55ffaa8e9180cf44112b/LICENSE
+        final String pathSection = Streams.stream(MorePaths.names(path)).reduce("", (x, y) -> x + "/" + y);
+
+        try {
+            return new URL("https://raw.githubusercontent.com/" + owner.name + "/" +
+                project.name + "/" + commit.hash + "/" + pathSection);
         } catch (final MalformedURLException e) {
             // Should not happen because we build the URL from sanitized inputs
             throw new IllegalStateException(e);
