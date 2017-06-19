@@ -101,6 +101,10 @@ public final class RecipeVersion {
         return new RecipeVersion(Either.left(source), Optional.empty(), Optional.of(dependencies), Optional.empty());
     }
 
+    public static RecipeVersion of(final RemoteArchive source) {
+        return new RecipeVersion(Either.right(source), Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
     public static RecipeVersion of(final GitCommit source, final String target) {
         return new RecipeVersion(Either.left(source), Optional.of(target), Optional.empty(), Optional.empty());
     }
