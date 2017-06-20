@@ -7,7 +7,9 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
+import io.reactivex.annotations.NonNull;
 import io.reactivex.observables.ConnectableObservable;
+import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
@@ -18,11 +20,13 @@ import java.nio.file.FileSystems;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.loopperfect.buckaroo.views.ProgressView.progressView;
 import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
 
 public final class Main {
+
     private Main() {}
 
     public static void main(final String[] args) {
@@ -33,6 +37,13 @@ public final class Main {
             return;
         }
 
+        // We need to change the default behaviour of Schedulers.io()
+        // so that it has a bounded thread-pool.
+        // Take at least 2 threads to prevent dead-locks.
+        final int threads = Math.max(2, Runtime.getRuntime().availableProcessors());
+
+        RxJavaPlugins.setIoSchedulerHandler(scheduler ->
+            Schedulers.from(Executors.newFixedThreadPool(threads)));
 
         final FileSystem fs = FileSystems.getDefault();
 

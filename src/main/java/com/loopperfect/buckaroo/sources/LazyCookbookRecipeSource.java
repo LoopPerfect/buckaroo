@@ -5,6 +5,7 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 
 import java.nio.file.Path;
 
@@ -31,7 +32,7 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
                 "recipes",
                 identifier.organization.name,
                 identifier.recipe.name + ".json");
-        }).flatMap(CommonTasks::readRecipeFile));
+        }).flatMap(CommonTasks::readRecipeFile).subscribeOn(Schedulers.io()));
     }
 
     public static RecipeSource of(final Path pathToCookbook) {

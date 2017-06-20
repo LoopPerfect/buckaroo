@@ -12,6 +12,7 @@ import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -212,7 +213,7 @@ public final class CommonTasks {
                             return Observable.empty() ;
                         else
                             // Otherwise, download the file
-                            return DownloadTask.download(remoteFile.url, target);
+                            return DownloadTask.download(remoteFile.url, target).subscribeOn(Schedulers.io());
 
                     }).cast(Event.class),
 

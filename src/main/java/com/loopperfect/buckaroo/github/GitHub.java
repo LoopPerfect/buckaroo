@@ -12,6 +12,7 @@ import com.loopperfect.buckaroo.github.serialization.GitHubSerializer;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Ref;
@@ -24,7 +25,6 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.StreamSupport;
 
@@ -94,7 +94,7 @@ public final class GitHub {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(repo);
 
-        return Process.of(Single.fromCallable(() -> fetchTags(owner, repo)));
+        return Process.of(Single.fromCallable(() -> fetchTags(owner, repo)).subscribeOn(Schedulers.io()));
     }
 
     // We are not using this because the GitHub API limits are quite strict without an access token.

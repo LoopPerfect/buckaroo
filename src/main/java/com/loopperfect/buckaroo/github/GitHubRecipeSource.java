@@ -12,6 +12,7 @@ import com.loopperfect.buckaroo.tasks.CacheTasks;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 
 import java.net.URL;
 import java.nio.file.FileSystem;
@@ -45,13 +46,13 @@ public final class GitHubRecipeSource implements RecipeSource {
 
             // 1. Download the release to the cache
             Process.of(
-                DownloadTask.download(release, cachePath, true),
+                DownloadTask.download(release, cachePath, true).subscribeOn(Schedulers.io()),
                 Single.just(FileDownloadedEvent.of(release, cachePath))),
 
             Process.chain(
 
                 // 2. Compute the hash
-                Process.of(CommonTasks.hash(cachePath)),
+                Process.of(CommonTasks.hash(cachePath).subscribeOn(Schedulers.io())),
 
                 (FileHashEvent fileHashEvent) -> {
 
@@ -62,12 +63,13 @@ public final class GitHubRecipeSource implements RecipeSource {
                     return Process.chain(
 
                         // 3. Unzip
-                        Process.of(CommonTasks.unzip(cachePath, unzipTargetPath, Optional.of(subPath))),
+                        Process.of(CommonTasks.unzip(cachePath, unzipTargetPath, Optional.of(subPath))
+                            .subscribeOn(Schedulers.io())),
 
                         (FileUnzipEvent fileUnzipEvent) -> Process.chain(
 
                             // 4. Read the project file
-                            Process.of(CommonTasks.readProjectFile(projectFilePath)),
+                            Process.of(CommonTasks.readProjectFile(projectFilePath).subscribeOn(Schedulers.io())),
 
                             // 5. Generate a recipe version from the project file and hash
                             (ReadProjectFileEvent readProjectFileEvent) -> {

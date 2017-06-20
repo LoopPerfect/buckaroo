@@ -102,11 +102,9 @@ public final class InstallTasksTest {
                     Identifier.of("valuable"),
                     AnySemanticVersion.of()));
 
-            final List<Event> result = InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies)
+            InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies)
                 .toList()
                 .blockingGet();
-
-            TestUtils.printTree(context.fs.getPath(""));
 
             assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
         }
@@ -119,11 +117,9 @@ public final class InstallTasksTest {
                     Identifier.of("neither"),
                     AnySemanticVersion.of()));
 
-            final List<Event> result = InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies)
+            InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies)
                 .toList()
                 .blockingGet();
-
-            TestUtils.printTree(context.fs.getPath(""));
 
             assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-neither", "BUCK")));
         }
