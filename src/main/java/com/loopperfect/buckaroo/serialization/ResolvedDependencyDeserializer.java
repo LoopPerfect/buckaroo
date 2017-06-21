@@ -33,10 +33,10 @@ public final class ResolvedDependencyDeserializer implements JsonDeserializer<Re
             Optional.of(jsonObject.get("target").getAsString()) :
             Optional.empty();
 
-        final ImmutableList<RecipeIdentifier> dependencies = jsonObject.has("dependencies") ?
+        final ImmutableList<ResolvedDependencyReference> dependencies = jsonObject.has("dependencies") ?
             context.deserialize(
                 jsonObject.get("dependencies"),
-                new TypeToken<ImmutableList<RecipeIdentifier>>() {}.getType()) :
+                new TypeToken<ImmutableList<ResolvedDependencyReference>>() {}.getType()) :
             ImmutableList.of();
 
         final Optional<RemoteFile> buckResource = jsonObject.has("buck") ?

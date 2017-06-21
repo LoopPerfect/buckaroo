@@ -17,13 +17,13 @@ public final class ResolvedDependency {
     public final Either<GitCommit, RemoteArchive> source;
     public final Optional<String> target;
     public final Optional<RemoteFile> buckResource;
-    public final ImmutableList<RecipeIdentifier> dependencies;
+    public final ImmutableList<ResolvedDependencyReference> dependencies;
 
     private ResolvedDependency(
         final Either<GitCommit, RemoteArchive> source,
         final Optional<String> target,
         final Optional<RemoteFile> buckResource,
-        final ImmutableList<RecipeIdentifier> dependencies) {
+        final ImmutableList<ResolvedDependencyReference> dependencies) {
 
         super();
 
@@ -71,23 +71,29 @@ public final class ResolvedDependency {
         final Either<GitCommit, RemoteArchive> source,
         final Optional<String> target,
         final Optional<RemoteFile> buckResource,
-        final ImmutableList<RecipeIdentifier> dependencies) {
+        final ImmutableList<ResolvedDependencyReference> dependencies) {
         return new ResolvedDependency(source, target, buckResource, dependencies);
+    }
+
+    public static ResolvedDependency of(
+        final Either<GitCommit, RemoteArchive> source,
+        final ImmutableList<ResolvedDependencyReference> dependencies) {
+        return new ResolvedDependency(source, Optional.empty(), Optional.empty(), dependencies);
     }
 
     public static ResolvedDependency of(final Either<GitCommit, RemoteArchive> source) {
         return new ResolvedDependency(source, Optional.empty(), Optional.empty(), ImmutableList.of());
     }
 
-    public static ResolvedDependency from(final RecipeVersion recipeVersion) {
-        Preconditions.checkNotNull(recipeVersion);
-        return of(
-            recipeVersion.source,
-            recipeVersion.target,
-            recipeVersion.buckResource,
-            recipeVersion.dependencies.orElse(DependencyGroup.of()).entries()
-                .stream()
-                .map(x -> x.project)
-                .collect(ImmutableList.toImmutableList()));
-    }
+//    public static ResolvedDependency from(final RecipeVersion recipeVersion) {
+//        Preconditions.checkNotNull(recipeVersion);
+//        return of(
+//            recipeVersion.source,
+//            recipeVersion.target,
+//            recipeVersion.buckResource,
+//            recipeVersion.dependencies.orElse(DependencyGroup.of()).entries()
+//                .stream()
+//                .map(x -> x.project)
+//                .collect(ImmutableList.toImmutableList()));
+//    }
 }

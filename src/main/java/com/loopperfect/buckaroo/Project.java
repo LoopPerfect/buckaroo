@@ -10,36 +10,38 @@ import java.util.Optional;
 public final class Project {
 
     public final Optional<String> name;
+    public final Optional<String> target;
     public final Optional<String> license;
     public final DependencyGroup dependencies;
 
-    private Project(final Optional<String> name, final Optional<String> license, final DependencyGroup dependencies) {
+    private Project(final Optional<String> name, final Optional<String> target, final Optional<String> license, final DependencyGroup dependencies) {
 
         this.name = Preconditions.checkNotNull(name);
+        this.target = Preconditions.checkNotNull(target);
         this.license = Preconditions.checkNotNull(license);
         this.dependencies = Preconditions.checkNotNull(dependencies);
     }
 
     public Project addDependency(final Dependency dependency) {
         Preconditions.checkNotNull(dependency);
-        return new Project(name, license, dependencies.add(dependency));
+        return new Project(name, target, license, dependencies.add(dependency));
     }
 
     public Project addDependencies(final List<Dependency> dependencies) {
         Preconditions.checkNotNull(dependencies);
-        return new Project(name, license, this.dependencies.add(dependencies));
+        return new Project(name, target, license, this.dependencies.add(dependencies));
     }
 
     public Project removeDependency(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
-        return new Project(name, license, dependencies.remove(identifier));
+        return new Project(name, target, license, dependencies.remove(identifier));
     }
 
     public Project removeDependencies(final List<Dependency> dependencies) {
 
         Preconditions.checkNotNull(dependencies);
 
-        return new Project(name, license, this.dependencies.remove(dependencies));
+        return new Project(name, target, license, this.dependencies.remove(dependencies));
     }
 
     @Override
@@ -52,41 +54,43 @@ public final class Project {
         final Project other = (Project) obj;
 
         return Objects.equals(name, other.name) &&
+            Objects.equals(target, other.target) &&
             Objects.equals(license, other.license) &&
             Objects.equals(dependencies, other.dependencies);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, license, dependencies);
+        return Objects.hash(name, target, license, dependencies);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
             .add("name", name)
+            .add("target", target)
             .add("license", license)
             .add("dependencies", dependencies)
             .toString();
     }
 
-    public static Project of(final Optional<String> name, final Optional<String> license, final DependencyGroup dependencies) {
-        return new Project(name, license, dependencies);
+    public static Project of(final Optional<String> name, final Optional<String> target, final Optional<String> license, final DependencyGroup dependencies) {
+        return new Project(name, target, license, dependencies);
     }
 
     public static Project of(final Optional<String> name) {
-        return new Project(name, Optional.empty(), DependencyGroup.of());
+        return new Project(name, Optional.empty(), Optional.empty(), DependencyGroup.of());
     }
 
     public static Project of(final String name) {
-        return new Project(Optional.of(name), Optional.empty(), DependencyGroup.of());
+        return new Project(Optional.of(name), Optional.empty(), Optional.empty(), DependencyGroup.of());
     }
 
     public static Project of(final String name, final DependencyGroup dependencies) {
-        return new Project(Optional.of(name), Optional.empty(), dependencies);
+        return new Project(Optional.of(name), Optional.empty(), Optional.empty(), dependencies);
     }
 
     public static Project of() {
-        return new Project(Optional.empty(), Optional.empty(), DependencyGroup.of());
+        return new Project(Optional.empty(), Optional.empty(), Optional.empty(), DependencyGroup.of());
     }
 }

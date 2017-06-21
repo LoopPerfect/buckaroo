@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.nio.file.FileSystem;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -95,5 +96,24 @@ public final class GitHubRecipeSourceTest {
         final List<Event> actual = task.timeout(90, TimeUnit.SECONDS).toList().blockingGet();
 
         assertTrue(actual.size() > 1);
+    }
+
+    @Test
+    public void fetchRecognizesTarget() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+
+        final Single<Recipe> task = recipeSource.fetch(
+            RecipeIdentifier.of("github", "njlr", "test-lib-d"))
+            .result();
+
+        final Optional<String> expected = Optional.of("target-d");
+
+        final Optional<String> actual = task.timeout(90, TimeUnit.SECONDS).blockingGet()
+            .versions.get(SemanticVersion.of(0, 1)).target;
+
+        assertEquals(expected, actual);
     }
 }

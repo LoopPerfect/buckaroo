@@ -84,7 +84,7 @@ public final class GitHubRecipeSource implements RecipeSource {
 
                                 return Process.just(RecipeVersion.of(
                                     remoteArchive,
-                                    Optional.empty(),
+                                    readProjectFileEvent.project.target,
                                     readProjectFileEvent.project.dependencies,
                                     Optional.empty()));
                             }));

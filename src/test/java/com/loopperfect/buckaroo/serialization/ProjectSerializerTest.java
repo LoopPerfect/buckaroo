@@ -18,6 +18,7 @@ public final class ProjectSerializerTest {
 
         final Project project = Project.of(
             Optional.of("my-magic-tool"),
+            Optional.of("my-magic-tool-lib"),
             Optional.of("MIT"),
             DependencyGroup.of(ImmutableMap.of(
                 RecipeIdentifier.of("org", "my-magic-lib"),

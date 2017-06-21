@@ -49,7 +49,7 @@ public final class AsyncDependencyResolver {
 
                         final ResolvedDependencies nextResolved = resolved.add(
                             next.project,
-                            Pair.with(entry.getKey(), ResolvedDependency.from(entry.getValue())));
+                            Pair.with(entry.getKey(), entry.getValue()));
 
                         final ImmutableList<Dependency> nextDependencies = new ImmutableList.Builder<Dependency>()
                             .addAll(entry.getValue().dependencies.orElse(DependencyGroup.of()).entries())
@@ -60,6 +60,7 @@ public final class AsyncDependencyResolver {
                             nextResolved,
                             nextDependencies,
                             strategy);
+
                     }).collect(toImmutableList());
 
                 final Observable<Event> states =
@@ -101,6 +102,7 @@ public final class AsyncDependencyResolver {
     public static Process<Event, ResolvedDependencies> resolve(
         final RecipeSource recipeSource,
         final ImmutableList<Dependency> dependencies) {
+
         return resolve(recipeSource, ResolvedDependencies.of(), dependencies, SumResolutionStrategy.of());
     }
 }

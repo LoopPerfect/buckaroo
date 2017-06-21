@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.Assert.assertTrue;
 
@@ -36,9 +37,12 @@ public final class InstallExistingTasksTest {
         assertTrue(Files.exists(context.fs.getPath(".buckconfig")));
         assertTrue(Files.exists(context.fs.getPath(".buckconfig.local")));
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", ".buckconfig")));
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", ".buckconfig.local")));
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
+        final Path dependencyFolder = context.fs.getPath(
+            "buckaroo", "official", "loopperfect", "valuable");
+
+        assertTrue(Files.exists(dependencyFolder.resolve(".buckconfig")));
+        assertTrue(Files.exists(dependencyFolder.resolve(".buckconfig.local")));
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
     }
 
     @Test
@@ -59,8 +63,7 @@ public final class InstallExistingTasksTest {
 
         InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
-
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
 
         final DependencyLocks locks2 = DependencyLocks.of(ImmutableList.of(
 
@@ -87,7 +90,7 @@ public final class InstallExistingTasksTest {
 
         InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-neither", "BUCK")));
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "official", "loopperfect", "neither", "BUCK")));
     }
 }

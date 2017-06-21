@@ -28,9 +28,36 @@ public final class DependencyLocksSerializerTest {
         serializeDeserialize(DependencyLocks.of(ImmutableMap.of(
             RecipeIdentifier.of("org", "project"),
             ResolvedDependency.of(
-                Either.left(GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5")),
-                Optional.of("my-magic-lib"),
+                Either.left(GitCommit.of("https://github.com/org/project/commit", "b0215d5")),
+                ImmutableList.of(
+                    ResolvedDependencyReference.of(RecipeIdentifier.of("org", "project")))))));
+    }
+
+    @Test
+    public void test2() throws Exception {
+
+        serializeDeserialize(DependencyLocks.of(ImmutableMap.of(
+            RecipeIdentifier.of("org", "project"),
+            ResolvedDependency.of(
+                Either.left(GitCommit.of("https://github.com/org/project/commit", "b0215d5")),
+                Optional.of("project-lib"),
                 Optional.empty(),
-                ImmutableList.of(RecipeIdentifier.of("megacorp", "json"))))));
+                ImmutableList.of(
+                    ResolvedDependencyReference.of(RecipeIdentifier.of("megacorp", "json"), "json-lib"))),
+            RecipeIdentifier.of("org", "anotherproject"),
+            ResolvedDependency.of(
+                Either.left(GitCommit.of("https://github.com/org/anotherproject/commit", "b0215d5")),
+                ImmutableList.of(
+                    ResolvedDependencyReference.of(RecipeIdentifier.of("megacorp", "threads")))))));
+    }
+
+    @Test
+    public void test3() throws Exception {
+
+        serializeDeserialize(DependencyLocks.of(ImmutableMap.of(
+            RecipeIdentifier.of("github", "org", "project"),
+            ResolvedDependency.of(
+                Either.left(GitCommit.of("https://github.com/org/project/commit", "b0215d5")),
+                ImmutableList.of()))));
     }
 }

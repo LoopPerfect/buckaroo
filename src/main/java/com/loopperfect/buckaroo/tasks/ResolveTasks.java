@@ -33,36 +33,30 @@ public final class ResolveTasks {
             CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()).toObservable())
             .mapStates(x -> (Event)x);
 
-        return p.chain(
-            config -> {
+        return p.chain(config -> {
 
-                final Process<Event, ReadProjectFileEvent> p2 =
-                    Process.usingLastAsResult(CommonTasks.readProjectFile(projectFilePath).toObservable())
-                        .mapStates(x -> (Event)x);
+            final Process<Event, ReadProjectFileEvent> p2 =
+                Process.usingLastAsResult(CommonTasks.readProjectFile(projectFilePath).toObservable())
+                    .mapStates(x -> (Event)x);
 
-                return p2.chain((ReadProjectFileEvent event) -> {
-                    final RecipeSource recipeSource = RecipeSources.standard(projectDirectory.getFileSystem(), config.config);
+            return p2.chain((ReadProjectFileEvent event) -> {
+                final RecipeSource recipeSource = RecipeSources.standard(projectDirectory.getFileSystem(), config.config);
 
-                    return AsyncDependencyResolver.resolve(
-                        recipeSource, event.project.dependencies.entries());
+                return AsyncDependencyResolver.resolve(
+                    recipeSource, event.project.dependencies.entries()).map(ResolvedDependenciesEvent::of);
 
-                }).chain(event -> {
+            }).map(i -> DependencyLocks.of(i.dependencies)).chain((DependencyLocks dependencyLocks) -> {
 
-                    final DependencyLocks locks = DependencyLocks.of(event.dependencies.entrySet()
-                        .stream()
-                        .map(x -> DependencyLock.of(x.getKey(), x.getValue().getValue1()))
-                        .collect(ImmutableList.toImmutableList()));
+                final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
 
-                    final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
+                return Process.usingLastAsResult(
+                    CommonTasks.writeFile(Serializers.serialize(dependencyLocks), lockFilePath, true).toObservable())
+                    .mapStates(x -> (Event)x);
 
-                    return Process.usingLastAsResult(
-                        CommonTasks.writeFile(Serializers.serialize(locks), lockFilePath, true).toObservable())
-                        .mapStates(x -> (Event)x);
+            }).chain(result -> Process.of(
+                Observable.just(TouchFileEvent.of(projectFilePath)), Single.just(Notification.of("blub"))));
 
-                }).chain(result-> Process.of(
-                    Observable.just(TouchFileEvent.of(projectFilePath)), Single.just(Notification.of("blub"))));
-
-            }).states();
+        }).states();
     }
 
     public static Observable<Event> resolveDependenciesInWorkingDirectory(final Context ctx) {

@@ -49,6 +49,36 @@ public final class DependencyLocks {
             .toString();
     }
 
+    public static DependencyLocks of(final ResolvedDependencies resolvedDependencies) {
+        Preconditions.checkNotNull(resolvedDependencies);
+
+        final ImmutableList<DependencyLock> locks = resolvedDependencies.dependencies.entrySet()
+            .stream()
+            .map(entry -> {
+
+                final RecipeVersion recipeVersion = entry.getValue().getValue1();
+
+                final ImmutableList<ResolvedDependencyReference> xs =
+                    recipeVersion.dependencies.map(x -> x.dependencies.entrySet()
+                        .stream()
+                        .map(i -> ResolvedDependencyReference.of(
+                            i.getKey(),
+                            resolvedDependencies.get(i.getKey()).getValue1().target))
+                        .collect(ImmutableList.toImmutableList())).orElse(ImmutableList.of());
+
+                return DependencyLock.of(
+                    entry.getKey(),
+                    ResolvedDependency.of(
+                        recipeVersion.source,
+                        recipeVersion.target,
+                        recipeVersion.buckResource,
+                        xs));
+            })
+            .collect(ImmutableList.toImmutableList());
+
+        return DependencyLocks.of(locks);
+    }
+
     public static DependencyLocks of(final Map<RecipeIdentifier, ResolvedDependency> locks) {
         return new DependencyLocks(locks);
     }

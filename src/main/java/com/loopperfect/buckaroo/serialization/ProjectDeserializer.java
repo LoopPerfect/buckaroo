@@ -19,6 +19,10 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
             Optional.of(jsonObject.get("name").getAsString()) :
             Optional.empty();
 
+        final Optional<String> target = jsonObject.has("target") ?
+            Optional.of(jsonObject.get("target").getAsString()) :
+            Optional.empty();
+
         final Optional<String> license = jsonObject.has("license") ?
             Optional.of(jsonObject.get("license").getAsString()) :
             Optional.empty();
@@ -30,6 +34,6 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
             dependencies = DependencyGroup.of();
         }
 
-        return Project.of(name, license, dependencies);
+        return Project.of(name, target, license, dependencies);
     }
 }

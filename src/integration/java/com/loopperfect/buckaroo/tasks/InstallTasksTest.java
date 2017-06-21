@@ -6,17 +6,15 @@ import com.google.common.hash.HashCode;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
-import com.loopperfect.buckaroo.sources.RecipeSources;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.schedulers.Schedulers;
 import org.junit.Test;
 
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.List;
+import java.nio.file.Path;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 public final class InstallTasksTest {
 
@@ -52,12 +50,15 @@ public final class InstallTasksTest {
 
         assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCKAROO_DEPS")));
+        final Path dependencyFolder = context.fs.getPath(
+            "buckaroo", "official", "loopperfect", "valuable");
+
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCKAROO_DEPS")));
     }
 
     @Test
-    public void installDirectlyFromGitHub() throws Exception {
+    public void installDirectlyFromGitHub1() throws Exception {
 
         final Context context = Context.of(Jimfs.newFileSystem(), Schedulers.newThread());
 
@@ -74,8 +75,36 @@ public final class InstallTasksTest {
 
         assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "github+njlr-test-lib-a", "BUCK")));
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "github+njlr-test-lib-a", "BUCKAROO_DEPS")));
+        final Path dependencyFolder = context.fs.getPath(
+            "buckaroo", "github", "njlr", "test-lib-a");
+
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCKAROO_DEPS")));
+    }
+
+    @Test
+    public void installDirectlyFromGitHub2() throws Exception {
+
+        final Context context = Context.of(Jimfs.newFileSystem(), Schedulers.newThread());
+
+        final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
+            PartialDependency.of(
+                Identifier.of("github"),
+                Identifier.of("njlr"),
+                Identifier.of("test-lib-d"),
+                AnySemanticVersion.of()));
+
+        InitTasks.initWorkingDirectory(context).toList().blockingGet();
+
+        InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).toList().blockingGet();
+
+        assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
+
+        final Path dependencyFolder = context.fs.getPath(
+            "buckaroo", "github", "njlr", "test-lib-d");
+
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
+        assertTrue(Files.exists(dependencyFolder.resolve("BUCKAROO_DEPS")));
     }
 
     @Test
@@ -131,8 +160,11 @@ public final class InstallTasksTest {
                 .toList()
                 .blockingGet();
 
-            assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
-            assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCKAROO_DEPS")));
+            final Path dependencyFolder = context.fs.getPath(
+                "buckaroo", "official", "loopperfect", "valuable");
+
+            assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
+            assertTrue(Files.exists(dependencyFolder.resolve("BUCKAROO_DEPS")));
         }
 
         // Install neither
@@ -147,8 +179,11 @@ public final class InstallTasksTest {
                 .toList()
                 .blockingGet();
 
-            assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-neither", "BUCK")));
-            assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-neither", "BUCKAROO_DEPS")));
+            final Path dependencyFolder = context.fs.getPath(
+                "buckaroo", "official", "loopperfect", "neither");
+
+            assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
+            assertTrue(Files.exists(dependencyFolder.resolve("BUCKAROO_DEPS")));
         }
 
         assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));

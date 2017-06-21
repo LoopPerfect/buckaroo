@@ -50,10 +50,12 @@ public final class QuickstartTasks {
                 .toObservable(),
 
             // Generate an empty BUCKAROO_DEPS
-            CommonTasks.writeFile(
-                CommonTasks.generateBuckarooDeps(ImmutableList.of()),
-                fs.getPath(projectDirectory.toString(), "BUCKAROO_DEPS"),
-                false)
+            Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(ImmutableList.of()))
+                .flatMap(content ->
+                    CommonTasks.writeFile(
+                        content,
+                        fs.getPath(projectDirectory.toString(), "BUCKAROO_DEPS"),
+                        false))
                 .toObservable(),
 
             // Create the project directories

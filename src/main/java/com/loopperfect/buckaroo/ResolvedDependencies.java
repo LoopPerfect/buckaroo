@@ -10,14 +10,14 @@ import java.util.Objects;
 
 public final class ResolvedDependencies {
 
-    public final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies;
+    public final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies;
 
-    private ResolvedDependencies(final Map<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
+    private ResolvedDependencies(final Map<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies) {
         Preconditions.checkNotNull(dependencies);
         this.dependencies = ImmutableMap.copyOf(dependencies);
     }
 
-    public ResolvedDependencies add(final RecipeIdentifier identifier, final Pair<SemanticVersion, ResolvedDependency> dependency) {
+    public ResolvedDependencies add(final RecipeIdentifier identifier, final Pair<SemanticVersion, RecipeVersion> dependency) {
         Preconditions.checkNotNull(identifier);
         Preconditions.checkNotNull(dependency);
         return ResolvedDependencies.of(
@@ -30,6 +30,11 @@ public final class ResolvedDependencies {
         Preconditions.checkNotNull(other);
         return other == this ||
             Objects.equals(dependencies, other.dependencies);
+    }
+
+    public Pair<SemanticVersion, RecipeVersion> get(final RecipeIdentifier identifier) {
+        Preconditions.checkNotNull(identifier);
+        return dependencies.get(identifier);
     }
 
     @Override
@@ -52,7 +57,7 @@ public final class ResolvedDependencies {
             .toString();
     }
 
-    public static ResolvedDependencies of(final Map<RecipeIdentifier, Pair<SemanticVersion, ResolvedDependency>> dependencies) {
+    public static ResolvedDependencies of(final Map<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies) {
         return new ResolvedDependencies(dependencies);
     }
 

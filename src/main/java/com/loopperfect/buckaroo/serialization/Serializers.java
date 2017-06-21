@@ -108,6 +108,8 @@ public final class Serializers {
         .registerTypeAdapter(RemoteFile.class, new RemoteFileSerializer())
         .registerTypeAdapter(RemoteFile.class, new RemoteFileDeserializer())
         .registerTypeAdapter(URL.class, new UrlDeserializer())
+        .registerTypeAdapter(ResolvedDependencyReference.class, new ResolvedDependencyReferenceSerializer())
+        .registerTypeAdapter(ResolvedDependencyReference.class, new ResolvedDependencyReferenceDeserializer())
         .registerTypeAdapterFactory(new ImmutableListTypeAdapterFactory())
         .registerTypeAdapterFactory(new ImmutableMapTypeAdapterFactory())
         .setPrettyPrinting()

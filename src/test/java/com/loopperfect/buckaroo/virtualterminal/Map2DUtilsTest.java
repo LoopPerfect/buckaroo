@@ -20,5 +20,4 @@ public final class Map2DUtilsTest {
         assertEquals(a.get(2, 2), c.get(2, 2));
         assertEquals(b.get(2, 2), c.get(2, a.height() + 2));
     }
-
 }

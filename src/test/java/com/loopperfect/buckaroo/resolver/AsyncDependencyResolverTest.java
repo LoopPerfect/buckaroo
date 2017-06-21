@@ -53,7 +53,7 @@ public final class AsyncDependencyResolverTest {
             identifier,
             Pair.with(
                 SemanticVersion.of(1),
-                ResolvedDependency.from(example.versions.get(SemanticVersion.of(1))))));
+                    example.versions.get(SemanticVersion.of(1)))));
 
         assertEquals(
             expected,
@@ -103,13 +103,13 @@ public final class AsyncDependencyResolverTest {
             RecipeIdentifier.of("org", "example-a"),
             Pair.with(
                 SemanticVersion.of(1),
-                ResolvedDependency.from(recipeA.versions.get(SemanticVersion.of(1)))),
+                recipeA.versions.get(SemanticVersion.of(1))),
             RecipeIdentifier.of("org", "example-b"),
             Pair.with(
                 SemanticVersion.of(1),
-                ResolvedDependency.from(recipeB.versions.get(SemanticVersion.of(1))))));
+                recipeB.versions.get(SemanticVersion.of(1)))));
 
-        assertEquals(
+            assertEquals(
             expected,
             AsyncDependencyResolver.resolve(recipeSource, toResolve).result().blockingGet());
     }

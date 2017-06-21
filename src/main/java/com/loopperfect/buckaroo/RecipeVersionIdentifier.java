@@ -28,7 +28,7 @@ public final class RecipeVersionIdentifier {
     @Override
     public boolean equals(final Object obj) {
         return this == obj ||
-            !(obj == null || !(obj instanceof RecipeVersionIdentifier)) &&
+            obj != null && obj instanceof RecipeVersionIdentifier &&
                 equals((RecipeVersionIdentifier) obj);
     }
 

@@ -81,36 +81,29 @@ public final class InstallTasks {
 
                                 AsyncDependencyResolver.resolve(
                                     recipeSource,
-                                    project.dependencies.add(proposedDependencies).entries()),
+                                    project.dependencies.add(proposedDependencies).entries())
+                                    .map(DependencyLocks::of),
 
-                                (ResolvedDependencies resolvedDependencies) -> {
+                                (DependencyLocks locks) -> Process.chain(
 
-                                    final DependencyLocks locks = DependencyLocks.of(
-                                        resolvedDependencies.dependencies.entrySet().stream()
-                                            .map(i -> DependencyLock.of(i.getKey(), i.getValue().getValue1()))
-                                            .collect(toImmutableList()));
-
-                                    return Process.chain(
-
-                                        // Write the project file
-                                        Process.of(
-                                            CommonTasks.writeFile(
-                                                Serializers.serialize(project.addDependencies(proposedDependencies)),
-                                                projectFilePath,
-                                                true)),
-
-                                        // Write the lock file
-                                        ignored -> Process.of(CommonTasks.writeFile(
-                                            Serializers.serialize(locks),
-                                            lockFilePath,
+                                    // Write the project file
+                                    Process.of(
+                                        CommonTasks.writeFile(
+                                            Serializers.serialize(project.addDependencies(proposedDependencies)),
+                                            projectFilePath,
                                             true)),
 
-                                        // Send a notification
-                                        ignored -> Process.of(
-                                            InstallExistingTasks.installExistingDependencies(projectDirectory),
-                                            Single.just(Notification.of("Installation complete. ")))
-                                    );
-                                }
+                                    // Write the lock file
+                                    ignored -> Process.of(CommonTasks.writeFile(
+                                        Serializers.serialize(locks),
+                                        lockFilePath,
+                                        true)),
+
+                                    // Send a notification
+                                    ignored -> Process.of(
+                                        InstallExistingTasks.installExistingDependencies(projectDirectory),
+                                        Single.just(Notification.of("Installation complete. ")))
+                                )
                             )
                         );
                     });
