@@ -18,7 +18,7 @@ script:
   - buck build :buckaroo
   - buck run :buckaroo-cli
   - buck test :buckaroo-unit
-  - buck test :buckaroo-integration
+  - buck build :buckaroo-integration
 
 branches:
   except:

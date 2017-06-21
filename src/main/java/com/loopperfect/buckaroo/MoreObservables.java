@@ -7,19 +7,10 @@ import io.reactivex.Emitter;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.functions.Action;
-import io.reactivex.schedulers.Schedulers;
-import io.reactivex.subjects.PublishSubject;
-import io.reactivex.subjects.Subject;
 import org.javatuples.Pair;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class MoreObservables {
 
@@ -55,19 +46,6 @@ public final class MoreObservables {
         });
     }
 
-    @Deprecated
-    public static <T> Observable<T> fromAction(final Action action) {
-        Preconditions.checkNotNull(action);
-        return Observable.fromPublisher(subscriber -> {
-            try {
-                action.run();
-                subscriber.onComplete();
-            } catch (final Throwable throwable) {
-                subscriber.onError(throwable);
-            }
-        });
-    }
-
     public static <T, S> Observable<Map<T, S>> zipMaps(final Map<T, Observable<S>> tasks) {
 
         Objects.requireNonNull(tasks, "tasks is null");
@@ -96,7 +74,7 @@ public final class MoreObservables {
                 .map(entry -> entry.getValue()
                     .map(x -> ImmutableMap.of(entry.getKey(), x))
                 ).collect(ImmutableList.toImmutableList())
-        ).scan(initialValue, (x, y) -> MoreMaps.merge(x, y));
+        ).scan(initialValue, MoreMaps::merge);
     }
 
     public static <A extends T, T> Observable<T> chain(final Observable<A> a, final Function<A, Observable<T>> f) {
@@ -120,24 +98,5 @@ public final class MoreObservables {
             a,
             (x, f) -> x.compose(PublishAndMergeTransformer.of(f)),
             Observable::concat);
-    }
-
-    @Deprecated
-    public static <T> Observable<T> sequence(
-        final Observable<? extends T> a, final Supplier<Observable<? extends T>> p) {
-
-        final Subject<T> subject = PublishSubject.create();
-
-        a.subscribe(
-            subject::onNext,
-            subject::onError,
-            () -> {
-                p.get().subscribe(
-                    subject::onNext,
-                    subject::onError,
-                    subject::onComplete);
-            });
-
-        return subject;
     }
 }

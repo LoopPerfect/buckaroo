@@ -33,6 +33,11 @@ public final class InstallExistingTasksTest {
 
         InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
 
+        assertTrue(Files.exists(context.fs.getPath(".buckconfig")));
+        assertTrue(Files.exists(context.fs.getPath(".buckconfig.local")));
+
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", ".buckconfig")));
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", ".buckconfig.local")));
         assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
     }
 
