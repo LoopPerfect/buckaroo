@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.github;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.FileDownloadedEvent;
@@ -56,9 +57,11 @@ public final class GitHubRecipeSource implements RecipeSource {
 
                 (FileHashEvent fileHashEvent) -> {
 
-                    final Path unzipTargetPath = CacheTasks.getCacheFolder(fs).resolve(fileHashEvent.sha256.toString());
+                    final FileSystem inMemoryFS = Jimfs.newFileSystem();
+
+                    final Path unzipTargetPath = inMemoryFS.getPath(fileHashEvent.sha256.toString());
                     final Path subPath = fs.getPath(fs.getSeparator(), project.name + "-" + commit.hash);
-                    final Path projectFilePath = fs.getPath(unzipTargetPath.toString(), "buckaroo.json");
+                    final Path projectFilePath = unzipTargetPath.resolve("buckaroo.json");
 
                     return Process.chain(
 

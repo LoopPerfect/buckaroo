@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 public final class InstallTasksTest {
 
     @Test
-    public void installFromGitHub() throws Exception {
+    public void installRecipe() throws Exception {
 
         final Context context = Context.of(Jimfs.newFileSystem(), Schedulers.newThread());
 
@@ -50,7 +50,32 @@ public final class InstallTasksTest {
 
         InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).toList().blockingGet();
 
+        assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
+
         assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCKAROO_DEPS")));
+    }
+
+    @Test
+    public void installDirectlyFromGitHub() throws Exception {
+
+        final Context context = Context.of(Jimfs.newFileSystem(), Schedulers.newThread());
+
+        final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
+            PartialDependency.of(
+                Identifier.of("github"),
+                Identifier.of("njlr"),
+                Identifier.of("test-lib-a"),
+                AnySemanticVersion.of()));
+
+        InitTasks.initWorkingDirectory(context).toList().blockingGet();
+
+        InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).toList().blockingGet();
+
+        assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
+
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "github+njlr-test-lib-a", "BUCK")));
+        assertTrue(Files.exists(context.fs.getPath("buckaroo", "github+njlr-test-lib-a", "BUCKAROO_DEPS")));
     }
 
     @Test
@@ -107,6 +132,7 @@ public final class InstallTasksTest {
                 .blockingGet();
 
             assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCK")));
+            assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-valuable", "BUCKAROO_DEPS")));
         }
 
         // Install neither
@@ -122,6 +148,9 @@ public final class InstallTasksTest {
                 .blockingGet();
 
             assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-neither", "BUCK")));
+            assertTrue(Files.exists(context.fs.getPath("buckaroo", "loopperfect-neither", "BUCKAROO_DEPS")));
         }
+
+        assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
     }
 }

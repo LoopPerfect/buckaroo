@@ -63,40 +63,45 @@ public final class CacheTasks {
 
         final Path target = getCachePath(fs, file);
 
-        return MoreObservables.chain(
+        // Does the file exist?
+        return Observable.fromCallable(() -> Files.exists(target)).flatMap(fileExists -> {
 
-            // Does the file exist?
-            Observable.fromCallable(() -> Files.exists(target)).flatMap(fileExists -> {
+            // Yes
+            if (fileExists) {
 
-                // Yes
-                if (fileExists) {
-                    // Verify the hash
-                    final HashCode actual = EvenMoreFiles.hashFile(target);
-                    return Observable.just(FileHashEvent.of(target, actual));
-                }
+                // Verify the hash
+                final HashCode actual = EvenMoreFiles.hashFile(target);
 
-                // No, do nothing
-                return Observable.empty();
-            }),
+                return MoreObservables.chain(
 
-            // Do the hashes match?
-            event -> event.sha256.equals(file.sha256) ?
+                    Observable.just(FileHashEvent.of(target, actual)),
 
-                // Yes, do nothing
-                Observable.empty() :
+                    (FileHashEvent fileHashEvent) -> {
+                        // Does it match?
+                        if (fileHashEvent.sha256.equals(file.sha256)) {
 
-                // No!
-                Observable.concat(
+                            // Yes, so do nothing
+                            return Observable.empty();
+                        }
 
-                    // Delete the file
-                    CommonTasks.deleteIfExists(target)
-                        .toObservable()
-                        .cast(Event.class),
+                        // No, so retry the download
+                        return Observable.concat(
 
-                    // Retry the download
-                    CommonTasks.downloadRemoteFile(fs, file, target)
-                )
-        );
+                            // Delete the file
+                            CommonTasks.deleteIfExists(target)
+                                .toObservable()
+                                .cast(Event.class),
+
+                            // Retry the download
+                            CommonTasks.downloadRemoteFile(fs, file, target)
+                        );
+                    });
+            }
+
+            // No...
+            // ... so download the file!
+            return CommonTasks.downloadRemoteFile(fs, file, target);
+        });
     }
 
     public static Observable<Event> downloadToCache(final FileSystem fs, final URL url) {

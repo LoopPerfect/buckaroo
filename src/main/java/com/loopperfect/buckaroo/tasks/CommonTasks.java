@@ -68,7 +68,7 @@ public final class CommonTasks {
         Preconditions.checkNotNull(content);
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() -> {
-            if (!Files.exists(path.getParent())) {
+            if (path.getParent() != null && !Files.exists(path.getParent())) {
                 Files.createDirectories(path.getParent());
             }
             if (overwrite) {

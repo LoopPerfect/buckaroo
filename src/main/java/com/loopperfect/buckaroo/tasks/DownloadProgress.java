@@ -9,6 +9,10 @@ public final class DownloadProgress extends Event {
     public final long downloaded;
     public final long contentLength;
 
+    public boolean hasKnownContentLength() {
+        return contentLength > 0;
+    }
+
     private DownloadProgress(final long downloaded, final long contentLength) {
         Preconditions.checkArgument(downloaded >= 0L);
         // TODO: Support the no content-length case better
