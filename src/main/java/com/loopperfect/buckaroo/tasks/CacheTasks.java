@@ -133,6 +133,21 @@ public final class CacheTasks {
         );
     }
 
+    public static Observable<Event> downloadUsingCache(final RemoteArchive archive, final Path target, final CopyOption... copyOptions) {
+
+        Preconditions.checkNotNull(archive);
+        Preconditions.checkNotNull(target);
+
+        final FileSystem fs = target.getFileSystem();
+        final Path cachePath = getCachePath(fs, archive.asRemoteFile());
+        final Optional<Path> subPath = archive.subPath.map(x -> fs.getPath(fs.getSeparator(), x));
+
+        return Observable.concat(
+            downloadToCache(fs, archive.asRemoteFile()),
+            CommonTasks.unzip(cachePath, target, subPath, copyOptions).toObservable()
+        );
+    }
+
     public static Single<FileCopyEvent> ensureCloneAndCheckout(final FileSystem fs, final GitCommit commit, final Path target) {
 
         Preconditions.checkNotNull(fs);

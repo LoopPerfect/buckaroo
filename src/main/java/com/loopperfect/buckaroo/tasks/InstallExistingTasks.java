@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.stream.Collectors;
 
 public final class InstallExistingTasks {
@@ -53,7 +54,7 @@ public final class InstallExistingTasks {
                 if( Files.exists(target) ) {
                     return Observable.empty();
                 }
-                return CommonTasks.downloadRemoteArchive(fs, remoteArchive, target);
+                return CacheTasks.downloadUsingCache(remoteArchive, target, StandardCopyOption.REPLACE_EXISTING);
             });
 
         final Path buckFilePath = fs.getPath(target.toString(), "BUCK");
