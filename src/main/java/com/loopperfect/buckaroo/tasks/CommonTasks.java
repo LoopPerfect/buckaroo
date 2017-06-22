@@ -204,13 +204,12 @@ public final class CommonTasks {
             Observable.fromCallable(() -> Files.exists(target))
                 .flatMap(
                     exists -> {
-                        if(exists)
+                        if (exists) {
                             // Then skip the download
-                            return Observable.empty() ;
-                        else
-                            // Otherwise, download the file
-                            return DownloadTask.download(remoteFile.url, target).subscribeOn(Schedulers.io());
-
+                            return Observable.empty();
+                        }
+                        // Otherwise, download the file
+                        return DownloadTask.download(remoteFile.url, target).subscribeOn(Schedulers.io());
                     }).cast(Event.class),
 
             // Verify the hash

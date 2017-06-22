@@ -32,20 +32,6 @@ public final class MoreObservables {
         return xs.reduce((x, y) -> (comparator.compare(x, y) < 0) ? y : x);
     }
 
-    public static <T> Observable<T> fromProcess(final ThrowingConsumer<Emitter<T>> process) {
-
-        Preconditions.checkNotNull(process);
-
-        return Observable.create(emitter -> {
-            try {
-                process.accept(emitter);
-                emitter.onComplete();
-            } catch (final Throwable e) {
-                emitter.onError(e);
-            }
-        });
-    }
-
     public static <T, S> Observable<Map<T, S>> zipMaps(final Map<T, Observable<S>> tasks) {
 
         Objects.requireNonNull(tasks, "tasks is null");

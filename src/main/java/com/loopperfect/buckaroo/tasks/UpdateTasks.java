@@ -27,75 +27,81 @@ public final class UpdateTasks {
         Preconditions.checkNotNull(folder);
         Preconditions.checkNotNull(cookbook);
 
-        return MoreObservables.fromProcess(observer -> {
+        return Observable.generate(emitter -> {
 
-            final FileSystem fs = folder.getFileSystem();
+            try {
+                final FileSystem fs = folder.getFileSystem();
 
-            // First, ensure that the target folder exists and is not a file.
-            if (Files.exists(folder)) {
-                if (!Files.isDirectory(folder)) {
-                    throw new IOException(folder + " is not a directory. ");
-                }
-            } else {
-                Files.createDirectories(folder);
-            }
-
-            final Path cookbookFolder = fs.getPath(
-                folder.toString(),
-                cookbook.name.name);
-
-            // If the cookbook folder already exists, then we should do a pull.
-            if (Files.exists(cookbookFolder)) {
-
-                observer.onNext(Notification.of(cookbookFolder + " already exists. "));
-
-                // Ensure it is a folder
-                if (!Files.isDirectory(cookbookFolder)) {
-                    throw new IOException(cookbookFolder + " is not a directory. ");
+                // First, ensure that the target folder exists and is not a file.
+                if (Files.exists(folder)) {
+                    if (!Files.isDirectory(folder)) {
+                        throw new IOException(folder + " is not a directory. ");
+                    }
+                } else {
+                    Files.createDirectories(folder);
                 }
 
-                // TODO: Find a work-around for the File API
+                final Path cookbookFolder = fs.getPath(
+                    folder.toString(),
+                    cookbook.name.name);
 
-                // Ensure that the remote is correct
-                observer.onNext(Notification.of("Verifying the remote URL... "));
+                // If the cookbook folder already exists, then we should do a pull.
+                if (Files.exists(cookbookFolder)) {
 
-                final Repository repository = new FileRepositoryBuilder()
-                    .setGitDir(fs.getPath(cookbookFolder.toString(), ".git").toFile())
-                    .build();
+                    emitter.onNext(Notification.of(cookbookFolder + " already exists. "));
 
-                final String url = repository.getConfig().getString("remote", "origin", "url");
+                    // Ensure it is a folder
+                    if (!Files.isDirectory(cookbookFolder)) {
+                        throw new IOException(cookbookFolder + " is not a directory. ");
+                    }
 
-                if (!url.equalsIgnoreCase(cookbook.url)) {
-                    throw new IOException("The remote of the cookbook at " + cookbookFolder + " does not match what was expected. " +
-                        "Expected " + cookbook.url + " but found " + url);
+                    // TODO: Find a work-around for the File API
+
+                    // Ensure that the remote is correct
+                    emitter.onNext(Notification.of("Verifying the remote URL... "));
+
+                    final Repository repository = new FileRepositoryBuilder()
+                        .setGitDir(fs.getPath(cookbookFolder.toString(), ".git").toFile())
+                        .build();
+
+                    final String url = repository.getConfig().getString("remote", "origin", "url");
+
+                    if (!url.equalsIgnoreCase(cookbook.url)) {
+                        throw new IOException("The remote of the cookbook at " + cookbookFolder + " does not match what was expected. " +
+                            "Expected " + cookbook.url + " but found " + url);
+                    }
+
+                    // Check the status
+                    emitter.onNext(Notification.of("Verifying the Git status... "));
+
+                    final Status status = Git.open(cookbookFolder.toFile()).status().call();
+
+                    if (!status.isClean()) {
+                        throw new IOException(cookbookFolder + " is not clean. ");
+                    }
+
+                    // Do a pull!
+                    emitter.onNext(Notification.of("Pulling the latest changes... "));
+
+                    Git.open(cookbookFolder.toFile()).pull().call();
+                } else {
+
+                    emitter.onNext(Notification.of(cookbookFolder + " does not already exist. "));
+
+                    // TODO: Find a work-around for the File API
+
+                    // Clone the cookbook
+                    emitter.onNext(Notification.of("Cloning " + cookbook.url + "... "));
+
+                    Git.cloneRepository()
+                        .setDirectory(cookbookFolder.toFile())
+                        .setURI(cookbook.url)
+                        .call();
                 }
 
-                // Check the status
-                observer.onNext(Notification.of("Verifying the Git status... "));
-
-                final Status status = Git.open(cookbookFolder.toFile()).status().call();
-
-                if (!status.isClean()) {
-                    throw new IOException(cookbookFolder + " is not clean. ");
-                }
-
-                // Do a pull!
-                observer.onNext(Notification.of("Pulling the latest changes... "));
-
-                Git.open(cookbookFolder.toFile()).pull().call();
-            } else {
-
-                observer.onNext(Notification.of(cookbookFolder + " does not already exist. "));
-
-                // TODO: Find a work-around for the File API
-
-                // Clone the cookbook
-                observer.onNext(Notification.of("Cloning " + cookbook.url + "... "));
-
-                Git.cloneRepository()
-                    .setDirectory(cookbookFolder.toFile())
-                    .setURI(cookbook.url)
-                    .call();
+                emitter.onComplete();
+            } catch (final Throwable e) {
+                emitter.onError(e);
             }
         });
     }

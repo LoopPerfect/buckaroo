@@ -5,6 +5,7 @@ import com.google.common.hash.HashCode;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.FileCopyEvent;
 import com.loopperfect.buckaroo.events.FileHashEvent;
+import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
@@ -148,17 +149,20 @@ public final class CacheTasks {
         );
     }
 
-    public static Single<FileCopyEvent> ensureCloneAndCheckout(final FileSystem fs, final GitCommit commit, final Path target) {
+    public static Observable<Event> cloneAndCheckoutUsingCache(
+        final GitCommit gitCommit, final Path targetDirectory, final StandardCopyOption... copyOptions) {
 
-        Preconditions.checkNotNull(fs);
-        Preconditions.checkNotNull(commit);
+        Preconditions.checkNotNull(gitCommit);
+        Preconditions.checkNotNull(targetDirectory);
 
-        final Path cachePath = fs.getPath(
-            getCacheFolder(fs).toString(),
-            StringUtils.escapeStringAsFilename(commit.url));
+        final Path cachePath = getCacheFolder(targetDirectory.getFileSystem())
+            .resolve(StringUtils.escapeStringAsFilename(gitCommit.url));
 
-        return GitTasks
-            .ensureCloneAndCheckout(commit, cachePath)
-            .andThen(CommonTasks.copy(cachePath, target));
+        final Observable<Event> copy = Completable.fromAction(() ->
+            EvenMoreFiles.copyDirectory(cachePath, targetDirectory, copyOptions))
+            .toObservable();
+
+        return GitTasks.ensureCloneAndCheckout(gitCommit, cachePath, true)
+            .concatWith(copy);
     }
 }

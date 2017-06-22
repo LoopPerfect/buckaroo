@@ -4,13 +4,12 @@ import com.google.common.hash.HashCode;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.EvenMoreFiles;
 import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.GitCommit;
 import com.loopperfect.buckaroo.RemoteFile;
 import org.junit.Test;
 
 import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.List;
 
 import static junit.framework.TestCase.assertEquals;
@@ -75,5 +74,26 @@ public final class CacheTasksTest {
         assertTrue(Files.exists(path));
         assertEquals(remoteFile.sha256, EvenMoreFiles.hashFile(path));
         assertTrue(events.stream().noneMatch(x -> x instanceof DownloadProgress));
+    }
+
+    @Test
+    public void cacheWorksForGit() throws Exception {
+
+        final GitCommit gitCommit = GitCommit.of(
+            "git@github.com:njlr/test-lib-d.git", "c86550e93ca45ed48fd226184c3b996923251e07");
+
+        final Path target1 = Files.createTempDirectory(Paths.get("/tmp"), "buckaroo-test")
+            .toAbsolutePath();
+
+        CacheTasks.cloneAndCheckoutUsingCache(gitCommit, target1).toList().blockingGet();
+
+        assertTrue(Files.exists(target1.resolve("BUCK")));
+
+        final Path target2 = Files.createTempDirectory(Paths.get("/tmp"), "buckaroo-test")
+            .toAbsolutePath();
+
+        CacheTasks.cloneAndCheckoutUsingCache(gitCommit, target2).toList().blockingGet();
+
+        assertTrue(Files.exists(target1.resolve("BUCK")));
     }
 }
