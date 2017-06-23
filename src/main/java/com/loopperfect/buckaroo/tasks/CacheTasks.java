@@ -3,11 +3,9 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.HashCode;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.events.FileCopyEvent;
 import com.loopperfect.buckaroo.events.FileHashEvent;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
-import io.reactivex.Single;
 
 import java.net.URL;
 import java.nio.file.*;
@@ -19,16 +17,26 @@ public final class CacheTasks {
 
     }
 
-    public static Path getCacheFolder(final FileSystem fs) {
+    public static Path getCacheFolder(final String osName, final FileSystem fs) {
 
+        Preconditions.checkNotNull(osName);
         Preconditions.checkNotNull(fs);
 
         // macOS
-        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+        if (osName.toLowerCase().contains("mac")) {
             return fs.getPath(System.getProperty("user.home"), "Library", "Caches", "Buckaroo");
         }
 
+        // Linux
+        if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
+            return fs.getPath(System.getProperty("user.home"), ".cache", "Buckaroo");
+        }
+
         return fs.getPath(System.getProperty("user.home"), ".buckaroo", "caches");
+    }
+
+    public static Path getCacheFolder(final FileSystem fs) {
+        return getCacheFolder(System.getProperty("os.name"), fs);
     }
 
     public static Path getCachePath(final FileSystem fs, final RemoteFile file) {
@@ -38,7 +46,8 @@ public final class CacheTasks {
 
         return fs.getPath(
             getCacheFolder(fs).toString(),
-            file.sha256.toString() + URLUtils.getExtension(file.url).map(x -> "." + x).orElse(""));
+            file.sha256.toString() +
+                URLUtils.getExtension(file.url).map(x -> "." + x).orElse(""));
     }
 
     public static Path getCachePath(final FileSystem fs, final URL url, final Optional<String> extension) {
