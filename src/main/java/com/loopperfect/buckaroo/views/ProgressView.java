@@ -28,8 +28,8 @@ public class ProgressView {
     public static Observable<Component> dependencyView(final Observable<Event> events$) {
         return events$.ofType(ResolvedDependenciesEvent.class)
             .map(deps->deps.dependencies)
-            .map(deps->deps.dependencies.entrySet().stream())
-            .map(s->s.map( kv ->
+            .map(deps->deps.dependencies.entrySet())
+            .map(s->s.stream().map(kv ->
                 kv.getKey().organization.toString()
                     + "/"
                     + kv.getKey().recipe.toString()
@@ -43,7 +43,7 @@ public class ProgressView {
     }
 
     public static Observable<Component> installationProgressView(final Observable<Event> events$) {
-        return events$.ofType(DependencyInstallationProgress.class).map(d-> {
+        return events$.ofType(DependencyInstallationProgress.class).map(d -> {
                 final ImmutableList<Triplet<String, Long, Long>> downloading = d.progress
                     .entrySet()
                     .stream()
@@ -124,5 +124,6 @@ public class ProgressView {
             dependencyView(events$),
             StackLayout::of)
             .cast(Component.class);
+
     }
 }

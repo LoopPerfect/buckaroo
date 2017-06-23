@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadLockFileEvent;
+import com.loopperfect.buckaroo.events.TouchFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 

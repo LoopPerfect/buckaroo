@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.Observable;
 import org.junit.Test;
 
@@ -87,5 +88,20 @@ public final class ProcessTest {
         p.states().toList().blockingGet();
 
         assertEquals(1, counter.count);
+    }
+
+    @Test
+    public void dontSwallowErrorsBeforeResult() throws Exception {
+
+        Process<Integer, String> p = Process.of(Observable.create(s -> {
+          s.onNext(left(1));
+          s.onError(new Exception("error"));
+          s.onNext(right("done"));
+          s.onComplete();
+        }));
+
+        final int x = p.states().take(1).lastOrError().onErrorReturnItem(0).blockingGet();
+
+        assertEquals(0, x);
     }
 }

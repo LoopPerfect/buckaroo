@@ -25,9 +25,11 @@ public final class PublishAndMergeTransformer<A extends C, B extends C, C> imple
     @Override
     public ObservableSource<C> apply(final Observable<A> x) {
         Objects.requireNonNull(x, "x is null");
-        return x.publish(i -> Observable.merge(
+        return x.publish(i -> Observable.concat(
             i,
-            i.lastOrError().toObservable().flatMap(f::apply)));
+            i.lastOrError()
+             .toObservable()
+             .flatMap(f::apply)));
     }
 
     public static <A extends C, B extends C, C> ObservableTransformer<A, C> of(final Function<A, Observable<B>> f) {
