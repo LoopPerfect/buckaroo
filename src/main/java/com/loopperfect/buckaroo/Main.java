@@ -91,7 +91,7 @@ public final class Main {
                 .distinctUntilChanged();
 
             final Observable<Component> summary$ = events$
-                .flatMap(x->{
+                .flatMap(x -> {
                     if(x.left().isPresent()) return Observable.error(x.left().get());
                     return Observable.just(x.right().get());
                 })
@@ -103,7 +103,7 @@ public final class Main {
             TerminalBuffer buffer = new TerminalBuffer();
 
             Observable
-                .merge(current$, summary$)
+                .concat(current$, summary$)
                 .map(c -> c.render(100))
                 .doOnNext(buffer::flip)
                 .doOnError(error -> {
