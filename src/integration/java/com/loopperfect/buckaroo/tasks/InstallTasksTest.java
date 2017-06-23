@@ -55,6 +55,10 @@ public final class InstallTasksTest {
 
         assertTrue(Files.exists(dependencyFolder.resolve("BUCK")));
         assertTrue(Files.exists(dependencyFolder.resolve("BUCKAROO_DEPS")));
+
+        TestUtils.printTree(context.fs.getPath("/"));
+
+        assertTrue(!Files.exists(dependencyFolder.getParent().resolve("valuable.zip")));
     }
 
     @Test
