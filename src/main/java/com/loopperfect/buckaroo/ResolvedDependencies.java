@@ -64,4 +64,17 @@ public final class ResolvedDependencies {
     public static ResolvedDependencies of() {
         return new ResolvedDependencies(ImmutableMap.of());
     }
+
+    public boolean isComplete() {
+        return dependencies.entrySet()
+            .stream()
+            .allMatch(entry -> {
+                final RecipeVersion recipeVersion = entry.getValue().getValue1();
+                return recipeVersion.dependencies.map(dependencyGroup -> dependencyGroup.dependencies.entrySet()
+                    .stream()
+                    .allMatch(x -> dependencies.containsKey(x.getKey()) &&
+                        x.getValue().isSatisfiedBy(dependencies.get(x.getKey()).getValue0())))
+                    .orElse(true);
+            });
+    }
 }
