@@ -1,6 +1,5 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.io.MoreFiles;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
@@ -14,7 +13,6 @@ import io.reactivex.Scheduler;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
-import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
@@ -117,7 +115,7 @@ public final class Main {
                             context.fs.getPath("").resolve("buckaroo-stacktrace.log"),
                             Arrays.stream(error.getStackTrace())
                                 .map(StackTraceElement::toString)
-                                .reduce(Instant.now().toString() + ":", (a, b) -> a + "\n" + b),
+                                .reduce(Instant.now().toString() + ": ", (a, b) -> a + "\n" + b),
                             Charset.defaultCharset(),
                             true);
                         executor.shutdown();

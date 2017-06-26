@@ -70,7 +70,11 @@ public final class DownloadTask {
 
         final Observable<DownloadProgress> observable = Observable.create(emitter -> {
 
-            final OkHttpClient client = new OkHttpClient();
+            final OkHttpClient client = new OkHttpClient.Builder()
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .build();
+
             final Request request = new Request.Builder()
                 .url(url)
                 .build();
