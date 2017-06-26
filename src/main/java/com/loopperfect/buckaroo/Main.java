@@ -6,8 +6,11 @@ import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
 import com.loopperfect.buckaroo.views.ProgressView;
 import com.loopperfect.buckaroo.views.SummaryView;
+import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
+import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
+import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
 import io.reactivex.annotations.NonNull;
@@ -104,26 +107,25 @@ public final class Main {
 
             Observable
                 .concat(current$, summary$)
-                .map(c -> c.render(100))
+                .map(c -> c.render(60))
                 .doOnNext(buffer::flip)
                 .doOnError(error -> {
-                    System.out.println(error.toString());
+                    buffer.flip(
+                        StackLayout.of(
+                            Text.of("buckaroo failed: "+ error.toString(), Color.RED),
+                            Text.of("writing stacktrace to buckaroo-stacktrace.log")
+                        ).render(60));
                     writeFile(
-                      fs.getPath("")
-                        .resolve("buckaroo-stacktrace.log"),
-                        "",
+                        fs.getPath("").resolve("buckaroo-stacktrace.log"),
+                        error.getStackTrace().toString(),
                         Charset.defaultCharset(),
                         true);
-                    executorService.shutdown();
-                    IOScheduler.shutdown();
-                    scheduler.shutdown();
-                }).doOnComplete(() -> {
+                }).doOnDispose(() -> {
                     executorService.shutdown();
                     IOScheduler.shutdown();
                     scheduler.shutdown();
                 }).subscribe(x->{},e->{},()->{});
 
-            //events$.subscribe(x->{},e->{},()->{});
             events$.connect();
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
