@@ -39,7 +39,8 @@ public final class Main {
         // We need to change the default behaviour of Schedulers.io()
         // so that it has a bounded thread-pool.
         // Take at least 2 threads to prevent dead-locks.
-        final int threads = Math.max(2, Runtime.getRuntime().availableProcessors());
+        // Take at most 12 to prevent too many downloads happening in parallel
+        final int threads = Math.min(Math.max(2, Runtime.getRuntime().availableProcessors() * 2), 12);
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
         final Context context = Context.of(FileSystems.getDefault(), Schedulers.from(executor));
@@ -88,7 +89,7 @@ public final class Main {
 
             final Observable<Component> summary = summaryView(events)
                 .subscribeOn(Schedulers.computation())
-                .lastElement().toObservable();
+                .takeLast(1);
 
             AnsiConsole.systemInstall();
 
