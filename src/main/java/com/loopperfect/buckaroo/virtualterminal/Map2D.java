@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.virtualterminal;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import io.reactivex.functions.*;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -78,10 +79,14 @@ public final class Map2D<T> {
     public Map2D<T> modify(final Function3<Integer, Integer, T, T> f) {
         Preconditions.checkNotNull(f);
         final T[][] nextValues = Arrays2D.create(valueType, width, height);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                nextValues[x][y] = Preconditions.checkNotNull(f.apply(x, y, get(x, y)));
+        try {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    nextValues[x][y] = Preconditions.checkNotNull(f.apply(x, y, get(x, y)));
+                }
             }
+        } catch (final Exception exception) {
+            throw new RuntimeException(exception);
         }
         return Map2D.of(width, height, valueType, nextValues);
     }

@@ -27,6 +27,8 @@ import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
 
 public final class Main {
 
+    private static final int TERMINAL_WIDTH = 60;
+
     private Main() {}
 
     public static void main(final String[] args) {
@@ -42,15 +44,29 @@ public final class Main {
         // Take at least 2 threads to prevent dead-locks.
         final int threads = Math.max(2, Runtime.getRuntime().availableProcessors());
 
-        RxJavaPlugins.setIoSchedulerHandler(scheduler ->
-            Schedulers.from(Executors.newFixedThreadPool(threads)));
+        final ExecutorService executor = Executors.newFixedThreadPool(threads);
+        final Context context = Context.of(FileSystems.getDefault(), Schedulers.from(executor));
 
-        final FileSystem fs = FileSystems.getDefault();
+        RxJavaPlugins.setIoSchedulerHandler(scheduler -> {
+            // Shutdown the old scheduler
+            scheduler.shutdown();
+            // Use the scheduler from the context
+            return context.scheduler;
+        });
 
         final String rawCommand = String.join(" ", args);
 
         // Send the command to the logging server, if present
-        LoggingTasks.log(fs, rawCommand).subscribe(); // Ignore any results
+        LoggingTasks.log(context.fs, rawCommand).subscribe(
+            next -> {
+                // Do nothing
+            },
+            error -> {
+                // Do nothing
+            },
+            () -> {
+                // Do nothing
+            });
 
         // Parse the command
         final Parser<CLICommand> commandParser = CLIParsers.commandParser;
@@ -61,39 +77,43 @@ public final class Main {
             final ExecutorService executorService = Executors.newCachedThreadPool();
             final Scheduler scheduler = Schedulers.from(executorService);
 
-            final Context ctx = Context.of(fs, scheduler);
-            final Observable<Event> task = command.routine().apply(ctx);
+            final Observable<Event> task = command.routine().apply(context);
 
-            final ConnectableObservable<Event> events$ = task
+            final ConnectableObservable<Event> events = task
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
                 .publish();
 
-            final Observable<Component> current$ = progressView(events$)
+            final Observable<Component> current = progressView(events)
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS)
                 .distinctUntilChanged();
 
-            final Observable<Component> summary$ = summaryView(events$)
+            final Observable<Component> summary = summaryView(events)
                 .subscribeOn(Schedulers.computation())
                 .lastElement().toObservable();
 
             AnsiConsole.systemInstall();
-            TerminalBuffer buffer = new TerminalBuffer();
-            Observable
-                .merge(current$, summary$)
-                .map(c -> c.render(100))
-                .doOnNext(buffer::flip)
-                .doOnError(error -> {
-                    error.printStackTrace();
-                    executorService.shutdown();
-                    scheduler.shutdown();
-                }).doOnComplete(() -> {
-                    executorService.shutdown();
-                    scheduler.shutdown();
-                }).subscribe();
 
-            events$.connect();
+            final TerminalBuffer buffer = new TerminalBuffer();
+
+            Observable.merge(current, summary)
+                .map(c -> c.render(TERMINAL_WIDTH))
+                .subscribe(
+                    buffer::flip,
+                    error -> {
+                        error.printStackTrace();
+                        executorService.shutdown();
+                        scheduler.shutdown();
+                    },
+                    () -> {
+                        executorService.shutdown();
+                        scheduler.shutdown();
+                    });
+
+            // Trigger the actual execution of the observable graph.
+            events.connect();
+
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());

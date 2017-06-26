@@ -7,7 +7,7 @@ public final class MoreLists {
 
     private MoreLists() {}
 
-    public static <T> ImmutableList<T> concat(final ImmutableList<T> a, final ImmutableList<T> b) {
+    public static <T> ImmutableList<T> concat(final ImmutableList<? extends T> a, final ImmutableList<? extends T> b) {
         Preconditions.checkNotNull(a);
         Preconditions.checkNotNull(b);
         return new ImmutableList.Builder<T>()

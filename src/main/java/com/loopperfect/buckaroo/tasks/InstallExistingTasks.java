@@ -5,10 +5,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadLockFileEvent;
+import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
-import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -124,6 +124,8 @@ public final class InstallExistingTasks {
 
         return Observable.concat(
 
+            Observable.just(Notification.of("Installing existing dependencies... ")),
+
             // Do we have a lock file?
             Single.fromCallable(() -> Files.exists(lockFilePath)).flatMapObservable(hasBuckarooLockFile -> {
                 if (hasBuckarooLockFile) {
@@ -134,11 +136,12 @@ public final class InstallExistingTasks {
                 return ResolveTasks.resolveDependencies(projectDirectory);
             }),
 
-            MoreSingles.chainObservable(
+            MoreObservables.chain(
 
                 // Read the lock file
                 CommonTasks.readLockFile(projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath())
-                    .map(ReadLockFileEvent::of),
+                    .map(ReadLockFileEvent::of)
+                    .toObservable(),
 
                 (ReadLockFileEvent event) -> {
 
@@ -146,23 +149,13 @@ public final class InstallExistingTasks {
                         .stream()
                         .collect(ImmutableMap.toImmutableMap(
                             i -> i,
-                            i -> installDependencyLock(projectDirectory, i)
-                                .filter(x->x instanceof DownloadProgress)));
+                            i -> installDependencyLock(projectDirectory, i)));
 
                     return Observable.concat(
 
                         // Install the locked dependencies
                         MoreObservables.mergeMaps(installs)
                             .map(x -> DependencyInstallationProgress.of(ImmutableMap.copyOf(x))),
-
-                        // Generate the BUCKAROO_DEPS file
-                        Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(event.locks.entries()
-                            .stream()
-                            .map(i -> ResolvedDependencyReference.of(i.identifier, i.origin.target))
-                            .collect(ImmutableList.toImmutableList())))
-                            .flatMap(content -> CommonTasks.writeFile(
-                                content, projectDirectory.resolve("BUCKAROO_DEPS"), true))
-                            .toObservable(),
 
                         // Touch the .buckconfig file
                         CommonTasks.touchFile(projectDirectory.resolve(".buckconfig")).toObservable(),
@@ -177,10 +170,29 @@ public final class InstallExistingTasks {
                                     .map(x -> x.identifier)
                                     .collect(ImmutableList.toImmutableList())),
                             projectDirectory.resolve(".buckconfig.local"),
-                            true).toObservable()
+                            true).toObservable(),
+
+                        MoreObservables.chain(
+
+                            CommonTasks.readProjectFile(projectDirectory.resolve("buckaroo.json")).toObservable(),
+
+                            // Generate the BUCKAROO_DEPS file
+                            (ReadProjectFileEvent readProjectFileEvent) -> Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(event.locks.entries()
+                                .stream()
+                                .map(i -> ResolvedDependencyReference.of(i.identifier, i.origin.target))
+                                // The top-level BUCKAROO_DEPS should only contain immediate dependencies
+                                .filter(x -> readProjectFileEvent.project.dependencies.requires(x.identifier))
+                                .collect(ImmutableList.toImmutableList())))
+                                .flatMap(content -> CommonTasks.writeFile(
+                                    content, projectDirectory.resolve("BUCKAROO_DEPS"), true))
+                                .toObservable()
+                                .cast(Event.class)
+                        )
                     );
                 }
-            ));
+            ),
+
+            Observable.just((Event) Notification.of("Finished installing dependencies. ")));
     }
 
     public static Observable<Event> installExistingDependenciesInWorkingDirectory(final Context ctx) {

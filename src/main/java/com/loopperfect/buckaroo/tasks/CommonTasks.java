@@ -60,7 +60,7 @@ public final class CommonTasks {
             Either.orThrow(Serializers.parseDependencyLocks(EvenMoreFiles.read(path))));
     }
 
-    public static Single<FileWriteEvent> writeFile(final String content, final Path path, final boolean overwrite) {
+    public static Single<WriteFileEvent> writeFile(final String content, final Path path, final boolean overwrite) {
         Preconditions.checkNotNull(content);
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() -> {
@@ -76,11 +76,11 @@ public final class CommonTasks {
             }
             final ByteSink sink = MoreFiles.asByteSink(path);
             sink.write(content.getBytes());
-            return FileWriteEvent.of(path, content.length() < 1024 ? Optional.of(content) : Optional.empty());
+            return WriteFileEvent.of(path, content.length() < 1024 ? Optional.of(content) : Optional.empty());
         });
     }
 
-    public static Single<FileWriteEvent> writeFile(final String content, final Path path) {
+    public static Single<WriteFileEvent> writeFile(final String content, final Path path) {
         return writeFile(content, path, false);
     }
 

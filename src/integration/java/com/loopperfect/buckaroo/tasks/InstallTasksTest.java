@@ -13,6 +13,7 @@ import org.junit.Test;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static junit.framework.TestCase.assertTrue;
 
@@ -75,7 +76,7 @@ public final class InstallTasksTest {
 
         InitTasks.initWorkingDirectory(context).toList().blockingGet();
 
-        InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).toList().blockingGet();
+        final List<Event> events = InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).toList().blockingGet();
 
         assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
 

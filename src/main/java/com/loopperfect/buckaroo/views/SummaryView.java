@@ -1,9 +1,12 @@
 package com.loopperfect.buckaroo.views;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.events.FileWriteEvent;
+import com.loopperfect.buckaroo.MoreLists;
+import com.loopperfect.buckaroo.events.WriteFileEvent;
+import com.loopperfect.buckaroo.events.TouchFileEvent;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import com.loopperfect.buckaroo.virtualterminal.components.FlowLayout;
@@ -15,65 +18,39 @@ import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-/**
- * Created by gaetano on 17/06/17.
- */
-public class SummaryView {
+public final class SummaryView {
 
-    public static Observable<Component> summaryView(Observable<Event> events$) {
+    private SummaryView() {
 
-        final Observable<FileWriteEvent> fileWrites$ = events$
-            .ofType(FileWriteEvent.class);
+    }
 
-        final Observable<ResolvedDependenciesEvent> resolvedDependencies$ = events$
-            .ofType(ResolvedDependenciesEvent.class);
+    public static Observable<Component> summaryView(final Observable<Event> events) {
 
-        final Observable<ImmutableList<String>> deps$ = resolvedDependencies$
-            .map(deps -> deps.dependencies)
-            .map(deps -> deps.dependencies.entrySet().stream())
-            .map(s -> s.map(kv ->
-                kv.getKey().organization.toString()
-                    + "/"
-                    + kv.getKey().recipe.toString()
-                    + "@" + kv.getValue().getValue0().toString()))
-            .map(s -> s.collect(toImmutableList()));
+        Preconditions.checkNotNull(events);
 
-        final Observable<String> writes$ = fileWrites$
-            .map(file -> file.path.toString());
+        final Observable<Event> fileModifiedEvent = events
+            .filter(x -> x instanceof WriteFileEvent || x instanceof TouchFileEvent);
 
-
-        final Observable<ImmutableList<Component>> modifiedSummary = writes$.scan(
+        final Observable<ImmutableList<Component>> modifiedSummary = fileModifiedEvent.scan(
             ImmutableList.of(),
-            (ImmutableList<String> list, String file) -> Streams
-                .concat(list.stream(), Stream.of(file))
+            (ImmutableList<Event> list, Event event) -> Streams
+                .concat(list.stream(), Stream.of(event))
                 .collect(toImmutableList()))
-            .map((ImmutableList<String> modifiedFiles) -> ImmutableList.of(
-                Text.of("modified Files(" + modifiedFiles.size() + ") :"),
+            .map((ImmutableList<Event> modifiedFiles) -> ImmutableList.of(
+                Text.of("Files modified (" + modifiedFiles.size() + "): "),
                 FlowLayout.of(
-                    Text.of("    "),
+                    Text.of("  "),
                     StackLayout.of(
-                        modifiedFiles.stream().map(Text::of).collect(toImmutableList())))));
+                        modifiedFiles.stream()
+                            .map(EventRenderer::render)
+                            .collect(toImmutableList())))));
 
+        final Observable<ImmutableList<Component>> resolvedDependencies = events
+            .ofType(ResolvedDependenciesEvent.class)
+            .map(EventRenderer::render)
+            .map(ImmutableList::of);
 
-        final Observable<ImmutableList<Component>> depsSummary = deps$
-            .lastElement()
-            .toObservable()
-            .map(deps -> ImmutableList.of(
-                Text.of("resolved dependencies(" + deps.size() + ") :"),
-                FlowLayout.of(
-                    Text.of("    "),
-                    StackLayout.of(deps.stream().map(Text::of).collect(toImmutableList())))))
-            .startWith(ImmutableList.of(FlowLayout.of()));
-
-
-        return Observable
-            .combineLatest(
-                modifiedSummary,
-                depsSummary,
-                (m, d) -> new ImmutableList.Builder<Component>()
-                    .addAll(m)
-                    .addAll(d)
-                    .build())
+        return Observable.combineLatest(modifiedSummary, resolvedDependencies, MoreLists::concat)
             .map(StackLayout::of)
             .cast(Component.class);
     }

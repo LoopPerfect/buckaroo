@@ -29,9 +29,9 @@ public final class ResolveTasks {
 
         final Path projectFilePath = projectDirectory.resolve("buckaroo.json").toAbsolutePath();
 
-        final Process<Event, ReadConfigFileEvent> p = Process.usingLastAsResult(
-            CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()).toObservable())
-            .mapStates(x -> (Event)x);
+        final Process<Event, ReadConfigFileEvent> p = Process.of(
+            Observable.just((Event)Notification.of("Resolving dependencies... ")),
+            CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()));
 
         return p.chain(config -> {
 

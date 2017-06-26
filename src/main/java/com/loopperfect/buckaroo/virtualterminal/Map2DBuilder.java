@@ -28,10 +28,6 @@ public final class Map2DBuilder<T> {
         }
     }
 
-    public Map2DBuilder(final Class<T> valueType, final T value) {
-        this(1, 1, valueType, value);
-    }
-
     public int width() {
         return width;
     }

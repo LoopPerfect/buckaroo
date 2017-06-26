@@ -31,13 +31,19 @@ public final class Text implements Component {
         final int height = computeLines(width, text);
 
         final TerminalPixel backgroundPixel = TerminalPixel.of(UnicodeChar.of(' '), foreground, background);
+
         final Map2DBuilder<TerminalPixel> builder = new Map2DBuilder<>(
-            Math.min(width, text.length()), height, TerminalPixel.class, backgroundPixel);
+            width, height, TerminalPixel.class, backgroundPixel);
 
         int x = 0;
         int y = 0;
 
         for (final char i : text.toCharArray()) {
+            if (i == '\n') {
+                x = 0;
+                y++;
+                continue;
+            }
             builder.set(x, y, TerminalPixel.of(UnicodeChar.of(i),foreground, background));
             x++;
             if (x >= builder.width()) {
@@ -55,6 +61,7 @@ public final class Text implements Component {
     public static Text of(final String text) {
         return new Text(text);
     }
+
     public static Text of(final String text, final Color foreground) {
         return new Text(text, foreground, Color.TRANSPARENT);
     }

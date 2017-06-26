@@ -3,47 +3,61 @@ package com.loopperfect.buckaroo.virtualterminal;
 import com.google.common.base.Preconditions;
 import org.fusesource.jansi.Ansi;
 
+import java.util.function.Consumer;
+
 public final class TerminalBuffer {
 
-    private Map2D<TerminalPixel> current;
+    private final Object lock = new Object();
 
-    public TerminalBuffer(final Map2D<TerminalPixel> current) {
-        Preconditions.checkNotNull(current);
-        this.current = current;
-    }
+    private final Consumer<String> consumer;
+
+    private transient volatile Map2D<TerminalPixel> current;
 
     public TerminalBuffer() {
-        current = null;
+        this(System.out::print);
+    }
+
+    public TerminalBuffer(final Consumer<String> consumer) {
+        this.consumer = consumer;
     }
 
     public void flip(final Map2D<TerminalPixel> next) {
         Preconditions.checkNotNull(next);
-        if (current != null) {
-            clear(current);
+        final Ansi nextAnsi = render(next);
+        synchronized (lock) {
+            if (current != null) {
+                consumer.accept(clear(current).toString());
+            }
+            consumer.accept(nextAnsi.toString());
+            current = next;
         }
-        render(next);
-        current = next;
     }
 
-    private static void clear(final Map2D<TerminalPixel> image) {
+    public static Ansi clear(final Map2D<TerminalPixel> image) {
         Preconditions.checkNotNull(image);
-        //System.out.print(Ansi.ansi().cursorUpLine(image.height()));
+        final Ansi ansi = Ansi.ansi();
         for (int y = 0; y < image.height(); y++) {
-            System.out.print(Ansi.ansi().eraseLine(Ansi.Erase.ALL));
-            System.out.print(Ansi.ansi().cursorUpLine(1));
+            ansi.eraseLine(Ansi.Erase.ALL)
+                .cursorToColumn(0)
+                .cursorUpLine();
         }
+        return ansi;
     }
 
-    private static void render(final Map2D<TerminalPixel> image) {
+    public static Ansi render(final Map2D<TerminalPixel> image) {
         Preconditions.checkNotNull(image);
         // TODO: Use a diffing algorithm to minimize re-writes
+        final Ansi ansi = Ansi.ansi().reset();
         for (int y = 0; y < image.height(); y++) {
             for (int x = 0; x < image.width(); x++) {
                 final TerminalPixel pixel = image.get(x, y);
-                System.out.print(Ansi.ansi().bg(pixel.background.toAnsi()).fg(pixel.foreground.toAnsi()).a((char) pixel.character.characterCode));
+                ansi.bg(pixel.background.toAnsi())
+                    .fg(pixel.foreground.toAnsi())
+                    .a((char) pixel.character.characterCode);
             }
-            System.out.print(Ansi.ansi().reset().newline());
+            ansi.reset().newline();
         }
-        System.out.print(Ansi.ansi().reset());
+        ansi.reset();
+        return ansi;
     }
 }

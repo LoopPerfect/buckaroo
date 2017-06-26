@@ -83,6 +83,10 @@ public final class TerminalPixel {
         return new TerminalPixel(character, Color.DEFAULT, Color.TRANSPARENT);
     }
 
+    public static TerminalPixel of(final char character) {
+        return new TerminalPixel(UnicodeChar.of(character), Color.DEFAULT, Color.TRANSPARENT);
+    }
+
     public static TerminalPixel fill(final Color bg) {
         return new TerminalPixel(UnicodeChar.of(' '), Color.DEFAULT, bg);
     }

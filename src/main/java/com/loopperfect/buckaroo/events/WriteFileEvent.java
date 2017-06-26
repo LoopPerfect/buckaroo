@@ -8,19 +8,19 @@ import java.util.Objects;
 import java.util.Optional;
 import java.nio.file.Path;
 
-public final class FileWriteEvent extends Event {
+public final class WriteFileEvent extends Event {
 
     public final Path path;
     public final Optional<String> content;
 
-    private FileWriteEvent(final Path path, final Optional<String> content) {
+    private WriteFileEvent(final Path path, final Optional<String> content) {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(content);
         this.path = path;
         this.content = content;
     }
 
-    public boolean equals(final FileWriteEvent other) {
+    public boolean equals(final WriteFileEvent other) {
         Preconditions.checkNotNull(other);
         return Objects.equals(path, other.path) &&
             Objects.equals(content, other.content);
@@ -35,19 +35,22 @@ public final class FileWriteEvent extends Event {
     public boolean equals(final Object obj) {
         return this == obj ||
             obj != null &&
-                obj instanceof FileWriteEvent &&
-                equals((FileWriteEvent) obj);
+                obj instanceof WriteFileEvent &&
+                equals((WriteFileEvent) obj);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
             .add("path", path)
-            .add("content", content)
             .toString();
     }
 
-    public static FileWriteEvent of(final Path path, final Optional<String> content) {
-        return new FileWriteEvent(path, content);
+    public static WriteFileEvent of(final Path path, final Optional<String> content) {
+        return new WriteFileEvent(path, content);
+    }
+
+    public static WriteFileEvent of(final Path path) {
+        return new WriteFileEvent(path, Optional.empty());
     }
 }
