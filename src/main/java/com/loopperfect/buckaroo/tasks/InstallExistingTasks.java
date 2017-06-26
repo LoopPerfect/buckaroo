@@ -151,6 +151,7 @@ public final class InstallExistingTasks {
                             i -> i,
                             i -> installDependencyLock(projectDirectory, i)));
 
+
                     return Observable.concat(
 
                         // Install the locked dependencies

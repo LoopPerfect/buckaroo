@@ -5,6 +5,7 @@ import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Process;
 import io.reactivex.Observable;
+import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
@@ -38,16 +39,22 @@ public final class DownloadTask {
     }
 
     public static Observable<DownloadProgress> download(final URL url, final Path target, final boolean overwrite) {
+
         Preconditions.checkNotNull(url);
         Preconditions.checkNotNull(target);
+
         return Single.fromCallable(() -> {
+
             final Path parent = target.getParent();
+
             if (parent != null && !Files.exists(parent)) {
                 Files.createDirectories(parent);
             }
+
             if (overwrite) {
                 return Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             }
+
             return Files.newOutputStream(target, StandardOpenOption.CREATE_NEW);
         }).flatMapObservable(outputStream -> download(url, outputStream));
     }
@@ -61,7 +68,7 @@ public final class DownloadTask {
         Preconditions.checkNotNull(url);
         Preconditions.checkNotNull(output);
 
-        return Observable.create(emitter -> {
+        final Observable<DownloadProgress> observable = Observable.create(emitter -> {
 
             final OkHttpClient client = new OkHttpClient();
             final Request request = new Request.Builder()
@@ -91,6 +98,8 @@ public final class DownloadTask {
 
                 while ((count = input.read(data)) != -1) {
 
+                    if(emitter.isDisposed()) break;
+
                     total += count;
                     output.write(data, 0, count);
 
@@ -98,6 +107,7 @@ public final class DownloadTask {
                         lastEmissionCount = total;
                         emitter.onNext(DownloadProgress.of(total, contentLength));
                     }
+
                     lastCount = total;
                 }
 
@@ -106,14 +116,22 @@ public final class DownloadTask {
 
                 input.close();
 
+                if (emitter.isDisposed()) {
+                    return;
+                }
+
                 if (lastEmissionCount != total) {
                     emitter.onNext(DownloadProgress.of(total, contentLength));
                 }
 
                 emitter.onComplete();
             } catch (final Throwable e) {
-                emitter.onError(e);
+                if (emitter.isDisposed()) {
+                    emitter.onError(e);
+                }
             }
-        }).cast(DownloadProgress.class).subscribeOn(Schedulers.io());
+        });
+
+        return observable.subscribeOn(Schedulers.io());
     }
 }

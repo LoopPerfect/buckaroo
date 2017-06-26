@@ -7,7 +7,6 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
-import io.reactivex.annotations.NonNull;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
@@ -15,12 +14,10 @@ import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import static com.loopperfect.buckaroo.views.ProgressView.progressView;
 import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
