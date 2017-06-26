@@ -24,6 +24,9 @@ import org.jparsec.error.ParserException;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -117,10 +120,12 @@ public final class Main {
                         ).render(60));
                     writeFile(
                         fs.getPath("").resolve("buckaroo-stacktrace.log"),
-                        error.getStackTrace().toString(),
+                        Arrays.stream(error.getStackTrace())
+                            .map(s->s.toString())
+                            .reduce(Instant.now().toString()+":", (a, b) -> a+"\n"+b),
                         Charset.defaultCharset(),
                         true);
-                }).doOnDispose(() -> {
+                }).doOnTerminate(() -> {
                     executorService.shutdown();
                     IOScheduler.shutdown();
                     scheduler.shutdown();
