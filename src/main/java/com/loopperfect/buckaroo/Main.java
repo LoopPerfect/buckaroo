@@ -1,9 +1,7 @@
 package com.loopperfect.buckaroo;
 
-import com.google.common.io.MoreFiles;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
-import com.loopperfect.buckaroo.tasks.LoggingTasks;
 import com.loopperfect.buckaroo.views.ProgressView;
 import com.loopperfect.buckaroo.views.SummaryView;
 import com.loopperfect.buckaroo.virtualterminal.Color;
@@ -13,7 +11,6 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
-import io.reactivex.annotations.NonNull;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
@@ -26,15 +23,11 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import static com.loopperfect.buckaroo.EvenMoreFiles.writeFile;
-import static com.loopperfect.buckaroo.views.ProgressView.progressView;
-import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
 
 public final class Main {
 
@@ -55,7 +48,10 @@ public final class Main {
 
 
         final Scheduler IOScheduler = Schedulers.from(Executors.newFixedThreadPool(threads));
-        RxJavaPlugins.setIoSchedulerHandler(scheduler -> IOScheduler);
+        RxJavaPlugins.setIoSchedulerHandler(scheduler -> {
+            scheduler.shutdown();
+            return IOScheduler;
+        });
 
         final FileSystem fs = FileSystems.getDefault();
 
@@ -125,16 +121,20 @@ public final class Main {
                             .reduce(Instant.now().toString()+":", (a, b) -> a+"\n"+b),
                         Charset.defaultCharset(),
                         true);
-                }).doOnTerminate(() -> {
+                }).doAfterTerminate(() -> {
                     executorService.shutdown();
                     IOScheduler.shutdown();
                     scheduler.shutdown();
-                }).subscribe(x->{},e->{},()->{});
+                }).subscribe(
+                    x -> {},
+                    e -> {},
+                    () -> {}
+                );
 
             events$.connect();
         } catch (final ParserException e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
-        } catch(Throwable e){}
+        } catch (Throwable e){}
     }
 }

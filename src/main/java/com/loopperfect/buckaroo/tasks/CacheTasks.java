@@ -88,6 +88,7 @@ public final class CacheTasks {
 
                     (FileHashEvent fileHashEvent) -> {
                         // Does it match?
+
                         if (fileHashEvent.sha256.equals(file.sha256)) {
 
                             // Yes, so do nothing

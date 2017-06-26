@@ -150,6 +150,7 @@ public final class InstallExistingTasks {
                             i -> installDependencyLock(projectDirectory, i)
                                 .filter(x->x instanceof DownloadProgress)));
 
+
                     return Observable.concat(
 
                         // Install the locked dependencies

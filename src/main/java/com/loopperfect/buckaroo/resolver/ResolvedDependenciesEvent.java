@@ -11,6 +11,7 @@ public final class ResolvedDependenciesEvent extends Event {
 
     private ResolvedDependenciesEvent(final ResolvedDependencies dependencies) {
         Preconditions.checkNotNull(dependencies);
+        Preconditions.checkArgument(dependencies.isComplete(), "not complete");
         this.dependencies = dependencies;
     }
 

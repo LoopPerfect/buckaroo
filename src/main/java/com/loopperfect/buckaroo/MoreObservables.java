@@ -60,7 +60,9 @@ public final class MoreObservables {
                 .map(entry -> entry.getValue()
                     .map(x -> ImmutableMap.of(entry.getKey(), x))
                 ).collect(ImmutableList.toImmutableList())
-        ).scan(initialValue, MoreMaps::merge);
+        ).scan(initialValue, (a,b)->
+            MoreMaps.merge(a,b)
+        );
     }
 
     public static <A extends T, T> Observable<T> chain(final Observable<A> a, final Function<A, Observable<T>> f) {

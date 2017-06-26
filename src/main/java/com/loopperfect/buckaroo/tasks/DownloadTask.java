@@ -91,6 +91,8 @@ public final class DownloadTask {
 
                 while ((count = input.read(data)) != -1) {
 
+                    if(emitter.isDisposed()) break;
+
                     total += count;
                     output.write(data, 0, count);
 
@@ -106,15 +108,20 @@ public final class DownloadTask {
 
                 input.close();
 
+                if(emitter.isDisposed())
+                    return;
+
                 if (lastEmissionCount != total) {
                     emitter.onNext(DownloadProgress.of(total, contentLength));
                 }
+
                 emitter.onComplete();
             } catch (final Throwable e) {
-                emitter.onError(e);
+                if(emitter.isDisposed())
+                    emitter.onError(e);
             }
 
-            emitter.onComplete();
+            //emitter.onComplete();
         }).cast(DownloadProgress.class).subscribeOn(Schedulers.io());
     }
 }

@@ -3,10 +3,12 @@ package com.loopperfect.buckaroo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.loopperfect.buckaroo.Either.left;
 import static com.loopperfect.buckaroo.Either.right;
@@ -104,4 +106,17 @@ public final class ProcessTest {
 
         assertEquals(0, x);
     }
+
+    @Test
+    public void SingleFilter() throws ExecutionException, InterruptedException {
+        SettableFuture<Boolean> f = SettableFuture.create();
+        Single.just(true)
+            .filter(x->x)
+            .toObservable() // Apparently doesn't work without it, as maybes don't call onComplete in RxJava 2.x ?!?!?!
+            .subscribe(x->{},e->{}, ()->{ f.set(true); });
+
+        assertTrue(f.get());
+    }
+
+
 }

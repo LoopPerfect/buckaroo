@@ -28,6 +28,8 @@ public final class PublishAndMergeTransformer<A extends C, B extends C, C> imple
         return x.publish(i -> Observable.concat(
             i,
             i.lastOrError()
+             .onErrorResumeNext(error ->
+                 Single.error(new RuntimeException("PublishAndMerge requires a non-empty Observable", error)))
              .toObservable()
              .flatMap(f::apply)));
     }
