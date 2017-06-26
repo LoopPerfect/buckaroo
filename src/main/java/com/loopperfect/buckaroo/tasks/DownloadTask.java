@@ -62,6 +62,7 @@ public final class DownloadTask {
         Preconditions.checkNotNull(output);
 
         return Observable.create(emitter -> {
+            emitter.onNext(DownloadProgress.of(0,1));
 
             final OkHttpClient client = new OkHttpClient();
             final Request request = new Request.Builder()

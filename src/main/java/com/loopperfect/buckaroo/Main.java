@@ -104,8 +104,9 @@ public final class Main {
             AnsiConsole.systemInstall();
             TerminalBuffer buffer = new TerminalBuffer();
 
+            //TODO: make sure that summary$ emits after current$
             Observable
-                .concat(current$, summary$)
+                .merge(current$, summary$)
                 .map(c -> c.render(60))
                 .doOnNext(buffer::flip)
                 .doOnError(error -> {
@@ -121,15 +122,11 @@ public final class Main {
                             .reduce(Instant.now().toString()+":", (a, b) -> a+"\n"+b),
                         Charset.defaultCharset(),
                         true);
-                }).doAfterTerminate(() -> {
-                    executorService.shutdown();
-                    IOScheduler.shutdown();
-                    scheduler.shutdown();
-                }).subscribe(
-                    x -> {},
-                    e -> {},
-                    () -> {}
-                );
+                }).doOnTerminate(()-> {
+                   executorService.shutdownNow();
+                   IOScheduler.shutdown();
+                   scheduler.shutdown();
+                }).subscribe(x -> {}, e -> {}, () -> {});
 
             events$.connect();
         } catch (final ParserException e) {

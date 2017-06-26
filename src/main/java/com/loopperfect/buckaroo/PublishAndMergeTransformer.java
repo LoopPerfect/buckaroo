@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo;
 
 import io.reactivex.*;
+import io.reactivex.schedulers.Schedulers;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -25,13 +26,14 @@ public final class PublishAndMergeTransformer<A extends C, B extends C, C> imple
     @Override
     public ObservableSource<C> apply(final Observable<A> x) {
         Objects.requireNonNull(x, "x is null");
-        return x.publish(i -> Observable.concat(
-            i,
-            i.lastOrError()
+        Observable<A> y = x.cache(); //TODO: find a better way...
+        return Observable.concat(
+            y,
+            y.lastOrError()
              .onErrorResumeNext(error ->
                  Single.error(new RuntimeException("PublishAndMerge requires a non-empty Observable", error)))
              .toObservable()
-             .flatMap(f::apply)));
+             .flatMap(f::apply));
     }
 
     public static <A extends C, B extends C, C> ObservableTransformer<A, C> of(final Function<A, Observable<B>> f) {
