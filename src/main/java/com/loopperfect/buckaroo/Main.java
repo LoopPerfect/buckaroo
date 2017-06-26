@@ -23,6 +23,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +48,8 @@ public final class Main {
         final int threads = 10;
 
 
-        final Scheduler IOScheduler = Schedulers.from(Executors.newFixedThreadPool(threads));
+        ExecutorService IOExecutor = Executors.newFixedThreadPool(threads);
+        final Scheduler IOScheduler = Schedulers.from(IOExecutor);
         RxJavaPlugins.setIoSchedulerHandler(scheduler -> {
             scheduler.shutdown();
             return IOScheduler;
@@ -106,7 +108,7 @@ public final class Main {
 
             //TODO: make sure that summary$ emits after current$
             Observable
-                .merge(current$, summary$)
+                .merge(current$, Observable.empty())
                 .map(c -> c.render(60))
                 .doOnNext(buffer::flip)
                 .doOnError(error -> {
@@ -122,11 +124,18 @@ public final class Main {
                             .reduce(Instant.now().toString()+":", (a, b) -> a+"\n"+b),
                         Charset.defaultCharset(),
                         true);
-                }).doOnTerminate(()-> {
-                   executorService.shutdownNow();
-                   IOScheduler.shutdown();
-                   scheduler.shutdown();
-                }).subscribe(x -> {}, e -> {}, () -> {});
+                }).subscribe(x -> {}, e -> {
+                    executorService.shutdown();
+                    IOExecutor.shutdown();
+                    IOScheduler.shutdown();
+                    scheduler.shutdown();
+                }, () -> {
+                    System.out.println("done...");
+                    executorService.shutdown();
+                    IOExecutor.shutdown();
+                    IOScheduler.shutdown();
+                    scheduler.shutdown();
+                });
 
             events$.connect();
         } catch (final ParserException e) {
