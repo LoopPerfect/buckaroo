@@ -108,7 +108,7 @@ public final class Main {
 
             //TODO: make sure that summary$ emits after current$
             Observable
-                .merge(current$, Observable.empty())
+                .merge(current$, summary$ )
                 .map(c -> c.render(60))
                 .doOnNext(buffer::flip)
                 .doOnError(error -> {
@@ -124,17 +124,13 @@ public final class Main {
                             .reduce(Instant.now().toString()+":", (a, b) -> a+"\n"+b),
                         Charset.defaultCharset(),
                         true);
-                }).subscribe(x -> {}, e -> {
+                }).doAfterTerminate(()->{
                     executorService.shutdown();
                     IOExecutor.shutdown();
                     IOScheduler.shutdown();
                     scheduler.shutdown();
-                }, () -> {
-                    System.out.println("done...");
-                    executorService.shutdown();
-                    IOExecutor.shutdown();
-                    IOScheduler.shutdown();
-                    scheduler.shutdown();
+                }).subscribe(x -> {}, e -> {}, () -> {
+                    System.out.println("success!!");
                 });
 
             events$.connect();
