@@ -50,7 +50,9 @@ public final class DependencyLocks {
     }
 
     public static DependencyLocks of(final ResolvedDependencies resolvedDependencies) {
+
         Preconditions.checkNotNull(resolvedDependencies);
+        Preconditions.checkArgument(resolvedDependencies.isComplete());
 
         final ImmutableList<DependencyLock> locks = resolvedDependencies.dependencies.entrySet()
             .stream()

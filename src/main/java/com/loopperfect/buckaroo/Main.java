@@ -1,20 +1,28 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.io.MoreFiles;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
+import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
+import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
+import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
+import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 
+import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -43,11 +51,14 @@ public final class Main {
         final int threads = Math.min(Math.max(2, Runtime.getRuntime().availableProcessors() * 2), 12);
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
-        final Context context = Context.of(FileSystems.getDefault(), Schedulers.from(executor));
+        final Scheduler scheduler = Schedulers.from(executor);
+        final Context context = Context.of(FileSystems.getDefault(), scheduler);
 
-        RxJavaPlugins.setIoSchedulerHandler(scheduler -> {
+        RxJavaPlugins.setIoSchedulerHandler(oldScheduler -> {
+
             // Shutdown the old scheduler
-            scheduler.shutdown();
+            oldScheduler.shutdown();
+
             // Use the scheduler from the context
             return context.scheduler;
         });
@@ -71,9 +82,6 @@ public final class Main {
 
         try {
             final CLICommand command = commandParser.parse(rawCommand);
-
-            final ExecutorService executorService = Executors.newCachedThreadPool();
-            final Scheduler scheduler = Schedulers.from(executorService);
 
             final Observable<Event> task = command.routine().apply(context);
 
@@ -100,12 +108,23 @@ public final class Main {
                 .subscribe(
                     buffer::flip,
                     error -> {
-                        error.printStackTrace();
-                        executorService.shutdown();
+                        buffer.flip(
+                            StackLayout.of(
+                                Text.of("Buckaroo hit an error: \n" + error.toString(), Color.RED),
+                                Text.of("Writing the stack-trace to buckaroo-stacktrace.log. ", Color.YELLOW)).
+                                render(60));
+                        EvenMoreFiles.writeFile(
+                            context.fs.getPath("").resolve("buckaroo-stacktrace.log"),
+                            Arrays.stream(error.getStackTrace())
+                                .map(StackTraceElement::toString)
+                                .reduce(Instant.now().toString() + ":", (a, b) -> a + "\n" + b),
+                            Charset.defaultCharset(),
+                            true);
+                        executor.shutdown();
                         scheduler.shutdown();
                     },
                     () -> {
-                        executorService.shutdown();
+                        executor.shutdown();
                         scheduler.shutdown();
                     });
 

@@ -68,3 +68,6 @@ buckaroo.lock.json
 /buckaroo/
 /target/
 BUCKAROO_DEPS
+
+# Logs
+*.log
