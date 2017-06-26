@@ -113,7 +113,7 @@ public final class Main {
                     buffer.flip(
                         StackLayout.of(
                             Text.of("buckaroo failed: "+ error.toString(), Color.RED),
-                            Text.of("writing stacktrace to buckaroo-stacktrace.log")
+                            Text.of("writing stacktrace to buckaroo-stacktrace.log", Color.YELLOW)
                         ).render(60));
                     writeFile(
                         fs.getPath("").resolve("buckaroo-stacktrace.log"),
