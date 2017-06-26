@@ -1,10 +1,7 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Context;
-import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.MoreObservables;
-import com.loopperfect.buckaroo.Project;
+import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
@@ -41,11 +38,9 @@ public final class InitTasks {
             // Create an empty project from the working directory
             generateProjectForDirectory(projectDirectory.toAbsolutePath()).toObservable(),
 
-            readProjectFileEvent -> {
+            readProjectFileEvent -> Observable.concat(
 
-                return Observable.concat(
-
-                    // Write the project file
+                // Write the project file
                 CommonTasks.writeFile(
                     Serializers.serialize(readProjectFileEvent.project),
                     projectDirectory.resolve("buckaroo.json").toAbsolutePath(),
@@ -54,8 +49,7 @@ public final class InitTasks {
                 // Touch .buckconfig
                 CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
                     .toObservable()
-                );
-            }
+            )
         );
     }
 

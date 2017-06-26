@@ -109,12 +109,11 @@ public final class DownloadTask {
                 if (lastEmissionCount != total) {
                     emitter.onNext(DownloadProgress.of(total, contentLength));
                 }
+
                 emitter.onComplete();
             } catch (final Throwable e) {
                 emitter.onError(e);
             }
-
-            emitter.onComplete();
         }).cast(DownloadProgress.class).subscribeOn(Schedulers.io());
     }
 }

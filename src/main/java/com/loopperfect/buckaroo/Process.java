@@ -32,6 +32,8 @@ public final class Process<S, T> {
             observable.takeWhile(x -> x.left().isPresent()),
             observable.skipWhile(x -> !x.right().isPresent())
                 .singleOrError()
+                .onErrorResumeNext(error ->
+                    Single.error(new ProcessException("A process must have a result. ", error)))
                 .toObservable())
             .skipLast(1)
             .map(x -> x.left().get());
@@ -41,7 +43,9 @@ public final class Process<S, T> {
         return observable.map(x -> x.right())
             .skipWhile(x -> !x.isPresent())
             .map(Optional::get)
-            .singleOrError();
+            .singleOrError()
+            .onErrorResumeNext(error ->
+                Single.error(new ProcessException("A process must have a result. ", error)));
     }
 
     public Observable<Either<S, T>> toObservable() {
@@ -91,22 +95,13 @@ public final class Process<S, T> {
 
     public static <S> Process<S, S> usingLastAsResult(final Observable<S> observable) {
         return new Process<>(Observable.concat(
-            observable.map(x -> {
-                final Either<S, S> either = Either.left(x);
-                return either;
-            }),
-            observable.lastOrError().map(x -> {
-                final Either<S, S> either = Either.right(x);
-                return either;
-            }).toObservable()
+            observable.map(Either::left),
+            observable.lastOrError().map(Either::<S, S>right).toObservable()
         ));
     }
 
     public static <S, T> Process<S, T> of(final Single<T> single) {
-        return of(single.map(x -> {
-            final Either<S, T> either = Either.right(x);
-            return either;
-        }).toObservable());
+        return of(single.map(Either::<S, T>right).toObservable());
     }
 
     public static <S, T> Process<S, T> of(final Single<T> single, final Class<S> stateClass) {

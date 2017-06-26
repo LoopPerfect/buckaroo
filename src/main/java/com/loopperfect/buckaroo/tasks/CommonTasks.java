@@ -91,14 +91,14 @@ public final class CommonTasks {
         });
     }
 
-    public static Maybe<DeleteFileEvent> deleteIfExists(final Path path) {
-        return MoreMaybes.fromOptionalSingle(Single.fromCallable(() -> {
+    public static Single<DeleteFileIfExistsEvent> deleteIfExists(final Path path) {
+        return Single.fromCallable(() -> {
             final boolean somethingWasDeleted = Files.deleteIfExists(path);
             if (somethingWasDeleted) {
-                return Optional.of(DeleteFileEvent.of(path));
+                return DeleteFileIfExistsEvent.of(path);
             }
-            return Optional.empty();
-        }));
+            return DeleteFileIfExistsEvent.of(path, false);
+        });
     }
 
     public static Single<CreateDirectoryEvent> createDirectory(final Path path) {

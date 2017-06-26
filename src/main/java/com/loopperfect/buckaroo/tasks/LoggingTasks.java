@@ -30,10 +30,8 @@ public final class LoggingTasks {
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(command);
 
-        return MoreObservables.chain(
-
-            // Read the config to get the analytics server
-            CommonTasks.readAndMaybeGenerateConfigFile(fs).toObservable(),
+        // Read the config to get the analytics server
+        return CommonTasks.readAndMaybeGenerateConfigFile(fs).flatMapObservable(
 
             // Send the log data
             readConfigFileEvent -> SessionTasks.readOrGenerateSessionId(fs).flatMap(session -> {

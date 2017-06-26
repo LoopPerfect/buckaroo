@@ -30,6 +30,7 @@ public final class InstallExistingTasksTest {
                         HashCode.fromString("639d7d0df95f8467f4aa8da71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
                         "valuable-0.1.0"))))));
 
+        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
         EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
 
         InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
@@ -59,6 +60,7 @@ public final class InstallExistingTasksTest {
                         HashCode.fromString("639d7d0df95f8467f4aa8da71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
                         "valuable-0.1.0"))))));
 
+        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
         EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
 
         InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();

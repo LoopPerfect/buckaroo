@@ -238,6 +238,7 @@ java_test(
     ':junit',
     ':jimfs',
     ':jparsec',
+    ':jansi',
   ],
 )
 

@@ -7,6 +7,7 @@ import io.reactivex.Observable;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -14,6 +15,41 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public final class MoreObservablesTest {
+
+    @Test
+    public void chain() throws Exception {
+
+        final Observable<Integer> as = Observable.just(1, 2, 3);
+        final Observable<Integer> bs = Observable.just(4, 5, 6);
+
+        final List<Integer> expected = ImmutableList.of(1, 2, 3, 7, 8, 9);
+        final List<Integer> actual = MoreObservables.chain(
+            as, a -> bs.map(b -> a + b)).toList().blockingGet();
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void chainSubscribesOnce() throws Exception {
+
+        final Mutable<Integer> counterA = new Mutable<>(0);
+        final Mutable<Integer> counterB = new Mutable<>(0);
+
+        final Observable<Integer> as = Observable.just(1, 2, 3)
+            .doOnSubscribe(subscription -> {
+                counterA.value++;
+            });
+
+        final Observable<Integer> bs = Observable.just(4, 5, 6)
+            .doOnSubscribe(subscription -> {
+                counterB.value++;
+            });
+
+        MoreObservables.chain(as, a -> bs.map(b -> a + b)).last(0).blockingGet();
+
+        assertEquals(Integer.valueOf(1), counterA.value);
+        assertEquals(Integer.valueOf(1), counterB.value);
+    }
 
     @Test
     public void zipMaps() throws Exception {
@@ -67,5 +103,108 @@ public final class MoreObservablesTest {
             .blockingGet();
 
         assertEquals(expected , actual);
+    }
+
+    @Test
+    public void exceptionsShouldBeDeliverable() throws Exception {
+
+        Observable<Integer> a = Observable.create(s -> {
+            s.onNext(1);
+            s.onError(new Exception("error"));
+            s.onNext(2);
+            s.onComplete();
+        });
+
+        int b = MoreObservables
+            .chain(a, Observable::just)
+            .lastOrError()
+            .onErrorReturnItem(0)
+            .blockingGet();
+
+        assertEquals(0, b);
+    }
+
+    @Test
+    public void exceptionsShouldBeDeliverableWithMergedMaps() throws Exception {
+
+        Observable<Integer> a = Observable.create(s -> {
+            s.onNext(1);
+            s.onError(new Exception("error"));
+            s.onNext(2);
+            s.onComplete();
+        });
+
+        Observable<Integer> b = Observable.create(s -> {
+            s.onNext(1);
+            s.onNext(2);
+            s.onNext(3);
+            s.onError(new Exception("error"));
+            s.onComplete();
+        });
+
+        final ImmutableMap<String, Observable<Integer>> map = ImmutableMap.of(
+            "a", a,
+            "b", b
+        );
+
+        final Observable<ImmutableMap<String, Integer>> observableMap
+            = MoreObservables.mergeMaps(map);
+
+        final int error = observableMap
+            .reduce(0, (x, y) -> 0)
+            .onErrorReturnItem(1)
+            .blockingGet();
+
+        assertEquals(1, error);
+    }
+
+    @Test
+    public void exceptionsShouldBeDeliverableWithMergedMaps2() throws Exception {
+
+        final Observable<Integer> a = Observable.error(new IOException("blub"));
+
+        final Observable<Integer> b = Observable.error(new IOException("blub"));
+
+        final ImmutableMap<String, Observable<Integer>> map = ImmutableMap.of(
+            "a", a,
+            "b", b
+        );
+
+        final Observable<ImmutableMap<String, Integer>> observableMap
+            = MoreObservables.mergeMaps(map);
+
+        final int error = observableMap
+            .reduce(0, (x, y) -> 0)
+            .onErrorReturnItem(1)
+            .blockingGet();
+
+        assertEquals(1, error);
+    }
+
+    @Test
+    public void shouldHandleEmptyInMergedMaps() throws Exception {
+
+        final Observable<Integer> a = Observable.empty();
+
+        final Observable<Integer> b = Observable.create(s -> {
+            s.onNext(1);
+            s.onNext(2);
+            s.onNext(3);
+            s.onComplete();
+        });
+
+        final ImmutableMap<String, Observable<Integer>> map = ImmutableMap.of(
+            "a", a,
+            "b", b
+        );
+
+        final Observable<ImmutableMap<String, Integer>> observableMap =
+            MoreObservables.mergeMaps(map);
+
+        final int error = observableMap
+            .reduce(1, (x, y) -> 0)
+            .blockingGet();
+
+        assertEquals(0, error);
     }
 }
