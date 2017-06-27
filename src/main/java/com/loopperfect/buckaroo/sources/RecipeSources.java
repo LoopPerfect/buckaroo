@@ -63,10 +63,10 @@ public final class RecipeSources {
         Preconditions.checkNotNull(dependency);
 
         return source.fetch(RecipeIdentifier.of(dependency.source, dependency.organization, dependency.project))
-            .chain(s -> Process.of( Single.just(s).map(x -> Dependency.of(
+            .chain(recipe -> Process.of(Single.just(recipe).map(x -> Dependency.of(
                 RecipeIdentifier.of(dependency.source, dependency.organization, dependency.project),
-                ExactSemanticVersion.of(x.versions.keySet().stream().max(Comparator.naturalOrder())
-                    .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! "))
-                )))));
+                ExactSemanticVersion.of(x.versions.keySet().stream()
+                    .max(Comparator.naturalOrder())
+                    .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! ")))))));
     }
 }

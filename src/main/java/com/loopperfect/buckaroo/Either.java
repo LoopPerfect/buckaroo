@@ -26,6 +26,14 @@ public final class Either<L, R> {
         this.r = r;
     }
 
+    public boolean isLeft() {
+        return which == LeftOrRight.LEFT;
+    }
+
+    public boolean isRight() {
+        return which == LeftOrRight.RIGHT;
+    }
+
     public Optional<L> left() {
         return join(Optional::of, x -> Optional.empty());
     }

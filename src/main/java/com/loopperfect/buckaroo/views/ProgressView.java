@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.DependencyInstallationProgress;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.MoreLists;
+import com.loopperfect.buckaroo.Notification;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
@@ -118,7 +119,11 @@ public final class ProgressView {
 //            dependencyView(events),
 //            StackLayout::of).cast(Component.class);
 
-        return events.map(EventRenderer::render);
+        return events.filter(x ->
+            x instanceof Notification ||
+                (x instanceof ResolvedDependenciesEvent && ((ResolvedDependenciesEvent)x).dependencies.isComplete()) ||
+                x instanceof DependencyInstallationProgress)
+            .map(EventRenderer::render);
 
 //        return events.scan(
 //            ImmutableList.of(),

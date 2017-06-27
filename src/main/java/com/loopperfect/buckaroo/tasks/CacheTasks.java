@@ -1,7 +1,6 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.google.common.hash.HashCode;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.FileHashEvent;
 import io.reactivex.Completable;
@@ -79,16 +78,11 @@ public final class CacheTasks {
             // Yes
             if (fileExists) {
 
-                // Verify the hash
-                final HashCode actual = EvenMoreFiles.hashFile(target);
-
-                return MoreObservables.chain(
-
-                    Observable.just(FileHashEvent.of(target, actual)),
+                return CommonTasks.hash(target).flatMapObservable(
 
                     (FileHashEvent fileHashEvent) -> {
-                        // Does it match?
 
+                        // Does it match?
                         if (fileHashEvent.sha256.equals(file.sha256)) {
 
                             // Yes, so do nothing

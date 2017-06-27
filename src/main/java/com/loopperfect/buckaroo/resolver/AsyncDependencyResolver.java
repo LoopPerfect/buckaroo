@@ -39,44 +39,47 @@ public final class AsyncDependencyResolver {
                         next.project.encode() + "@" + resolvedVersion.encode() + " does not satisfy " + next.encode())));
         }
 
-        return recipeSource.fetch(next.project)
-            .chain(recipe -> {
-                final ImmutableList<Process<Event, ResolvedDependencies>> candidateStream = recipe.versions.entrySet()
-                    .stream()
-                    .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
-                    .sorted(Comparator.comparing(Map.Entry::getKey))
-                    .map(entry -> {
+        return recipeSource.fetch(next.project).chain(recipe -> {
 
-                        final ResolvedDependencies nextResolved = resolved.add(
-                            next.project,
-                            Pair.with(entry.getKey(), entry.getValue()));
+            final ImmutableList<Process<Event, ResolvedDependencies>> candidateStream = recipe.versions.entrySet()
+                .stream()
+                .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
+                .sorted(Comparator.comparing(Map.Entry::getKey))
+                .map(entry -> {
 
-                        final ImmutableList<Dependency> nextDependencies = new ImmutableList.Builder<Dependency>()
-                            .addAll(entry.getValue().dependencies.orElse(DependencyGroup.of()).entries())
-                            .build();
+                    final ResolvedDependencies nextResolved = resolved.add(
+                        next.project,
+                        Pair.with(entry.getKey(), entry.getValue()));
 
-                        return resolve(
-                            recipeSource,
-                            nextResolved,
-                            nextDependencies,
-                            strategy);
+                    final ImmutableList<Dependency> nextDependencies = ImmutableList.copyOf(
+                        entry.getValue().dependencies.orElse(DependencyGroup.of()).entries());
 
-                    }).collect(toImmutableList());
+                    return resolve(
+                        recipeSource,
+                        nextResolved,
+                        nextDependencies,
+                        strategy);
 
-                final Observable<Event> states =
-                    Observable.merge(candidateStream
-                        .stream()
-                        .map(Process::states)
-                        .collect(toImmutableList()));
+                }).collect(toImmutableList());
 
-                return Process.of(states, MoreObservables.findMax(
-                    MoreObservables.skipErrors(Observable.fromIterable(
-                        candidateStream.stream().map(Process::result)::iterator)),
-                    Comparator.comparing(strategy::score))
-                    .toSingle()
-                    .onErrorResumeNext(error ->
-                        Single.error(new DependencyResolutionException("Could not satisfy " + next, error))));
-            });
+//            final Observable<Event> states =
+//                Observable.merge(candidateStream
+//                    .stream()
+//                    .map(Process::states)
+//                    .collect(toImmutableList()));
+
+            final Observable<Event> states = Observable.empty(); // TODO: include the states
+
+            final Single<ResolvedDependencies> result = MoreObservables.findMax(
+                MoreObservables.skipErrors(Observable.fromIterable(
+                    candidateStream.stream().map(Process::result)::iterator)),
+                Comparator.comparing(strategy::score))
+                .toSingle()
+                .onErrorResumeNext(error ->
+                    Single.error(new DependencyResolutionException("Could not satisfy " + next, error)));
+
+            return Process.of(states, result);
+        });
     }
 
     private static Process<Event, ResolvedDependencies> resolve(

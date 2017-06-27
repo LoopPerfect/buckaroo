@@ -145,7 +145,7 @@ public final class DownloadTaskTest {
             .blockingGet();
 
         assertTrue(Files.exists(target));
-        assertTrue(events.stream().allMatch(DownloadProgress::hasKnownContentLength));
+        assertTrue(events.stream().anyMatch(DownloadProgress::hasKnownContentLength));
         assertTrue(events.stream().anyMatch(x -> x.progress() > 0f && x.progress() < 1f));
     }
 }

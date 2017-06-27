@@ -14,6 +14,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertTrue;
 
@@ -45,9 +47,25 @@ public final class InstallTasksTest {
             ".buckaroo", "buckaroo-recipes", "recipes", "loopperfect", "valuable.json"),
             Serializers.serialize(valuable));
 
-        InitTasks.initWorkingDirectory(context).toList().blockingGet();
+        final CountDownLatch latch1 = new CountDownLatch(1);
 
-        InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).toList().blockingGet();
+        InitTasks.initWorkingDirectory(context).subscribe(next -> {
+
+        }, error -> {
+
+        }, latch1::countDown);
+
+        latch1.await(5000L, TimeUnit.MILLISECONDS);
+
+        final CountDownLatch latch2 = new CountDownLatch(1);
+
+        InstallTasks.installDependencyInWorkingDirectory(context.fs, partialDependencies).subscribe(next -> {
+
+        }, error -> {
+
+        }, latch2::countDown);
+
+        latch2.await(5000L, TimeUnit.MILLISECONDS);
 
         assertTrue(Files.exists(context.fs.getPath("BUCKAROO_DEPS")));
 

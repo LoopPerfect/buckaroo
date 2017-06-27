@@ -6,6 +6,10 @@ public final class ProcessException extends Exception {
         super();
     }
 
+    public ProcessException(final String message) {
+        super(message);
+    }
+
     public ProcessException(final Throwable innerException) {
         super(innerException);
     }

@@ -33,10 +33,8 @@ public final class InitTasks {
 
         Preconditions.checkNotNull(projectDirectory);
 
-        return MoreObservables.chain(
-
-            // Create an empty project from the working directory
-            generateProjectForDirectory(projectDirectory.toAbsolutePath()).toObservable(),
+        // Create an empty project from the working directory
+        return generateProjectForDirectory(projectDirectory.toAbsolutePath()).flatMapObservable(
 
             readProjectFileEvent -> Observable.concat(
 

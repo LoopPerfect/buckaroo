@@ -185,8 +185,7 @@ public final class CommonTasks {
         Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(expected);
 
-        return MoreObservables.chain(
-            hash(path).toObservable(),
+        return hash(path).flatMapObservable(
             event -> event.sha256.equals(expected) ?
                 Observable.empty() :
                 Observable.error(new HashMismatchException(expected, event.sha256)));

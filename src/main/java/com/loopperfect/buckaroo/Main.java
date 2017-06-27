@@ -15,12 +15,13 @@ import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
-import org.jparsec.error.ParserException;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +31,7 @@ import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
 
 public final class Main {
 
-    private static final int TERMINAL_WIDTH = 60;
+    private static final int TERMINAL_WIDTH = 80;
 
     private Main() {}
 
@@ -81,58 +82,60 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(rawCommand);
 
-            final Observable<Event> task = command.routine().apply(context);
+            final ConnectableObservable<Event> task = command.routine().apply(context).publish();
 
-            final ConnectableObservable<Event> events = task
+            final Observable<Component> components = task
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
-                .publish();
-
-            final Observable<Component> current = progressView(events)
+                .compose(upstream -> Observable.combineLatest(
+                    summaryView(upstream).startWith(StackLayout.of()),
+                    progressView(upstream).startWith(StackLayout.of()),
+                    (x, y) -> (Component)StackLayout.of(x, y)))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS)
                 .distinctUntilChanged();
-
-            final Observable<Component> summary = summaryView(events)
-                .subscribeOn(Schedulers.computation())
-                .takeLast(1);
 
             AnsiConsole.systemInstall();
 
             final TerminalBuffer buffer = new TerminalBuffer();
 
-            Observable.combineLatest(
-                summary.startWith(StackLayout.of()),
-                current.startWith(StackLayout.of()),
-                (x, y) -> StackLayout.of(x, y))
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            components
                 .map(c -> c.render(TERMINAL_WIDTH))
                 .subscribe(
                     buffer::flip,
                     error -> {
+                        try {
+                            EvenMoreFiles.writeFile(
+                                context.fs.getPath("buckaroo-stacktrace.log"),
+                                Arrays.stream(error.getStackTrace())
+                                    .map(StackTraceElement::toString)
+                                    .reduce(Instant.now().toString() + ": ", (a, b) -> a + "\n" + b),
+                                Charset.defaultCharset(),
+                                true);
+                        } catch (final IOException ignored) {
+
+                        }
                         buffer.flip(
                             StackLayout.of(
-                                Text.of("Buckaroo hit an error: \n" + error.toString(), Color.RED),
-                                Text.of("Writing the stack-trace to buckaroo-stacktrace.log. ", Color.YELLOW)).
+                                Text.of("Error! \n" + error.toString(), Color.RED),
+                                Text.of("The stacktrace was written to buckaroo-stacktrace.log. ", Color.YELLOW)).
                                 render(60));
-                        EvenMoreFiles.writeFile(
-                            context.fs.getPath("").resolve("buckaroo-stacktrace.log"),
-                            Arrays.stream(error.getStackTrace())
-                                .map(StackTraceElement::toString)
-                                .reduce(Instant.now().toString() + ": ", (a, b) -> a + "\n" + b),
-                            Charset.defaultCharset(),
-                            true);
                         executor.shutdown();
                         scheduler.shutdown();
+                        latch.countDown();
                     },
                     () -> {
                         executor.shutdown();
                         scheduler.shutdown();
+                        latch.countDown();
                     });
 
-            // Trigger the actual execution of the observable graph.
-            events.connect();
+            task.connect();
+            latch.await();
 
-        } catch (final ParserException e) {
+        } catch (final Throwable e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
         }

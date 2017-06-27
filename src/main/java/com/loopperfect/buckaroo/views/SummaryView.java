@@ -5,11 +5,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.MoreLists;
+import com.loopperfect.buckaroo.Notification;
 import com.loopperfect.buckaroo.events.WriteFileEvent;
 import com.loopperfect.buckaroo.events.TouchFileEvent;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
-import com.loopperfect.buckaroo.virtualterminal.components.FlowLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
@@ -38,19 +38,24 @@ public final class SummaryView {
                 .collect(toImmutableList()))
             .map((ImmutableList<Event> modifiedFiles) -> ImmutableList.of(
                 Text.of("Files modified (" + modifiedFiles.size() + "): "),
-                FlowLayout.of(
-                    Text.of("  "),
                     StackLayout.of(
                         modifiedFiles.stream()
                             .map(EventRenderer::render)
-                            .collect(toImmutableList())))));
+                            .collect(toImmutableList()))));
 
         final Observable<ImmutableList<Component>> resolvedDependencies = events
             .ofType(ResolvedDependenciesEvent.class)
+            .takeLast(1)
             .map(EventRenderer::render)
             .map(ImmutableList::of);
 
-        return Observable.combineLatest(modifiedSummary, resolvedDependencies, MoreLists::concat)
+        final Observable<ImmutableList<Component>> notifications = events
+            .ofType(Notification.class)
+            .map(EventRenderer::render)
+            .map(ImmutableList::of);
+
+        return Observable.combineLatest(
+            modifiedSummary, resolvedDependencies, notifications, MoreLists::concat)
             .map(StackLayout::of)
             .cast(Component.class);
     }

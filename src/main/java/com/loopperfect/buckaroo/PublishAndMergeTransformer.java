@@ -1,9 +1,10 @@
 package com.loopperfect.buckaroo;
 
 import io.reactivex.*;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.annotations.NonNull;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -28,14 +29,34 @@ public final class PublishAndMergeTransformer<A extends C, B extends C, C> imple
     @Override
     public ObservableSource<C> apply(final Observable<A> x) {
         Objects.requireNonNull(x, "x is null");
-        final Observable<A> y = x.cache(); // TODO: Find a better way...
-        return Observable.concat(
-            y,
-            y.lastOrError()
-             .onErrorResumeNext(error ->
-                 Single.error(new RuntimeException("PublishAndMerge requires a non-empty Observable", error)))
-             .toObservable()
-             .flatMap(f::apply));
+        return Observable.create(new ObservableOnSubscribe<C>() {
+
+            transient volatile Optional<A> last = Optional.empty();
+
+            private void sendPrevious(@NonNull final ObservableEmitter<C> e) {
+                if (last.isPresent()) {
+                    e.onNext(last.get());
+                }
+            }
+
+            @Override
+            public void subscribe(@NonNull final ObservableEmitter<C> e) throws Exception {
+                x.subscribe(next -> {
+                    sendPrevious(e);
+                    last = Optional.of(next);
+                }, error -> {
+                    sendPrevious(e);
+                    e.onError(error);
+                }, () -> {
+                    sendPrevious(e);
+                    if (last.isPresent()) {
+                        f.apply(last.get()).subscribe(e::onNext, e::onError, e::onComplete);
+                    } else {
+                        e.onComplete();
+                    }
+                });
+            }
+        });
     }
 
     public static <A extends C, B extends C, C> ObservableTransformer<A, C> of(final Function<A, Observable<B>> f) {

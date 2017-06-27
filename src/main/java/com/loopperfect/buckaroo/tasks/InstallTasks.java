@@ -14,6 +14,9 @@ import io.reactivex.Single;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.loopperfect.buckaroo.MoreLists.concat;
@@ -24,28 +27,30 @@ public final class InstallTasks {
 
     }
 
-    static Process<Event, ImmutableList<Dependency>> completeDependencies(
+    public static Process<Event, ImmutableList<Dependency>> completeDependencies(
         final RecipeSource recipeSource, final ImmutableList<PartialDependency> partialDependencies) {
 
         Preconditions.checkNotNull(recipeSource);
         Preconditions.checkNotNull(partialDependencies);
 
-        final ImmutableList<Process<Event, Dependency>> ps =
-            partialDependencies.stream()
-                .map(x -> RecipeSources.resolve(recipeSource, x)).collect(toImmutableList());
+        final ImmutableList<Process<Event, Dependency>> resolveProcesses = partialDependencies.stream()
+            .map(x -> RecipeSources.resolve(recipeSource, x))
+            .collect(toImmutableList());
 
-        final Single<ImmutableList<Dependency>> deps = ps.stream()
+//        final Observable<Event> states = Observable
+//            .merge(resolveProcesses.stream().map(x -> x.states()).collect(toImmutableList()));
+
+        final Observable<Event> states = Observable.empty(); // TODO: Include the states somehow.
+
+        final Single<ImmutableList<Dependency>> result = resolveProcesses.stream()
             .map(p -> p.result().map(ImmutableList::of))
-            .reduce((x, y) -> x.flatMap(a -> y.map(b -> concat(a, b))))
-            .orElseGet(() -> Single.just(ImmutableList.of()));
+            .reduce(Single.just(ImmutableList.of()), (x, y) -> x.flatMap(a -> y.map(b -> concat(a, b))));
 
-        final Observable<Event> os = Observable
-            .merge(ps.stream().map(Process::states).collect(toImmutableList()));
-
-        return Process.of(os, deps);
+        return Process.of(states, result);
     }
 
-    public static Observable<Event> installDependency(final Path projectDirectory, final ImmutableList<PartialDependency> partialDependencies) {
+    public static Observable<Event> installDependency(
+        final Path projectDirectory, final ImmutableList<PartialDependency> partialDependencies) {
 
         Preconditions.checkNotNull(projectDirectory);
         Preconditions.checkNotNull(partialDependencies);

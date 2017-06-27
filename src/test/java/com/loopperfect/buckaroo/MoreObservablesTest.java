@@ -17,41 +17,6 @@ import static org.junit.Assert.*;
 public final class MoreObservablesTest {
 
     @Test
-    public void chain() throws Exception {
-
-        final Observable<Integer> as = Observable.just(1, 2, 3);
-        final Observable<Integer> bs = Observable.just(4, 5, 6);
-
-        final List<Integer> expected = ImmutableList.of(1, 2, 3, 7, 8, 9);
-        final List<Integer> actual = MoreObservables.chain(
-            as, a -> bs.map(b -> a + b)).toList().blockingGet();
-
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    public void chainSubscribesOnce() throws Exception {
-
-        final Mutable<Integer> counterA = new Mutable<>(0);
-        final Mutable<Integer> counterB = new Mutable<>(0);
-
-        final Observable<Integer> as = Observable.just(1, 2, 3)
-            .doOnSubscribe(subscription -> {
-                counterA.value++;
-            });
-
-        final Observable<Integer> bs = Observable.just(4, 5, 6)
-            .doOnSubscribe(subscription -> {
-                counterB.value++;
-            });
-
-        MoreObservables.chain(as, a -> bs.map(b -> a + b)).last(0).blockingGet();
-
-        assertEquals(Integer.valueOf(1), counterA.value);
-        assertEquals(Integer.valueOf(1), counterB.value);
-    }
-
-    @Test
     public void zipMaps() throws Exception {
 
         final Map<String, Observable<Integer>> o = ImmutableMap.of("a", Observable.just(1, 2, 3));
@@ -103,25 +68,6 @@ public final class MoreObservablesTest {
             .blockingGet();
 
         assertEquals(expected , actual);
-    }
-
-    @Test
-    public void exceptionsShouldBeDeliverable() throws Exception {
-
-        Observable<Integer> a = Observable.create(s -> {
-            s.onNext(1);
-            s.onError(new Exception("error"));
-            s.onNext(2);
-            s.onComplete();
-        });
-
-        int b = MoreObservables
-            .chain(a, Observable::just)
-            .lastOrError()
-            .onErrorReturnItem(0)
-            .blockingGet();
-
-        assertEquals(0, b);
     }
 
     @Test

@@ -60,31 +60,6 @@ public final class MoreObservables {
                 .map(entry -> entry.getValue()
                     .map(x -> ImmutableMap.of(entry.getKey(), x))
                 ).collect(ImmutableList.toImmutableList())
-        ).scan(initialValue, (a,b)->
-            MoreMaps.merge(a,b)
-        );
-    }
-
-    public static <A extends T, T> Observable<T> chain(final Observable<A> a, final Function<A, Observable<T>> f) {
-        Objects.requireNonNull(a);
-        Objects.requireNonNull(f);
-        return a.compose(PublishAndMergeTransformer.of(f));
-    }
-
-    public static <A extends T, B extends T, T> Observable<T> chain(
-        final Observable<A> a, final Function<A, Observable<B>> f, final Function<B, Observable<T>> g) {
-        Objects.requireNonNull(a);
-        Objects.requireNonNull(f);
-        Objects.requireNonNull(g);
-        return chain(a, i -> chain(f.apply(i), g));
-    }
-
-    public static <T> Observable<T> chainN(final Observable<T> a, final Function<T, Observable<T>>... fs) {
-        Preconditions.checkNotNull(a);
-        Preconditions.checkNotNull(fs);
-        return Arrays.stream(fs).reduce(
-            a,
-            (x, f) -> x.compose(PublishAndMergeTransformer.of(f)),
-            Observable::concat);
+        ).scan(initialValue, MoreMaps::merge);
     }
 }

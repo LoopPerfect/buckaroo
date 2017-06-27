@@ -68,7 +68,7 @@ public final class ProcessTest {
             Observable.just(left("a"), left("b"), right("Hello"), left("c")));
 
         assertEquals(
-            ImmutableList.of("a", "Expected"),
+            ImmutableList.of("a", "b", "Expected"),
             p.states().onErrorReturnItem("Expected").toList().blockingGet());
     }
 
@@ -85,38 +85,26 @@ public final class ProcessTest {
         final Process<Integer, String> p = Process.of(m);
 
         p.result().blockingGet();
-        p.result().blockingGet();
-        p.states().toList().blockingGet();
         p.states().toList().blockingGet();
 
-        assertEquals(Integer.valueOf(1), counter.value);
+        assertEquals(2, (int) counter.value);
     }
 
     @Test
-    public void dontSwallowErrorsBeforeResult() throws Exception {
+    public void countSubscribesForChain() throws Exception {
 
-        Process<Integer, String> p = Process.of(Observable.create(s -> {
-          s.onNext(left(1));
-          s.onError(new Exception("error"));
-          s.onNext(right("done"));
-          s.onComplete();
-        }));
+        final Mutable<Integer> counter = new Mutable<>(0);
 
-        final int x = p.states().take(1).lastOrError().onErrorReturnItem(0).blockingGet();
+        final Observable<Either<Integer, String>> o = Observable.just(left(1), left(2), left(3), right("A"));
+        final Observable<Either<Integer, String>> m = o.doOnSubscribe(subscription -> {
+            counter.value++;
+        });
 
-        assertEquals(0, x);
+        final Process<Integer, String> a = Process.of(m);
+        final Process<Integer, String> b = Process.chain(a, x -> Process.just("B"));
+
+        b.result().blockingGet();
+
+        assertEquals(1, (int) counter.value);
     }
-
-    @Test
-    public void SingleFilter() throws ExecutionException, InterruptedException {
-        SettableFuture<Boolean> f = SettableFuture.create();
-        Single.just(true)
-            .filter(x->x)
-            .toObservable() // Apparently doesn't work without it, as maybes don't call onComplete in RxJava 2.x ?!?!?!
-            .subscribe(x->{},e->{}, ()->{ f.set(true); });
-
-        assertTrue(f.get());
-    }
-
-
 }

@@ -136,12 +136,9 @@ public final class InstallExistingTasks {
                 return ResolveTasks.resolveDependencies(projectDirectory);
             }),
 
-            MoreObservables.chain(
-
-                // Read the lock file
-                CommonTasks.readLockFile(projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath())
-                    .map(ReadLockFileEvent::of)
-                    .toObservable(),
+            // Read the lock file
+            CommonTasks.readLockFile(projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath())
+                    .map(ReadLockFileEvent::of).flatMapObservable(
 
                 (ReadLockFileEvent event) -> {
 
@@ -173,9 +170,7 @@ public final class InstallExistingTasks {
                             projectDirectory.resolve(".buckconfig.local"),
                             true).toObservable(),
 
-                        MoreObservables.chain(
-
-                            CommonTasks.readProjectFile(projectDirectory.resolve("buckaroo.json")).toObservable(),
+                        CommonTasks.readProjectFile(projectDirectory.resolve("buckaroo.json")).flatMapObservable(
 
                             // Generate the BUCKAROO_DEPS file
                             (ReadProjectFileEvent readProjectFileEvent) -> Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(event.locks.entries()
