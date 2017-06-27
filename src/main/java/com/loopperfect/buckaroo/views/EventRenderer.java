@@ -9,6 +9,7 @@ import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
+import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import com.loopperfect.buckaroo.virtualterminal.components.ProgressBar;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
@@ -43,10 +44,13 @@ public final class EventRenderer {
         return Text.of("Downloaded " + event.source + " to " + event.destination, Color.YELLOW);
     }
 
+    private static final TerminalPixel downloadProgressFill = TerminalPixel.fill(Color.WHITE);
+    private static final TerminalPixel downloadProgressBackground = TerminalPixel.fill(Color.BLACK);
+
     public static Component render(final DownloadProgress event) {
         Preconditions.checkNotNull(event);
         return event.hasKnownContentLength() ?
-            ProgressBar.of((float)(event.downloaded / event.contentLength)) :
+            ProgressBar.of(event.progress(), downloadProgressFill, downloadProgressBackground) :
             Text.of("Downloaded " + (event.contentLength / 1024L) + "kb");
     }
 

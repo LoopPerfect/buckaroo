@@ -13,6 +13,11 @@ public final class DownloadProgress extends Event {
         return contentLength > 0;
     }
 
+    public float progress() {
+        Preconditions.checkState(hasKnownContentLength());
+        return clamp(downloaded / (float) contentLength, 0f, 1f);
+    }
+
     private DownloadProgress(final long downloaded, final long contentLength) {
         Preconditions.checkArgument(downloaded >= 0L);
         // TODO: Support the no content-length case better
@@ -52,5 +57,15 @@ public final class DownloadProgress extends Event {
 
     public static DownloadProgress of(final long downloaded, final long contentLength) {
         return new DownloadProgress(downloaded, contentLength);
+    }
+
+    private static float clamp(final float a, final float min, final float max) {
+        if (a < min) {
+            return min;
+        }
+        if (a > max) {
+            return max;
+        }
+        return a;
     }
 }

@@ -9,6 +9,9 @@ import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -20,7 +23,7 @@ public final class DownloadTaskTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final SettableFuture<Boolean> future = SettableFuture.create();
+        final CountDownLatch latch = new CountDownLatch(1);
 
         DownloadTask.download(
             new URL("http://www.google.com"),
@@ -30,13 +33,14 @@ public final class DownloadTaskTest {
 
                 },
                 error -> {
-                    future.set(false);
+
                 },
                 () -> {
-                    future.set(true);
+                    assertTrue(true);
+                    latch.countDown();
                 });
 
-        assertTrue(future.get());
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -125,5 +129,23 @@ public final class DownloadTaskTest {
             .blockingGet();
 
         assertTrue(Files.exists(target));
+    }
+
+    @Test
+    public void fetchesContentLengthFromGitHub() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final Path target = fs.getPath("master.zip").toAbsolutePath();
+
+        final List<DownloadProgress> events = DownloadTask.download(
+            new URL("https://github.com/electronicarts/EASTL/archive/master.zip"),
+            target)
+            .toList()
+            .blockingGet();
+
+        assertTrue(Files.exists(target));
+        assertTrue(events.stream().allMatch(DownloadProgress::hasKnownContentLength));
+        assertTrue(events.stream().anyMatch(x -> x.progress() > 0f && x.progress() < 1f));
     }
 }

@@ -101,7 +101,10 @@ public final class Main {
 
             final TerminalBuffer buffer = new TerminalBuffer();
 
-            Observable.merge(current, summary)
+            Observable.combineLatest(
+                summary.startWith(StackLayout.of()),
+                current.startWith(StackLayout.of()),
+                (x, y) -> StackLayout.of(x, y))
                 .map(c -> c.render(TERMINAL_WIDTH))
                 .subscribe(
                     buffer::flip,
