@@ -59,9 +59,14 @@ public final class EventRenderer {
         return Text.of("Read the lock file. ", Color.BLUE);
     }
 
+    public static Component render(final ReadProjectFileEvent event) {
+        Preconditions.checkNotNull(event);
+        return Text.of("Read the project file. ", Color.BLUE);
+    }
+
     public static Component render(final FileUnzipEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Read the lock file. ", Color.BLUE);
+        return Text.of("Unzipping :"+ event.toString(), Color.YELLOW);
     }
 
     public static Component render(final ResolvedDependenciesEvent event) {
@@ -113,6 +118,9 @@ public final class EventRenderer {
         }
         if (event instanceof ResolvedDependenciesEvent) {
             return render((ResolvedDependenciesEvent) event);
+        }
+        if (event instanceof ReadProjectFileEvent) {
+            return render((ReadProjectFileEvent) event);
         }
         if (event instanceof ReadLockFileEvent) {
             return render((ReadLockFileEvent) event);
