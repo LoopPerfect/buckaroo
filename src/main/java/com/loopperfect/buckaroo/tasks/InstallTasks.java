@@ -40,13 +40,13 @@ public final class InstallTasks {
 //        final Observable<Event> states = Observable
 //            .merge(resolveProcesses.stream().map(x -> x.states()).collect(toImmutableList()));
 
-        final Observable<Event> states = Observable.empty(); // TODO: Include the states somehow.
+//        final Observable<Event> states = Observable.empty(); // TODO: Include the states somehow.
 
-        final Single<ImmutableList<Dependency>> result = resolveProcesses.stream()
-            .map(p -> p.result().map(ImmutableList::of))
-            .reduce(Single.just(ImmutableList.of()), (x, y) -> x.flatMap(a -> y.map(b -> concat(a, b))));
+//        final Single<ImmutableList<Dependency>> result = resolveProcesses.stream()
+//            .map(p -> p.result().map(ImmutableList::of))
+//            .reduce(Single.just(ImmutableList.of()), (x, y) -> x.flatMap(a -> y.map(b -> concat(a, b))));
 
-        return Process.of(states, result);
+        return Process.merge(resolveProcesses);
     }
 
     public static Observable<Event> installDependency(

@@ -76,7 +76,7 @@ public final class CommonTasks {
             }
             final ByteSink sink = MoreFiles.asByteSink(path);
             sink.write(content.getBytes());
-            return WriteFileEvent.of(path, content.length() < 1024 ? Optional.of(content) : Optional.empty());
+            return WriteFileEvent.of(path);
         });
     }
 

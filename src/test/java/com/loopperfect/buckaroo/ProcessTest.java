@@ -4,11 +4,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import org.javatuples.Pair;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static com.loopperfect.buckaroo.Either.left;
 import static com.loopperfect.buckaroo.Either.right;
@@ -106,5 +110,100 @@ public final class ProcessTest {
         b.result().blockingGet();
 
         assertEquals(1, (int) counter.value);
+    }
+
+    @Test
+    public void merge1() throws Exception {
+
+        final Process<Integer, String> a = Process.of(Observable.just(
+            Either.left(1), Either.left(2), Either.left(3), Either.right("A")));
+
+        final Process<Integer, String> b = Process.of(Observable.just(
+            Either.left(7), Either.left(8), Either.left(9), Either.right("B")));
+
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        Process.merge(a, b).result().subscribe(result -> {
+            assertEquals(Pair.with("A", "B"), result);
+            latch.countDown();
+        });
+
+        Process.merge(a, b).states().subscribe(next -> {}, error -> {}, latch::countDown);
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void merge2() throws Exception {
+
+        final ImmutableList<Process<Integer, String>> xs = ImmutableList.of(
+            Process.of(Observable.just(
+                Either.left(1), Either.left(2), Either.left(3), Either.right("A"))),
+            Process.of(Observable.just(
+                Either.left(4), Either.left(5), Either.left(6), Either.right("B"))),
+            Process.of(Observable.just(
+                Either.left(7), Either.left(8), Either.left(9), Either.right("C"))));
+
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        Process.merge(xs).result().subscribe(result -> {
+            assertEquals(ImmutableList.of("A", "B", "C"), result);
+            latch.countDown();
+        });
+
+        Process.merge(xs).states().toList().subscribe(result -> {
+            assertEquals(3 * 3, result.size());
+            latch.countDown();
+        });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void merge3() throws Exception {
+
+        final Process<Integer, String> a = Process.of(Observable.just(
+            Either.left(1), Either.left(2), Either.left(3), Either.right("A")));
+
+        final Process<Integer, String> b = Process.of(Observable.error(new IOException("!")));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Process.merge(a, b).states().subscribe(
+            next -> {},
+            error -> {
+                assertTrue(error instanceof IOException);
+                assertEquals("!", error.getMessage());
+                latch.countDown();
+            },
+            () -> {});
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void countMergeSubscribes() throws Exception {
+
+        final Mutable<Integer> counter = new Mutable<>(0);
+
+        final Observable<Either<Integer, String>> o = Observable.just(
+            Either.left(1), Either.left(2), Either.left(3), Either.right("A"));
+
+        final Process<Integer, String> a = Process.of(o.doOnSubscribe(subscription -> {
+            counter.value++;
+        }));
+
+        final Process<Integer, String> b = Process.of(Observable.just(
+            Either.left(7), Either.left(8), Either.left(9), Either.right("B")));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Process.merge(a, b).result().subscribe(result -> {
+            latch.countDown();
+        });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+
+        assertEquals(1, (int)counter.value);
     }
 }

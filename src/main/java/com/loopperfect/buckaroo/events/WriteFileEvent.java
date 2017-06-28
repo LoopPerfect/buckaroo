@@ -11,24 +11,20 @@ import java.nio.file.Path;
 public final class WriteFileEvent extends Event {
 
     public final Path path;
-    public final Optional<String> content;
 
-    private WriteFileEvent(final Path path, final Optional<String> content) {
+    private WriteFileEvent(final Path path) {
         Preconditions.checkNotNull(path);
-        Preconditions.checkNotNull(content);
         this.path = path;
-        this.content = content;
     }
 
     public boolean equals(final WriteFileEvent other) {
         Preconditions.checkNotNull(other);
-        return Objects.equals(path, other.path) &&
-            Objects.equals(content, other.content);
+        return Objects.equals(path, other.path);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(path, content);
+        return Objects.hash(path);
     }
 
     @Override
@@ -46,11 +42,7 @@ public final class WriteFileEvent extends Event {
             .toString();
     }
 
-    public static WriteFileEvent of(final Path path, final Optional<String> content) {
-        return new WriteFileEvent(path, content);
-    }
-
     public static WriteFileEvent of(final Path path) {
-        return new WriteFileEvent(path, Optional.empty());
+        return new WriteFileEvent(path);
     }
 }

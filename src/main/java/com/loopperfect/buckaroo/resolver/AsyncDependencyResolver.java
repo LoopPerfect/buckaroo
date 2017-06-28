@@ -68,7 +68,7 @@ public final class AsyncDependencyResolver {
 //                    .map(Process::states)
 //                    .collect(toImmutableList()));
 
-            final Observable<Event> states = Observable.empty(); // TODO: include the states
+            final Observable<Event> states = Observable.empty(); // TODO: include the states using Process.merge
 
             final Single<ResolvedDependencies> result = MoreObservables.findMax(
                 MoreObservables.skipErrors(Observable.fromIterable(

@@ -1,9 +1,11 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.reactivex.*;
 import io.reactivex.annotations.NonNull;
+import org.javatuples.Pair;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -25,6 +27,7 @@ public final class Process<S, T> {
     public Observable<S> states() {
         return Observable.create(new ObservableOnSubscribe<S>() {
             private boolean isComplete = false;
+
             @Override
             public void subscribe(@NonNull final ObservableEmitter<S> emitter) throws Exception {
                 observable.subscribe(next -> {
@@ -43,26 +46,23 @@ public final class Process<S, T> {
     }
 
     public Single<T> result() {
-        return Single.create(new SingleOnSubscribe<T>() {
-            private Optional<T> t = Optional.empty();
-            @Override
-            public void subscribe(@NonNull final SingleEmitter<T> emitter) throws Exception {
-                observable.subscribe(next -> {
-                    if (t.isPresent()) {
-                        emitter.onError(new ProcessException("Process must not push states after the result. "));
-                    } else {
-                        if (next.isRight()) {
-                            t = next.right();
-                        }
+        return Single.create(emitter -> {
+            final Mutable<Optional<T>> result = new Mutable<>(Optional.empty());
+            observable.subscribe(next -> {
+                if (result.value.isPresent()) {
+                    emitter.onError(new ProcessException("Process must not push states after the result. "));
+                } else {
+                    if (next.isRight()) {
+                        result.value = next.right();
                     }
-                }, emitter::onError, () -> {
-                    if (t.isPresent()) {
-                        emitter.onSuccess(t.get());
-                    } else {
-                        emitter.onError(new ProcessException("Process must push a result. "));
-                    }
-                });
-            }
+                }
+            }, emitter::onError, () -> {
+                if (result.value.isPresent()) {
+                    emitter.onSuccess(result.value.get());
+                } else {
+                    emitter.onError(new ProcessException("Process must push a result. "));
+                }
+            });
         });
     }
 
@@ -215,5 +215,71 @@ public final class Process<S, T> {
             a,
             (x, f) -> Process.chain(x, f),
             Process::concat);
+    }
+
+    /**
+     * Takes two Process objects and merges them into one.
+     * <p>
+     * The semantics are:
+     * - The resulting process only finishes when both complete
+     * - All events from both processes are pushed
+     * - An error in either process causes an error in the merged process
+     * - A subscription to the merged process triggers a subscription on each child process
+     *
+     * @param a    The first process to merge
+     * @param b    The second process to merge
+     * @param <S>  The type of the state objects in both processes
+     * @param <T1> The result type of the first process
+     * @param <T2> The result type of the second process
+     * @return
+     */
+    public static <S, T1, T2> Process<S, Pair<T1, T2>> merge(final Process<? extends S, T1> a, final Process<? extends S, T2> b) {
+
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(b);
+
+        final Observable<Either<S, Pair<T1, T2>>> o = Observable.create(emitter -> {
+
+            final Mutable<Optional<T1>> resultA = new Mutable<>(Optional.empty());
+            final Mutable<Optional<T2>> resultB = new Mutable<>(Optional.empty());
+
+            a.toObservable()
+                .subscribe(next -> {
+                    if (next.isLeft()) {
+                        emitter.onNext(Either.left(next.left().get()));
+                    } else {
+                        resultA.value = next.right();
+                    }
+                }, emitter::onError, () -> {
+                    if (!emitter.isDisposed() && resultA.value.isPresent() && resultB.value.isPresent()) {
+                        emitter.onNext(Either.right(Pair.with(resultA.value.get(), resultB.value.get())));
+                        emitter.onComplete();
+                    }
+                });
+
+            b.toObservable()
+                .subscribe(next -> {
+                    if (next.isLeft()) {
+                        emitter.onNext(Either.left(next.left().get()));
+                    } else {
+                        resultB.value = next.right();
+                    }
+                }, emitter::onError, () -> {
+                    if (!emitter.isDisposed() && resultA.value.isPresent() && resultB.value.isPresent()) {
+                        emitter.onNext(Either.right(Pair.with(resultA.value.get(), resultB.value.get())));
+                        emitter.onComplete();
+                    }
+                });
+        });
+
+        return Process.of(o);
+    }
+
+    public static <S, T> Process<S, ImmutableList<T>> merge(final ImmutableList<Process<S, T>> xs) {
+        return xs.stream()
+            .map(i -> i.map(ImmutableList::of))
+            .reduce(
+                Process.just(ImmutableList.of()),
+                (i, j) -> Process.merge(i, j).map(k -> MoreLists.concat(k.getValue0(), k.getValue1())));
     }
 }
