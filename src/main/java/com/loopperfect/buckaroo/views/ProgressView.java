@@ -117,7 +117,7 @@ public final class ProgressView {
             Observable.combineLatest(
                 Observable.just(Instant.now().toEpochMilli()),
                 events.map(e->e.date.toInstant().toEpochMilli()),
-                (t0, t1) -> (t1-t0)/100).map(t ->(Component)Text.of("time: "+t+" s",Color.BLUE)),
+                (t0, t1) -> (t1-t0)/1000).map(t ->(Component)Text.of("time: "+t+" s",Color.BLUE)),
 
             events
                 .filter(x-> !(x instanceof DependencyInstallationEvent))
