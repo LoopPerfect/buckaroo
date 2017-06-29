@@ -123,7 +123,7 @@ public final class ProgressView {
             x instanceof Notification ||
                 (x instanceof ResolvedDependenciesEvent && ((ResolvedDependenciesEvent)x).dependencies.isComplete()) ||
                 x instanceof DependencyInstallationProgress)
-            .map(EventRenderer::render);
+            .map(GenericEventRenderer::render);
 
 //        return events.scan(
 //            ImmutableList.of(),

@@ -40,18 +40,18 @@ public final class SummaryView {
                 Text.of("Files modified (" + modifiedFiles.size() + "): "),
                     StackLayout.of(
                         modifiedFiles.stream()
-                            .map(EventRenderer::render)
+                            .map(GenericEventRenderer::render)
                             .collect(toImmutableList()))));
 
         final Observable<ImmutableList<Component>> resolvedDependencies = events
             .ofType(ResolvedDependenciesEvent.class)
             .takeLast(1)
-            .map(EventRenderer::render)
+            .map(GenericEventRenderer::render)
             .map(ImmutableList::of);
 
         final Observable<ImmutableList<Component>> notifications = events
             .ofType(Notification.class)
-            .map(EventRenderer::render)
+            .map(GenericEventRenderer::render)
             .map(ImmutableList::of);
 
         return Observable.combineLatest(
