@@ -87,12 +87,15 @@ public final class Main {
             final Observable<Component> components = task
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
-                .compose(upstream -> Observable.combineLatest(
+                .publish(upstream -> Observable.combineLatest(
                     summaryView(upstream).startWith(StackLayout.of()),
-                    progressView(upstream).startWith(StackLayout.of()),
+                    progressView(upstream)
+                        .observeOn(Schedulers.computation())
+                        .subscribeOn(Schedulers.computation())
+                        .startWith(StackLayout.of()),
                     (x, y) -> (Component)StackLayout.of(x, y)))
                 .subscribeOn(Schedulers.computation())
-                .sample(100, TimeUnit.MILLISECONDS)
+                .sample(100, TimeUnit.MILLISECONDS, true)
                 .distinctUntilChanged();
 
             AnsiConsole.systemInstall();

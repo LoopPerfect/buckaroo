@@ -1,121 +1,129 @@
 package com.loopperfect.buckaroo.views;
 
-import com.loopperfect.buckaroo.DependencyInstallationEvent;
-import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.Notification;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
+import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
+import com.loopperfect.buckaroo.tasks.DownloadProgress;
+import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
 import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
+import org.javatuples.Pair;
+import org.javatuples.Triplet;
+
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.Optional;
+import java.util.Stack;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 public final class ProgressView {
 
     private ProgressView() {
 
     }
-/*
-    public static Observable<Component> dependencyView(final Observable<Event> events) {
-        return events.ofType(ResolvedDependenciesEvent.class)
-            .map(x -> x.dependencies)
-            .map(x -> x.dependencies.entrySet().stream())
-            .map(s -> s.map(kv ->
-                kv.getKey().organization.toString()
-                    + "/"
-                    + kv.getKey().recipe.toString()
-                    + "@" + kv.getValue().getValue0().toString() + " "))
-            .map(s -> s.collect(toImmutableList()))
-            .map(Collection::stream)
-            .map(s -> FlowLayout.of(
-                s.map(x -> Text.of(x, Color.GREEN)).collect(toImmutableList())))
-            .startWith(FlowLayout.of())
-            .cast(Component.class);
+
+    public static Observable<Either<DependencyInstallationEvent, DependencyInstalledEvent>> installOrInstalled(final Observable<Event> events) {
+        return events.filter(x->
+            (x instanceof DependencyInstallationEvent) || (x instanceof DependencyInstalledEvent)
+        ).map(x -> {
+            if (x instanceof DependencyInstallationEvent) {
+                return Either.left((DependencyInstallationEvent)x);
+            } else {
+                return Either.right((DependencyInstalledEvent)x);
+            }
+        });
     }
 
-    public static Observable<Component> installationProgressView(final Observable<Event> events) {
-        return events.ofType(DependencyInstallationEvent.class).map(d -> {
-                final ImmutableList<Triplet<String, Long, Long>> downloading = d.progress
-                    .entrySet()
-                    .stream()
-//                    .filter(e -> e.getValue() instanceof DownloadProgress)
-                    .map(e -> Pair.with(e.getKey(), (DownloadProgress)e.getValue()))
-                    .map(e -> Triplet.with(
-                        "downloading " + e.getValue0().identifier.toString(),
-                        e.getValue1().downloaded,
-                        e.getValue1().contentLength))
-                    .collect(toImmutableList());
+    public static int ScoreEvent(Event e) {
+        if(e instanceof DependencyInstalledEvent) return 0;
+        if(e instanceof DownloadProgress) {
+            DownloadProgress p = (DownloadProgress)e;
+            return (p.hasKnownContentLength()) ?
+                (int)(p.progress()*100) :
+                min( (int) (p.downloaded / 1e6 * 50) , 50);
+            // if we don't have any ContentLength we can't compute a progress, hence we cant show ProgressBars.
+            // Let's prefer ProgressBars over 50% > to Downloaded X bytes notifications
+        }
 
-                final long completed = downloading
-                    .stream()
-                    .map(Triplet::getValue1)
-                    .reduce(1L, (a, b) -> a + b);
-
-                final long toDownload = downloading
-                    .stream()
-                    .map(Triplet::getValue2)
-                    .reduce(1L, (a, b) -> a + b);
-
-                final Triplet<String, Long, Long> total = Triplet.with(
-                    "total progress",
-                    completed,
-                    toDownload);
-
-                final Comparator<Triplet<String, Long, Long>> comparator = Comparator.comparingDouble(a ->
-                    1.0 - (double)a.getValue1() / (double)a.getValue2());
-
-                final ImmutableList<Triplet<String, Long, Long>> downloadView = downloading
-                    .stream()
-                    .filter(e -> e.getValue2() > e.getValue1())
-                    .sorted(comparator)
-                    .limit(5)
-                    .collect(toImmutableList());
-
-                final ImmutableList<Triplet<String, Long, Long>> combined =
-                    MoreLists.append(downloadView, total);
-
-                return StackLayout.of(combined.stream()
-                    .map(e -> StackLayout.of(
-                        Text.of(e.getValue0() + " : "),
-                        ProgressBar.of(
-                            Math.min(
-                                (float)1,
-                                (float)e.getValue1() / Math.max((float)1, (float)e.getValue2())))))
-                    .collect(toImmutableList()));
-            });
+        return 120 -
+            max(120, (int)(Instant.now().toEpochMilli() - e.date.toInstant().toEpochMilli())/100);
+        // every event is more important than DownloadProgress but gets less important over time
     }
-*/
+
     public static Observable<Component> progressView(final Observable<Event> events) {
 
-//        final Observable<ReadProjectFileEvent> projectFiles = events
-//            .ofType(ReadProjectFileEvent.class);
+        final Observable<ImmutableList<RecipeIdentifier>> installing = events
+            .ofType(DependencyInstallationEvent.class)
+            .map(x -> x.progress.getValue0().identifier)
+            .distinct()
+            .scan(ImmutableList.of(), MoreLists::append);
 
-//        final Observable<WriteFileEvent> fileWrites = events
-//            .ofType(WriteFileEvent.class);
+        final Observable<ImmutableList<RecipeIdentifier>> installed = events
+            .ofType(DependencyInstallationEvent.class)
+            .map(x->x.progress.getValue1())
+            .ofType(DependencyInstalledEvent.class)
+            .map(x->x.dependency.identifier)
+            .distinct()
+            .scan(ImmutableList.of(), MoreLists::append);
 
-//        final Observable<Component> projects = projectFiles
-//            .map(file -> Text.of(
-//                "reading project file " + file.project.name.orElse("") + " " +
-//                    file.project.license.orElse("")));
+        final Observable<Component> total = Observable.combineLatest(
+            installing.map(ImmutableList::size).filter(x->x>0),
+            installed.map(ImmutableList::size),
+            (a, b) -> (Component)Text.of(
+                "installed: "+ b + "/" + a,
+                Color.YELLOW
+        ));
 
-//        final Observable<String> writes = fileWrites
-//            .map(file -> file.path.toString());
-//
-//        return Observable.combineLatest(
-//            writes
-//                .map(w->FlowLayout.of(Text.of("modified: "), Text.of(w, Color.YELLOW)))
-//                .startWith(FlowLayout.of()),
-//            installationProgressView(events),
-//            dependencyView(events),
-//            StackLayout::of).cast(Component.class);
 
-        return events.filter(x ->
-            x instanceof Notification ||
-                (x instanceof ResolvedDependenciesEvent && ((ResolvedDependenciesEvent)x).dependencies.isComplete()) ||
-                x instanceof DependencyInstallationEvent)
-            .map(GenericEventRenderer::render);
+        Comparator<Triplet<DependencyLock, Event, Integer>> comp = Comparator.comparingInt(Triplet::getValue2);
 
-//        return events.scan(
-//            ImmutableList.of(),
-//            (ImmutableList<Component> state, Event next) ->
-//                MoreLists.append(state, EventRenderer.render(next)))
-//            .map(StackLayout::of);
+        final Observable<ImmutableList<Event>> installations = events
+            .ofType(DependencyInstallationEvent.class)
+            .scan(ImmutableMap.of(), (a, b) ->
+                MoreMaps.merge(a, ImmutableMap.of(b.progress.getValue0(), b.progress.getValue1()))
+            ).map(x-> x.entrySet()
+                .stream()
+                .map(y -> Triplet.with(
+                    (DependencyLock)y.getKey(),
+                    (Event)y.getValue(),
+                    ScoreEvent((Event)y.getValue()) ))
+                .sorted(comp.reversed())
+                .limit(3)
+                .map(z->DependencyInstallationEvent.of(z.removeFrom2()))
+                .collect(toImmutableList()));
+
+        final Observable<Component> progress = installations.map(x->
+            x.stream()
+                .map(GenericEventRenderer::render)
+                .collect(toImmutableList())
+        ).map(StackLayout::of);
+
+        return Observable.combineLatest(
+
+            Observable.combineLatest(
+                progress,
+                total, StackLayout::of
+            ).startWith(StackLayout.of()),
+
+            events.scan(0, (a, b) -> a+1)
+                .map(x-> (Component)Text.of("performed actions: "+x, Color.BLUE)),
+
+            Observable.combineLatest(
+                Observable.just(Instant.now().toEpochMilli()),
+                events.map(e->e.date.toInstant().toEpochMilli()),
+                (t0, t1) -> (t1-t0)/100).map(t ->(Component)Text.of("time: "+t+" s",Color.BLUE)),
+
+            events
+                .filter(x-> !(x instanceof DependencyInstallationEvent))
+                .map(GenericEventRenderer::render),
+
+            StackLayout::of
+        );
     }
 }

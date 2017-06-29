@@ -114,9 +114,13 @@ public final class InstallExistingTasks {
                         .map(i -> i.identifier)
                         .collect(ImmutableList.toImmutableList())),
                 dependencyDirectory.resolve(".buckconfig.local"),
-                true).toObservable()
+                true).toObservable(),
+
+            // Mark the installation as complete
+            Observable.just(DependencyInstalledEvent.of(lock))
         );
     }
+
 
     public static Observable<Event> installExistingDependencies(final Path projectDirectory) {
 
@@ -143,13 +147,7 @@ public final class InstallExistingTasks {
                     .map(ReadLockFileEvent::of).flatMapObservable(
 
                 (ReadLockFileEvent event) -> {
-/*
-                    final ImmutableMap<DependencyLock, Observable<Event>> installs = event.locks.entries()
-                        .stream()
-                        .collect(ImmutableMap.toImmutableMap(
-                            i -> i,
-                            (DependencyLock i) -> installDependencyLock(projectDirectory, i)));
-*/
+
                     final Observable<DependencyInstallationEvent> installs = Observable.merge(
                         event.locks
                             .entries()
