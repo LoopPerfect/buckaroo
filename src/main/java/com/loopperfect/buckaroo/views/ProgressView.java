@@ -1,31 +1,18 @@
 package com.loopperfect.buckaroo.views;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.DependencyInstallationProgress;
+import com.loopperfect.buckaroo.DependencyInstallationEvent;
 import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.MoreLists;
 import com.loopperfect.buckaroo.Notification;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
-import com.loopperfect.buckaroo.tasks.DownloadProgress;
-import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
 import io.reactivex.Observable;
-import io.reactivex.Single;
-import org.javatuples.Pair;
-import org.javatuples.Triplet;
-
-import java.util.Collection;
-import java.util.Comparator;
-
-import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class ProgressView {
 
     private ProgressView() {
 
     }
-
+/*
     public static Observable<Component> dependencyView(final Observable<Event> events) {
         return events.ofType(ResolvedDependenciesEvent.class)
             .map(x -> x.dependencies)
@@ -44,7 +31,7 @@ public final class ProgressView {
     }
 
     public static Observable<Component> installationProgressView(final Observable<Event> events) {
-        return events.ofType(DependencyInstallationProgress.class).map(d -> {
+        return events.ofType(DependencyInstallationEvent.class).map(d -> {
                 final ImmutableList<Triplet<String, Long, Long>> downloading = d.progress
                     .entrySet()
                     .stream()
@@ -94,7 +81,7 @@ public final class ProgressView {
                     .collect(toImmutableList()));
             });
     }
-
+*/
     public static Observable<Component> progressView(final Observable<Event> events) {
 
 //        final Observable<ReadProjectFileEvent> projectFiles = events
@@ -122,7 +109,7 @@ public final class ProgressView {
         return events.filter(x ->
             x instanceof Notification ||
                 (x instanceof ResolvedDependenciesEvent && ((ResolvedDependenciesEvent)x).dependencies.isComplete()) ||
-                x instanceof DependencyInstallationProgress)
+                x instanceof DependencyInstallationEvent)
             .map(GenericEventRenderer::render);
 
 //        return events.scan(

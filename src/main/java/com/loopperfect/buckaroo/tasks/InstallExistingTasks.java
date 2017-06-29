@@ -2,18 +2,20 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadLockFileEvent;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import org.javatuples.Pair;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.stream.Collectors;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class InstallExistingTasks {
 
@@ -141,19 +143,28 @@ public final class InstallExistingTasks {
                     .map(ReadLockFileEvent::of).flatMapObservable(
 
                 (ReadLockFileEvent event) -> {
-
+/*
                     final ImmutableMap<DependencyLock, Observable<Event>> installs = event.locks.entries()
                         .stream()
                         .collect(ImmutableMap.toImmutableMap(
                             i -> i,
-                            i -> installDependencyLock(projectDirectory, i)));
+                            (DependencyLock i) -> installDependencyLock(projectDirectory, i)));
+*/
+                    final Observable<DependencyInstallationEvent> installs = Observable.merge(
+                        event.locks
+                            .entries()
+                            .stream()
+                            .map(i-> installDependencyLock(projectDirectory, i)
+                                .map(x->Pair.with(i, x))
+                                .map(DependencyInstallationEvent::of))
+                            .collect(toImmutableList())
+                    );
 
 
                     return Observable.concat(
 
                         // Install the locked dependencies
-                        MoreObservables.mergeMaps(installs)
-                            .map(x -> DependencyInstallationProgress.of(ImmutableMap.copyOf(x))),
+                        installs,
 
                         // Touch the .buckconfig file
                         CommonTasks.touchFile(projectDirectory.resolve(".buckconfig")).toObservable(),

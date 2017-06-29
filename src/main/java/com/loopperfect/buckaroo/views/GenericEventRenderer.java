@@ -1,8 +1,7 @@
 package com.loopperfect.buckaroo.views;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.loopperfect.buckaroo.DependencyInstallationProgress;
+import com.loopperfect.buckaroo.DependencyInstallationEvent;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Notification;
 import com.loopperfect.buckaroo.events.*;
@@ -16,7 +15,6 @@ import com.loopperfect.buckaroo.virtualterminal.components.ProgressBar;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 public final class GenericEventRenderer {
@@ -86,15 +84,12 @@ public final class GenericEventRenderer {
             .collect(Collectors.joining("\n")));
     }
 
-    public static Component render(final DependencyInstallationProgress event) {
+    public static Component render(final DependencyInstallationEvent event) {
         Preconditions.checkNotNull(event);
-        return StackLayout.of(event.progress.entrySet()
-            .stream()
-            .sorted(Comparator.comparing(x -> x.getKey().identifier.encode()))
-            .map(x -> StackLayout.of(
-                Text.of(x.getKey().identifier.encode()),
-                render(x.getValue())))
-            .collect(ImmutableList.toImmutableList()));
+        return StackLayout.of(
+            Text.of(event.progress.getValue0().identifier.toString()),
+            render(event.progress.getValue1())
+        );
     }
 
     public static Component render(final FileHashEvent event) {
@@ -131,8 +126,8 @@ public final class GenericEventRenderer {
         if (event instanceof DownloadProgress) {
             return render((DownloadProgress)event);
         }
-        if (event instanceof DependencyInstallationProgress) {
-            return render((DependencyInstallationProgress) event);
+        if (event instanceof DependencyInstallationEvent) {
+            return render((DependencyInstallationEvent) event);
         }
         if (event instanceof ResolvedDependenciesEvent) {
             return render((ResolvedDependenciesEvent) event);
