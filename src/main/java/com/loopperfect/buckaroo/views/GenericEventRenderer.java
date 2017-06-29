@@ -7,6 +7,7 @@ import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Notification;
 import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
+import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
@@ -18,9 +19,9 @@ import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
-public final class EventRenderer {
+public final class GenericEventRenderer {
 
-    private EventRenderer() {
+    private GenericEventRenderer() {
 
     }
 
@@ -37,6 +38,11 @@ public final class EventRenderer {
     public static Component render(final WriteFileEvent event) {
         Preconditions.checkNotNull(event);
         return Text.of("Wrote " + event.path, Color.YELLOW);
+    }
+
+    public static Component render(final DeleteFileEvent event) {
+        Preconditions.checkNotNull(event);
+        return Text.of("Deleted " + event.path, Color.YELLOW);
     }
 
     public static Component render(final FileDownloadedEvent event) {
@@ -66,7 +72,7 @@ public final class EventRenderer {
 
     public static Component render(final FileUnzipEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Unzipping :"+ event.toString(), Color.YELLOW);
+        return Text.of("Unzipping " + event.source + " to " + event.target, Color.YELLOW);
     }
 
     public static Component render(final ResolvedDependenciesEvent event) {
@@ -94,6 +100,18 @@ public final class EventRenderer {
     public static Component render(final FileHashEvent event) {
         Preconditions.checkNotNull(event);
         return Text.of("Hashed " + event.file + " \n(" + event.sha256 + ")", Color.BLUE);
+    }
+
+    public static Component render(final DeleteFileIfExistsEvent event) {
+        Preconditions.checkNotNull(event);
+        return event.didDelete ?
+            render(DeleteFileEvent.of(event.path)) :
+            StackLayout.of();
+    }
+
+    public static Component render(final DependencyInstalledEvent event) {
+        Preconditions.checkNotNull(event);
+        return Text.of("Installed " + event.dependency.identifier.encode(), Color.GREEN);
     }
 
     public static Component render(final Event event) {
@@ -130,6 +148,15 @@ public final class EventRenderer {
         }
         if (event instanceof FileHashEvent) {
             return render((FileHashEvent) event);
+        }
+        if (event instanceof DependencyInstalledEvent) {
+            return render((DependencyInstalledEvent) event);
+        }
+        if (event instanceof DeleteFileEvent) {
+            return render((DeleteFileEvent) event);
+        }
+        if (event instanceof DeleteFileIfExistsEvent) {
+            return render((DeleteFileIfExistsEvent) event);
         }
         return Text.of(event.toString());
     }
