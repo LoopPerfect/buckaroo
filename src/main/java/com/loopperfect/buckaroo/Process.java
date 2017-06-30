@@ -4,12 +4,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.reactivex.*;
+import io.reactivex.Observable;
 import io.reactivex.annotations.NonNull;
 import org.javatuples.Pair;
 
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 
 import static com.loopperfect.buckaroo.Either.*;
@@ -83,6 +82,11 @@ public final class Process<S, T> {
     public <U> Process<S, U> chain(final Function<T, Process<S, U>> f) {
         Objects.requireNonNull(f, "f is null");
         return Process.chain(this, f);
+    }
+
+    public Process<S, T> onErrorReturn(final Function<Throwable, T> f) {
+        Objects.requireNonNull(f, "f is null");
+        return Process.of(toObservable().onErrorReturn(x -> right(f.apply(x))));
     }
 
     public static <S, T> Process<S, T> just(final T result) {
@@ -281,5 +285,35 @@ public final class Process<S, T> {
             .reduce(
                 Process.just(ImmutableList.of()),
                 (i, j) -> Process.merge(i, j).map(k -> MoreLists.concat(k.getValue0(), k.getValue1())));
+    }
+
+    public static <S, T> Process<S, T> max(final Process<S, T> a, final Process<S, T> b, final Comparator<T> comparator) {
+        Objects.requireNonNull(a);
+        Objects.requireNonNull(b);
+        Objects.requireNonNull(comparator);
+        return merge(a, b).map(xy ->
+            comparator.compare(xy.getValue0(), xy.getValue1()) > 0 ?
+                xy.getValue0() :
+                xy.getValue1());
+    }
+
+    public static <S, T> Process<S, T> max(final Process<S, T> x, final Collection<Process<S, T>> xs, final Comparator<T> comparator) {
+        Objects.requireNonNull(xs, "xs is null");
+        Objects.requireNonNull(comparator, "comparator is null");
+        return xs.stream()
+            .reduce(x, (state, next) -> Process.max(state, next, comparator));
+    }
+
+    public static <S, T> Optional<Process<S, T>> max(final Collection<Process<S, T>> xs, final Comparator<T> comparator) {
+        Objects.requireNonNull(xs, "xs is null");
+        Objects.requireNonNull(comparator, "comparator is null");
+        return xs.stream()
+            .reduce((state, next) -> Process.max(state, next, comparator));
+    }
+
+    public static <S, T> Maybe<Process<S, T>> max(final Observable<Process<S, T>> xs, final Comparator<T> comparator) {
+        Objects.requireNonNull(xs, "xs is null");
+        Objects.requireNonNull(comparator, "comparator is null");
+        return xs.reduce((state, next) -> Process.max(state, next, comparator));
     }
 }

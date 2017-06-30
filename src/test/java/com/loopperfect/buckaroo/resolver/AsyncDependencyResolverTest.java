@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
@@ -121,10 +122,6 @@ public final class AsyncDependencyResolverTest {
                 latch.countDown();
             });
 
-        latch.await();
-
-//        assertEquals(
-//            expected,
-//            AsyncDependencyResolver.resolve(recipeSource, toResolve).result().blockingGet());
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 }

@@ -10,6 +10,7 @@ import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
+import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import com.loopperfect.buckaroo.virtualterminal.components.ProgressBar;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
@@ -48,8 +49,11 @@ public final class GenericEventRenderer {
         return Text.of("Downloaded " + event.source + " to " + event.destination, Color.YELLOW);
     }
 
-    private static final TerminalPixel downloadProgressFill = TerminalPixel.fill(Color.WHITE);
-    private static final TerminalPixel downloadProgressBackground = TerminalPixel.fill(Color.BLACK);
+    private static final TerminalPixel downloadProgressFill = TerminalPixel.of(
+        UnicodeChar.of('\u2588'), Color.GREEN, Color.DEFAULT);
+
+    private static final TerminalPixel downloadProgressBackground = TerminalPixel.of(
+        UnicodeChar.of('\u2591'), Color.DEFAULT, Color.DEFAULT);
 
     public static Component render(final DownloadProgress event) {
         Preconditions.checkNotNull(event);

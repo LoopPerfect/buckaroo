@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -74,6 +75,17 @@ public final class ProcessTest {
         assertEquals(
             ImmutableList.of("a", "b", "Expected"),
             p.states().onErrorReturnItem("Expected").toList().blockingGet());
+    }
+
+    @Test
+    public void onErrorReturn() throws Exception {
+
+        final Process<String, String> p = Process.of(
+            Observable.concat(
+                Observable.just(left("a"), left("b")),
+                Observable.error(new IOException("Oh no!"))));
+
+        assertEquals("error", p.onErrorReturn(throwable -> "error").result().blockingGet());
     }
 
     @Test
@@ -205,5 +217,53 @@ public final class ProcessTest {
         latch.await(5000L, TimeUnit.MILLISECONDS);
 
         assertEquals(1, (int)counter.value);
+    }
+
+    @Test
+    public void max() throws Exception {
+
+        final Process<Integer, Integer> a = Process.just(1);
+        final Process<Integer, Integer> b = Process.just(2);
+
+        final Process<Integer, Integer> c = Process.max(a, b, Integer::compareTo);
+
+        assertEquals(2, (int) c.result().blockingGet());
+    }
+
+    @Test
+    public void maxN() throws Exception {
+
+        final Process<Integer, Integer> x = Process.just(1);
+        final ImmutableList<Process<Integer, Integer>> xs = ImmutableList.of(
+            Process.just(1),
+            Process.just(3),
+            Process.just(2),
+            Process.just(2));
+
+        final Process<Integer, Integer> c = Process.max(x, xs, Integer::compareTo);
+
+        assertEquals(3, (int) c.result().blockingGet());
+    }
+
+    @Test
+    public void maxCountSubscribes() throws Exception {
+
+        final Mutable<Integer> counter = new Mutable<>(0);
+
+        final Process<Integer, Integer> x = Process.of(Single.just(4)
+            .doOnSubscribe(subscription -> counter.value++));
+
+        final ImmutableList<Process<Integer, Integer>> xs = ImmutableList.of(
+            Process.of(Single.just(1)
+                .doOnSubscribe(subscription -> counter.value++)),
+            Process.of(Single.just(2)
+                .doOnSubscribe(subscription -> counter.value++)),
+            Process.of(Single.just(3)
+                .doOnSubscribe(subscription -> counter.value++)));
+
+        final Process<Integer, Integer> c = Process.max(x, xs, Integer::compareTo);
+
+        assertEquals(4, (int) c.result().blockingGet());
+        assertEquals(4, (int) counter.value);
     }
 }

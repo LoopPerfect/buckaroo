@@ -11,6 +11,7 @@ import io.reactivex.Single;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -61,7 +62,7 @@ public final class LoggingTasks {
             final HttpClient httpClient = HttpClientBuilder.create().build();
 
             final HttpPost request = new HttpPost(url.toURI());
-            final StringEntity params = new StringEntity(data);
+            final StringEntity params = new StringEntity(data, ContentType.APPLICATION_JSON);
 
             request.addHeader("Content-Type", "application/json; charset=" + charset);
             request.setEntity(params);

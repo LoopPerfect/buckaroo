@@ -25,14 +25,14 @@ public final class ProgressBar implements Component {
     }
 
     private static final TerminalPixel defaultFill = TerminalPixel.of(
-        UnicodeChar.of('\u25A0'),
-        Color.WHITE,
-        Color.BLACK);
+        UnicodeChar.of('\u2588'),
+        Color.DEFAULT,
+        Color.DEFAULT);
 
     private static final TerminalPixel defaultBackground = TerminalPixel.of(
-        UnicodeChar.of(' '),
-        Color.WHITE,
-        Color.BLACK);
+        UnicodeChar.of('\u2591'),
+        Color.DEFAULT,
+        Color.DEFAULT);
 
     public static ProgressBar of(final float progress) {
         return new ProgressBar(progress, defaultFill, defaultBackground);

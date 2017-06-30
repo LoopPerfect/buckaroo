@@ -92,7 +92,8 @@ public final class Main {
                     progressView(upstream)
                         .observeOn(Schedulers.computation())
                         .subscribeOn(Schedulers.computation())
-                        .startWith(StackLayout.of()),
+                        .startWith(StackLayout.of())
+                        .concatWith(Observable.just(StackLayout.of())),
                     (x, y) -> (Component)StackLayout.of(x, y)))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)

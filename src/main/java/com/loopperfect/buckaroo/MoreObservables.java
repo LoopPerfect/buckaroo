@@ -3,14 +3,12 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.reactivex.Emitter;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import org.javatuples.Pair;
 
 import java.util.*;
-import java.util.function.Function;
 
 public final class MoreObservables {
 
@@ -18,6 +16,7 @@ public final class MoreObservables {
 
     }
 
+    @Deprecated
     public static <T> Observable<T> skipErrors(final Observable<Single<T>> xs) {
         Preconditions.checkNotNull(xs);
         return xs.flatMap(single -> single.map(Optional::of)
@@ -26,6 +25,7 @@ public final class MoreObservables {
                 optional.map(Observable::just).orElseGet(Observable::empty)));
     }
 
+    @Deprecated
     public static <T> Maybe<T> findMax(final Observable<T> xs, final Comparator<T> comparator) {
         Preconditions.checkNotNull(xs);
         Preconditions.checkNotNull(comparator);

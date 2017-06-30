@@ -20,10 +20,6 @@ public final class Mutable<T> {
         this.value = initialValue;
     }
 
-    public Mutable() {
-        this(null);
-    }
-
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)

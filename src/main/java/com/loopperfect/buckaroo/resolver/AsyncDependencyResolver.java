@@ -10,6 +10,7 @@ import org.javatuples.Pair;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -41,7 +42,7 @@ public final class AsyncDependencyResolver {
 
         return recipeSource.fetch(next.project).chain(recipe -> {
 
-            final ImmutableList<Process<Event, ResolvedDependencies>> candidateStream = recipe.versions.entrySet()
+            final ImmutableList<Process<Event, ResolvedDependencies>> candidates = recipe.versions.entrySet()
                 .stream()
                 .filter(x -> next.requirement.isSatisfiedBy(x.getKey()))
                 .sorted(Comparator.comparing(Map.Entry::getKey))
@@ -62,23 +63,23 @@ public final class AsyncDependencyResolver {
 
                 }).collect(toImmutableList());
 
-//            final Observable<Event> states =
-//                Observable.merge(candidateStream
-//                    .stream()
-//                    .map(Process::states)
-//                    .collect(toImmutableList()));
-
-            final Observable<Event> states = Observable.empty(); // TODO: include the states using Process.merge
-
-            final Single<ResolvedDependencies> result = MoreObservables.findMax(
-                MoreObservables.skipErrors(Observable.fromIterable(
-                    candidateStream.stream().map(Process::result)::iterator)),
-                Comparator.comparing(strategy::score))
-                .toSingle()
-                .onErrorResumeNext(error ->
-                    Single.error(new DependencyResolutionException("Could not satisfy " + next, error)));
-
-            return Process.of(states, result);
+            return Process.of(
+                Process.merge(candidates.stream()
+                    .map(x -> x.map(Optional::of)
+                        .onErrorReturn(error -> Optional.empty()))
+                    .collect(ImmutableList.toImmutableList()))
+                    .map(x -> x.stream()
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .max(Comparator.comparing(strategy::score)))
+                    .toObservable()
+                    .flatMap(x -> {
+                        if (x.isLeft() || x.isRight() && x.right().get().isPresent()) {
+                            final Either<Event, ResolvedDependencies> e = x.rightMap(Optional::get);
+                            return Observable.just(e);
+                        }
+                        return Observable.error(new DependencyResolutionException("Could not satisfy " + next));
+                    }));
         });
     }
 
