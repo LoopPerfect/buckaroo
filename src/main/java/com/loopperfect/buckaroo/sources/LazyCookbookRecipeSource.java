@@ -32,7 +32,7 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
                 "recipes",
                 identifier.organization.name,
                 identifier.recipe.name + ".json");
-        }).flatMap(CommonTasks::readRecipeFile).subscribeOn(Schedulers.io()));
+        }).flatMap(CommonTasks::readRecipeFile));
     }
 
     public static RecipeSource of(final Path pathToCookbook) {

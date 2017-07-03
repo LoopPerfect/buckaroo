@@ -94,7 +94,7 @@ public final class GitHub {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(repo);
 
-        return Process.of(Single.fromCallable(() -> fetchTags(owner, repo)).subscribeOn(Schedulers.io()));
+        return Process.of(Single.fromCallable(() -> fetchTags(owner, repo)));
     }
 
     // We are not using this because the GitHub API limits are quite strict without an access token.

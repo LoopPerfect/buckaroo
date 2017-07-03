@@ -7,12 +7,15 @@ import com.loopperfect.buckaroo.events.ReadLockFileEvent;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 import org.javatuples.Pair;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -148,6 +151,8 @@ public final class InstallExistingTasks {
 
                 (ReadLockFileEvent event) -> {
 
+
+
                     final Observable<DependencyInstallationEvent> installs = Observable.merge(
                         event.locks
                             .entries()
@@ -160,6 +165,8 @@ public final class InstallExistingTasks {
 
 
                     return Observable.concat(
+                        Observable.just((Event)event),
+                        Observable.concat(
 
                         // Install the locked dependencies
                         installs,
@@ -193,7 +200,7 @@ public final class InstallExistingTasks {
                                 .toObservable()
                                 .cast(Event.class)
                         )
-                    );
+                    ));
                 }
             ),
 

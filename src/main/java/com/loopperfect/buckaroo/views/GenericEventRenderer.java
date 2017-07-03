@@ -59,7 +59,7 @@ public final class GenericEventRenderer {
         Preconditions.checkNotNull(event);
         return event.hasKnownContentLength() ?
             ProgressBar.of(event.progress(), downloadProgressFill, downloadProgressBackground) :
-            Text.of("Downloaded " + (event.contentLength / 1024L) + "kb");
+            Text.of("Downloaded " + (event.downloaded / 1024L) + "kb");
     }
 
     public static Component render(final ReadLockFileEvent event) {

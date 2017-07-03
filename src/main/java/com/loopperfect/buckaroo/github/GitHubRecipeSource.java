@@ -47,13 +47,13 @@ public final class GitHubRecipeSource implements RecipeSource {
 
             // 1. Download the release to the cache
             Process.of(
-                DownloadTask.download(release, cachePath, true).subscribeOn(Schedulers.io()),
+                DownloadTask.download(release, cachePath, true),
                 Single.just(FileDownloadedEvent.of(release, cachePath))),
 
             Process.chain(
 
                 // 2. Compute the hash
-                Process.of(CommonTasks.hash(cachePath).subscribeOn(Schedulers.io())),
+                Process.of(CommonTasks.hash(cachePath)),
 
                 (FileHashEvent fileHashEvent) -> {
 
@@ -66,13 +66,12 @@ public final class GitHubRecipeSource implements RecipeSource {
                     return Process.chain(
 
                         // 3. Unzip
-                        Process.of(CommonTasks.unzip(cachePath, unzipTargetPath, Optional.of(subPath))
-                            .subscribeOn(Schedulers.io())),
+                        Process.of(CommonTasks.unzip(cachePath, unzipTargetPath, Optional.of(subPath))),
 
                         (FileUnzipEvent fileUnzipEvent) -> Process.chain(
 
                             // 4. Read the project file
-                            Process.of(CommonTasks.readProjectFile(projectFilePath).subscribeOn(Schedulers.io())),
+                            Process.of(CommonTasks.readProjectFile(projectFilePath)),
 
                             // 5. Generate a recipe version from the project file and hash
                             (ReadProjectFileEvent readProjectFileEvent) -> {

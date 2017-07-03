@@ -166,7 +166,8 @@ public final class CacheTasks {
             EvenMoreFiles.copyDirectory(cachePath, targetDirectory, copyOptions))
             .toObservable();
 
-        return GitTasks.ensureCloneAndCheckout(gitCommit, cachePath, true)
-            .concatWith(copy);
+        return Observable.concat(
+            GitTasks.ensureCloneAndCheckout(gitCommit, cachePath, true)
+            ,copy);
     }
 }

@@ -44,20 +44,23 @@ public final class CommonTasks {
     }
 
     public static Single<String> readFile(final Path path) {
-        return Single.fromCallable(() -> EvenMoreFiles.read(path));
+        return Single.fromCallable(() -> EvenMoreFiles.read(path))
+            .subscribeOn(Schedulers.io());
     }
 
     public static Single<ReadProjectFileEvent> readProjectFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
             Either.orThrow(Serializers.parseProject(EvenMoreFiles.read(path))))
-            .map(ReadProjectFileEvent::of);
+            .map(ReadProjectFileEvent::of)
+            .subscribeOn(Schedulers.io());
     }
 
     public static Single<DependencyLocks> readLockFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseDependencyLocks(EvenMoreFiles.read(path))));
+            Either.orThrow(Serializers.parseDependencyLocks(EvenMoreFiles.read(path))))
+            .subscribeOn(Schedulers.io());
     }
 
     public static Single<WriteFileEvent> writeFile(final String content, final Path path, final boolean overwrite) {
@@ -77,11 +80,12 @@ public final class CommonTasks {
             final ByteSink sink = MoreFiles.asByteSink(path);
             sink.write(content.getBytes());
             return WriteFileEvent.of(path);
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     public static Single<WriteFileEvent> writeFile(final String content, final Path path) {
-        return writeFile(content, path, false);
+        return writeFile(content, path, false)
+            .subscribeOn(Schedulers.io());
     }
 
     public static Single<TouchFileEvent> touchFile(final Path path) {
@@ -115,7 +119,7 @@ public final class CommonTasks {
         return Single.fromCallable(() -> {
             Files.copy(source, destination, copyOptions);
             return FileCopyEvent.of(source, destination);
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     public static Single<FileUnzipEvent> unzip(final Path source, final Path target, final Optional<Path> subPath, CopyOption... copyOptions) {
@@ -125,20 +129,22 @@ public final class CommonTasks {
         return Single.fromCallable(() -> {
             EvenMoreFiles.unzip(source, target, subPath, copyOptions);
             return FileUnzipEvent.of(source, target);
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     public static Single<Recipe> readRecipeFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path))));
+            Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path))))
+            .subscribeOn(Schedulers.io());
     }
 
     public static Single<ReadConfigFileEvent> readConfigFile(final Path path) {
         Preconditions.checkNotNull(path);
         return Single.fromCallable(() ->
             Either.orThrow(Serializers.parseConfig(EvenMoreFiles.read(path))))
-            .map(ReadConfigFileEvent::of);
+            .map(ReadConfigFileEvent::of)
+            .subscribeOn(Schedulers.io());
     }
 
     public static Single<ReadConfigFileEvent> readAndMaybeGenerateConfigFile(final FileSystem fs) {
@@ -156,7 +162,8 @@ public final class CommonTasks {
                 return Either.orThrow(Serializers.parseConfig(defaulConfigString));
             }
             return Either.orThrow(Serializers.parseConfig(EvenMoreFiles.read(configFilePath)));
-        }).map(ReadConfigFileEvent::of);
+        }).map(ReadConfigFileEvent::of)
+         .subscribeOn(Schedulers.io());
     }
 
     public static Single<FileHashEvent> hash(final Path path) {
@@ -166,7 +173,7 @@ public final class CommonTasks {
         return Single.fromCallable(() -> {
             final HashCode hash = EvenMoreFiles.hashFile(path);
             return FileHashEvent.of(path, hash);
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     /**
@@ -208,12 +215,12 @@ public final class CommonTasks {
                             return Observable.empty();
                         }
                         // Otherwise, download the file
-                        return DownloadTask.download(remoteFile.url, target).subscribeOn(Schedulers.io());
+                        return DownloadTask.download(remoteFile.url, target);
                     }).cast(Event.class),
 
             // Verify the hash
             ensureHash(target, remoteFile.sha256)
-        );
+        ).subscribeOn(Schedulers.io());
     }
 
     public static Observable<Event> downloadRemoteArchive(final FileSystem fs, final RemoteArchive remoteArchive, final Path targetDirectory) {
@@ -236,6 +243,6 @@ public final class CommonTasks {
                     targetDirectory,
                     remoteArchive.subPath.map(subPath -> fs.getPath(fs.getSeparator(), subPath)),
                     StandardCopyOption.REPLACE_EXISTING);
-            }).toObservable());
+            }).toObservable()).subscribeOn(Schedulers.io());
     }
 }

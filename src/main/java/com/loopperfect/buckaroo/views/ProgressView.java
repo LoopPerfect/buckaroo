@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
+import com.loopperfect.buckaroo.serialization.DependencyGroupSerializer;
 import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
@@ -46,13 +47,13 @@ public final class ProgressView {
             DownloadProgress p = (DownloadProgress)e;
             return (p.hasKnownContentLength()) ?
                 (int)(p.progress()*100) :
-                min( (int) (p.downloaded / 1e6 * 50) , 50);
+                min( (int) (p.downloaded / 1e6 * 30) , 30);
             // if we don't have any ContentLength we can't compute a progress, hence we cant show ProgressBars.
             // Let's prefer ProgressBars over 50% > to Downloaded X bytes notifications
         }
 
         return 120 -
-            max(120, (int)(Instant.now().toEpochMilli() - e.date.toInstant().toEpochMilli())/100);
+            max(120, (int)(Instant.now().toEpochMilli() - e.date.toInstant().toEpochMilli())/1000);
         // every event is more important than DownloadProgress but gets less important over time
     }
 
@@ -85,6 +86,7 @@ public final class ProgressView {
 
         final Observable<ImmutableList<Event>> installations = events
             .ofType(DependencyInstallationEvent.class)
+            .filter(x-> !(x.progress.getValue1() instanceof ResolvedDependenciesEvent))
             .scan(ImmutableMap.of(), (a, b) ->
                 MoreMaps.merge(a, ImmutableMap.of(b.progress.getValue0(), b.progress.getValue1()))
             ).map(x-> x.entrySet()
@@ -121,6 +123,7 @@ public final class ProgressView {
 
             events
                 .filter(x-> !(x instanceof DependencyInstallationEvent))
+                .filter(x-> !(x instanceof ResolvedDependenciesEvent))
                 .map(GenericEventRenderer::render),
 
             StackLayout::of

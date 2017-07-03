@@ -47,12 +47,12 @@ public final class Main {
         // so that it has a bounded thread-pool.
         // Take at least 2 threads to prevent dead-locks.
         // Take at most 12 to prevent too many downloads happening in parallel
-        final int threads = Math.min(Math.max(2, Runtime.getRuntime().availableProcessors() * 2), 12);
+         final int threads = 10;
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
         final Scheduler scheduler = Schedulers.from(executor);
         final Context context = Context.of(FileSystems.getDefault(), scheduler);
-
+/*
         RxJavaPlugins.setIoSchedulerHandler(oldScheduler -> {
 
             // Shutdown the old scheduler
@@ -61,7 +61,7 @@ public final class Main {
             // Use the scheduler from the context
             return context.scheduler;
         });
-
+*/
         final String rawCommand = String.join(" ", args);
 
         // Send the command to the logging server, if present
@@ -82,15 +82,16 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(rawCommand);
 
-            final ConnectableObservable<Event> task = command.routine().apply(context).publish();
+            final Observable<Event> task = command.routine().apply(context)
+                .observeOn(scheduler)
+                .subscribeOn(scheduler);
 
             final Observable<Component> components = task
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
                 .publish(upstream -> Observable.combineLatest(
-                    summaryView(upstream).startWith(StackLayout.of()),
+                    Observable.just(StackLayout.of()),//summaryView(upstream).startWith(StackLayout.of()),
                     progressView(upstream)
-                        .observeOn(Schedulers.computation())
                         .subscribeOn(Schedulers.computation())
                         .startWith(StackLayout.of())
                         .concatWith(Observable.just(StackLayout.of())),
@@ -136,7 +137,6 @@ public final class Main {
                         latch.countDown();
                     });
 
-            task.connect();
             latch.await();
 
         } catch (final Throwable e) {
