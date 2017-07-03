@@ -3,6 +3,8 @@ package com.loopperfect.buckaroo;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
+import com.loopperfect.buckaroo.views.ProgressView;
+import com.loopperfect.buckaroo.views.StatsView;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
@@ -90,11 +92,11 @@ public final class Main {
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
                 .publish(upstream -> Observable.combineLatest(
-                    Observable.just(StackLayout.of()),//summaryView(upstream).startWith(StackLayout.of()),
-                    progressView(upstream)
+                    ProgressView.of(upstream)
                         .subscribeOn(Schedulers.computation())
                         .startWith(StackLayout.of())
                         .concatWith(Observable.just(StackLayout.of())),
+                    StatsView.of(upstream),
                     (x, y) -> (Component)StackLayout.of(x, y)))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)

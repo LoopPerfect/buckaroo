@@ -33,7 +33,7 @@ public final class Text implements Component {
         final TerminalPixel backgroundPixel = TerminalPixel.of(UnicodeChar.of(' '), foreground, background);
 
         final Map2DBuilder<TerminalPixel> builder = new Map2DBuilder<>(
-            width, height, TerminalPixel.class, backgroundPixel);
+            Math.min(text.length(), width), height, TerminalPixel.class, backgroundPixel);
 
         int x = 0;
         int y = 0;
