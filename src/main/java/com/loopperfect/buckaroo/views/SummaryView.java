@@ -14,6 +14,7 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -24,7 +25,7 @@ public final class SummaryView {
 
     }
 
-    public static Observable<Component> summaryView(final Observable<Event> events) {
+    public static Observable<Component> render(final Observable<Event> events) {
 
         Preconditions.checkNotNull(events);
 
@@ -45,9 +46,10 @@ public final class SummaryView {
 
         final Observable<ImmutableList<Component>> resolvedDependencies = events
             .ofType(ResolvedDependenciesEvent.class)
-            .takeLast(1)
             .map(GenericEventRenderer::render)
+            .startWith(StackLayout.of())
             .map(ImmutableList::of);
+
 
         final Observable<ImmutableList<Component>> notifications = events
             .ofType(Notification.class)

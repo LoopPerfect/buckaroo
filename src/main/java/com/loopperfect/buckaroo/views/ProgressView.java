@@ -57,7 +57,7 @@ public final class ProgressView {
         // every event is more important than DownloadProgress but gets less important over time
     }
 
-    public static Observable<Component> of(final Observable<Event> events) {
+    public static Observable<Component> render(final Observable<Event> events) {
 
         final Observable<ImmutableList<RecipeIdentifier>> installing = events
             .ofType(DependencyInstallationEvent.class)

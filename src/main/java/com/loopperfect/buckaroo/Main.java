@@ -5,6 +5,7 @@ import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
 import com.loopperfect.buckaroo.views.ProgressView;
 import com.loopperfect.buckaroo.views.StatsView;
+import com.loopperfect.buckaroo.views.SummaryView;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
@@ -27,9 +28,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import static com.loopperfect.buckaroo.views.ProgressView.progressView;
-import static com.loopperfect.buckaroo.views.SummaryView.summaryView;
 
 public final class Main {
 
@@ -92,12 +90,16 @@ public final class Main {
                 .observeOn(scheduler)
                 .subscribeOn(scheduler)
                 .publish(upstream -> Observable.combineLatest(
-                    ProgressView.of(upstream)
+                    ProgressView.render(upstream)
                         .subscribeOn(Schedulers.computation())
                         .startWith(StackLayout.of())
                         .concatWith(Observable.just(StackLayout.of())),
-                    StatsView.of(upstream),
-                    (x, y) -> (Component)StackLayout.of(x, y)))
+                    StatsView.render(upstream)
+                        .subscribeOn(Schedulers.computation()),
+                    SummaryView.render(upstream)
+                        .startWith(StackLayout.of())
+                        .subscribeOn(Schedulers.computation()),
+                    (x, y, z) -> (Component)StackLayout.of(x, y, z)))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
                 .distinctUntilChanged();

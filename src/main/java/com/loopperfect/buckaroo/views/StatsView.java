@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class StatsView {
     private StatsView() {}
 
-    public static Observable<Component> of(final Observable<Event> events) {
+    public static Observable<Component> render(final Observable<Event> events) {
 
         Observable<ImmutableMap<RecipeIdentifier, Long>> downloads = events
             .ofType(DependencyInstallationEvent.class)
@@ -64,7 +64,6 @@ public class StatsView {
                 Text.of(t, Color.BLUE),
                 Text.of(c, Color.BLUE)
             )
-        ).cast(Component.class)
-        .subscribeOn(Schedulers.computation());
+        ).cast(Component.class);
     }
 }
