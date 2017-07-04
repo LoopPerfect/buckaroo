@@ -60,7 +60,6 @@ public final class AsyncDependencyResolver {
                         nextResolved,
                         nextDependencies,
                         strategy);
-
                 }).collect(toImmutableList());
 
             return Process.of(

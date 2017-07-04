@@ -1,7 +1,10 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
+import com.loopperfect.buckaroo.sources.RecipeNotFoundException;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
 import com.loopperfect.buckaroo.views.GenericEventRenderer;
 import com.loopperfect.buckaroo.views.ProgressView;
@@ -10,6 +13,7 @@ import com.loopperfect.buckaroo.views.SummaryView;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
+import com.loopperfect.buckaroo.virtualterminal.components.ListLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
@@ -29,6 +33,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class Main {
 
@@ -48,21 +55,14 @@ public final class Main {
         // so that it has a bounded thread-pool.
         // Take at least 2 threads to prevent dead-locks.
         // Take at most 12 to prevent too many downloads happening in parallel
-         final int threads = 10;
+        final int threads = 10;
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
         final Scheduler scheduler = Schedulers.from(executor);
         final Context context = Context.of(FileSystems.getDefault(), scheduler);
-/*
-        RxJavaPlugins.setIoSchedulerHandler(oldScheduler -> {
 
-            // Shutdown the old scheduler
-            oldScheduler.shutdown();
+        RxJavaPlugins.setErrorHandler((Throwable e) -> {});
 
-            // Use the scheduler from the context
-            return context.scheduler;
-        });
-*/
         final String rawCommand = String.join(" ", args);
 
         // Send the command to the logging server, if present
@@ -117,6 +117,32 @@ public final class Main {
                 .subscribe(
                     buffer::flip,
                     error -> {
+                        executor.shutdown();
+                        scheduler.shutdown();
+                        latch.countDown();
+
+                        if(error instanceof RecipeNotFoundException) {
+                            final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
+
+                            final ImmutableList<Component> candidates =
+                                Streams.stream(notFound.source.findCandidates(notFound.identifier))
+                                    .limit(3)
+                                    .map(RecipeIdentifier::encode)
+                                    .map(Text::of)
+                                    .collect(toImmutableList());
+
+                            if(candidates.size()>0) {
+                                buffer.flip(
+                                    StackLayout.of(
+                                        Text.of("Error! \n" + error.toString(), Color.RED),
+                                        Text.of("Maybe you meant to install one of the following?"),
+                                        ListLayout.of(candidates)).render(60));
+                            } else {
+                                buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
+                            }
+                            return;
+                        }
+
                         try {
                             EvenMoreFiles.writeFile(
                                 context.fs.getPath("buckaroo-stacktrace.log"),
@@ -133,9 +159,6 @@ public final class Main {
                                 Text.of("Error! \n" + error.toString(), Color.RED),
                                 Text.of("The stacktrace was written to buckaroo-stacktrace.log. ", Color.YELLOW)).
                                 render(60));
-                        executor.shutdown();
-                        scheduler.shutdown();
-                        latch.countDown();
                     },
                     () -> {
                         executor.shutdown();

@@ -14,11 +14,16 @@ import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
+import jdk.nashorn.internal.ir.annotations.Immutable;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class CommonTasks {
 
@@ -40,7 +45,7 @@ public final class CommonTasks {
                 "BUCKAROO_DEPS",
                 dependencies.stream()
                     .map(ResolvedDependencyReference::encode)
-                    .collect(ImmutableList.toImmutableList())));
+                    .collect(toImmutableList())));
     }
 
     public static Single<String> readFile(final Path path) {
@@ -244,5 +249,23 @@ public final class CommonTasks {
                     remoteArchive.subPath.map(subPath -> fs.getPath(fs.getSeparator(), subPath)),
                     StandardCopyOption.REPLACE_EXISTING);
             }).toObservable()).subscribeOn(Schedulers.io());
+    }
+
+
+    public static ImmutableList<RecipeIdentifier> readCookBook(final Path path) throws IOException {
+        final FileSystem fs = path.getFileSystem();
+        System.out.println(path.resolve("recipes").toString());
+        final Path recipeFolder = path.resolve("recipes");
+            return Files.find(recipeFolder, 2, (filePath, attr) -> true)
+                .filter(filePath -> filePath.toString().endsWith(".json") && !filePath.getParent().toString().endsWith("recipes"))
+                .map(filePath -> {
+                    final int parts = filePath.getNameCount();
+                    final String fileName = filePath.getName(parts - 1).toString();
+                    final String orgName = filePath.getName(parts - 2).toString();
+                    final String recipe = fileName.replace(".json", "");
+                    return RecipeIdentifier.parse(orgName+"/"+recipe);
+                }).filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toImmutableList());
     }
 }
