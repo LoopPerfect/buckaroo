@@ -65,6 +65,7 @@ public final class Text implements Component {
     public static Text of(final String text, final Color foreground) {
         return new Text(text, foreground, Color.TRANSPARENT);
     }
+
     public static Text of(final String text, final Color foreground, final Color background) {
         return new Text(text, foreground, background);
     }

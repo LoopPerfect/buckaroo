@@ -17,6 +17,10 @@ public final class UnicodeChar {
         return "U+" + Integer.toHexString(characterCode).toUpperCase();
     }
 
+    public String asString() {
+        return Arrays.toString(Character.toChars(characterCode));
+    }
+
     public boolean equals(final UnicodeChar other) {
         Preconditions.checkNotNull(other);
         return characterCode == other.characterCode;

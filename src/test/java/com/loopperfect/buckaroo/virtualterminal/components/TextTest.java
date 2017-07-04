@@ -41,7 +41,7 @@ public final class TextTest {
         final Text text = Text.of("abc");
 
         final Map2D<TerminalPixel> expected = new Map2DBuilder(
-            100, 1, TerminalPixel.class, TerminalPixel.of(UnicodeChar.of(' ')))
+            3, 1, TerminalPixel.class, TerminalPixel.of(UnicodeChar.of(' ')))
             .set(0, 0, TerminalPixel.of(UnicodeChar.of('a')))
             .set(1, 0, TerminalPixel.of(UnicodeChar.of('b')))
             .set(2, 0, TerminalPixel.of(UnicodeChar.of('c')))
@@ -57,7 +57,7 @@ public final class TextTest {
 
         final Map2D<TerminalPixel> render = text.render(100);
 
-        assertEquals(100, render.width());
+        assertEquals(29, render.width());
         assertEquals(5, render.height());
     }
 }
