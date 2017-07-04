@@ -107,6 +107,9 @@ public final class AsyncDependencyResolver {
         final RecipeSource recipeSource,
         final ImmutableList<Dependency> dependencies) {
 
+        Preconditions.checkNotNull(recipeSource);
+        Preconditions.checkNotNull(dependencies);
+
         return resolve(recipeSource, ResolvedDependencies.of(), dependencies, SumResolutionStrategy.of());
     }
 }

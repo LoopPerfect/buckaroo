@@ -4,11 +4,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
+import com.loopperfect.buckaroo.crypto.Hash;
 import com.loopperfect.buckaroo.sources.RecipeSources;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import org.javatuples.Pair;
 import org.junit.Test;
 
+import java.net.URL;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -112,6 +114,54 @@ public final class AsyncDependencyResolverTest {
                 recipeB.versions.get(SemanticVersion.of(1)))));
 
         final CountDownLatch latch = new CountDownLatch(1);
+
+        AsyncDependencyResolver.resolve(recipeSource, toResolve).result().subscribe(
+            actual -> {
+                assertEquals(expected, actual);
+                latch.countDown();
+            }, error -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    private static Recipe createRecipeForResolveDeepTransitive(final int depth) throws Exception {
+        return Recipe.of(
+            "Example " + depth,
+            "https://github.com/org/example-" + depth,
+            ImmutableMap.of(
+                SemanticVersion.of(1),
+                RecipeVersion.of(
+                    RemoteArchive.of(
+                        new URL("https://github.com/org/example-" + depth + ".zip"),
+                        Hash.sha256("example" + depth)),
+                    Optional.empty(),
+                    DependencyGroup.of(depth > 0 ?
+                        ImmutableMap.of(
+                            RecipeIdentifier.of("org", "example-" + (depth - 1)), AnySemanticVersion.of()) :
+                        ImmutableMap.of()),
+                    Optional.empty())));
+    }
+
+    @Test
+    public void resolveDeepTransitive() throws Exception {
+
+        final RecipeSource recipeSource = recipeIdentifier -> {
+            try {
+                int index = Integer.parseInt(recipeIdentifier.recipe.name.split("-")[1]);
+                return Process.just(createRecipeForResolveDeepTransitive(index));
+            } catch (final Throwable e){
+                return Process.error(new FetchRecipeException("Could not find " + recipeIdentifier.encode() + ". "));
+            }
+        };
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final int depth = 256; // 85
+
+        final ImmutableList<Dependency> toResolve = ImmutableList.of(
+            Dependency.of(RecipeIdentifier.of("org", "example-" + depth), AnySemanticVersion.of()));
 
         AsyncDependencyResolver.resolve(recipeSource, toResolve).toObservable()
             .subscribe(next -> {
