@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
+import com.loopperfect.buckaroo.views.GenericEventRenderer;
 import com.loopperfect.buckaroo.views.ProgressView;
 import com.loopperfect.buckaroo.views.StatsView;
 import com.loopperfect.buckaroo.views.SummaryView;

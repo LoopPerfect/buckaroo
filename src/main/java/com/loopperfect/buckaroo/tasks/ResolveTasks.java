@@ -50,11 +50,11 @@ public final class ResolveTasks {
                 final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
 
                 return Process.usingLastAsResult(
-                    CommonTasks.writeFile(Serializers.serialize(dependencyLocks), lockFilePath, true).toObservable())
-                    .mapStates(x -> (Event)x);
-
-            }).chain(result -> Process.of(
-                Observable.just(TouchFileEvent.of(projectFilePath)), Single.just(Notification.of("blub"))));
+                    CommonTasks.writeFile(Serializers.serialize(dependencyLocks), lockFilePath, true)
+                        .toObservable()
+                        .cast(Event.class)
+                        .concatWith(Observable.just((Event)Notification.of("Resolving dependencies complete"))));
+            });
 
         }).states();
     }

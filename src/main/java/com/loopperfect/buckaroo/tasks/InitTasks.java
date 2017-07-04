@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.events.InitProjectEvent;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
@@ -17,7 +18,7 @@ public final class InitTasks {
 
     }
 
-    public static Single<ReadProjectFileEvent> generateProjectForDirectory(final Path path) {
+    public static Single<InitProjectEvent> generateProjectForDirectory(final Path path) {
 
         Preconditions.checkNotNull(path);
 
@@ -25,7 +26,7 @@ public final class InitTasks {
             final Optional<String> projectName = path.getNameCount() > 0 ?
                 Optional.of(path.getName(path.getNameCount() - 1).toString()) :
                 Optional.empty();
-            return ReadProjectFileEvent.of(Project.of(projectName));
+            return InitProjectEvent.of(Project.of(projectName));
         });
     }
 
@@ -36,17 +37,23 @@ public final class InitTasks {
         // Create an empty project from the working directory
         return generateProjectForDirectory(projectDirectory.toAbsolutePath()).flatMapObservable(
 
-            readProjectFileEvent -> Observable.concat(
-
+            initProjectEvent -> Observable.concat(
+                Observable.just((Event)initProjectEvent),
                 // Write the project file
                 CommonTasks.writeFile(
-                    Serializers.serialize(readProjectFileEvent.project),
+                    Serializers.serialize(initProjectEvent.project),
                     projectDirectory.resolve("buckaroo.json").toAbsolutePath(),
-                    false).toObservable(),
+                    false)
+                    .toObservable()
+                    .cast(Event.class)
+                    .onErrorReturnItem(
+                        Notification.of("buckaroo.json already exists!")),
 
                 // Touch .buckconfig
                 CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
-                    .toObservable()
+                    .toObservable(),
+
+                Observable.just(Notification.of("initialization complete"))
             )
         );
     }
