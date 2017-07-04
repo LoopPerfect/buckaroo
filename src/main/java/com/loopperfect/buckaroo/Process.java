@@ -2,7 +2,9 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
+import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.*;
 import io.reactivex.Observable;
 import io.reactivex.annotations.NonNull;
@@ -12,7 +14,6 @@ import java.util.*;
 import java.util.function.Function;
 
 import static com.loopperfect.buckaroo.Either.*;
-import static com.loopperfect.buckaroo.Either.right;
 
 public final class Process<S, T> {
 
@@ -47,21 +48,23 @@ public final class Process<S, T> {
     public Single<T> result() {
         return Single.create(emitter -> {
             final Mutable<Optional<T>> result = new Mutable<>(Optional.empty());
-            observable.subscribe(next -> {
-                if (result.value.isPresent()) {
-                    emitter.onError(new ProcessException("Process must not push states after the result. "));
-                } else {
-                    if (next.isRight()) {
-                        result.value = next.right();
+            observable.subscribe(
+                next -> {
+                    if (result.value.isPresent()) {
+                        emitter.onError(new ProcessException("Process must not push states after the result. "));
+                    } else {
+                        if (next.isRight()) {
+                            result.value = next.right();
+                        }
                     }
-                }
-            }, emitter::onError, () -> {
-                if (result.value.isPresent()) {
-                    emitter.onSuccess(result.value.get());
-                } else {
-                    emitter.onError(new ProcessException("Process must push a result. "));
-                }
-            });
+                }, emitter::onError,
+                () -> {
+                    if (result.value.isPresent()) {
+                        emitter.onSuccess(result.value.get());
+                    } else {
+                        emitter.onError(new ProcessException("Process must push a result. "));
+                    }
+                });
         });
     }
 
@@ -186,6 +189,7 @@ public final class Process<S, T> {
                 });
             }
         });
+
         return Process.of(o);
     }
 
@@ -204,21 +208,48 @@ public final class Process<S, T> {
         Preconditions.checkNotNull(a);
         Preconditions.checkNotNull(fs);
 
-        return Arrays.stream(fs).reduce(
-            a,
-            (x, f) -> Process.chain(x, f),
-            Process::concat);
+        return chainN(a, ImmutableList.copyOf(fs));
     }
 
-    public static <S, T> Process<S, T> chainN(final Process<S, T> a, final Iterable<Function<T, Process<S, T>>> fs) {
+    public static <S, T> Process<S, T> chainN(final Process<S, T> x, final Iterable<Function<T, Process<S, T>>> fs) {
 
-        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(x);
         Preconditions.checkNotNull(fs);
 
-        return Streams.stream(fs).reduce(
-            a,
-            (x, f) -> Process.chain(x, f),
-            Process::concat);
+        // The logic here is a bit strange because we need to prevent stack-overflow errors for large chains.
+        // The strategy is to compose everything into a list of observables which can then be merged using
+        // Rx's built-in merge function that implements a trampoline.
+        // In order to chain the processes without causing extra subscribes, we put a side-effect into the each process
+        // that sets a future containing its result.
+        // The future is then used as the trigger for the next process in the chain.
+
+        // Use an ArrayList as a builder.
+        final List<Observable<Either<S, T>>> ys = Lists.newArrayList();
+
+        Observable<Either<S, T>> previous = x.toObservable();
+
+        for (final Function<T, Process<S, T>> f : fs) {
+
+            final SettableFuture<T> future = SettableFuture.create();
+
+            // When the previous process completes, we should put the result into a future.
+            // We skip the last value because we only want the states for processes inside the chain.
+            previous = previous.doOnNext(i -> {
+                if (i.isRight()) {
+                    future.set(i.right().get());
+                }
+            }).skipLast(1);
+
+            ys.add(previous);
+
+            // The next process is then generated from the future.
+            previous = Single.fromFuture(future)
+                .flatMapObservable(i -> f.apply(i).toObservable());
+        }
+
+        ys.add(previous);
+
+        return Process.of(Observable.merge(ys));
     }
 
     /**

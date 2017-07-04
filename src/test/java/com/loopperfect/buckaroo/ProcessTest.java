@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -14,6 +15,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import static com.loopperfect.buckaroo.Either.left;
 import static com.loopperfect.buckaroo.Either.right;
@@ -107,6 +111,17 @@ public final class ProcessTest {
     }
 
     @Test
+    public void chain1() throws Exception {
+
+        final Process<Integer, String> a = Process.of(Observable.just(
+            left(1), left(2), left(3), right("A")));
+
+        final Process<Integer, String> b = Process.chain(a, x -> Process.just("B"));
+
+        assertEquals("B", b.result().blockingGet());
+    }
+
+    @Test
     public void countSubscribesForChain() throws Exception {
 
         final Mutable<Integer> counter = new Mutable<>(0);
@@ -122,6 +137,72 @@ public final class ProcessTest {
         b.result().blockingGet();
 
         assertEquals(1, (int) counter.value);
+    }
+
+    @Test
+    public void chainN() throws Exception {
+
+        final Process<Integer, Integer> x = Process.just(1, 1, 2, 3);
+        final Process<Integer, Integer> y = Process.just(2, 4, 5, 6);
+        final Process<Integer, Integer> z = Process.just(3, 7, 8, 9);
+
+        final ImmutableList<Function<Integer, Process<Integer, Integer>>> xs = ImmutableList.of(
+            i -> y.mapStates(j -> i + j),
+            i -> z.mapStates(j -> i + j));
+
+        final Process<Integer, Integer> w = Process.chainN(x, xs);
+
+        final List<Integer> expected = ImmutableList.of(
+            1, 2, 3,
+            5, 6, 7,
+            9, 10, 11);
+
+        final List<Integer> actual = w.states().toList().blockingGet();
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void chainNDeep() throws Exception {
+
+        final Process<Integer, Integer> x = Process.of(Observable.just(
+            left(1), left(2), left(3), right(0)));
+
+        final int n = 1024;
+
+        final ImmutableList<Function<Integer, Process<Integer, Integer>>> xs = IntStream.range(0, n)
+            .mapToObj(i -> (Function<Integer, Process<Integer, Integer>>) integer -> Process.just(integer + 1))
+            .collect(ImmutableList.toImmutableList());
+
+        final Process<Integer, Integer> y = Process.chainN(x, xs);
+
+        assertEquals(n, (int)y.result().blockingGet());
+    }
+
+    @Test
+    public void countSubscribesForChainN() throws Exception {
+
+        final AtomicInteger counter = new AtomicInteger(0);
+
+        final Process<Integer, Integer> x = Process.of(Observable.just(
+            left(1), left(2), left(3), right(0)));
+
+        final int n = 1024;
+
+        final ImmutableList<Function<Integer, Process<Integer, Integer>>> xs = IntStream.range(0, n)
+            .mapToObj(i -> (Function<Integer, Process<Integer, Integer>>) integer -> {
+                final Observable<Either<Integer, Integer>> o = Observable.just(Either.right(integer + 1));
+                return Process.of(o.doOnSubscribe(subscription -> {
+                    counter.incrementAndGet();
+                }));
+            })
+            .collect(ImmutableList.toImmutableList());
+
+        final Process<Integer, Integer> y = Process.chainN(x, xs);
+
+        y.result().blockingGet();
+
+        assertEquals(n, (int)counter.intValue());
     }
 
     @Test
