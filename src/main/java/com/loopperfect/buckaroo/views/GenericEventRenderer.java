@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.views;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.DependencyInstallationEvent;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Notification;
@@ -11,11 +12,9 @@ import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
-import com.loopperfect.buckaroo.virtualterminal.components.Component;
-import com.loopperfect.buckaroo.virtualterminal.components.ProgressBar;
-import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
-import com.loopperfect.buckaroo.virtualterminal.components.Text;
+import com.loopperfect.buckaroo.virtualterminal.components.*;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 public final class GenericEventRenderer {
@@ -87,16 +86,19 @@ public final class GenericEventRenderer {
         if (event.dependencies.dependencies.isEmpty()) {
             return Text.of("There were no dependencies to resolve. ");
         }
-        return Text.of("Resolved: \n" + event.dependencies.dependencies.entrySet()
-            .stream()
-            .map(x -> "  " + x.getKey().encode() + " = " + x.getValue().getValue0().encode())
-            .collect(Collectors.joining("\n")));
+        return StackLayout.of(
+            Text.of("Resolved: "),
+            ListLayout.of(
+                event.dependencies.dependencies.entrySet()
+                    .stream()
+                    .map(x -> Text.of(x.getKey().encode() + " = " + x.getValue().getValue0().encode()))
+                    .collect(ImmutableList.toImmutableList())));
     }
 
     public static Component render(final DependencyInstallationEvent event) {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
-            Text.of("downloading: "+ event.progress.getValue0().identifier.toString()),
+            Text.of("Downloading: "+ event.progress.getValue0().identifier.toString()),
             render(event.progress.getValue1())
         );
     }
@@ -104,7 +106,7 @@ public final class GenericEventRenderer {
     public static Component render(final FetchGithubProgressEvent event) {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
-            Text.of("downloading: "+ event.identifier.toString()),
+            Text.of("Downloading: "+ event.identifier.toString()),
             render(event.progress)
         );
     }

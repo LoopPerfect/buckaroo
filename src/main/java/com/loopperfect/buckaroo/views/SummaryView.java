@@ -10,6 +10,7 @@ import com.loopperfect.buckaroo.events.WriteFileEvent;
 import com.loopperfect.buckaroo.events.TouchFileEvent;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
+import com.loopperfect.buckaroo.virtualterminal.components.ListLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
@@ -39,7 +40,7 @@ public final class SummaryView {
                 .collect(toImmutableList()))
             .map((ImmutableList<Event> modifiedFiles) -> ImmutableList.of(
                 Text.of("Files modified (" + modifiedFiles.size() + "): "),
-                    StackLayout.of(
+                    ListLayout.of(
                         modifiedFiles.stream()
                             .map(GenericEventRenderer::render)
                             .collect(toImmutableList()))));
