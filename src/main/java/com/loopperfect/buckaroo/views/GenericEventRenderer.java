@@ -67,6 +67,11 @@ public final class GenericEventRenderer {
         return Text.of("Read the lock file. ", Color.BLUE);
     }
 
+    public static Component render(final InitProjectEvent event) {
+        Preconditions.checkNotNull(event);
+        return Text.of("Read the project file. ", Color.BLUE);
+    }
+
     public static Component render(final ReadProjectFileEvent event) {
         Preconditions.checkNotNull(event);
         return Text.of("Read the project file. ", Color.BLUE);
@@ -167,6 +172,9 @@ public final class GenericEventRenderer {
         }
         if (event instanceof DeleteFileIfExistsEvent) {
             return render((DeleteFileIfExistsEvent) event);
+        }
+        if (event instanceof InitProjectEvent) {
+            return render((InitProjectEvent) event);
         }
         return Text.of(event.toString());
     }

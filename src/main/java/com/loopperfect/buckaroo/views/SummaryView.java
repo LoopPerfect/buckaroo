@@ -54,7 +54,7 @@ public final class SummaryView {
         final Observable<ImmutableList<Component>> notifications = events
             .ofType(Notification.class)
             .map(GenericEventRenderer::render)
-            .map(ImmutableList::of);
+            .scan(ImmutableList.of(), MoreLists::append);
 
         return Observable.combineLatest(
             modifiedSummary, resolvedDependencies, notifications, MoreLists::concat)

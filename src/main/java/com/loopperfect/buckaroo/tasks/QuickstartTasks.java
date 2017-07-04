@@ -43,7 +43,9 @@ public final class QuickstartTasks {
                 Serializers.serialize(project),
                 fs.getPath("buckaroo.json").toAbsolutePath(),
                 false)
-                .toObservable(),
+                .toObservable()
+                .cast(Event.class)
+                .onErrorReturnItem(Notification.of("buckaroo.json already exists!")),
 
             // Touch the .buckconfig
             CommonTasks.touchFile(fs.getPath(projectDirectory.toString(), ".buckconfig"))
@@ -56,7 +58,9 @@ public final class QuickstartTasks {
                         content,
                         fs.getPath(projectDirectory.toString(), "BUCKAROO_DEPS"),
                         false))
-                .toObservable(),
+                .toObservable()
+                .cast(Event.class)
+                .onErrorReturnItem(Notification.of("BUCKAROO_DEPS already exists!")),
 
             // Create the project directories
             CommonTasks.createDirectory(fs.getPath(projectDirectory.toString(), projectIdentifier.name))
@@ -73,7 +77,9 @@ public final class QuickstartTasks {
                 content,
                 fs.getPath(projectDirectory.toString(), projectIdentifier.name, "src", "main.cpp"),
                 false))
-                .toObservable(),
+                .toObservable()
+                .cast(Event.class)
+                .onErrorReturnItem(Notification.of("src/main.cpp already exists!")),
 
             // Generate the BUCK file
             Single.fromCallable(() -> Either.orThrow(BuckFile.generate(projectIdentifier)))
@@ -81,7 +87,9 @@ public final class QuickstartTasks {
                     CommonTasks.writeFile(
                         content,
                         fs.getPath(projectDirectory.toString(), "BUCK"),
-                        false).toObservable(),
+                        false).toObservable()
+                        .cast(Event.class)
+                        .onErrorReturnItem(Notification.of("BUCK-file already exists!")),
                     Observable.just(Notification.of("buck run :" + projectIdentifier))
                 ))
         ));
