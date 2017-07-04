@@ -5,13 +5,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
-import com.loopperfect.buckaroo.events.FileDownloadedEvent;
-import com.loopperfect.buckaroo.events.FileHashEvent;
-import com.loopperfect.buckaroo.events.FileUnzipEvent;
-import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
+import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.tasks.CacheTasks;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 
@@ -47,7 +45,11 @@ public final class GitHubRecipeSource implements RecipeSource {
 
             // 1. Download the release to the cache
             Process.of(
-                DownloadTask.download(release, cachePath, true),
+                Observable.combineLatest(
+                    Observable.just(RecipeIdentifier.of(Identifier.of("github"), owner, project)),
+                    DownloadTask.download(release, cachePath, true),
+                    FetchGithubProgressEvent::of
+                ),
                 Single.just(FileDownloadedEvent.of(release, cachePath))),
 
             Process.chain(

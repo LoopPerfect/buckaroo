@@ -97,6 +97,7 @@ public final class Main {
                     StatsView.render(upstream)
                         .subscribeOn(Schedulers.computation()),
                     SummaryView.render(upstream)
+                        .takeLast(1)
                         .startWith(StackLayout.of())
                         .subscribeOn(Schedulers.computation()),
                     (x, y, z) -> (Component)StackLayout.of(x, y, z)))
