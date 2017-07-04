@@ -25,4 +25,13 @@ public final class Arrays2D {
         }
         return result;
     }
+
+    public static <T> void fill(final T[][] array, final T value) {
+        Preconditions.checkNotNull(array);
+        for (int i = 0; i < array.length; i++) {
+            for (int j = 0; j < array[0].length; j++) {
+                array[i][j] = value;
+            }
+        }
+    }
 }

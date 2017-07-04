@@ -1,3 +1,6 @@
+[project]
+  ignore = .git, .idea
+
 [download]
-  maven_repo = http://repo.maven.apache.org/maven2/ 
+  maven_repo = https://repo.maven.apache.org/maven2/
   in_build = true

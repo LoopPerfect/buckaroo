@@ -73,4 +73,32 @@ public final class Map2DUtils {
 
         return Map2D.of(a.width(), a.height() + b.height(), a.valueType(), values);
     }
+
+    public static <T> Map2D<T> pasteRight(final Map2D<T> a, final Map2D<T> b, final T background) {
+
+        Preconditions.checkNotNull(a);
+        Preconditions.checkNotNull(b);
+        Preconditions.checkNotNull(background);
+
+        int w = a.width() + b.width();
+        int h = Math.max(a.height(), b.height());
+
+        final T[][] values = Arrays2D.create(a.valueType(), w, h);
+
+        Arrays2D.fill(values, background);
+
+        for (int x = 0; x < a.width(); x++) {
+            for (int y = 0; y < a.height(); y++) {
+                values[x][y] = a.get(x, y);
+            }
+        }
+
+        for (int x = 0; x < b.width(); x++) {
+            for (int y = 0; y < b.height(); y++) {
+                values[a.width() + x][y] = b.get(x, y);
+            }
+        }
+
+        return Map2D.of(w, h, a.valueType(), values);
+    }
 }
