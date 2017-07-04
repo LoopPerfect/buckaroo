@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.DependencyInstallationEvent;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Notification;
+import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
@@ -13,9 +14,9 @@ import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
+import org.jparsec.internal.util.Lists;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public final class GenericEventRenderer {
 
@@ -52,7 +53,7 @@ public final class GenericEventRenderer {
         UnicodeChar.of('\u2588'), Color.GREEN, Color.DEFAULT);
 
     private static final TerminalPixel downloadProgressBackground = TerminalPixel.of(
-        UnicodeChar.of('\u2591'), Color.DEFAULT, Color.DEFAULT);
+        UnicodeChar.of('\u2591'), Color.GRAY, Color.DEFAULT);
 
     public static Component render(final DownloadProgress event) {
         Preconditions.checkNotNull(event);
@@ -81,6 +82,19 @@ public final class GenericEventRenderer {
         return Text.of("Unzipping " + event.source + " to " + event.target, Color.YELLOW);
     }
 
+    private static Component render(final RecipeIdentifier identifier) {
+        Preconditions.checkNotNull(identifier);
+        final List<Component> components = Lists.arrayList();
+        if (identifier.source.isPresent()) {
+            components.add(Text.of(identifier.source.get().name, Color.CYAN));
+            components.add(Text.of("+", Color.GRAY));
+        }
+        components.add(Text.of(identifier.organization.name, Color.BLUE));
+        components.add(Text.of("/", Color.GRAY));
+        components.add(Text.of(identifier.recipe.name, Color.MAGENTA));
+        return FlowLayout.of(components);
+    }
+
     public static Component render(final ResolvedDependenciesEvent event) {
         Preconditions.checkNotNull(event);
         if (event.dependencies.dependencies.isEmpty()) {
@@ -91,24 +105,29 @@ public final class GenericEventRenderer {
             ListLayout.of(
                 event.dependencies.dependencies.entrySet()
                     .stream()
-                    .map(x -> Text.of(x.getKey().encode() + " = " + x.getValue().getValue0().encode()))
+                    .map(x -> FlowLayout.of(
+                        render(x.getKey()),
+                        Text.of(" = "),
+                        Text.of(x.getValue().getValue0().encode(), Color.GREEN)))
                     .collect(ImmutableList.toImmutableList())));
     }
 
     public static Component render(final DependencyInstallationEvent event) {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
-            Text.of("Downloading: "+ event.progress.getValue0().identifier.toString()),
-            render(event.progress.getValue1())
-        );
+            FlowLayout.of(
+                Text.of("Downloading: ", Color.GRAY),
+                render(event.progress.getValue0().identifier)),
+            ListLayout.of(render(event.progress.getValue1())));
     }
 
     public static Component render(final FetchGithubProgressEvent event) {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
-            Text.of("Downloading: "+ event.identifier.toString()),
-            render(event.progress)
-        );
+            FlowLayout.of(
+                Text.of("Downloading: ", Color.GRAY),
+                render(event.identifier)),
+            ListLayout.of(render(event.progress)));
     }
 
     public static Component render(final FileHashEvent event) {

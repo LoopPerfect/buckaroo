@@ -53,6 +53,12 @@ public final class TerminalPixel {
         return TerminalPixel.of(character, foreground, background);
     }
 
+    public boolean hasSameStyling(final TerminalPixel other) {
+        Preconditions.checkNotNull(other);
+        return Objects.equals(foreground, other.foreground) &&
+            Objects.equals(background, other.background);
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(character, foreground, background);

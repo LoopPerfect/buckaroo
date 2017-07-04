@@ -38,12 +38,14 @@ public final class SummaryView {
             (ImmutableList<Event> list, Event event) -> Streams
                 .concat(list.stream(), Stream.of(event))
                 .collect(toImmutableList()))
-            .map((ImmutableList<Event> modifiedFiles) -> ImmutableList.of(
-                Text.of("Files modified (" + modifiedFiles.size() + "): "),
-                    ListLayout.of(
-                        modifiedFiles.stream()
-                            .map(GenericEventRenderer::render)
-                            .collect(toImmutableList()))));
+            .map((ImmutableList<Event> modifiedFiles) -> modifiedFiles.isEmpty() ?
+                ImmutableList.of(Text.of("No files were modified. ")) :
+                ImmutableList.of(
+                        Text.of("Files modified (" + modifiedFiles.size() + "): "),
+                            ListLayout.of(
+                                modifiedFiles.stream()
+                                    .map(GenericEventRenderer::render)
+                                    .collect(toImmutableList()))));
 
         final Observable<ImmutableList<Component>> resolvedDependencies = events
             .ofType(ResolvedDependenciesEvent.class)
