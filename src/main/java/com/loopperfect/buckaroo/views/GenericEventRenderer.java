@@ -91,8 +91,16 @@ public final class GenericEventRenderer {
     public static Component render(final DependencyInstallationEvent event) {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
-            Text.of(event.progress.getValue0().identifier.toString()),
+            Text.of("downloading: "+ event.progress.getValue0().identifier.toString()),
             render(event.progress.getValue1())
+        );
+    }
+
+    public static Component render(final FetchGithubProgressEvent event) {
+        Preconditions.checkNotNull(event);
+        return StackLayout.of(
+            Text.of("downloading: "+ event.identifier.toString()),
+            render(event.progress)
         );
     }
 
@@ -132,6 +140,9 @@ public final class GenericEventRenderer {
         }
         if (event instanceof DependencyInstallationEvent) {
             return render((DependencyInstallationEvent) event);
+        }
+        if (event instanceof FetchGithubProgressEvent) {
+            return render((FetchGithubProgressEvent) event);
         }
         if (event instanceof ResolvedDependenciesEvent) {
             return render((ResolvedDependenciesEvent) event);

@@ -57,7 +57,7 @@ public final class ProgressView {
         // every event is more important than DownloadProgress but gets less important over time
     }
 
-    public static Observable<Component> progressView(final Observable<Event> events) {
+    public static Observable<Component> render(final Observable<Event> events) {
 
         final Observable<ImmutableList<RecipeIdentifier>> installing = events
             .ofType(DependencyInstallationEvent.class)
@@ -86,7 +86,15 @@ public final class ProgressView {
 
         final Observable<ImmutableList<Event>> installations = events
             .ofType(DependencyInstallationEvent.class)
-            .filter(x-> !(x.progress.getValue1() instanceof ResolvedDependenciesEvent))
+            .map(x-> {
+                if(x.progress.getValue1() instanceof ResolvedDependenciesEvent) {
+                    int count = ((ResolvedDependenciesEvent) x.progress.getValue1()).dependencies.dependencies.keySet().size();
+                    return DependencyInstallationEvent.of(
+                        x.progress.removeFrom1().add((Event)Notification.of("Resolved "+count+" dependencies"))
+                    );
+                }
+                return x;
+            })
             .scan(ImmutableMap.of(), (a, b) ->
                 MoreMaps.merge(a, ImmutableMap.of(b.progress.getValue0(), b.progress.getValue1()))
             ).map(x-> x.entrySet()
@@ -112,14 +120,6 @@ public final class ProgressView {
                 progress,
                 total, StackLayout::of
             ).startWith(StackLayout.of()),
-
-            events.scan(0, (a, b) -> a+1)
-                .map(x-> (Component)Text.of("performed actions: "+x, Color.BLUE)),
-
-            Observable.combineLatest(
-                Observable.just(Instant.now().toEpochMilli()),
-                events.map(e->e.date.toInstant().toEpochMilli()),
-                (t0, t1) -> (t1-t0)/1000).map(t ->(Component)Text.of("time: "+t+" s",Color.BLUE)),
 
             events
                 .filter(x-> !(x instanceof DependencyInstallationEvent))
