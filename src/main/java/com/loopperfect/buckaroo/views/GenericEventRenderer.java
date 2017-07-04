@@ -82,7 +82,7 @@ public final class GenericEventRenderer {
         return Text.of("Unzipping " + event.source + " to " + event.target, Color.YELLOW);
     }
 
-    private static Component render(final RecipeIdentifier identifier) {
+    public static Component render(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
         final List<Component> components = Lists.arrayList();
         if (identifier.source.isPresent()) {

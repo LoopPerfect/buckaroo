@@ -127,8 +127,7 @@ public final class Main {
                             final ImmutableList<Component> candidates =
                                 Streams.stream(notFound.source.findCandidates(notFound.identifier))
                                     .limit(3)
-                                    .map(RecipeIdentifier::encode)
-                                    .map(Text::of)
+                                    .map(GenericEventRenderer::render)
                                     .collect(toImmutableList());
 
                             if(candidates.size()>0) {
