@@ -6,8 +6,8 @@ import com.google.common.collect.Streams;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.MoreLists;
 import com.loopperfect.buckaroo.Notification;
-import com.loopperfect.buckaroo.events.WriteFileEvent;
 import com.loopperfect.buckaroo.events.TouchFileEvent;
+import com.loopperfect.buckaroo.events.WriteFileEvent;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import com.loopperfect.buckaroo.virtualterminal.components.ListLayout;
@@ -15,7 +15,6 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;

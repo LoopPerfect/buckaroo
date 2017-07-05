@@ -32,11 +32,6 @@ public final class Project {
         return new Project(name, target, license, this.dependencies.add(dependencies));
     }
 
-    public Project removeDependency(final RecipeIdentifier identifier) {
-        Preconditions.checkNotNull(identifier);
-        return new Project(name, target, license, dependencies.remove(identifier));
-    }
-
     public Project removeDependencies(final List<Dependency> dependencies) {
 
         Preconditions.checkNotNull(dependencies);

@@ -4,20 +4,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
-import com.loopperfect.buckaroo.serialization.DependencyGroupSerializer;
 import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
 import com.loopperfect.buckaroo.virtualterminal.Color;
-import com.loopperfect.buckaroo.virtualterminal.components.*;
+import com.loopperfect.buckaroo.virtualterminal.components.Component;
+import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
+import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
-import io.reactivex.schedulers.Schedulers;
-import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.Optional;
-import java.util.Stack;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Math.max;
