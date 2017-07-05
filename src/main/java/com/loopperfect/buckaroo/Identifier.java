@@ -27,10 +27,7 @@ public final class Identifier {
         if (this == obj) {
             return true;
         }
-        if (obj == null || !(obj instanceof Identifier)) {
-            return false;
-        }
-        return equals((Identifier) obj);
+        return !(obj == null || !(obj instanceof Identifier)) && equals((Identifier) obj);
     }
 
     @Override

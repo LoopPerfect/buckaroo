@@ -29,7 +29,7 @@ public final class StatsView {
         final Observable<Long> downloaded = downloads.map(p->
             p.values()
                 .stream()
-                .reduce(0l, (a, b) -> a + b));
+                .reduce(0L, (a, b) -> a + b));
 
         final Observable<Long> timer = Observable
             .interval(1, TimeUnit.SECONDS)

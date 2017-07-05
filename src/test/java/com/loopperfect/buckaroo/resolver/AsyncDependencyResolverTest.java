@@ -4,13 +4,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
-import com.loopperfect.buckaroo.crypto.Hash;
 import com.loopperfect.buckaroo.sources.RecipeSources;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import org.javatuples.Pair;
 import org.junit.Test;
 
-import java.net.URL;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

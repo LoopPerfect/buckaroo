@@ -12,7 +12,6 @@ import com.loopperfect.buckaroo.github.serialization.GitHubSerializer;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Ref;

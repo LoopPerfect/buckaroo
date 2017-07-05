@@ -32,7 +32,7 @@ public final class ProjectSerializer implements JsonSerializer<Project> {
             jsonObject.addProperty("license", project.license.get());
         }
 
-        if (!project.dependencies.isEmpty()) {
+        if (project.dependencies.any()) {
             jsonObject.add("dependencies", context.serialize(project.dependencies));
         }
 

@@ -1,19 +1,14 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
-import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import org.javatuples.Pair;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -202,7 +197,7 @@ public final class ProcessTest {
 
         y.result().blockingGet();
 
-        assertEquals(n, (int)counter.intValue());
+        assertEquals(n, counter.intValue());
     }
 
     @Test

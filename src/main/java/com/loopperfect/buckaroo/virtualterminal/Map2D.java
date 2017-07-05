@@ -113,9 +113,11 @@ public final class Map2D<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean equals(final Object obj) {
         return obj != null &&
             obj instanceof Map2D &&
+            Objects.equals(valueType, ((Map2D) obj).valueType) &&
             equals((Map2D) obj);
     }
 
@@ -138,10 +140,10 @@ public final class Map2D<T> {
                 values[column][row] = value;
             }
         }
-        return new Map2D<T>(width, height, valueType, values);
+        return new Map2D<>(width, height, valueType, values);
     }
 
     public static <T> Map2D<T>of(final int width, final int height, final Class<T> valueType, final T[][] values) {
-        return new Map2D<T>(width, height, valueType, values);
+        return new Map2D<>(width, height, valueType, values);
     }
 }

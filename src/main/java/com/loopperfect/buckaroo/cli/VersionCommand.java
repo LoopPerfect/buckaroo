@@ -13,7 +13,7 @@ public final class VersionCommand implements CLICommand {
     }
 
     @Override
-    public Function<Context, Observable<Event>> routine() {
+    public Function<FileSystem, Observable<Event>> routine() {
         return fs -> Observable.just(Notification.of(Buckaroo.version.toString()));
     }
 

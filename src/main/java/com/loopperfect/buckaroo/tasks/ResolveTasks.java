@@ -1,18 +1,15 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
-import com.loopperfect.buckaroo.events.TouchFileEvent;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.sources.RecipeSources;
 import io.reactivex.Observable;
-import io.reactivex.Single;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -59,8 +56,8 @@ public final class ResolveTasks {
         }).states();
     }
 
-    public static Observable<Event> resolveDependenciesInWorkingDirectory(final Context ctx) {
-        Preconditions.checkNotNull(ctx);
-        return resolveDependencies(ctx.fs.getPath(""));
+    public static Observable<Event> resolveDependenciesInWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return resolveDependencies(fs.getPath(""));
     }
 }

@@ -5,10 +5,10 @@ import com.google.common.hash.HashCode;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
-import io.reactivex.schedulers.Schedulers;
 import org.junit.Test;
 
 import java.net.URL;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -19,7 +19,7 @@ public final class InstallExistingTasksTest {
     @Test
     public void worksForExistingLockFile() throws Exception {
 
-        final Context context = Context.of(Jimfs.newFileSystem(), Schedulers.newThread());
+        final FileSystem fs = Jimfs.newFileSystem();
 
         final DependencyLocks locks = DependencyLocks.of(ImmutableList.of(
             DependencyLock.of(
@@ -30,15 +30,15 @@ public final class InstallExistingTasksTest {
                         HashCode.fromString("639d7d0df95f8467f4aa8da71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
                         "valuable-0.1.0"))))));
 
-        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
-        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
 
-        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
+        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs).toList().blockingGet();
 
-        assertTrue(Files.exists(context.fs.getPath(".buckconfig")));
-        assertTrue(Files.exists(context.fs.getPath(".buckconfig.local")));
+        assertTrue(Files.exists(fs.getPath(".buckconfig")));
+        assertTrue(Files.exists(fs.getPath(".buckconfig.local")));
 
-        final Path dependencyFolder = context.fs.getPath(
+        final Path dependencyFolder = fs.getPath(
             "buckaroo", "official", "loopperfect", "valuable");
 
         assertTrue(Files.exists(dependencyFolder.resolve(".buckconfig")));
@@ -49,7 +49,7 @@ public final class InstallExistingTasksTest {
     @Test
     public void worksForExistingLockFile2() throws Exception {
 
-        final Context context = Context.of(Jimfs.newFileSystem(), Schedulers.newThread());
+        final FileSystem fs = Jimfs.newFileSystem();
 
         final DependencyLocks locks = DependencyLocks.of(ImmutableList.of(
             DependencyLock.of(
@@ -60,12 +60,12 @@ public final class InstallExistingTasksTest {
                         HashCode.fromString("639d7d0df95f8467f4aa8da71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
                         "valuable-0.1.0"))))));
 
-        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
-        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
 
-        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
+        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs).toList().blockingGet();
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
+        assertTrue(Files.exists(fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
 
         final DependencyLocks locks2 = DependencyLocks.of(ImmutableList.of(
 
@@ -84,15 +84,14 @@ public final class InstallExistingTasksTest {
                         new URL("https://github.com/LoopPerfect/valuable/archive/v0.1.0.zip"),
                         HashCode.fromString("639d7d0df95f8467f4aa8da71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
                         "valuable-0.1.0"))))
-
         ));
 
-        Files.delete( context.fs.getPath("buckaroo.lock.json") );
-        EvenMoreFiles.writeFile(context.fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks2));
+        Files.delete(fs.getPath("buckaroo.lock.json") );
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks2));
 
-        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(context).toList().blockingGet();
+        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs).toList().blockingGet();
 
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
-        assertTrue(Files.exists(context.fs.getPath("buckaroo", "official", "loopperfect", "neither", "BUCK")));
+        assertTrue(Files.exists(fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
+        assertTrue(Files.exists(fs.getPath("buckaroo", "official", "loopperfect", "neither", "BUCK")));
     }
 }

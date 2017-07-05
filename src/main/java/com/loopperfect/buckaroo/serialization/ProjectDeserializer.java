@@ -2,7 +2,6 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.*;
 import com.loopperfect.buckaroo.DependencyGroup;
-import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Project;
 
 import java.lang.reflect.Type;

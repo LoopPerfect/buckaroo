@@ -1,7 +1,6 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
 import io.reactivex.Observable;
 
@@ -13,12 +12,12 @@ public final class UpgradeTasks {
 
     }
 
-    public static Observable<Event> upgradeInWorkingDirectory(final Context ctx) {
+    public static Observable<Event> upgradeInWorkingDirectory(final FileSystem fs) {
 
-        Preconditions.checkNotNull(ctx);
+        Preconditions.checkNotNull(fs);
 
         return Observable.concat(
-            ResolveTasks.resolveDependenciesInWorkingDirectory(ctx),
-            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(ctx));
+            ResolveTasks.resolveDependenciesInWorkingDirectory(fs),
+            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs));
     }
 }

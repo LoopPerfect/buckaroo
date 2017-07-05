@@ -1,13 +1,9 @@
 package com.loopperfect.buckaroo.resolver;
 
 import com.google.common.base.Preconditions;
-import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.ResolvedDependencies;
-import com.loopperfect.buckaroo.ResolvedDependency;
 import com.loopperfect.buckaroo.SemanticVersion;
 import org.javatuples.Pair;
-
-import java.util.Map;
 
 public final class SumResolutionStrategy implements ResolutionStrategy {
 

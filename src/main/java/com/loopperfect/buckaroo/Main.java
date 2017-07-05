@@ -18,7 +18,6 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
-import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 import org.fusesource.jansi.AnsiConsole;
@@ -26,6 +25,7 @@ import org.jparsec.Parser;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.time.Instant;
 import java.util.Arrays;
@@ -33,7 +33,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -59,14 +58,14 @@ public final class Main {
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
         final Scheduler scheduler = Schedulers.from(executor);
-        final Context context = Context.of(FileSystems.getDefault(), scheduler);
+        final FileSystem fs = FileSystems.getDefault();
 
         RxJavaPlugins.setErrorHandler((Throwable e) -> {});
 
         final String rawCommand = String.join(" ", args);
 
         // Send the command to the logging server, if present
-        LoggingTasks.log(context.fs, rawCommand).subscribe(
+        LoggingTasks.log(fs, rawCommand).subscribe(
             next -> {
                 // Do nothing
             },
@@ -83,7 +82,7 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(rawCommand);
 
-            final Observable<Event> task = command.routine().apply(context)
+            final Observable<Event> task = command.routine().apply(fs)
                 .observeOn(scheduler)
                 .subscribeOn(scheduler);
 
@@ -144,7 +143,7 @@ public final class Main {
 
                         try {
                             EvenMoreFiles.writeFile(
-                                context.fs.getPath("buckaroo-stacktrace.log"),
+                                fs.getPath("buckaroo-stacktrace.log"),
                                 Arrays.stream(error.getStackTrace())
                                     .map(StackTraceElement::toString)
                                     .reduce(Instant.now().toString() + ": ", (a, b) -> a + "\n" + b),

@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public final class Map2DTest {
 
@@ -22,9 +23,6 @@ public final class Map2DTest {
         assertFalse(map.isInBounds(9, 9));
         assertFalse(map.isInBounds(0, 3));
         assertFalse(map.isInBounds(4, 0));
-    }
-
-    private void assertTrue(final boolean inBounds) {
     }
 
     @Test

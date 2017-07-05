@@ -8,7 +8,6 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import com.loopperfect.buckaroo.Either;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.charset.Charset;

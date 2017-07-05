@@ -7,15 +7,12 @@ import com.loopperfect.buckaroo.events.ReadLockFileEvent;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
 import org.javatuples.Pair;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -207,8 +204,8 @@ public final class InstallExistingTasks {
             Observable.just((Event) Notification.of("Finished installing dependencies. ")));
     }
 
-    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final Context ctx) {
-        Preconditions.checkNotNull(ctx);
-        return installExistingDependencies(ctx.fs.getPath(""));
+    public static Observable<Event> installExistingDependenciesInWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return installExistingDependencies(fs.getPath(""));
     }
 }

@@ -29,10 +29,7 @@ public final class Notification extends Event {
         if (this == obj) {
             return true;
         }
-        if (obj != null && obj instanceof Notification) {
-            return equals((Notification)obj);
-        }
-        return false;
+        return obj != null && obj instanceof Notification && equals((Notification) obj);
     }
 
     @Override

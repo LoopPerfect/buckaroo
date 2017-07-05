@@ -11,6 +11,7 @@ public final class Arrays2D {
 
     }
 
+    @SuppressWarnings("unchecked")
     public static <T> T[][] create(final Class<T> componentType, final int width, final int height) {
         Preconditions.checkNotNull(componentType);
         Preconditions.checkArgument(width >= 0);

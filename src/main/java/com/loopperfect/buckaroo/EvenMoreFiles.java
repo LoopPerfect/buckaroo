@@ -15,7 +15,6 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 public final class EvenMoreFiles {
 
@@ -54,11 +53,10 @@ public final class EvenMoreFiles {
         Preconditions.checkNotNull(path);
 
         final HashFunction hashFunction = Hashing.sha256();
-        final HashCode hashCode = hashFunction.newHasher()
+
+        return hashFunction.newHasher()
             .putBytes(MoreFiles.asByteSource(path).read())
             .hash();
-
-        return hashCode;
     }
 
     public static FileSystem zipFileSystem(final Path pathToZipFile) throws IOException {
@@ -128,12 +126,6 @@ public final class EvenMoreFiles {
                 target,
                 copyOptions);
 
-    }
-
-    public static Stream<Path> walkZip(final Path source, final int maxDepth) throws IOException {
-        Preconditions.checkNotNull(source);
-        final FileSystem zipFileSystem = zipFileSystem(source);
-        return Files.walk(zipFileSystem.getPath("/"), maxDepth);
     }
 
     public static String read(final Path path, final Charset charset) throws IOException {

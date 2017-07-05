@@ -58,9 +58,4 @@ public final class PublishAndMergeTransformer<A extends C, B extends C, C> imple
             }
         });
     }
-
-    public static <A extends C, B extends C, C> ObservableTransformer<A, C> of(final Function<A, Observable<B>> f) {
-        Objects.requireNonNull(f, "f is null");
-        return new PublishAndMergeTransformer<>(f);
-    }
 }

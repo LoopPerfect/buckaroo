@@ -5,10 +5,7 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Project;
 
-/**
- * Created by gaetano on 04/07/17.
- */
-public class InitProjectEvent extends Event {
+public final class InitProjectEvent extends Event {
 
     public final Project project;
 

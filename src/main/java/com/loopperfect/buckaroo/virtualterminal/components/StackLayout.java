@@ -8,7 +8,6 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 
 import java.util.Arrays;
-import java.util.stream.Collectors;
 
 public final class StackLayout implements Component {
 

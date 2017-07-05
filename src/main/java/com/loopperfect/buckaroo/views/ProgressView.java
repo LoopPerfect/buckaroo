@@ -26,18 +26,6 @@ public final class ProgressView {
 
     }
 
-    public static Observable<Either<DependencyInstallationEvent, DependencyInstalledEvent>> installOrInstalled(final Observable<Event> events) {
-        return events.filter(x->
-            (x instanceof DependencyInstallationEvent) || (x instanceof DependencyInstalledEvent)
-        ).map(x -> {
-            if (x instanceof DependencyInstallationEvent) {
-                return Either.left((DependencyInstallationEvent)x);
-            } else {
-                return Either.right((DependencyInstalledEvent)x);
-            }
-        });
-    }
-
     public static int ScoreEvent(Event e) {
         if(e instanceof DependencyInstalledEvent) return 0;
         if(e instanceof DownloadProgress) {
@@ -50,7 +38,7 @@ public final class ProgressView {
         }
 
         return 120 -
-            max(120, (int)(Instant.now().toEpochMilli() - e.date.toInstant().toEpochMilli())/1000);
+            max(120, (int)(Instant.now().toEpochMilli() - e.date.toInstant().toEpochMilli()) / 1000);
         // every event is more important than DownloadProgress but gets less important over time
     }
 
@@ -83,11 +71,11 @@ public final class ProgressView {
 
         final Observable<ImmutableList<Event>> installations = events
             .ofType(DependencyInstallationEvent.class)
-            .map(x-> {
+            .map(x -> {
                 if(x.progress.getValue1() instanceof ResolvedDependenciesEvent) {
                     int count = ((ResolvedDependenciesEvent) x.progress.getValue1()).dependencies.dependencies.keySet().size();
                     return DependencyInstallationEvent.of(
-                        x.progress.removeFrom1().add((Event)Notification.of("Resolved "+count+" dependencies"))
+                        x.progress.removeFrom1().add(Notification.of("Resolved "+count+" dependencies"))
                     );
                 }
                 return x;

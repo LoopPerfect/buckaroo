@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
 import com.loopperfect.buckaroo.Buckaroo;
 import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.MoreObservables;
 import com.loopperfect.buckaroo.events.PostRequestEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;

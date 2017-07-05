@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.InitProjectEvent;
-import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -58,8 +57,8 @@ public final class InitTasks {
         );
     }
 
-    public static Observable<Event> initWorkingDirectory(final Context ctx) {
-        Preconditions.checkNotNull(ctx);
-        return init(ctx.fs.getPath(""));
+    public static Observable<Event> initWorkingDirectory(final FileSystem fs) {
+        Preconditions.checkNotNull(fs);
+        return init(fs.getPath(""));
     }
 }

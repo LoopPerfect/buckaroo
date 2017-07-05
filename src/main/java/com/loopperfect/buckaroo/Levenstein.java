@@ -5,11 +5,7 @@ import com.google.common.collect.ImmutableList;
 import org.javatuples.Pair;
 
 import java.util.Comparator;
-import java.util.Iterator;
-import java.util.stream.Collector;
 import java.util.stream.IntStream;
-
-import static com.google.common.collect.ImmutableList.toImmutableList;
 
 /**
  * Original implementation by Ar90n

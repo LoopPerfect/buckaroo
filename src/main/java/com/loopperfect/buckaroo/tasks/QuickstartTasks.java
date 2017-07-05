@@ -95,11 +95,11 @@ public final class QuickstartTasks {
         ));
     }
 
-    public static Observable<Event> quickstartInWorkingDirectory(final Context ctx) {
+    public static Observable<Event> quickstartInWorkingDirectory(final FileSystem fs) {
 
-        Preconditions.checkNotNull(ctx);
+        Preconditions.checkNotNull(fs);
 
-        return InitTasks.generateProjectForDirectory(ctx.fs.getPath("").toAbsolutePath())
-            .flatMapObservable(event -> createAppSkeleton(ctx.fs.getPath("").toAbsolutePath(), event.project));
+        return InitTasks.generateProjectForDirectory(fs.getPath("").toAbsolutePath())
+            .flatMapObservable(event -> createAppSkeleton(fs.getPath("").toAbsolutePath(), event.project));
     }
 }

@@ -5,7 +5,6 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.nio.file.Path;
 
 public final class WriteFileEvent extends Event {

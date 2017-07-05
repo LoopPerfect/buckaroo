@@ -3,11 +3,8 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.versioning.VersioningParsers;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 public final class SemanticVersion implements Comparable<SemanticVersion> {
 
@@ -55,16 +52,7 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
 
     @Override
     public boolean equals(final Object o) {
-
-        if (o == this) {
-            return true;
-        }
-
-        if (o == null || !(o instanceof SemanticVersion)) {
-            return false;
-        }
-
-        return equals((SemanticVersion) o);
+        return o == this || !(o == null || !(o instanceof SemanticVersion)) && equals((SemanticVersion) o);
     }
 
     @Override

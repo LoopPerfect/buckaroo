@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.*;
 import com.loopperfect.buckaroo.DependencyGroup;
-import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.RecipeIdentifier;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 

@@ -6,7 +6,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.loopperfect.buckaroo.Either;
-import com.loopperfect.buckaroo.RecipeVersion;
 import com.loopperfect.buckaroo.RemoteFile;
 import com.loopperfect.buckaroo.ResolvedDependency;
 

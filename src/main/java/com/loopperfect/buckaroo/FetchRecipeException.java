@@ -13,5 +13,4 @@ public class FetchRecipeException extends Exception {
     public FetchRecipeException(final Throwable throwable) {
         super(throwable);
     }
-
 }

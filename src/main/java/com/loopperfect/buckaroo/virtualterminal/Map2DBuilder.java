@@ -5,10 +5,10 @@ import com.google.common.base.Preconditions;
 public final class Map2DBuilder<T> {
 
     private final Class<T> valueType;
+    private final T[][] values;
 
     private int width;
     private int height;
-    private T[][] values;
 
     public Map2DBuilder(int width, int height, final Class<T> valueType, final T value) {
 

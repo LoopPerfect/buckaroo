@@ -1,18 +1,14 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.google.common.collect.Maps;
 import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.PartialDependency;
 import com.loopperfect.buckaroo.PartialRecipeIdentifier;
 import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.VersioningParsers;
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
 import org.jparsec.Scanners;
 import org.jparsec.pattern.CharPredicates;
-
-import java.util.Optional;
 
 public final class CLIParsers {
 
@@ -72,15 +68,6 @@ public final class CLIParsers {
     static final Parser<Void> updateTokenParser =
             Scanners.stringCaseInsensitive("update");
 
-    static final Parser<Void> libraryTokenParser =
-            Scanners.stringCaseInsensitive("library");
-
-    static final Parser<Void> recipesTokenParser =
-            Scanners.stringCaseInsensitive("organizations");
-
-    static final Parser<Void> generateTokenParser =
-            Scanners.stringCaseInsensitive("generate");
-
     static final Parser<Void> cookbooksTokenParser =
             Scanners.stringCaseInsensitive("cookbooks");
 
@@ -98,10 +85,6 @@ public final class CLIParsers {
 
     static final Parser<Void> resolveTokenParser =
         Scanners.stringCaseInsensitive("resolve");
-
-    static final Parser<RecipesCommand> recipesCommandParser =
-            recipesTokenParser.between(ignoreParser, ignoreParser)
-                    .map(x -> RecipesCommand.of());
 
     static final Parser<InstallExistingCommand> installExistingCommandParser =
         installTokenParser
@@ -130,18 +113,6 @@ public final class CLIParsers {
             upgradeTokenParser.between(ignoreParser, ignoreParser)
                     .map(x -> UpgradeCommand.of());
 
-    static final Parser<GenerateCommand> generateCommandParser =
-            generateTokenParser.between(ignoreParser, ignoreParser)
-                    .map(x -> GenerateCommand.of());
-
-    static final Parser<CookbooksCommand> cookbooksCommandParser =
-            cookbooksTokenParser.between(ignoreParser, ignoreParser)
-                    .map(x -> CookbooksCommand.of());
-
-    static final Parser<DependenciesCommand> dependenciesCommandParser =
-            dependenciesTokenParser.between(ignoreParser, ignoreParser)
-                    .map(x -> DependenciesCommand.of());
-
     static final Parser<VersionCommand> versionCommandParser =
             versionTokenParser.between(ignoreParser, ignoreParser)
                     .map(x -> VersionCommand.of());
@@ -166,10 +137,6 @@ public final class CLIParsers {
             installCommandParser,
             uninstallCommandParser,
             updateCommandParser,
-            recipesCommandParser,
-            generateCommandParser,
-            cookbooksCommandParser,
-            dependenciesCommandParser,
             versionCommandParser,
             quickstartCommandParser,
             helpCommandParser,

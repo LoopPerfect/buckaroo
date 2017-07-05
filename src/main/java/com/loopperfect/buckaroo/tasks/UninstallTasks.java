@@ -16,14 +16,14 @@ public final class UninstallTasks {
         super();
     }
 
-    public static Observable<Event> uninstallInWorkingDirectory(final Context ctx,
+    public static Observable<Event> uninstallInWorkingDirectory(final FileSystem fs,
         final ImmutableList<PartialRecipeIdentifier> identifiers) {
 
-        Preconditions.checkNotNull(ctx);
+        Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(identifiers);
 
 
-        final Path projectFilePath = ctx.fs.getPath("buckaroo.json").toAbsolutePath();
+        final Path projectFilePath = fs.getPath("buckaroo.json").toAbsolutePath();
 
         return CommonTasks.readProjectFile(projectFilePath).toObservable()
             .compose(new PublishAndMergeTransformer<ReadProjectFileEvent, Event, Event>(readProjectFileEvent -> {
@@ -50,7 +50,7 @@ public final class UninstallTasks {
                         .cast(Event.class),
 
                     // Upgrade
-                    UpgradeTasks.upgradeInWorkingDirectory(ctx)
+                    UpgradeTasks.upgradeInWorkingDirectory(fs)
                 );
             }));
     }

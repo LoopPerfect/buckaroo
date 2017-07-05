@@ -22,10 +22,8 @@ public final class DependencyGroup {
         this.dependencies = Preconditions.checkNotNull(dependencies);
     }
 
-    public boolean any() { return !dependencies.isEmpty(); }
-
-    public boolean isEmpty() {
-        return dependencies.isEmpty();
+    public boolean any() {
+        return !dependencies.isEmpty();
     }
 
     public boolean requires(final RecipeIdentifier identifier) {

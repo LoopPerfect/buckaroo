@@ -5,7 +5,6 @@ import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Process;
 import io.reactivex.Observable;
-import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;

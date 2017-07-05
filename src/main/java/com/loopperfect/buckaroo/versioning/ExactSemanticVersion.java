@@ -28,11 +28,11 @@ public final class ExactSemanticVersion implements SemanticVersionRequirement {
     @Override
     public String encode() {
         if (semanticVersions.size() == 1) {
-            return semanticVersions.iterator().next().toString();
+            return semanticVersions.iterator().next().encode();
         }
         return "[" +
             semanticVersions.stream()
-                .map(x -> x.toString())
+                .map(SemanticVersion::encode)
                 .collect(Collectors.joining(", ")) +
             "]";
     }

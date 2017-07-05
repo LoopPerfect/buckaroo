@@ -83,6 +83,8 @@ public final class VersioningParsersTest {
         assertEquals(ExactSemanticVersion.of(SemanticVersion.of(1, 1)), parser.parse("=1.1"));
         assertEquals(ExactSemanticVersion.of(SemanticVersion.of(7)), parser.parse("  =  7 "));
 
+        assertEquals(BoundedSemanticVersion.atMost(SemanticVersion.of(7)), parser.parse("  <= 7 "));
+
         assertEquals(
             ExactSemanticVersion.of(SemanticVersion.of(1, 1), SemanticVersion.of(1, 2)),
             parser.parse(" [ 1.1, 1.2  ] "));

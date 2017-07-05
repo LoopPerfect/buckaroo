@@ -1,14 +1,12 @@
 package com.loopperfect.buckaroo.github;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.Single;
-import org.javatuples.Pair;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;

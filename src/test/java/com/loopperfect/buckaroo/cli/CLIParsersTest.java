@@ -7,7 +7,6 @@ import org.jparsec.Parser;
 import org.jparsec.error.ParserException;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -133,15 +132,9 @@ public final class CLIParsersTest {
 
         assertEquals(InitCommand.of(), parser.parse(" init  "));
 
-        assertEquals(RecipesCommand.of(), parser.parse(" organizations  "));
-
         assertEquals(UpgradeCommand.of(), parser.parse("upgrade"));
 
         assertEquals(InstallExistingCommand.of(), parser.parse(" install "));
-
-        assertEquals(GenerateCommand.of(), parser.parse("   generate "));
-
-        assertEquals(CookbooksCommand.of(), parser.parse("   cookbooks "));
 
         assertEquals(VersionCommand.of(), parser.parse("   version "));
 

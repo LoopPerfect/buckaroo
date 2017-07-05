@@ -117,7 +117,7 @@ public final class Either<L, R> {
 
     public static <L, R> Either<L, R> left(final L x) {
         Preconditions.checkNotNull(x);
-        return new Either<L, R>(LeftOrRight.LEFT, x, null);
+        return new Either<>(LeftOrRight.LEFT, x, null);
     }
 
     public static <L, R> Either<L, R> right(final R x) {
@@ -137,7 +137,7 @@ public final class Either<L, R> {
 
     public static <L, R, E extends Throwable> R orThrow(final Either<L, R> either, final Supplier<E> exception) throws E {
         Preconditions.checkNotNull(either);
-        return either.right().orElseThrow(exception::get);
+        return either.right().orElseThrow(exception);
     }
 
     public static <T> T join(final Either<? extends T, ? extends T> either) {

@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo.events;
 import com.google.common.base.MoreObjects;
 import com.loopperfect.buckaroo.Event;
 import java.nio.file.Path;
-import java.net.URL;
 
 public final class GitCloneEvent extends Event {
 

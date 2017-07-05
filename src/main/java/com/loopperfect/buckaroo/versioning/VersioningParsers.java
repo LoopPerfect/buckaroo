@@ -116,7 +116,7 @@ public final class VersioningParsers {
         Parsers.sequence(
             semanticVersionParser.followedBy(dashTokenParser.between(ignoreParser, ignoreParser)),
             semanticVersionParser,
-            (x, y) -> SemanticVersionRange.of(x, y))
+            SemanticVersionRange::of)
             .between(ignoreParser, ignoreParser);
 
     public static final Parser<SemanticVersionRequirement> semanticVersionRequirementParser =

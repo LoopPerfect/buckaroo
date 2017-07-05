@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo.events;
 import com.google.common.base.MoreObjects;
 import com.loopperfect.buckaroo.Event;
 
-import java.net.URL;
 import java.nio.file.Path;
 
 public final class GitCheckoutEvent extends Event {

@@ -10,10 +10,7 @@ public final class RecipeVersion {
 
     public final Either<GitCommit, RemoteArchive> source;
     public final Optional<String> target;
-
-    @Deprecated
     public final Optional<DependencyGroup> dependencies;
-
     public final Optional<RemoteFile> buckResource;
 
     private RecipeVersion(
@@ -66,25 +63,21 @@ public final class RecipeVersion {
         return new RecipeVersion(source, target, Optional.empty(), buckResource);
     }
 
-    @Deprecated
     public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target,
                                    final Optional<DependencyGroup> dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(source, target, dependencies, buckResource);
     }
 
-    @Deprecated
     public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target,
                                    final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(source, target, Optional.of(dependencies), buckResource);
     }
 
-    @Deprecated
     public static RecipeVersion of(final RemoteArchive source, final Optional<String> target,
                                    final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(Either.right(source), target, Optional.of(dependencies), buckResource);
     }
 
-    @Deprecated
     public static RecipeVersion of(final GitCommit source, final Optional<String> target,
             final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(Either.left(source), target, Optional.of(dependencies), buckResource);

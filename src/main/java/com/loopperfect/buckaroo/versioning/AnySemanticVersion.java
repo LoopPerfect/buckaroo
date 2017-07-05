@@ -1,7 +1,6 @@
 package com.loopperfect.buckaroo.versioning;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
 import com.loopperfect.buckaroo.SemanticVersion;
 import com.loopperfect.buckaroo.SemanticVersionRequirement;
 
@@ -14,11 +13,6 @@ public final class AnySemanticVersion implements SemanticVersionRequirement {
     @Override
     public boolean isSatisfiedBy(final SemanticVersion version) {
         return true;
-    }
-
-    @Override
-    public ImmutableSet<SemanticVersion> hints() {
-        return ImmutableSet.of();
     }
 
     @Override

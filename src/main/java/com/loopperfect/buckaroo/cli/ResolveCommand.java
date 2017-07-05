@@ -1,11 +1,8 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.tasks.ResolveTasks;
 import io.reactivex.Observable;
-import io.reactivex.schedulers.Schedulers;
 
 import java.nio.file.FileSystem;
 import java.util.function.Function;
@@ -17,7 +14,7 @@ public final class ResolveCommand implements CLICommand {
     }
 
     @Override
-    public Function<Context, Observable<Event>> routine() {
+    public Function<FileSystem, Observable<Event>> routine() {
         return ResolveTasks::resolveDependenciesInWorkingDirectory;
     }
 

@@ -1,8 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Context;
 import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.Unit;
 import com.loopperfect.buckaroo.tasks.UpgradeTasks;
 import io.reactivex.Observable;
 
@@ -16,7 +14,7 @@ public final class UpgradeCommand implements CLICommand {
     }
 
     @Override
-    public Function<Context, Observable<Event>> routine() {
+    public Function<FileSystem, Observable<Event>> routine() {
         return UpgradeTasks::upgradeInWorkingDirectory;
     }
 

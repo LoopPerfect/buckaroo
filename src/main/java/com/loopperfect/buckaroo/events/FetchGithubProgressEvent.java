@@ -3,12 +3,8 @@ package com.loopperfect.buckaroo.events;
 import com.google.common.base.MoreObjects;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.RecipeSource;
 
-/**
- * Created by gaetano on 04/07/17.
- */
-public class FetchGithubProgressEvent extends Event {
+public final class FetchGithubProgressEvent extends Event {
 
     public final RecipeIdentifier identifier;
     public final Event progress;

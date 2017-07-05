@@ -1,7 +1,6 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
@@ -106,11 +105,9 @@ public final class UpdateTasks {
         });
     }
 
-    public static Observable<Event> updateCookbooks(final Context ctx) {
+    public static Observable<Event> updateCookbooks(final FileSystem fs) {
 
-        Preconditions.checkNotNull(ctx);
-
-        final FileSystem fs = ctx.fs;
+        Preconditions.checkNotNull(fs);
 
         final Path buckarooFolder = fs.getPath(
             System.getProperty("user.home"),
@@ -122,7 +119,7 @@ public final class UpdateTasks {
 
         return CommonTasks.readConfigFile(configFilePath)
             .toObservable()
-            .compose(new PublishAndMergeTransformer<ReadConfigFileEvent, Event, Event>(event -> {
+            .compose(new PublishAndMergeTransformer<ReadConfigFileEvent, Notification, Event>(event -> {
 
                 final ImmutableMap<RemoteCookbook, Observable<Event>> updateCookbookTasks = event.config.cookbooks.stream()
                     .collect(ImmutableMap.toImmutableMap(i -> i, i -> updateCookbook(buckarooFolder, i)));

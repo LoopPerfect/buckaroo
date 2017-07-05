@@ -23,11 +23,6 @@ public final class FileDownloadedEvent extends Event {
     }
 
     @Override
-    public boolean equals(final Object obj) {
-        return super.equals(obj);
-    }
-
-    @Override
     public int hashCode() {
         return Objects.hash(source, destination) * super.hashCode();
     }

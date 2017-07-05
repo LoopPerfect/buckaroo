@@ -14,12 +14,8 @@ import io.reactivex.Single;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.loopperfect.buckaroo.MoreLists.concat;
 
 public final class InstallTasks {
 

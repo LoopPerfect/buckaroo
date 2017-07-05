@@ -2,8 +2,6 @@ package com.loopperfect.buckaroo;
 
 import org.junit.Test;
 
-import java.util.Objects;
-
 import static org.junit.Assert.*;
 
 public final class PartialRecipeIdentifierTest {

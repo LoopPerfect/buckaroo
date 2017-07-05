@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo;
 import org.junit.Test;
 
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.Optional;
 
 import static org.junit.Assert.*;
