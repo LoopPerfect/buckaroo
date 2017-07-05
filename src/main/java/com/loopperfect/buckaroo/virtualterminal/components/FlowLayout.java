@@ -7,10 +7,7 @@ import com.loopperfect.buckaroo.virtualterminal.Map2DUtils;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public final class FlowLayout implements Component {
 

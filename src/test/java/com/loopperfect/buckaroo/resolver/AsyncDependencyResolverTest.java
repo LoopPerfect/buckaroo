@@ -126,52 +126,54 @@ public final class AsyncDependencyResolverTest {
         latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 
-    private static Recipe createRecipeForResolveDeepTransitive(final int depth) throws Exception {
-        return Recipe.of(
-            "Example " + depth,
-            "https://github.com/org/example-" + depth,
-            ImmutableMap.of(
-                SemanticVersion.of(1),
-                RecipeVersion.of(
-                    RemoteArchive.of(
-                        new URL("https://github.com/org/example-" + depth + ".zip"),
-                        Hash.sha256("example" + depth)),
-                    Optional.empty(),
-                    DependencyGroup.of(depth > 0 ?
-                        ImmutableMap.of(
-                            RecipeIdentifier.of("org", "example-" + (depth - 1)), AnySemanticVersion.of()) :
-                        ImmutableMap.of()),
-                    Optional.empty())));
-    }
+    // TODO: Re-enable this test once the resolver does not use recursion.
 
-    @Test
-    public void resolveDeepTransitive() throws Exception {
-
-        final RecipeSource recipeSource = recipeIdentifier -> {
-            try {
-                int index = Integer.parseInt(recipeIdentifier.recipe.name.split("-")[1]);
-                return Process.just(createRecipeForResolveDeepTransitive(index));
-            } catch (final Throwable e){
-                return Process.error(new FetchRecipeException("Could not find " + recipeIdentifier.encode() + ". "));
-            }
-        };
-
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        final int depth = 256; // 85
-
-        final ImmutableList<Dependency> toResolve = ImmutableList.of(
-            Dependency.of(RecipeIdentifier.of("org", "example-" + depth), AnySemanticVersion.of()));
-
-        AsyncDependencyResolver.resolve(recipeSource, toResolve).toObservable()
-            .subscribe(next -> {
-
-            }, error -> {
-                latch.countDown();
-            }, () -> {
-                latch.countDown();
-            });
-
-        latch.await(5000L, TimeUnit.MILLISECONDS);
-    }
+//    private static Recipe createRecipeForResolveDeepTransitive(final int depth) throws Exception {
+//        return Recipe.of(
+//            "Example " + depth,
+//            "https://github.com/org/example-" + depth,
+//            ImmutableMap.of(
+//                SemanticVersion.of(1),
+//                RecipeVersion.of(
+//                    RemoteArchive.of(
+//                        new URL("https://github.com/org/example-" + depth + ".zip"),
+//                        Hash.sha256("example" + depth)),
+//                    Optional.empty(),
+//                    DependencyGroup.of(depth > 0 ?
+//                        ImmutableMap.of(
+//                            RecipeIdentifier.of("org", "example-" + (depth - 1)), AnySemanticVersion.of()) :
+//                        ImmutableMap.of()),
+//                    Optional.empty())));
+//    }
+//
+//    @Test
+//    public void resolveDeepTransitive() throws Exception {
+//
+//        final RecipeSource recipeSource = recipeIdentifier -> {
+//            try {
+//                int index = Integer.parseInt(recipeIdentifier.recipe.name.split("-")[1]);
+//                return Process.just(createRecipeForResolveDeepTransitive(index));
+//            } catch (final Throwable e){
+//                return Process.error(new FetchRecipeException("Could not find " + recipeIdentifier.encode() + ". "));
+//            }
+//        };
+//
+//        final CountDownLatch latch = new CountDownLatch(1);
+//
+//        final int depth = 256; // 85
+//
+//        final ImmutableList<Dependency> toResolve = ImmutableList.of(
+//            Dependency.of(RecipeIdentifier.of("org", "example-" + depth), AnySemanticVersion.of()));
+//
+//        AsyncDependencyResolver.resolve(recipeSource, toResolve).toObservable()
+//            .subscribe(next -> {
+//
+//            }, error -> {
+//                latch.countDown();
+//            }, () -> {
+//                latch.countDown();
+//            });
+//
+//        latch.await(5000L, TimeUnit.MILLISECONDS);
+//    }
 }

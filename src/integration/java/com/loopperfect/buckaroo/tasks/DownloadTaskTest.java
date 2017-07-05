@@ -130,22 +130,4 @@ public final class DownloadTaskTest {
 
         assertTrue(Files.exists(target));
     }
-
-    @Test
-    public void fetchesContentLengthFromGitHub() throws Exception {
-
-        final FileSystem fs = Jimfs.newFileSystem();
-
-        final Path target = fs.getPath("master.zip").toAbsolutePath();
-
-        final List<DownloadProgress> events = DownloadTask.download(
-            new URL("https://github.com/electronicarts/EASTL/archive/master.zip"),
-            target)
-            .toList()
-            .blockingGet();
-
-        assertTrue(Files.exists(target));
-        assertTrue(events.stream().anyMatch(DownloadProgress::hasKnownContentLength));
-        assertTrue(events.stream().anyMatch(x -> x.progress() > 0f && x.progress() < 1f));
-    }
 }
