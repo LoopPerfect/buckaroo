@@ -16,6 +16,7 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
 
+import java.util.Comparator;
 import java.util.List;
 
 public final class GenericEventRenderer {
@@ -119,6 +120,7 @@ public final class GenericEventRenderer {
             ListLayout.of(
                 event.dependencies.dependencies.entrySet()
                     .stream()
+                    .sorted(Comparator.comparing(x -> x.getKey().encode()))
                     .map(x -> FlowLayout.of(
                         render(x.getKey()),
                         Text.of(" = "),
