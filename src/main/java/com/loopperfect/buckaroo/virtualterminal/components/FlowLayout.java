@@ -8,6 +8,7 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public final class FlowLayout implements Component {
 
@@ -17,6 +18,24 @@ public final class FlowLayout implements Component {
     private FlowLayout(final TerminalPixel backgroundPixel, final ImmutableList<Component> children) {
         this.backgroundPixel = Preconditions.checkNotNull(backgroundPixel);
         this.children = Preconditions.checkNotNull(children);
+    }
+
+    public boolean equals(final FlowLayout other) {
+        Preconditions.checkNotNull(other);
+        return this == other || Objects.equals(backgroundPixel, other.backgroundPixel) &&
+            Objects.equals(children, other.children);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj || obj != null &&
+            obj instanceof FlowLayout &&
+            equals((FlowLayout)obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(backgroundPixel, children);
     }
 
     @Override

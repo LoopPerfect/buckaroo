@@ -2,7 +2,10 @@ package com.loopperfect.buckaroo.virtualterminal;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import org.javatuples.Triplet;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public final class TerminalPixel {
@@ -80,23 +83,32 @@ public final class TerminalPixel {
             .toString();
     }
 
+    private static final ThreadLocal<Map<Triplet<UnicodeChar, Color, Color>, TerminalPixel>> instanceCache = ThreadLocal.withInitial(HashMap::new);
+
     public static TerminalPixel of(final UnicodeChar character, final Color foreground, final Color background) {
-        return new TerminalPixel(character, foreground, background);
+        final Triplet<UnicodeChar, Color, Color> cacheKey = Triplet.with(character, foreground, background);
+        final Map<Triplet<UnicodeChar, Color, Color>, TerminalPixel> cache = instanceCache.get();
+        if (cache.containsKey(cacheKey)) {
+            return cache.get(cacheKey);
+        }
+        final TerminalPixel terminalPixel = new TerminalPixel(character, foreground, background);
+        cache.putIfAbsent(cacheKey, terminalPixel);
+        return terminalPixel;
     }
 
     public static TerminalPixel of(final UnicodeChar character) {
-        return new TerminalPixel(character, Color.DEFAULT, Color.TRANSPARENT);
+        return of(character, Color.DEFAULT, Color.TRANSPARENT);
     }
 
     public static TerminalPixel of(final char character) {
-        return new TerminalPixel(UnicodeChar.of(character), Color.DEFAULT, Color.TRANSPARENT);
+        return of(UnicodeChar.of(character), Color.DEFAULT, Color.TRANSPARENT);
     }
 
     public static TerminalPixel fill(final Color bg) {
-        return new TerminalPixel(UnicodeChar.of(' '), Color.DEFAULT, bg);
+        return of(UnicodeChar.of(' '), Color.DEFAULT, bg);
     }
 
     public static TerminalPixel fill(final Color bg, char c) {
-        return new TerminalPixel(UnicodeChar.of(c), Color.DEFAULT, bg);
+        return of(UnicodeChar.of(c), Color.DEFAULT, bg);
     }
 }

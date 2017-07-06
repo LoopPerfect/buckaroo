@@ -3,6 +3,8 @@ package com.loopperfect.buckaroo.virtualterminal.components;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.virtualterminal.*;
 
+import java.util.Objects;
+
 public final class ProgressBar implements Component {
 
     private final float progress;
@@ -14,6 +16,25 @@ public final class ProgressBar implements Component {
         this.progress = progress;
         this.fill = fill;
         this.background = background;
+    }
+
+    public boolean equals(final ProgressBar other) {
+        Preconditions.checkNotNull(other);
+        return this == other || Objects.equals(progress, other.progress) &&
+            Objects.equals(fill, other.fill) &&
+            Objects.equals(background, other.background);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj || obj != null &&
+            obj instanceof ProgressBar &&
+            equals((ProgressBar)obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(progress, fill, background);
     }
 
     @Override

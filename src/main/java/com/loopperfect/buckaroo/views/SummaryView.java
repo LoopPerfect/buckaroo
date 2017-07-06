@@ -9,10 +9,7 @@ import com.loopperfect.buckaroo.Notification;
 import com.loopperfect.buckaroo.events.TouchFileEvent;
 import com.loopperfect.buckaroo.events.WriteFileEvent;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
-import com.loopperfect.buckaroo.virtualterminal.components.Component;
-import com.loopperfect.buckaroo.virtualterminal.components.ListLayout;
-import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
-import com.loopperfect.buckaroo.virtualterminal.components.Text;
+import com.loopperfect.buckaroo.virtualterminal.components.*;
 import io.reactivex.Observable;
 
 import java.util.stream.Stream;
@@ -49,18 +46,21 @@ public final class SummaryView {
         final Observable<ImmutableList<Component>> resolvedDependencies = events
             .ofType(ResolvedDependenciesEvent.class)
             .map(GenericEventRenderer::render)
+            .map(CachedComponent::of)
             .startWith(StackLayout.of())
+            .map(CachedComponent::of)
             .map(ImmutableList::of);
-
 
         final Observable<ImmutableList<Component>> notifications = events
             .ofType(Notification.class)
             .map(GenericEventRenderer::render)
+            .map(CachedComponent::of)
             .scan(ImmutableList.of(), MoreLists::append);
 
         return Observable.combineLatest(
             modifiedSummary, resolvedDependencies, notifications, MoreLists::concat)
             .map(StackLayout::of)
+            .map(CachedComponent::of)
             .cast(Component.class);
     }
 }

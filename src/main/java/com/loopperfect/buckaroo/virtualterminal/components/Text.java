@@ -5,6 +5,7 @@ import com.loopperfect.buckaroo.virtualterminal.*;
 
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public final class Text implements Component {
 
@@ -22,6 +23,25 @@ public final class Text implements Component {
         this.text = Preconditions.checkNotNull(text);
         this.foreground = Preconditions.checkNotNull(foreground);
         this.background = Preconditions.checkNotNull(background);
+    }
+
+    public boolean equals(final Text other) {
+        Preconditions.checkNotNull(other);
+        return this == other || Objects.equals(text, other.text) &&
+            Objects.equals(foreground, other.foreground) &&
+            Objects.equals(background, other.background);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj || obj != null &&
+            obj instanceof Text &&
+            equals((Text)obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(text, foreground, background);
     }
 
     @Override

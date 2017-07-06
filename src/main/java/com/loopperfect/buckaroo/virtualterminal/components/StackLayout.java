@@ -8,6 +8,7 @@ import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public final class StackLayout implements Component {
 
@@ -17,6 +18,24 @@ public final class StackLayout implements Component {
     private StackLayout(final TerminalPixel background, final ImmutableList<Component> components) {
         this.background = Preconditions.checkNotNull(background);
         this.components = Preconditions.checkNotNull(components);
+    }
+
+    public boolean equals(final StackLayout other) {
+        Preconditions.checkNotNull(other);
+        return this == other || Objects.equals(background, other.background) &&
+            Objects.equals(components, other.components);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj || obj != null &&
+            obj instanceof StackLayout &&
+            equals((StackLayout)obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(background, components);
     }
 
     @Override

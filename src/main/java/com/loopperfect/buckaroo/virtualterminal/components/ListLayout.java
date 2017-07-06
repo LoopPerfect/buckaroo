@@ -24,7 +24,7 @@ public final class ListLayout implements Component {
 
     public boolean equals(final ListLayout other) {
         Preconditions.checkNotNull(other);
-        return Objects.equals(elements, other.elements);
+        return this == other || Objects.equals(elements, other.elements);
     }
 
     @Override

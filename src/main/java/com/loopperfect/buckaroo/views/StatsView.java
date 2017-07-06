@@ -26,14 +26,14 @@ public final class StatsView {
                     b.getValue0().identifier,
                     ((DownloadProgress)b.getValue1()).downloaded)));
 
-        final Observable<Long> downloaded = downloads.map(p->
+        final Observable<Long> downloaded = downloads.map(p ->
             p.values()
                 .stream()
                 .reduce(0L, (a, b) -> a + b));
 
         final Observable<Long> timer = Observable
             .interval(1, TimeUnit.SECONDS)
-            .map(x->1)
+            .map(x -> 1)
             .scan(0L, (a, b) -> a + b)
             .takeUntil(events.last(Notification.of("done")).toObservable());
 
@@ -41,10 +41,10 @@ public final class StatsView {
 
         return Observable.combineLatest(
             timer
-                .map(t-> t + "s ")
+                .map(t -> t + "s ")
                 .startWith(""),
             downloaded
-                .map(d-> d/1024 + "kb ")
+                .map(d -> d/1024 + "kb ")
                 .startWith(""),
             eventsCounter
                 .map(c -> c + " events")
