@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.Notification;
 import io.reactivex.Observable;
 
 import java.nio.file.FileSystem;
@@ -18,6 +19,7 @@ public final class UpgradeTasks {
 
         return Observable.concat(
             ResolveTasks.resolveDependenciesInWorkingDirectory(fs),
-            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs));
+            InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs),
+            Observable.just(Notification.of("Upgrade complete")));
     }
 }

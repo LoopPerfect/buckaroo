@@ -10,6 +10,7 @@ import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
+import com.loopperfect.buckaroo.tasks.UpdateProgressEvent;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
@@ -17,6 +18,8 @@ import com.loopperfect.buckaroo.virtualterminal.components.*;
 import org.jparsec.internal.util.Lists;
 
 import java.util.List;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public final class GenericEventRenderer {
 
@@ -109,7 +112,7 @@ public final class GenericEventRenderer {
                         render(x.getKey()),
                         Text.of(" = "),
                         Text.of(x.getValue().getValue0().encode(), Color.GREEN)))
-                    .collect(ImmutableList.toImmutableList())));
+                    .collect(toImmutableList())));
     }
 
     public static Component render(final DependencyInstallationEvent event) {
@@ -119,6 +122,20 @@ public final class GenericEventRenderer {
                 Text.of("Downloading: ", Color.GRAY),
                 render(event.progress.getValue0().identifier)),
             ListLayout.of(render(event.progress.getValue1())));
+    }
+
+    public static Component render(final UpdateProgressEvent event) {
+        Preconditions.checkNotNull(event);
+        return StackLayout.of(
+            Text.of("updating cookbooks:"),
+            ListLayout.of(
+                event.progress.entrySet().stream().map(
+                    e-> FlowLayout.of(
+                            Text.of(e.getKey().url, Color.MAGENTA),
+                            Text.of(" : "),
+                            render(e.getValue()))
+                ).collect(toImmutableList())
+        ));
     }
 
     public static Component render(final FetchGithubProgressEvent event) {
@@ -196,6 +213,9 @@ public final class GenericEventRenderer {
         }
         if (event instanceof InitProjectEvent) {
             return render((InitProjectEvent) event);
+        }
+        if (event instanceof UpdateProgressEvent) {
+            return render(((UpdateProgressEvent) event));
         }
         return Text.of(event.toString());
     }
