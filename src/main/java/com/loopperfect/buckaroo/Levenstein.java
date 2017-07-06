@@ -11,9 +11,14 @@ import java.util.stream.IntStream;
  * Original implementation by Ar90n
  * Created by gaetano on 04/07/17.
  */
-public class Levenstein {
+public final class Levenstein {
+
+    private Levenstein() {
+
+    }
 
     private static int calcDistance(final String x, final String y) {
+
         Preconditions.checkNotNull(x);
         Preconditions.checkNotNull(y);
 
@@ -36,11 +41,11 @@ public class Levenstein {
 
     public static <T> Iterable<T> findClosest(final ImmutableList<T> candidates, final T misspelled) {
 
-        Comparator<Pair<T,Integer>> byDistance = Comparator.comparing(Pair::getValue1);
+        final Comparator<Pair<T,Integer>> byDistance = Comparator.comparing(Pair::getValue1);
 
         return () -> candidates
             .stream()
-            .map(c-> Pair.with(c, calcDistance(c.toString(), misspelled.toString())))
+            .map(c -> Pair.with(c, calcDistance(c.toString(), misspelled.toString())))
             .sorted(byDistance)
             .map(Pair::getValue0)
             .iterator();

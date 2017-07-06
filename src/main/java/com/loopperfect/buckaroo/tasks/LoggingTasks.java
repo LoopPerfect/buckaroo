@@ -56,14 +56,11 @@ public final class LoggingTasks {
 
         return Single.fromCallable(() -> {
 
-            final String charset = "UTF-8";
-
             final HttpClient httpClient = HttpClientBuilder.create().build();
 
             final HttpPost request = new HttpPost(url.toURI());
             final StringEntity params = new StringEntity(data, ContentType.APPLICATION_JSON);
 
-            request.addHeader("Content-Type", "application/json; charset=" + charset);
             request.setEntity(params);
 
             final HttpResponse response = httpClient.execute(request);

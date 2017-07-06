@@ -64,16 +64,20 @@ public final class Main {
 
         final String rawCommand = String.join(" ", args);
 
+        final CountDownLatch latch = new CountDownLatch(2);
+
         // Send the command to the logging server, if present
-        LoggingTasks.log(fs, rawCommand).subscribe(
+        LoggingTasks.log(fs, rawCommand).timeout(3000L, TimeUnit.MILLISECONDS).subscribe(
             next -> {
                 // Do nothing
             },
             error -> {
                 // Do nothing
+                latch.countDown();
             },
             () -> {
                 // Do nothing
+                latch.countDown();
             });
 
         // Parse the command
@@ -108,8 +112,6 @@ public final class Main {
             AnsiConsole.systemInstall();
 
             final TerminalBuffer buffer = new TerminalBuffer();
-
-            final CountDownLatch latch = new CountDownLatch(1);
 
             components
                 .map(c -> c.render(TERMINAL_WIDTH))
