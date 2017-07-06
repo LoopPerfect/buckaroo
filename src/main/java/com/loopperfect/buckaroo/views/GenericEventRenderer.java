@@ -90,7 +90,7 @@ public final class GenericEventRenderer {
             components.add(Text.of("+", Color.GRAY));
         }
         components.add(Text.of(identifier.organization.name, Color.BLUE));
-        components.add(Text.of("/", Color.GRAY));
+        components.add(Text.of("/"));
         components.add(Text.of(identifier.recipe.name, Color.MAGENTA));
         return FlowLayout.of(components);
     }
