@@ -123,6 +123,7 @@ public final class Main {
                         scheduler.shutdown();
                         latch.countDown();
 
+
                         if(error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
 
@@ -141,6 +142,11 @@ public final class Main {
                             } else {
                                 buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
                             }
+                            return;
+                        }
+
+                        if(error instanceof CookbookUpdateException) {
+                            buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
                             return;
                         }
 
