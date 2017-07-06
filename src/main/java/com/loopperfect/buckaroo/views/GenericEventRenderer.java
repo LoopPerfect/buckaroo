@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.views;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.loopperfect.buckaroo.DependencyInstallationEvent;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.Notification;
@@ -15,7 +16,6 @@ import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalPixel;
 import com.loopperfect.buckaroo.virtualterminal.UnicodeChar;
 import com.loopperfect.buckaroo.virtualterminal.components.*;
-import org.jparsec.internal.util.Lists;
 
 import java.util.List;
 
@@ -34,22 +34,26 @@ public final class GenericEventRenderer {
 
     public static Component render(final TouchFileEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Touched " + event.path, Color.YELLOW);
+        return FlowLayout.of(Text.of("Touched "), Text.of(event.path.toString(), Color.YELLOW));
     }
 
     public static Component render(final WriteFileEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Wrote " + event.path, Color.YELLOW);
+        return FlowLayout.of(Text.of("Wrote "), Text.of(event.path.toString(), Color.YELLOW));
     }
 
     public static Component render(final DeleteFileEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Deleted " + event.path, Color.YELLOW);
+        return FlowLayout.of(Text.of("Deleted "), Text.of(event.path.toString(), Color.YELLOW));
     }
 
     public static Component render(final FileDownloadedEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Downloaded " + event.source + " to " + event.destination, Color.YELLOW);
+        return FlowLayout.of(
+            Text.of("Downloaded "),
+            Text.of(event.source.toString(), Color.YELLOW),
+            Text.of(" to "),
+            Text.of(event.destination.toString(), Color.YELLOW));
     }
 
     private static final TerminalPixel downloadProgressFill = TerminalPixel.of(
@@ -58,11 +62,17 @@ public final class GenericEventRenderer {
     private static final TerminalPixel downloadProgressBackground = TerminalPixel.of(
         UnicodeChar.of('\u2591'), Color.GRAY, Color.DEFAULT);
 
+    private static final ImmutableList<String> spinner = ImmutableList.of(
+        "\uD83C\uDF0D", "\uD83C\uDF0E", "\uD83C\uDF0F");
+
     public static Component render(final DownloadProgress event) {
         Preconditions.checkNotNull(event);
         return event.hasKnownContentLength() ?
             ProgressBar.of(event.progress(), downloadProgressFill, downloadProgressBackground) :
-            Text.of("Downloaded " + (event.downloaded / 1024L) + "kb");
+            FlowLayout.of(
+                Text.of("Downloaded "),
+                Text.of((event.downloaded / 1024L) + "kb", Color.GREEN),
+                Text.of(" " + spinner.get(((int)(event.downloaded / (1024L))) % 1024)));
     }
 
     public static Component render(final ReadLockFileEvent event) {
@@ -82,12 +92,16 @@ public final class GenericEventRenderer {
 
     public static Component render(final FileUnzipEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Unzipping " + event.source + " to " + event.target, Color.YELLOW);
+        return FlowLayout.of(
+            Text.of("Unzipping "),
+            Text.of(event.source.toString(), Color.YELLOW),
+            Text.of(" to "),
+            Text.of(event.target.toString(), Color.YELLOW));
     }
 
     public static Component render(final RecipeIdentifier identifier) {
         Preconditions.checkNotNull(identifier);
-        final List<Component> components = Lists.arrayList();
+        final List<Component> components = Lists.newArrayList();
         if (identifier.source.isPresent()) {
             components.add(Text.of(identifier.source.get().name, Color.CYAN));
             components.add(Text.of("+", Color.GRAY));
@@ -149,7 +163,12 @@ public final class GenericEventRenderer {
 
     public static Component render(final FileHashEvent event) {
         Preconditions.checkNotNull(event);
-        return Text.of("Hashed " + event.file + " \n(" + event.sha256 + ")", Color.BLUE);
+        return FlowLayout.of(
+            Text.of("Hashed "),
+            Text.of(event.file.toString(), Color.YELLOW),
+            Text.of(" ("),
+            Text.of(event.sha256.toString(), Color.BLUE),
+            Text.of(")"));
     }
 
     public static Component render(final DeleteFileIfExistsEvent event) {
