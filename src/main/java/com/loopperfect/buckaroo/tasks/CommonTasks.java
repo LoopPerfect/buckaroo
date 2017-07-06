@@ -7,6 +7,7 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.buck.BuckFile;
 import com.loopperfect.buckaroo.events.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
@@ -49,12 +50,16 @@ public final class CommonTasks {
             .subscribeOn(Schedulers.io());
     }
 
-    public static Single<ReadProjectFileEvent> readProjectFile(final Path path) {
+    public static Process<Event, Project> readProjectFile(final Path path) {
         Preconditions.checkNotNull(path);
-        return Single.fromCallable(() ->
+        final Observable<Either<Event, Project>> states = Observable.just(ReadProjectFileEvent.of())
+            .map(Either::left);
+        final Observable<Either<Event, Project>> result = Single.fromCallable(() ->
             Either.orThrow(Serializers.parseProject(EvenMoreFiles.read(path))))
-            .map(ReadProjectFileEvent::of)
-            .subscribeOn(Schedulers.io());
+            .subscribeOn(Schedulers.io())
+            .map(Either::<Event, Project>right)
+            .toObservable();
+        return Process.of(Observable.concat(states, result));
     }
 
     public static Single<DependencyLocks> readLockFile(final Path path) {

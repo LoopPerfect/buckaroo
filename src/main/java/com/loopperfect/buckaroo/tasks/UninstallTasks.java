@@ -3,9 +3,11 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -22,13 +24,11 @@ public final class UninstallTasks {
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(identifiers);
 
-
         final Path projectFilePath = fs.getPath("buckaroo.json").toAbsolutePath();
 
-        return CommonTasks.readProjectFile(projectFilePath).toObservable()
-            .compose(new PublishAndMergeTransformer<ReadProjectFileEvent, Event, Event>(readProjectFileEvent -> {
-
-                final Project project = readProjectFileEvent.project;
+        return CommonTasks.readProjectFile(projectFilePath)
+            .result()
+            .flatMapObservable((Project project) -> {
 
                 final ImmutableList<Dependency> toRemove = project.dependencies.entries()
                     .stream()
@@ -46,12 +46,11 @@ public final class UninstallTasks {
 
                     // Write the new project file
                     CommonTasks.writeFile(Serializers.serialize(nextProject), projectFilePath, true)
-                        .toObservable()
-                        .cast(Event.class),
+                        .cast(Event.class)
+                        .toObservable(),
 
                     // Upgrade
-                    UpgradeTasks.upgradeInWorkingDirectory(fs)
-                );
-            }));
+                    UpgradeTasks.upgradeInWorkingDirectory(fs));
+            });
     }
 }

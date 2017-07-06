@@ -67,11 +67,9 @@ public final class InstallTasks {
                 return Process.chain(
 
                     // Read the project file
-                    Process.of(CommonTasks.readProjectFile(projectFilePath)),
+                    CommonTasks.readProjectFile(projectFilePath),
 
-                    (ReadProjectFileEvent readProjectFileEvent) -> {
-
-                        final Project project = readProjectFileEvent.project;
+                    (Project project) -> {
 
                         return Process.chain(
 
