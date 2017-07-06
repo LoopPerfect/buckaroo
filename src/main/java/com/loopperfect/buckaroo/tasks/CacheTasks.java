@@ -168,6 +168,6 @@ public final class CacheTasks {
 
         return Observable.concat(
             GitTasks.ensureCloneAndCheckout(gitCommit, cachePath, true)
-            ,copy);
+            , copy);
     }
 }

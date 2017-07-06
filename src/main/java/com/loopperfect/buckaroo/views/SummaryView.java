@@ -38,7 +38,7 @@ public final class SummaryView {
                 .concat(list.stream(), Stream.of(event))
                 .collect(toImmutableList()))
             .map((ImmutableList<Event> modifiedFiles) -> modifiedFiles.isEmpty() ?
-                ImmutableList.of(Text.of("No files were modified. ")) :
+                ImmutableList.of() :
                 ImmutableList.of(
                         Text.of("Files modified (" + modifiedFiles.size() + "): "),
                             ListLayout.of(

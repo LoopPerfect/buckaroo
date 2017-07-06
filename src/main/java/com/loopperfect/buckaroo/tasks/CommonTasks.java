@@ -221,7 +221,7 @@ public final class CommonTasks {
 
             // Verify the hash
             ensureHash(target, remoteFile.sha256)
-        ).subscribeOn(Schedulers.io());
+        );
     }
 
     public static Observable<Event> downloadRemoteArchive(final FileSystem fs, final RemoteArchive remoteArchive, final Path targetDirectory) {
