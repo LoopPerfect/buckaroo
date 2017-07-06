@@ -41,10 +41,10 @@ public final class StatsView {
 
         return Observable.combineLatest(
             timer
-                .map(t-> t + "s ")
+                .map(t -> t + "s ")
                 .startWith(""),
             downloaded
-                .map(d-> d/1024 + "kb ")
+                .map(d -> d/1024 + "kb ")
                 .startWith(""),
             eventsCounter
                 .map(c -> c + " events")

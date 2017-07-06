@@ -59,12 +59,10 @@ public final class ProgressView {
             .scan(ImmutableList.of(), MoreLists::append);
 
         final Observable<Component> total = Observable.combineLatest(
-            installing.map(ImmutableList::size).filter(x->x>0),
+            installing.map(ImmutableList::size).filter(x -> x > 0),
             installed.map(ImmutableList::size),
             (a, b) -> (Component)Text.of(
-                "installed: "+ b + "/" + a,
-                Color.YELLOW
-        ));
+                "Installed: " + b + "/" + a));
 
 
         Comparator<Triplet<DependencyLock, Event, Integer>> comp = Comparator.comparingInt(Triplet::getValue2);
