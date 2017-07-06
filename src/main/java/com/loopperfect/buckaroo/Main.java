@@ -87,27 +87,28 @@ public final class Main {
             final CLICommand command = commandParser.parse(rawCommand);
 
             final Observable<Event> task = command.routine().apply(fs)
-                .observeOn(scheduler)
-                .subscribeOn(scheduler);
+                 .subscribeOn(scheduler);
 
             final Observable<Component> components = task
-                .observeOn(scheduler)
                 .subscribeOn(scheduler)
-                .publish(upstream -> Observable.combineLatest(
-                    ProgressView.render(upstream)
-                        .subscribeOn(Schedulers.computation())
-                        .startWith(StackLayout.of())
-                        .concatWith(Observable.just(StackLayout.of())),
-                    StatsView.render(upstream)
-                        .subscribeOn(Schedulers.computation()),
-                    SummaryView.render(upstream)
-                        .takeLast(1)
-                        .startWith(StackLayout.of())
-                        .subscribeOn(Schedulers.computation()),
-                    (x, y, z) -> (Component)StackLayout.of(x, y, z)))
+                .publish(upstream->
+                        Observable.combineLatest(
+                            ProgressView.render(upstream)
+                                .startWith(StackLayout.of())
+                                .subscribeOn(Schedulers.computation())
+                                .concatWith(Observable.just(StackLayout.of())),
+                            StatsView.render(upstream)
+                                .subscribeOn(Schedulers.computation())
+                                .skip(300, TimeUnit.MILLISECONDS)
+                                .startWith(StackLayout.of()),
+                            SummaryView.render(upstream)
+                                .takeLast(1)
+                                .startWith(StackLayout.of()),
+                        (x, y, z) -> (Component)StackLayout.of(x, y, z)))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
-                .distinctUntilChanged();
+                .distinctUntilChanged()
+                .doOnNext(x->{ System.gc(); }); // that's a bad idea... TODO: interning
 
             AnsiConsole.systemInstall();
 
