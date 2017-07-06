@@ -72,10 +72,10 @@ public final class GitHubRecipeSource implements RecipeSource {
                         (FileUnzipEvent fileUnzipEvent) -> Process.chain(
 
                             // 4. Read the project file
-                            Process.of(CommonTasks.readProjectFile(projectFilePath)),
+                            CommonTasks.readProjectFile(projectFilePath),
 
                             // 5. Generate a recipe version from the project file and hash
-                            (ReadProjectFileEvent readProjectFileEvent) -> {
+                            (Project p) -> {
 
                                 final RemoteArchive remoteArchive = RemoteArchive.of(
                                     release,
@@ -84,8 +84,8 @@ public final class GitHubRecipeSource implements RecipeSource {
 
                                 return Process.just(RecipeVersion.of(
                                     remoteArchive,
-                                    readProjectFileEvent.project.target,
-                                    readProjectFileEvent.project.dependencies,
+                                    p.target,
+                                    p.dependencies,
                                     Optional.empty()));
                             }));
                 })

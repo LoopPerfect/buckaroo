@@ -183,14 +183,16 @@ public final class InstallExistingTasks {
                             projectDirectory.resolve(".buckconfig.local"),
                             true).toObservable(),
 
-                        CommonTasks.readProjectFile(projectDirectory.resolve("buckaroo.json")).flatMapObservable(
+                        CommonTasks.readProjectFile(projectDirectory.resolve("buckaroo.json"))
+                            .result()
+                            .flatMapObservable(
 
                             // Generate the BUCKAROO_DEPS file
-                            (ReadProjectFileEvent readProjectFileEvent) -> Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(event.locks.entries()
+                            (Project project) -> Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(event.locks.entries()
                                 .stream()
                                 .map(i -> ResolvedDependencyReference.of(i.identifier, i.origin.target))
                                 // The top-level BUCKAROO_DEPS should only contain immediate dependencies
-                                .filter(x -> readProjectFileEvent.project.dependencies.requires(x.identifier))
+                                .filter(x -> project.dependencies.requires(x.identifier))
                                 .collect(ImmutableList.toImmutableList())))
                                 .flatMap(content -> CommonTasks.writeFile(
                                     content, projectDirectory.resolve("BUCKAROO_DEPS"), true))

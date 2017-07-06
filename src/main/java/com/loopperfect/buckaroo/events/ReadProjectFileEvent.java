@@ -7,23 +7,27 @@ import com.loopperfect.buckaroo.Project;
 
 public final class ReadProjectFileEvent extends Event {
 
-    public final Project project;
+    private ReadProjectFileEvent() {
 
-    private ReadProjectFileEvent(final Project project) {
-        Preconditions.checkNotNull(project);
-        this.project = project;
     }
 
-    // TODO: equals, hashCode
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj || obj != null && obj instanceof ReadProjectFileEvent;
+    }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-            .add("project", project)
             .toString();
     }
 
-    public static ReadProjectFileEvent of(final Project project) {
-        return new ReadProjectFileEvent(project);
+    public static ReadProjectFileEvent of() {
+        return new ReadProjectFileEvent();
     }
 }

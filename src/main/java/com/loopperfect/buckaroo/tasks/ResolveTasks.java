@@ -32,15 +32,13 @@ public final class ResolveTasks {
 
         return p.chain(config -> {
 
-            final Process<Event, ReadProjectFileEvent> p2 =
-                Process.usingLastAsResult(CommonTasks.readProjectFile(projectFilePath).toObservable())
-                    .mapStates(x -> (Event)x);
+            final Process<Event, Project> p2 = CommonTasks.readProjectFile(projectFilePath);
 
-            return p2.chain((ReadProjectFileEvent event) -> {
+            return p2.chain((Project project) -> {
                 final RecipeSource recipeSource = RecipeSources.standard(projectDirectory.getFileSystem(), config.config);
 
                 return AsyncDependencyResolver.resolve(
-                    recipeSource, event.project.dependencies.entries()).map(ResolvedDependenciesEvent::of);
+                    recipeSource, project.dependencies.entries()).map(ResolvedDependenciesEvent::of);
 
             }).map(i -> DependencyLocks.of(i.dependencies)).chain((DependencyLocks dependencyLocks) -> {
 
