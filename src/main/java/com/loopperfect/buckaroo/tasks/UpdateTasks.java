@@ -58,7 +58,7 @@ public final class UpdateTasks {
 
                     // Ensure it is a folder
                     if (!Files.isDirectory(cookbookFolder)) {
-                        throw new IOException(cookbookFolder + " is not a directory. ");
+                        throw new CookbookUpdateException(cookbookFolder + " is not a directory. ");
                     }
 
                     // TODO: Find a work-around for the File API
@@ -72,7 +72,7 @@ public final class UpdateTasks {
 
                     final String url = repository.getConfig().getString("remote", "origin", "url");
                     if (!url.equalsIgnoreCase(cookbook.url)) {
-                        throw new IOException("The remote of the cookbook at " + cookbookFolder + " does not match what was expected. " +
+                        throw new CookbookUpdateException("The remote of the cookbook at " + cookbookFolder + " does not match what was expected. " +
                             "Expected " + cookbook.url + " but found " + url);
                     }
 
@@ -81,7 +81,9 @@ public final class UpdateTasks {
                     final Status status = Git.open(cookbookFolder.toFile()).status().call();
 
                     if (!status.isClean()) {
-                        throw new IOException(cookbookFolder + " is not clean. ");
+                        throw new CookbookUpdateException(cookbookFolder
+                            + " is not clean! This means you made changes to your cookbook folder."
+                            + " Commit your changes or discard them manually");
                     }
 
                     // Do a pull!
@@ -91,7 +93,7 @@ public final class UpdateTasks {
                     emitter.onNext(Notification.of(pullResult.getMergeResult().toString()+" "));
                 } else {
 
-                    emitter.onNext(Notification.of(cookbookFolder + " does not already exist. "));
+                    emitter.onNext(Notification.of(cookbookFolder + " does not exist... "));
 
                     // TODO: Find a work-around for the File API
 
@@ -132,8 +134,7 @@ public final class UpdateTasks {
                     .collect(toImmutableMap(
                         i -> i,
                         i -> updateCookbook(buckarooFolder, i)
-                            .onErrorReturn(e->Notification.of(e.toString()))
-                            .startWith(Notification.of("updating "+ i.name.toString()))));
+                             .startWith(Notification.of("updating "+ i.name.toString()))));
 
                 return MoreObservables.mergeMaps(updateCookbookTasks)
                     .map(UpdateProgressEvent::of);
