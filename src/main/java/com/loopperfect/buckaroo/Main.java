@@ -60,7 +60,7 @@ public final class Main {
         final Scheduler scheduler = Schedulers.from(executor);
         final FileSystem fs = FileSystems.getDefault();
 
-        RxJavaPlugins.setErrorHandler((Throwable e) -> {});
+        //RxJavaPlugins.setErrorHandler((Throwable e) -> {});
 
         final String rawCommand = String.join(" ", args);
 
@@ -100,6 +100,7 @@ public final class Main {
                             StatsView.render(upstream)
                                 .subscribeOn(Schedulers.computation())
                                 .skip(300, TimeUnit.MILLISECONDS)
+                                .takeUntil(upstream.lastElement().toObservable())
                                 .startWith(StackLayout.of()),
                             SummaryView.render(upstream)
                                 .takeLast(1)
@@ -107,8 +108,8 @@ public final class Main {
                         (x, y, z) -> (Component)StackLayout.of(x, y, z)))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
-                .distinctUntilChanged()
-                .doOnNext(x->{ System.gc(); }); // that's a bad idea... TODO: interning
+                .distinctUntilChanged();
+//                .doOnNext(x->{ System.gc(); }); // that's a bad idea... TODO: interning
 
             AnsiConsole.systemInstall();
 
