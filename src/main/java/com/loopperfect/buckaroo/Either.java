@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class Either<L, R> {
 
@@ -23,6 +24,14 @@ public final class Either<L, R> {
         this.which = which;
         this.l = l;
         this.r = r;
+    }
+
+    public boolean isLeft() {
+        return which == LeftOrRight.LEFT;
+    }
+
+    public boolean isRight() {
+        return which == LeftOrRight.RIGHT;
     }
 
     public Optional<L> left() {
@@ -49,14 +58,14 @@ public final class Either<L, R> {
             g.apply(r);
     }
 
-    public <T> Either<T, R> leftProjection(final Function<L, T> f) {
+    public <T> Either<T, R> leftMap(final Function<L, T> f) {
         Preconditions.checkNotNull(f);
         return which == LeftOrRight.LEFT ?
             Either.left(f.apply(l)) :
             Either.right(r);
     }
 
-    public <T> Either<L, T> rightProjection(final Function<R, T> f) {
+    public <T> Either<L, T> rightMap(final Function<R, T> f) {
         Preconditions.checkNotNull(f);
         return which == LeftOrRight.LEFT ?
             Either.left(l) :
@@ -91,7 +100,7 @@ public final class Either<L, R> {
             return false;
         }
 
-        final Either<L, R> other = (Either<L, R>) obj;
+        final Either<?, ?> other = (Either<?, ?>) obj;
 
         return Objects.equals(which, other.which) &&
             (which == LeftOrRight.LEFT ?
@@ -121,6 +130,16 @@ public final class Either<L, R> {
         return either.right().orElseThrow(() -> either.left().get());
     }
 
+    public static <L, R, E extends Throwable> R orThrow(final Either<L, R> either, final E exception) throws E {
+        Preconditions.checkNotNull(either);
+        return either.right().orElseThrow(() -> exception);
+    }
+
+    public static <L, R, E extends Throwable> R orThrow(final Either<L, R> either, final Supplier<E> exception) throws E {
+        Preconditions.checkNotNull(either);
+        return either.right().orElseThrow(exception);
+    }
+
     public static <T> T join(final Either<? extends T, ? extends T> either) {
         Preconditions.checkNotNull(either);
         return either.which == LeftOrRight.LEFT ? either.l : either.r;
@@ -133,5 +152,21 @@ public final class Either<L, R> {
         return either.which == LeftOrRight.LEFT ?
             f.apply(either.l) :
             g.apply(either.r);
+    }
+
+    public static <A, B, C> Function<Either<A, C>, Either<B, C>> liftLeft(final Function<A, B> f) {
+        Preconditions.checkNotNull(f);
+        return e -> {
+            Preconditions.checkNotNull(e);
+            return e.leftMap(f);
+        };
+    }
+
+    public static <A, B, C> Function<Either<C, A>, Either<C, B>> liftRight(final Function<A, B> f) {
+        Preconditions.checkNotNull(f);
+        return e -> {
+            Preconditions.checkNotNull(e);
+            return e.rightMap(f);
+        };
     }
 }

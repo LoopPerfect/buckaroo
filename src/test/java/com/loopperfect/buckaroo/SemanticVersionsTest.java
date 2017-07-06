@@ -1,6 +1,9 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableSet;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
+import com.loopperfect.buckaroo.versioning.SemanticVersionRange;
 
 import java.util.Optional;
 

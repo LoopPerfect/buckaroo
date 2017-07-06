@@ -22,7 +22,7 @@ public final class DependencyGroupSerializer implements JsonSerializer<Dependenc
         final JsonObject jsonObject = new JsonObject();
 
         for (final Dependency i : dependencyGroup.entries()) {
-            jsonObject.addProperty(i.project.encode(), i.versionRequirement.encode());
+            jsonObject.addProperty(i.project.encode(), i.requirement.encode());
         }
 
         return jsonObject;

@@ -2,6 +2,9 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.BoundedSemanticVersion;
+import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

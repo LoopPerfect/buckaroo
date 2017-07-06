@@ -1,8 +1,11 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.Help;
+import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.Notification;
+import io.reactivex.Observable;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class HelpCommand implements CLICommand {
 
@@ -21,8 +24,9 @@ public final class HelpCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return Help.routine;
+    public Function<FileSystem, Observable<Event>> routine() {
+        return fs -> Observable.just(Notification.of("Read the docs at: \n" +
+            "https://buckaroo.readthedocs.io/en/latest/cli.html"));
     }
 
     public static HelpCommand of() {

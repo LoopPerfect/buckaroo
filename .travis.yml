@@ -5,7 +5,7 @@ before_install:
   # Install Linuxbrew
   - test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git $HOME/.linuxbrew
   - PATH="$HOME/.linuxbrew/bin:$PATH"
-  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
+  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >> ~/.bash_profile
   - export MANPATH="$(brew --prefix)/share/man:$MANPATH"
   - export INFOPATH="$(brew --prefix)/share/info:$INFOPATH"
   - brew --version
@@ -16,8 +16,9 @@ before_install:
 
 script:
   - buck build :buckaroo
-  - buck test :buckaroo-unit
   - buck run :buckaroo-cli
+  - buck test :buckaroo-unit
+  - buck build :buckaroo-integration
 
 branches:
   except:

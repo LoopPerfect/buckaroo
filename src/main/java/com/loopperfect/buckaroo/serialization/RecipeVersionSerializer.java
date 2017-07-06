@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.loopperfect.buckaroo.DependencyGroup;
 import com.loopperfect.buckaroo.Either;
 import com.loopperfect.buckaroo.RecipeVersion;
 import com.loopperfect.buckaroo.RemoteFile;
@@ -34,8 +35,8 @@ public final class RecipeVersionSerializer implements JsonSerializer<RecipeVersi
             jsonObject.addProperty("target", recipeVersion.target.get());
         }
 
-        if (!recipeVersion.dependencies.isEmpty()) {
-            jsonObject.add("dependencies", context.serialize(recipeVersion.dependencies));
+        if (recipeVersion.dependencies.map(DependencyGroup::any).orElse(false)) {
+            jsonObject.add("dependencies", context.serialize(recipeVersion.dependencies.get()));
         }
 
         if (recipeVersion.buckResource.isPresent()) {

@@ -1,9 +1,9 @@
 {
-  "cookBooks": [
+  "cookbooks": [
     {
       "name": "buckaroo-recipes",
       "url": "git@github.com:loopperfect/buckaroo-recipes.git"
     }
   ],
-  "analytics": "https://logging-nikhedonia.rhcloud.com/:80"
+  "analytics": "https://analytics.buckaroo.pm"
 }

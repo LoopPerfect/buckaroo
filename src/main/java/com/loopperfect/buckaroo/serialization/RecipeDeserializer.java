@@ -3,7 +3,6 @@ package com.loopperfect.buckaroo.serialization;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.*;
-import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.Recipe;
 import com.loopperfect.buckaroo.RecipeVersion;
 import com.loopperfect.buckaroo.SemanticVersion;

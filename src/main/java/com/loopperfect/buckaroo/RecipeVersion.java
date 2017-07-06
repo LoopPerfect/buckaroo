@@ -10,13 +10,13 @@ public final class RecipeVersion {
 
     public final Either<GitCommit, RemoteArchive> source;
     public final Optional<String> target;
-    public final DependencyGroup dependencies;
+    public final Optional<DependencyGroup> dependencies;
     public final Optional<RemoteFile> buckResource;
 
     private RecipeVersion(
             final Either<GitCommit, RemoteArchive> source,
             final Optional<String> target,
-            final DependencyGroup dependencies,
+            final Optional<DependencyGroup> dependencies,
             final Optional<RemoteFile> buckResource) {
 
         this.source = Preconditions.checkNotNull(source);
@@ -59,35 +59,50 @@ public final class RecipeVersion {
                 .toString();
     }
 
+    public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target, final Optional<RemoteFile> buckResource) {
+        return new RecipeVersion(source, target, Optional.empty(), buckResource);
+    }
+
+    public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target,
+                                   final Optional<DependencyGroup> dependencies, final Optional<RemoteFile> buckResource) {
+        return new RecipeVersion(source, target, dependencies, buckResource);
+    }
+
     public static RecipeVersion of(final Either<GitCommit, RemoteArchive> source, final Optional<String> target,
                                    final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
-        return new RecipeVersion(source, target, dependencies, buckResource);
+        return new RecipeVersion(source, target, Optional.of(dependencies), buckResource);
     }
 
     public static RecipeVersion of(final RemoteArchive source, final Optional<String> target,
                                    final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
-        return new RecipeVersion(Either.right(source), target, dependencies, buckResource);
+        return new RecipeVersion(Either.right(source), target, Optional.of(dependencies), buckResource);
     }
 
     public static RecipeVersion of(final GitCommit source, final Optional<String> target,
             final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
-        return new RecipeVersion(Either.left(source), target, dependencies, buckResource);
+        return new RecipeVersion(Either.left(source), target, Optional.of(dependencies), buckResource);
     }
 
+    @Deprecated
     public static RecipeVersion of(final GitCommit source, final Optional<String> target,
                                    final DependencyGroup dependencies) {
-        return new RecipeVersion(Either.left(source), target, dependencies, Optional.empty());
+        return new RecipeVersion(Either.left(source), target, Optional.of(dependencies), Optional.empty());
     }
 
+    @Deprecated
     public static RecipeVersion of(final GitCommit source, final DependencyGroup dependencies) {
-        return new RecipeVersion(Either.left(source), Optional.empty(), dependencies, Optional.empty());
+        return new RecipeVersion(Either.left(source), Optional.empty(), Optional.of(dependencies), Optional.empty());
+    }
+
+    public static RecipeVersion of(final RemoteArchive source) {
+        return new RecipeVersion(Either.right(source), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     public static RecipeVersion of(final GitCommit source, final String target) {
-        return new RecipeVersion(Either.left(source), Optional.of(target), DependencyGroup.of(), Optional.empty());
+        return new RecipeVersion(Either.left(source), Optional.of(target), Optional.empty(), Optional.empty());
     }
 
     public static RecipeVersion of(final GitCommit source) {
-        return new RecipeVersion(Either.left(source), Optional.empty(), DependencyGroup.of(), Optional.empty());
+        return new RecipeVersion(Either.left(source), Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

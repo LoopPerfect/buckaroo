@@ -19,6 +19,10 @@ public final class UrlDeserializer implements JsonDeserializer<URL> {
         Preconditions.checkNotNull(type);
         Preconditions.checkNotNull(context);
 
+        if (jsonElement.getAsString() == null) {
+            throw new JsonParseException("URL must be a string");
+        }
+
         try {
             return new URL(jsonElement.getAsString());
         } catch (final MalformedURLException e) {

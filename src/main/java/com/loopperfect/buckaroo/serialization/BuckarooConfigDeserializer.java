@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.gson.*;
 import com.loopperfect.buckaroo.BuckarooConfig;
-import com.loopperfect.buckaroo.RemoteCookBook;
+import com.loopperfect.buckaroo.RemoteCookbook;
 
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -23,11 +23,11 @@ public final class BuckarooConfigDeserializer implements JsonDeserializer<Buckar
 
         final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-        final JsonArray cookBooksElement = jsonObject.getAsJsonArray("cookBooks");
+        final JsonArray cookBooksElement = jsonObject.getAsJsonArray("cookbooks");
 
-        final ImmutableList<RemoteCookBook> cookBooks = ImmutableList.copyOf(
+        final ImmutableList<RemoteCookbook> cookBooks = ImmutableList.copyOf(
             Streams.stream(cookBooksElement == null ? ImmutableList.of() : cookBooksElement)
-                .map(x -> (RemoteCookBook) context.deserialize(x, RemoteCookBook.class))
+                .map(x -> (RemoteCookbook) context.deserialize(x, RemoteCookbook.class))
                 .collect(Collectors.toList()));
 
         final Optional<URL> analyticsServer = jsonObject.has("analytics") ?

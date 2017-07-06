@@ -1,8 +1,11 @@
 package com.loopperfect.buckaroo.cli;
 
-import com.loopperfect.buckaroo.Unit;
-import com.loopperfect.buckaroo.io.IO;
-import com.loopperfect.buckaroo.routines.InstallExisting;
+import com.loopperfect.buckaroo.Event;
+import com.loopperfect.buckaroo.tasks.InstallExistingTasks;
+import io.reactivex.Observable;
+
+import java.nio.file.FileSystem;
+import java.util.function.Function;
 
 public final class InstallExistingCommand implements CLICommand {
 
@@ -21,8 +24,8 @@ public final class InstallExistingCommand implements CLICommand {
     }
 
     @Override
-    public IO<Unit> routine() {
-        return InstallExisting.routine;
+    public Function<FileSystem, Observable<Event>> routine() {
+        return InstallExistingTasks::installExistingDependenciesInWorkingDirectory;
     }
 
     public static InstallExistingCommand of() {

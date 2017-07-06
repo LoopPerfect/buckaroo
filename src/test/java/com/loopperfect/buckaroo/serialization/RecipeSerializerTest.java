@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -13,7 +15,7 @@ import static org.junit.Assert.assertEquals;
 
 public final class RecipeSerializerTest {
 
-    @org.junit.Test
+    @Test
     public void test1() {
 
         final Recipe recipe = Recipe.of(
@@ -42,7 +44,7 @@ public final class RecipeSerializerTest {
         assertEquals(Either.right(recipe), deserializedRecipe);
     }
 
-    @org.junit.Test
+    @Test
     public void test2() throws MalformedURLException {
 
         final Recipe recipe = Recipe.of(
