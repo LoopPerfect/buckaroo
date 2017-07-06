@@ -50,7 +50,9 @@ public final class UninstallTasks {
                         .cast(Event.class),
 
                     // Upgrade
-                    UpgradeTasks.upgradeInWorkingDirectory(fs)
+                    UpgradeTasks.upgradeInWorkingDirectory(fs),
+
+                    Observable.just(Notification.of("Uninstall complete"))
                 );
             }));
     }
