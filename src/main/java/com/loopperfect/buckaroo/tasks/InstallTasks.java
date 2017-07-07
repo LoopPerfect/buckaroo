@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
-import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.sources.RecipeSources;

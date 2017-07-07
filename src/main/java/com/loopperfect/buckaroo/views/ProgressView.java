@@ -26,9 +26,11 @@ public final class ProgressView {
 
     }
 
-    public static int ScoreEvent(Event e) {
-        if(e instanceof DependencyInstalledEvent) return 0;
-        if(e instanceof DownloadProgress) {
+    public static int ScoreEvent(final Event e) {
+        if (e instanceof DependencyInstalledEvent) {
+            return 0;
+        }
+        if (e instanceof DownloadProgress) {
             DownloadProgress p = (DownloadProgress)e;
             return (p.hasKnownContentLength()) ?
                 (int)(p.progress()*100) :
@@ -39,7 +41,7 @@ public final class ProgressView {
 
         return 120 -
             max(120, (int)(Instant.now().toEpochMilli() - e.date.toInstant().toEpochMilli()) / 1000);
-        // every event is more important than DownloadProgress but gets less important over time
+        // Every event is more important than DownloadProgress but gets less important over time
     }
 
     public static Observable<Component> render(final Observable<Event> events) {
@@ -52,9 +54,9 @@ public final class ProgressView {
 
         final Observable<ImmutableList<RecipeIdentifier>> installed = events
             .ofType(DependencyInstallationEvent.class)
-            .map(x->x.progress.getValue1())
+            .map(x -> x.progress.getValue1())
             .ofType(DependencyInstalledEvent.class)
-            .map(x->x.dependency.identifier)
+            .map(x -> x.dependency.identifier)
             .distinct()
             .scan(ImmutableList.of(), MoreLists::append);
 
@@ -64,16 +66,15 @@ public final class ProgressView {
             (a, b) -> (Component)Text.of(
                 "Installed: " + b + "/" + a));
 
-
-        Comparator<Triplet<DependencyLock, Event, Integer>> comp = Comparator.comparingInt(Triplet::getValue2);
+        final Comparator<Triplet<DependencyLock, Event, Integer>> comp = Comparator.comparingInt(Triplet::getValue2);
 
         final Observable<ImmutableList<Event>> installations = events
             .ofType(DependencyInstallationEvent.class)
             .map(x -> {
-                if(x.progress.getValue1() instanceof ResolvedDependenciesEvent) {
+                if (x.progress.getValue1() instanceof ResolvedDependenciesEvent) {
                     int count = ((ResolvedDependenciesEvent) x.progress.getValue1()).dependencies.dependencies.keySet().size();
                     return DependencyInstallationEvent.of(
-                        x.progress.removeFrom1().add(Notification.of("Resolved "+count+" dependencies"))
+                        x.progress.removeFrom1().add(Notification.of("Resolved " + count + " dependencies"))
                     );
                 }
                 return x;
@@ -85,31 +86,28 @@ public final class ProgressView {
                 .map(y -> Triplet.with(
                     (DependencyLock)y.getKey(),
                     (Event)y.getValue(),
-                    ScoreEvent((Event)y.getValue()) ))
+                    ScoreEvent((Event)y.getValue())))
                 .sorted(comp.reversed())
                 .limit(3)
-                .map(z->DependencyInstallationEvent.of(z.removeFrom2()))
+                .map(z -> DependencyInstallationEvent.of(z.removeFrom2()))
                 .collect(toImmutableList()));
 
-        final Observable<Component> progress = installations.map(x->
-            x.stream()
-                .map(GenericEventRenderer::render)
-                .collect(toImmutableList())
+        final Observable<Component> progress = installations.map(x -> x.stream()
+            .map(GenericEventRenderer::render)
+            .collect(toImmutableList())
         ).map(StackLayout::of);
 
         return Observable.combineLatest(
-
             Observable.combineLatest(
                 progress,
-                total, StackLayout::of
+                total,
+                StackLayout::of
             ).startWith(StackLayout.of()),
-
-            events
-                .filter(x-> !(x instanceof DependencyInstallationEvent))
-                .filter(x-> !(x instanceof ResolvedDependenciesEvent))
+            events.filter(x -> !(x instanceof DependencyInstallationEvent))
+                .filter(x -> !(x instanceof ResolvedDependenciesEvent))
                 .map(GenericEventRenderer::render),
-
-            StackLayout::of
-        );
+            StackLayout::of)
+            .map(x -> (Component)x)
+            .concatWith(Observable.just(StackLayout.of()));
     }
 }

@@ -399,4 +399,94 @@ public final class ProcessTest {
 
         latch.await(5000L, TimeUnit.MILLISECONDS);
     }
+
+    @Test
+    public void chainChecksDisposed() throws Exception {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final Observable<Either<Integer, Integer>> xs = Observable.create(emitter -> {
+            emitter.onNext(Either.left(1));
+            emitter.onNext(Either.left(2));
+            emitter.onNext(Either.left(3));
+            assertTrue(emitter.isDisposed());
+        });
+
+        final Process<Integer, Integer> p = Process.of(xs);
+        final Process<Integer, Integer> q = Process.chain(p, i -> Process.just(6, 4, 5));
+
+        q.states().take(2).subscribe(
+            x -> {
+
+            },
+            error -> {
+
+            },
+            () -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void chainNChecksDisposed() throws Exception {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final Observable<Either<Integer, Integer>> xs = Observable.create(emitter -> {
+            emitter.onNext(Either.left(1));
+            emitter.onNext(Either.left(2));
+            emitter.onNext(Either.left(3));
+            assertTrue(emitter.isDisposed());
+        });
+
+        final Process<Integer, Integer> p = Process.of(xs);
+        final Process<Integer, Integer> q = Process.chainN(p, i -> Process.just(6, 4, 5));
+
+        q.states().take(2).subscribe(
+            x -> {
+
+            },
+            error -> {
+
+            },
+            () -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void mergeChecksDisposed() throws Exception {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final Observable<Either<Integer, Integer>> xs = Observable.create(emitter -> {
+            emitter.onNext(Either.left(1));
+            emitter.onNext(Either.left(2));
+            emitter.onNext(Either.left(3));
+            assertTrue(emitter.isDisposed());
+        });
+
+        final Process<Integer, Integer> p = Process.of(xs);
+        final Process<Integer, Integer> q = Process.of(xs);
+
+        final Process<Integer, Integer> r = Process.merge(p, q)
+            .map(x -> x.getValue0() + x.getValue1());
+
+        r.states().take(3).subscribe(
+            x -> {
+
+            },
+            error -> {
+
+            },
+            () -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
 }

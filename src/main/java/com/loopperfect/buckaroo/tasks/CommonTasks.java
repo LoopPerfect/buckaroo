@@ -140,7 +140,7 @@ public final class CommonTasks {
 
     public static Single<Recipe> readRecipeFile(final Path path) {
         Preconditions.checkNotNull(path);
-        return Single.fromCallable(() ->
+        return MoreSingles.fromCallableWithDispose(() ->
             Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path))))
             .subscribeOn(Schedulers.io());
     }
@@ -254,19 +254,19 @@ public final class CommonTasks {
 
 
     public static ImmutableList<RecipeIdentifier> readCookBook(final Path path) throws IOException {
-        final FileSystem fs = path.getFileSystem();
-        System.out.println(path.resolve("recipes").toString());
         final Path recipeFolder = path.resolve("recipes");
-            return Files.find(recipeFolder, 2, (filePath, attr) -> true)
-                .filter(filePath -> filePath.toString().endsWith(".json") && !filePath.getParent().toString().endsWith("recipes"))
-                .map(filePath -> {
-                    final int parts = filePath.getNameCount();
-                    final String fileName = filePath.getName(parts - 1).toString();
-                    final String orgName = filePath.getName(parts - 2).toString();
-                    final String recipe = fileName.replace(".json", "");
-                    return RecipeIdentifier.parse(orgName+"/"+recipe);
-                }).filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(toImmutableList());
+        return Files.find(recipeFolder, 2, (filePath, attr) -> true)
+            .filter(filePath -> filePath.toString().endsWith(".json") &&
+                !filePath.getParent().toString().endsWith("recipes"))
+            .map(filePath -> {
+                final int parts = filePath.getNameCount();
+                final String fileName = filePath.getName(parts - 1).toString();
+                final String orgName = filePath.getName(parts - 2).toString();
+                final String recipe = fileName.replace(".json", "");
+                return RecipeIdentifier.parse(orgName + "/" + recipe);
+            })
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(toImmutableList());
     }
 }

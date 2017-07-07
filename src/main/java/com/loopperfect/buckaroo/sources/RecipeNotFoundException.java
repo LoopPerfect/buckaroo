@@ -17,6 +17,14 @@ public class RecipeNotFoundException extends Exception {
         this.identifier = Preconditions.checkNotNull(identifier);
     }
 
+    public RecipeNotFoundException(final RecipeSource source, final RecipeIdentifier identifier, final Throwable cause) {
+
+        super(cause);
+
+        this.source = Preconditions.checkNotNull(source);
+        this.identifier = Preconditions.checkNotNull(identifier);
+    }
+
     @Override
     public String getMessage() {
         return "RecipeNotFoundException: " + identifier.toString();

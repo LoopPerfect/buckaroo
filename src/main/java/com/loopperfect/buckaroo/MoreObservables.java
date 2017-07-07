@@ -58,8 +58,8 @@ public final class MoreObservables {
             tasks.entrySet()
                 .stream()
                 .map(entry -> entry.getValue()
-                    .map(x -> ImmutableMap.of(entry.getKey(), x))
-                ).collect(ImmutableList.toImmutableList())
+                    .map(x -> ImmutableMap.of(entry.getKey(), x)))
+                .collect(ImmutableList.toImmutableList())
         ).scan(initialValue, MoreMaps::merge);
     }
 }

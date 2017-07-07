@@ -41,7 +41,7 @@ public final class Levenstein {
 
     public static <T> Iterable<T> findClosest(final ImmutableList<T> candidates, final T misspelled) {
 
-        final Comparator<Pair<T,Integer>> byDistance = Comparator.comparing(Pair::getValue1);
+        final Comparator<Pair<T, Integer>> byDistance = Comparator.comparing(Pair::getValue1);
 
         return () -> candidates
             .stream()

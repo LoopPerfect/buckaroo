@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
-import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;

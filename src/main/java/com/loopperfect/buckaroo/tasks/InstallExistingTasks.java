@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.ReadLockFileEvent;
-import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import org.javatuples.Pair;

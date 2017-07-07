@@ -1,11 +1,8 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableTable;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.events.ReadConfigFileEvent;
 import io.reactivex.Observable;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.PullResult;
@@ -17,9 +14,7 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Collectors;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 public final class UpdateTasks {

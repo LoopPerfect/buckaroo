@@ -8,7 +8,6 @@ import com.loopperfect.buckaroo.tasks.CommonTasks;
 import io.reactivex.Single;
 
 import java.nio.file.Path;
-import java.util.Optional;
 
 public final class LazyCookbookRecipeSource implements RecipeSource {
 
@@ -24,7 +23,7 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
 
         Preconditions.checkNotNull(identifier);
 
-        return Process.of( Single.fromCallable(() -> {
+        final Single<Recipe> readRecipe = Single.fromCallable(() -> {
             if (identifier.source.isPresent()) {
                 throw new IllegalArgumentException(identifier.encode() + " should be found on " + identifier.source.get());
             }
@@ -33,13 +32,10 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
                 "recipes",
                 identifier.organization.name,
                 identifier.recipe.name + ".json");
-        }).flatMap( (pathToRecipe) -> CommonTasks.readRecipeFile(pathToRecipe)
-            .map(Optional::of)
-            .onErrorReturnItem(Optional.empty())
-            .map(x-> {
-                if(x.isPresent()) return x.get();
-                throw new RecipeNotFoundException(this, identifier);
-            })));
+        }).flatMap(CommonTasks::readRecipeFile);
+//            .onErrorResumeNext(error -> Single.error(new RecipeNotFoundException(this, identifier, error)));
+
+        return Process.of(readRecipe);
     }
 
     @Override

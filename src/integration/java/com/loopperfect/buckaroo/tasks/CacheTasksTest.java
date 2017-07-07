@@ -2,15 +2,14 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.hash.HashCode;
 import com.google.common.jimfs.Jimfs;
-import com.loopperfect.buckaroo.EvenMoreFiles;
-import com.loopperfect.buckaroo.Event;
-import com.loopperfect.buckaroo.GitCommit;
-import com.loopperfect.buckaroo.RemoteFile;
+import com.loopperfect.buckaroo.*;
 import org.junit.Test;
 
 import java.net.URL;
 import java.nio.file.*;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
@@ -95,5 +94,29 @@ public final class CacheTasksTest {
         CacheTasks.cloneAndCheckoutUsingCache(gitCommit, target2).toList().blockingGet();
 
         assertTrue(Files.exists(target1.resolve("BUCK")));
+    }
+
+    @Test
+    public void downloadUsingCacheFailsWhenTheHashIsIncorrect() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final RemoteFile remoteFile = RemoteFile.of(
+            new URL("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
+            HashCode.fromString("aaaaaaaaaaaaaa4f244296b0fba7a70166dea49c9e8d3eacda58d67a"));
+
+        final Path cachePath = CacheTasks.getCachePath(fs, remoteFile);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        CacheTasks.downloadToCache(fs, remoteFile).subscribe(
+            next -> {},
+            error -> {
+                assertTrue(error instanceof HashMismatchException);
+                latch.countDown();
+            },
+            () -> {});
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 }
