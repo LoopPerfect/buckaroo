@@ -16,7 +16,8 @@ import java.util.stream.IntStream;
 
 import static com.loopperfect.buckaroo.Either.left;
 import static com.loopperfect.buckaroo.Either.right;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public final class ProcessTest {
 
@@ -341,5 +342,61 @@ public final class ProcessTest {
 
         assertEquals(4, (int) c.result().blockingGet());
         assertEquals(4, (int) counter.value);
+    }
+
+    @Test
+    public void statesChecksDisposed() throws Exception {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final Observable<Either<Integer, Integer>> xs = Observable.create(emitter -> {
+            emitter.onNext(Either.left(1));
+            emitter.onNext(Either.left(2));
+            emitter.onNext(Either.left(3));
+            assertTrue(emitter.isDisposed());
+        });
+
+        final Process<Integer, Integer> p = Process.of(xs);
+
+        p.states().take(2).subscribe(
+            x -> {
+
+            },
+            error -> {
+
+            },
+            () -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void resultChecksDisposed() throws Exception {
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final Observable<Either<Integer, Integer>> xs = Observable.create(emitter -> {
+            emitter.onNext(Either.left(1));
+            emitter.onNext(Either.left(2));
+            emitter.onNext(Either.left(3));
+            assertTrue(emitter.isDisposed());
+        });
+
+        final Process<Integer, Integer> p = Process.of(xs);
+
+        p.result().toObservable().take(0).subscribe(
+            x -> {
+
+            },
+            error -> {
+
+            },
+            () -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 }
