@@ -3,11 +3,8 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.Process;
-import com.loopperfect.buckaroo.events.ReadProjectFileEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import io.reactivex.Observable;
-import io.reactivex.Single;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -50,7 +47,9 @@ public final class UninstallTasks {
                         .toObservable(),
 
                     // Upgrade
-                    UpgradeTasks.upgradeInWorkingDirectory(fs));
+                    UpgradeTasks.upgradeInWorkingDirectory(fs),
+                    Observable.just(Notification.of("Uninstall complete"))
+                );
             });
     }
 }
