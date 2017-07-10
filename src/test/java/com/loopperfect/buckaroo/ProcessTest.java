@@ -3,10 +3,12 @@ package com.loopperfect.buckaroo;
 import com.google.common.collect.ImmutableList;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 import org.javatuples.Pair;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -488,5 +490,106 @@ public final class ProcessTest {
             });
 
         latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void testMerge() throws Exception {
+
+        final Observable<Integer> a = Observable.just(1, 2, 3).concatWith(Observable.error(new Exception("a")));
+        final Observable<Integer> b = Observable.just(4, 5, 6).concatWith(Observable.error(new Exception("b")));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Observable.merge(a, b).subscribe(
+            x -> {},
+            e -> {
+                latch.countDown();
+            },
+            () -> {
+//                latch.countDown();
+            });
+
+        latch.await();
+    }
+
+    @Test
+    public void testCombineLatest() throws Exception {
+
+        final Observable<Integer> a = Observable.just(1, 2, 3)
+            .concatWith(Observable.error(new Exception("a")))
+            .subscribeOn(Schedulers.newThread());
+
+        final Observable<Integer> b = Observable.just(4, 5, 6)
+            .concatWith(Observable.error(new Exception("b")))
+            .subscribeOn(Schedulers.newThread());
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+//        Observable.combineLatest(
+//            ImmutableList.of(a, b),
+//            objects -> Arrays.stream(objects).mapToInt(x -> (Integer) x).sum()).subscribe(
+//            x -> {},
+//            e -> {
+//                latch.countDown();
+//            },
+//            () -> {
+//
+//            });
+
+        Observable.combineLatest(
+            a,
+            b,
+            (i, j) -> i + j).subscribe(
+            x -> {},
+            e -> {
+                latch.countDown();
+            },
+            () -> {
+
+            });
+
+        latch.await();
+    }
+
+    @Test
+    public void testScan() throws Exception {
+
+        final Observable<Integer> a = Observable.just(1, 2, 3).concatWith(Observable.error(new Exception("a")));
+        final Observable<Integer> b = Observable.just(4, 5, 6).concatWith(Observable.error(new Exception("b")));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        a.scanWith(() -> 100, (i, j) -> i + j).subscribe(
+            x -> {},
+            e -> {
+                latch.countDown();
+            },
+            () -> {
+
+            });
+
+        latch.await();
+    }
+
+    @Test
+    public void testAutoConnect() throws Exception {
+
+        final Observable<Integer> a = Observable.just(1, 2, 3)
+            .concatWith(Observable.error(new Exception("a")))
+            .publish()
+            .autoConnect(1);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Observable.merge(a, a).subscribe(
+            x -> {},
+            e -> {
+                latch.countDown();
+            },
+            () -> {
+
+            });
+
+        latch.await();
     }
 }

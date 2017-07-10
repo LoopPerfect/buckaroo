@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.views;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
@@ -15,18 +16,22 @@ public final class StatsView {
 
     private StatsView() {}
 
-    public static Observable<Component> render(final Observable<Event> events) {
+    public static Observable<Component> render(final Observable<Event> observable) {
 
-        Observable<ImmutableMap<RecipeIdentifier, Long>> downloads = events
+        Preconditions.checkNotNull(observable);
+
+        final Observable<Event> events = observable;//.share();
+
+        final Observable<ImmutableMap<RecipeIdentifier, Long>> downloads = events
             .ofType(DependencyInstallationEvent.class)
-            .map(e-> e.progress)
+            .map(e -> e.progress)
             .filter(p -> p.getValue1() instanceof DownloadProgress)
             .scan(ImmutableMap.of(), (a, b) ->
                 MoreMaps.merge(a, ImmutableMap.of(
                     b.getValue0().identifier,
                     ((DownloadProgress)b.getValue1()).downloaded)));
 
-        final Observable<Long> downloaded = downloads.map(p->
+        final Observable<Long> downloaded = downloads.map(p ->
             p.values()
                 .stream()
                 .reduce(0L, (a, b) -> a + b));

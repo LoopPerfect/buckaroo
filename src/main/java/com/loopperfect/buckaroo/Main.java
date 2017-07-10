@@ -18,6 +18,9 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.functions.Function;
+import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 import org.fusesource.jansi.AnsiConsole;
@@ -54,30 +57,28 @@ public final class Main {
         // so that it has a bounded thread-pool.
         // Take at least 2 threads to prevent dead-locks.
         // Take at most 12 to prevent too many downloads happening in parallel
-        final int threads = 10;
+        final int threads = Math.min(Math.max(2, Runtime.getRuntime().availableProcessors() * 2), 12);
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
         final Scheduler scheduler = Schedulers.from(executor);
         final FileSystem fs = FileSystems.getDefault();
 
-        //RxJavaPlugins.setErrorHandler((Throwable e) -> {});
-
         final String rawCommand = String.join(" ", args);
 
-        final CountDownLatch latch = new CountDownLatch(2);
+        final CountDownLatch loggingLatch = new CountDownLatch(1);
 
         // Send the command to the logging server, if present
-        LoggingTasks.log(fs, rawCommand).timeout(3000L, TimeUnit.MILLISECONDS).subscribe(
+        LoggingTasks.log(fs, rawCommand).timeout(10000L, TimeUnit.MILLISECONDS).subscribe(
             next -> {
                 // Do nothing
             },
             error -> {
                 // Do nothing
-                latch.countDown();
+                loggingLatch.countDown();
             },
             () -> {
                 // Do nothing
-                latch.countDown();
+                loggingLatch.countDown();
             });
 
         // Parse the command
@@ -86,34 +87,42 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(rawCommand);
 
-            final Observable<Event> task = command.routine().apply(fs)
-                 .subscribeOn(scheduler);
+            final Observable<Event> task = command.routine().apply(fs);
+//                .subscribeOn(scheduler)
+//                .publish();
 
             final Observable<Component> components = task
                 .subscribeOn(scheduler)
-                .publish(upstream->
-                        Observable.combineLatest(
-                            ProgressView.render(upstream)
-                                .startWith(StackLayout.of())
-                                .subscribeOn(Schedulers.computation())
-                                .concatWith(Observable.just(StackLayout.of())),
-                            StatsView.render(upstream)
-                                .subscribeOn(Schedulers.computation())
-                                .skip(300, TimeUnit.MILLISECONDS)
-                                .takeUntil(upstream.lastElement().toObservable())
-                                .startWith(StackLayout.of()),
+                .publish(observable -> {
+                    final Observable<Event> upstream = observable;
+                    return Observable.combineLatest(
+                        ImmutableList.of(
+//                            ProgressView.render(upstream)
+//                                .startWith(StackLayout.of())
+//                                .subscribeOn(Schedulers.computation())
+//                                .concatWith(Observable.just(StackLayout.of())),
+//                            StatsView.render(upstream)
+//                                .subscribeOn(Schedulers.computation())
+//                                .skip(300, TimeUnit.MILLISECONDS)
+//                                .takeUntil(upstream.lastElement().toObservable())
+//                                .startWith(StackLayout.of()),
                             SummaryView.render(upstream)
                                 .takeLast(1)
-                                .startWith(StackLayout.of()),
-                        (x, y, z) -> (Component)StackLayout.of(x, y, z)))
+                                .startWith(StackLayout.of())),
+                        (Function<Object[], Component>) objects -> StackLayout.of(Arrays.stream(objects)
+                            .map(x -> (Component)x)
+                            .collect(ImmutableList.toImmutableList())));
+                })
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
-                .distinctUntilChanged();
-//                .doOnNext(x->{ System.gc(); }); // that's a bad idea... TODO: interning
+                .distinctUntilChanged()
+                .doOnNext(x -> { System.gc(); }); // that's a bad idea... TODO: interning
 
             AnsiConsole.systemInstall();
 
             final TerminalBuffer buffer = new TerminalBuffer();
+
+            final CountDownLatch latch = new CountDownLatch(1);
 
             components
                 .map(c -> c.render(TERMINAL_WIDTH))
@@ -124,8 +133,7 @@ public final class Main {
                         scheduler.shutdown();
                         latch.countDown();
 
-
-                        if(error instanceof RecipeNotFoundException) {
+                        if (error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
 
                             final ImmutableList<Component> candidates =
@@ -134,7 +142,7 @@ public final class Main {
                                     .map(GenericEventRenderer::render)
                                     .collect(toImmutableList());
 
-                            if(candidates.size()>0) {
+                            if (candidates.size() > 0) {
                                 buffer.flip(
                                     StackLayout.of(
                                         Text.of("Error! \n" + error.toString(), Color.RED),
@@ -146,7 +154,7 @@ public final class Main {
                             return;
                         }
 
-                        if(error instanceof CookbookUpdateException) {
+                        if (error instanceof CookbookUpdateException) {
                             buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
                             return;
                         }
@@ -174,7 +182,10 @@ public final class Main {
                         latch.countDown();
                     });
 
+//            task.connect();
+
             latch.await();
+            loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
 
         } catch (final Throwable e) {
             System.out.println("Uh oh!");

@@ -148,10 +148,10 @@ public final class Process<S, T> {
     }
 
     public static <S> Process<S, S> usingLastAsResult(final Observable<S> observable) {
-        return new Process<>(Observable.concat(
-            observable.map(Either::left),
-            observable.lastOrError().map(Either::<S, S>right).toObservable()
-        ));
+        return new Process<>(Observable.concatDelayError(
+            ImmutableList.of(
+                observable.map(Either::left),
+                observable.lastOrError().map(Either::<S, S>right).toObservable())));
     }
 
     public static <S, T> Process<S, T> of(final Single<T> single) {
@@ -165,12 +165,12 @@ public final class Process<S, T> {
     }
 
     public static <A extends S, X extends S, S, T> Process<S, T> concat(final Process<A, ?> a, final Process<X, T> b) {
-        return of(Observable.concat(
-            a.states().map(Either::<S, T>left),
-            b.toObservable()
-                .delaySubscription(a.result().toObservable())
-                .map(x -> join(x, Either::left, Either::right))
-        ));
+        return of(Observable.concatDelayError(
+            ImmutableList.of(
+                a.states().map(Either::<S, T>left),
+                b.toObservable()
+                    .delaySubscription(a.result().toObservable())
+                    .map(x -> join(x, Either::left, Either::right)))));
     }
 
     public static <S, T> Process<S, T> concat(final Process<S, T> x, final Iterable<Process<S, T>> xs) {
@@ -198,6 +198,9 @@ public final class Process<S, T> {
             @Override
             public void subscribe(@NonNull final ObservableEmitter<Either<S, U>> emitter) throws Exception {
                 x.toObservable().subscribe((Either<S, T> next) -> {
+                    if (emitter.isDisposed()){
+                        return;
+                    }
                     if (result.isPresent()) {
                         emitter.onError(new ProcessException("A process must not have more than one result"));
                     } else {
@@ -214,6 +217,9 @@ public final class Process<S, T> {
                     }
                     emitter.onError(error);
                 }, () -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
                     if (result.isPresent()) {
                         final Observable<Either<S, U>> nextObservable = f.apply(result.get()).toObservable();
                         nextObservable.subscribe(emitter::onNext, emitter::onError, emitter::onComplete);
@@ -221,7 +227,7 @@ public final class Process<S, T> {
                         emitter.onError(new ProcessException("A process must have a result. "));
                     }
                 }, subscription -> {
-                    if (emitter.isDisposed() && !subscription.isDisposed()) {
+                    if (!emitter.isDisposed() && !subscription.isDisposed()) {
                         subscription.dispose();
                     }
                 });
@@ -287,7 +293,7 @@ public final class Process<S, T> {
 
         ys.add(previous);
 
-        return Process.of(Observable.merge(ys));
+        return Process.of(Observable.concat(ys));
     }
 
     /**
