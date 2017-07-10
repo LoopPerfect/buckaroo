@@ -30,6 +30,7 @@ public final class ProgressView {
         if (e instanceof DependencyInstalledEvent) {
             return 0;
         }
+
         if (e instanceof DownloadProgress) {
             DownloadProgress p = (DownloadProgress)e;
             return (p.hasKnownContentLength()) ?
