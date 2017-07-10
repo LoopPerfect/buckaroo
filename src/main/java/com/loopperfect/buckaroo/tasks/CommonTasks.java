@@ -140,7 +140,7 @@ public final class CommonTasks {
 
     public static Single<Recipe> readRecipeFile(final Path path) {
         Preconditions.checkNotNull(path);
-        return MoreSingles.fromCallableWithDispose(() ->
+        return Single.fromCallable(() ->
             Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path))))
             .subscribeOn(Schedulers.io());
     }

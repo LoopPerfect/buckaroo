@@ -6,14 +6,16 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.tasks.DependencyInstalledEvent;
 import com.loopperfect.buckaroo.tasks.DownloadProgress;
-import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.components.Component;
 import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
+import io.reactivex.functions.Function;
+import io.reactivex.schedulers.Schedulers;
 import org.javatuples.Triplet;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Comparator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -34,7 +36,7 @@ public final class ProgressView {
             DownloadProgress p = (DownloadProgress)e;
             return (p.hasKnownContentLength()) ?
                 (int)(p.progress()*100) :
-                min( (int) (p.downloaded / 1e6 * 30) , 30);
+                min((int) (p.downloaded / 1e6 * 30) , 30);
             // if we don't have any ContentLength we can't compute a progress, hence we cant show ProgressBars.
             // Let's prefer ProgressBars over 50% > to Downloaded X bytes notifications
         }
@@ -44,7 +46,11 @@ public final class ProgressView {
         // Every event is more important than DownloadProgress but gets less important over time
     }
 
-    public static Observable<Component> render(final Observable<Event> events) {
+    public static Observable<Component> render(final Observable<Event> observable) {
+
+        final Observable<Event> events = observable.publish()
+            .autoConnect(4)
+            .subscribeOn(Schedulers.computation());
 
         final Observable<ImmutableList<RecipeIdentifier>> installing = events
             .ofType(DependencyInstallationEvent.class)
@@ -63,8 +69,7 @@ public final class ProgressView {
         final Observable<Component> total = Observable.combineLatest(
             installing.map(ImmutableList::size).filter(x -> x > 0),
             installed.map(ImmutableList::size),
-            (a, b) -> (Component)Text.of(
-                "Installed: " + b + "/" + a));
+            (a, b) -> (Component)Text.of("Installed: " + b + "/" + a));
 
         final Comparator<Triplet<DependencyLock, Event, Integer>> comp = Comparator.comparingInt(Triplet::getValue2);
 
@@ -74,14 +79,13 @@ public final class ProgressView {
                 if (x.progress.getValue1() instanceof ResolvedDependenciesEvent) {
                     int count = ((ResolvedDependenciesEvent) x.progress.getValue1()).dependencies.dependencies.keySet().size();
                     return DependencyInstallationEvent.of(
-                        x.progress.removeFrom1().add(Notification.of("Resolved " + count + " dependencies"))
-                    );
+                        x.progress.removeFrom1().add(Notification.of("Resolved " + count + " dependencies")));
                 }
                 return x;
             })
             .scan(ImmutableMap.of(), (a, b) ->
-                MoreMaps.merge(a, ImmutableMap.of(b.progress.getValue0(), b.progress.getValue1()))
-            ).map(x-> x.entrySet()
+                MoreMaps.merge(a, ImmutableMap.of(b.progress.getValue0(), b.progress.getValue1())))
+            .map(x -> x.entrySet()
                 .stream()
                 .map(y -> Triplet.with(
                     (DependencyLock)y.getKey(),
@@ -94,19 +98,23 @@ public final class ProgressView {
 
         final Observable<Component> progress = installations.map(x -> x.stream()
             .map(GenericEventRenderer::render)
-            .collect(toImmutableList())
-        ).map(StackLayout::of);
+            .collect(toImmutableList()))
+            .map(StackLayout::of);
 
-        return Observable.combineLatest(
-            Observable.combineLatest(
-                progress,
-                total,
-                StackLayout::of
-            ).startWith(StackLayout.of()),
-            events.filter(x -> !(x instanceof DependencyInstallationEvent))
-                .filter(x -> !(x instanceof ResolvedDependenciesEvent))
-                .map(GenericEventRenderer::render),
-            StackLayout::of)
+        return Observable.combineLatestDelayError(
+            ImmutableList.of(
+                Observable.combineLatestDelayError(
+                    ImmutableList.of(progress, total),
+                    (Function<Object[], Component>) objects -> StackLayout.of(Arrays.stream(objects)
+                        .map(x -> (Component) x)
+                        .collect(ImmutableList.toImmutableList())))
+                    .startWith(StackLayout.of()),
+                events.filter(x -> !(x instanceof DependencyInstallationEvent))
+                    .filter(x -> !(x instanceof ResolvedDependenciesEvent))
+                    .map(GenericEventRenderer::render)),
+            objects -> StackLayout.of(Arrays.stream(objects)
+                .map(x -> (Component) x)
+                .collect(ImmutableList.toImmutableList())))
             .map(x -> (Component)x)
             .concatWith(Observable.just(StackLayout.of()));
     }

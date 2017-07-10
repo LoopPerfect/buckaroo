@@ -17,6 +17,8 @@ import static com.loopperfect.buckaroo.Either.*;
 
 public final class Process<S, T> {
 
+    private final Object lock = new Object();
+
     private final Observable<Either<S, T>> observable;
 
     private Process(final Observable<Either<S, T>> observable) {
@@ -37,7 +39,12 @@ public final class Process<S, T> {
                             return;
                         }
                         if (isComplete) {
-                            emitter.onError(new ProcessException("Process must push exactly one result. "));
+                            synchronized (lock) {
+                                if (emitter.isDisposed()) {
+                                    return;
+                                }
+                                emitter.onError(new ProcessException("Process must push exactly one result. "));
+                            }
                         } else {
                             if (next.isRight()) {
                                 isComplete = true;
@@ -47,10 +54,11 @@ public final class Process<S, T> {
                         }
                     },
                     error -> {
-                        if (emitter.isDisposed()) {
-                            return;
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(error);
+                            }
                         }
-                        emitter.onError(error);
                     },
                     () -> {
                         if (emitter.isDisposed()) {
@@ -71,7 +79,12 @@ public final class Process<S, T> {
                         return;
                     }
                     if (result.value.isPresent()) {
-                        emitter.onError(new ProcessException("Process must not push states after the result. "));
+                        synchronized (lock) {
+                            if (emitter.isDisposed()) {
+                                return;
+                            }
+                            emitter.onError(new ProcessException("Process must not push states after the result. "));
+                        }
                     } else {
                         if (next.isRight()) {
                             result.value = next.right();
@@ -79,10 +92,12 @@ public final class Process<S, T> {
                     }
                 },
                 error -> {
-                    if (emitter.isDisposed()) {
-                        return;
+                    synchronized (lock) {
+                        if (emitter.isDisposed()) {
+                            return;
+                        }
+                        emitter.onError(error);
                     }
-                    emitter.onError(error);
                 },
                 () -> {
                     if (emitter.isDisposed()) {
@@ -91,7 +106,12 @@ public final class Process<S, T> {
                     if (result.value.isPresent()) {
                         emitter.onSuccess(result.value.get());
                     } else {
-                        emitter.onError(new ProcessException("Process must push a result. "));
+                        synchronized (lock) {
+                            if (emitter.isDisposed()) {
+                                return;
+                            }
+                            emitter.onError(new ProcessException("Process must push a result. "));
+                        }
                     }
                 });
         });
@@ -184,6 +204,8 @@ public final class Process<S, T> {
         Objects.requireNonNull(x, "x is null");
         Objects.requireNonNull(f, "f is null");
 
+        final Object lock = new Object();
+
         final Observable<Either<S, U>> o = Observable.create(new ObservableOnSubscribe<Either<S, U>>() {
 
             private Optional<S> lastState = Optional.empty();
@@ -198,8 +220,16 @@ public final class Process<S, T> {
             @Override
             public void subscribe(@NonNull final ObservableEmitter<Either<S, U>> emitter) throws Exception {
                 x.toObservable().subscribe((Either<S, T> next) -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
                     if (result.isPresent()) {
-                        emitter.onError(new ProcessException("A process must not have more than one result"));
+                        synchronized (lock) {
+                            if (emitter.isDisposed()) {
+                                return;
+                            }
+                            emitter.onError(new ProcessException("A process must not have more than one result"));
+                        }
                     } else {
                         sendLastState(emitter);
                         if (next.isRight()) {
@@ -209,16 +239,35 @@ public final class Process<S, T> {
                         }
                     }
                 }, error -> {
+                    synchronized (lock) {
+                        if (!emitter.isDisposed()) {
+                            emitter.onError(error);
+                        }
+                    }
+                }, () -> {
                     if (emitter.isDisposed()) {
                         return;
                     }
-                    emitter.onError(error);
-                }, () -> {
                     if (result.isPresent()) {
                         final Observable<Either<S, U>> nextObservable = f.apply(result.get()).toObservable();
-                        nextObservable.subscribe(emitter::onNext, emitter::onError, emitter::onComplete);
+                        nextObservable.subscribe(next -> {
+                            emitter.onNext(next);
+                        }, error -> {
+                            synchronized (lock) {
+                                if (!emitter.isDisposed()) {
+                                    emitter.onError(error);
+                                }
+                            }
+                        }, () -> {
+                            emitter.onComplete();
+                        });
                     } else {
-                        emitter.onError(new ProcessException("A process must have a result. "));
+                        synchronized (lock) {
+                            if (emitter.isDisposed()) {
+                                return;
+                            }
+                            emitter.onError(new ProcessException("A process must have a result. "));
+                        }
                     }
                 }, subscription -> {
                     if (emitter.isDisposed() && !subscription.isDisposed()) {
@@ -311,6 +360,8 @@ public final class Process<S, T> {
         Preconditions.checkNotNull(a);
         Preconditions.checkNotNull(b);
 
+        final Object lock = new Object();
+
         final Observable<Either<S, Pair<T1, T2>>> o = Observable.create(emitter -> {
 
             final Mutable<Optional<T1>> resultA = new Mutable<>(Optional.empty());
@@ -325,10 +376,12 @@ public final class Process<S, T> {
                     }
                 },
                 error -> {
-                    if (emitter.isDisposed()) {
-                        return;
+                    synchronized (lock) {
+                        if (emitter.isDisposed()) {
+                            return;
+                        }
+                        emitter.onError(error);
                     }
-                    emitter.onError(error);
                 },
                 () -> {
                     if (!emitter.isDisposed() && resultA.value.isPresent() && resultB.value.isPresent()) {
@@ -351,10 +404,11 @@ public final class Process<S, T> {
                     }
                 },
                 error -> {
-                    if (emitter.isDisposed()) {
-                        return;
+                    synchronized (lock) {
+                        if (!emitter.isDisposed()) {
+                            emitter.onError(error);
+                        }
                     }
-                    emitter.onError(error);
                 },
                 () -> {
                     if (!emitter.isDisposed() && resultA.value.isPresent() && resultB.value.isPresent()) {

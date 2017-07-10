@@ -63,7 +63,11 @@ public final class LoggingTasks {
 
             request.setEntity(params);
 
-            final HttpResponse response = httpClient.execute(request);
+            try {
+                final HttpResponse response = httpClient.execute(request);
+            } catch (final Throwable error) {
+
+            }
 
             return PostRequestEvent.of();
         });
