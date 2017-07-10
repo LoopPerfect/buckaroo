@@ -18,7 +18,6 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
-import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
@@ -90,46 +89,61 @@ public final class Main {
             final Observable<Event> task = command.routine().apply(fs)
                 .subscribeOn(scheduler);
 
-            final Observable<Component> components = task
+            final Observable<Either<Throwable, Event>> errorOrEvent = task
                 .subscribeOn(scheduler)
-                .compose(observable -> observable.publish().autoConnect(2))
-                .compose(upstream ->
-                    Observable.combineLatestDelayError(
-                        ImmutableList.of(
-                            ProgressView.render(upstream)
+                .map(x -> {
+                    final Either<Throwable, Event> e = Either.right(x);
+                    return e;
+                }).onErrorReturn(x -> {
+                    final Either<Throwable, Event> e = Either.left(x);
+                    return e;
+                });
+
+            final Observable<Either<Throwable, Component>> components = errorOrEvent
+                .publish(upstream -> upstream
+                    .flatMap(u -> {
+                      if( u.isLeft()) return Observable.error(u.left().get());
+                      return Observable.just(u);
+                    })
+                    .map(x -> x.right().get())
+                    .compose(u ->
+                        Observable.combineLatest(
+                            ProgressView.render(u)
                                 .startWith(StackLayout.of())
                                 .subscribeOn(Schedulers.computation())
                                 .concatWith(Observable.just(StackLayout.of())),
-                            StatsView.render(upstream)
+                            StatsView.render(u)
                                 .subscribeOn(Schedulers.computation())
                                 .skip(300, TimeUnit.MILLISECONDS)
                                 .startWith(StackLayout.of()),
-                            SummaryView.render(upstream)
+                            SummaryView.render(u)
                                 .takeLast(1)
-                                .startWith(StackLayout.of())),
-                        (Function<Object[], Component>) objects -> StackLayout.of(Arrays.stream(objects)
-                            .map(x -> (Component)x)
-                            .collect(ImmutableList.toImmutableList()))))
+                                .startWith(StackLayout.of()),
+                            (x, y, z) -> {
+                                Either<Throwable, Component> e = Either.right((Component)StackLayout.of(x, y, z));
+                                return e;
+                            })))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
                 .distinctUntilChanged()
-                .doOnNext(x -> { System.gc(); }); // TODO: interning
+                .doOnNext(x->{ System.gc(); });
 
             AnsiConsole.systemInstall();
 
             final TerminalBuffer buffer = new TerminalBuffer();
 
             components
-                .map(c -> c.render(TERMINAL_WIDTH))
+                .map(x -> x.right().get())
+                .map(x -> x.render(60))
                 .subscribe(
                     buffer::flip,
                     error -> {
                         
                         executor.shutdown();
                         scheduler.shutdown();
-                        taskLatch.countDown();
+                        latch.countDown();
 
-                        if (error instanceof RecipeNotFoundException) {
+                        if(error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
 
                             final ImmutableList<Component> candidates =
