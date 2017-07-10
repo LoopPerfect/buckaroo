@@ -32,8 +32,8 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
                 "recipes",
                 identifier.organization.name,
                 identifier.recipe.name + ".json");
-        }).flatMap(CommonTasks::readRecipeFile);
-//            .onErrorResumeNext(error -> Single.error(new RecipeNotFoundException(this, identifier, error)));
+        }).flatMap(CommonTasks::readRecipeFile)
+        .onErrorResumeNext(error -> Single.error(new RecipeNotFoundException(this, identifier, error)));
 
         return Process.of(readRecipe);
     }

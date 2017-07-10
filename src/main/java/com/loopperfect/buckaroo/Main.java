@@ -18,7 +18,6 @@ import com.loopperfect.buckaroo.virtualterminal.components.StackLayout;
 import com.loopperfect.buckaroo.virtualterminal.components.Text;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
-import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
@@ -87,43 +86,61 @@ public final class Main {
             final CLICommand command = commandParser.parse(rawCommand);
 
             final Observable<Event> task = command.routine().apply(fs)
-                 .subscribeOn(scheduler);
+                .subscribeOn(scheduler);
 
-            final Observable<Component> components = task
+            final Observable<Either<Throwable, Event>> errorOrEvent = task
                 .subscribeOn(scheduler)
-                .publish(upstream->
+                .map(x -> {
+                    final Either<Throwable, Event> e = Either.right(x);
+                    return e;
+                }).onErrorReturn(x -> {
+                    final Either<Throwable, Event> e = Either.left(x);
+                    return e;
+                });
+
+            final Observable<Either<Throwable, Component>> components = errorOrEvent
+                .publish(upstream -> upstream
+                    .flatMap(u -> {
+                      if( u.isLeft()) return Observable.error(u.left().get());
+                      return Observable.just(u);
+                    })
+                    .map(x -> x.right().get())
+                    .compose(u ->
                         Observable.combineLatest(
-                            ProgressView.render(upstream)
+                            ProgressView.render(u)
                                 .startWith(StackLayout.of())
                                 .subscribeOn(Schedulers.computation())
                                 .concatWith(Observable.just(StackLayout.of())),
-                            StatsView.render(upstream)
+                            StatsView.render(u)
                                 .subscribeOn(Schedulers.computation())
                                 .skip(300, TimeUnit.MILLISECONDS)
                                 .takeUntil(upstream.lastElement().toObservable())
                                 .startWith(StackLayout.of()),
-                            SummaryView.render(upstream)
+                            SummaryView.render(u)
                                 .takeLast(1)
                                 .startWith(StackLayout.of()),
-                        (x, y, z) -> (Component)StackLayout.of(x, y, z)))
+                            (x, y, z) -> {
+                                Either<Throwable, Component> e = Either.right((Component)StackLayout.of(x, y, z));
+                                return e;
+                            })))
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
-                .distinctUntilChanged();
-//                .doOnNext(x->{ System.gc(); }); // that's a bad idea... TODO: interning
+                .distinctUntilChanged()
+                .doOnNext(x->{ System.gc(); });
 
             AnsiConsole.systemInstall();
 
             final TerminalBuffer buffer = new TerminalBuffer();
 
             components
-                .map(c -> c.render(TERMINAL_WIDTH))
+                .map(x -> x.right().get())
+                .map(x -> x.render(60))
                 .subscribe(
                     buffer::flip,
                     error -> {
                         executor.shutdown();
                         scheduler.shutdown();
                         latch.countDown();
-
 
                         if(error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
