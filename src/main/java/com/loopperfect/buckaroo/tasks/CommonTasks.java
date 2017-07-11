@@ -229,8 +229,10 @@ public final class CommonTasks {
                     }).cast(Event.class),
 
             // Verify the hash
-            ensureHash(target, remoteFile.sha256)
-        );
+            ensureHash(target, remoteFile.sha256))
+            .onErrorResumeNext(
+                (Throwable cause) ->
+                    Observable.error(DownloadFileException.wrap(remoteFile, target, cause)));
     }
 
     public static Observable<Event> downloadRemoteArchive(final FileSystem fs, final RemoteArchive remoteArchive, final Path targetDirectory) {

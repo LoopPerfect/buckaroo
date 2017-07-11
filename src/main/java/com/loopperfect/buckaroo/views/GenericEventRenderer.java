@@ -73,7 +73,7 @@ public final class GenericEventRenderer {
             FlowLayout.of(
                 Text.of("Downloaded "),
                 Text.of((event.downloaded / 1024L) + "kb", Color.GREEN),
-                Text.of(" " + spinner.get(((int)(event.downloaded / (1024L))) % 1024)));
+                Text.of(" " + spinner.get(((int)(event.downloaded / (1024L))) % spinner.size())));
     }
 
     public static Component render(final ReadLockFileEvent event) {

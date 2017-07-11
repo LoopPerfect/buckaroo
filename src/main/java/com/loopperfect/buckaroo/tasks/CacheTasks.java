@@ -9,11 +9,13 @@ import io.reactivex.Observable;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class CacheTasks {
 
-    private static final HashMap<Path, Observable<Event>> inProgress = new HashMap<>();
+    private static final Map<Path, Observable<Event>> inProgress = new ConcurrentHashMap<>();
 
     private CacheTasks() {
 
@@ -111,6 +113,7 @@ public final class CacheTasks {
     public static Observable<Event> downloadToCache(final FileSystem fs, final RemoteFile file) {
         final Path cachePath = getCachePath(fs, file);
             synchronized (inProgress) {
+
                 if (inProgress.containsKey(cachePath)) {
                     return inProgress.get(cachePath);
                 }
@@ -123,6 +126,7 @@ public final class CacheTasks {
                     .lastElement()
                     .toObservable()
                     .startWith(Notification.of("already downloading by another dependency")));
+
                 return downloading;
             }
     }

@@ -1,9 +1,11 @@
 package com.loopperfect.buckaroo;
 
-/**
- * Created by gaetano on 06/07/17.
- */
-public class CookbookUpdateException extends Exception{
+import com.loopperfect.buckaroo.virtualterminal.Color;
+import com.loopperfect.buckaroo.virtualterminal.components.Component;
+import com.loopperfect.buckaroo.virtualterminal.components.Text;
+
+public class CookbookUpdateException extends Exception implements RenderableException {
+
     public CookbookUpdateException(final String message) {
         super(message);
     }
@@ -14,5 +16,10 @@ public class CookbookUpdateException extends Exception{
 
     public CookbookUpdateException(final Throwable throwable) {
         super(throwable);
+    }
+
+    @Override
+    public Component render() {
+        return Text.of("Error! \n" + this.getCause().toString(), Color.RED);
     }
 }
