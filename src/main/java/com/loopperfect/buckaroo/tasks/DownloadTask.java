@@ -93,7 +93,9 @@ public final class DownloadTask {
 
                 long total = 0;
 
-                emitter.onNext(DownloadProgress.of(total, contentLength));
+                if (!emitter.isDisposed()) {
+                    emitter.onNext(DownloadProgress.of(total, contentLength));
+                }
 
                 int count;
                 long lastCount = 0;
@@ -101,7 +103,9 @@ public final class DownloadTask {
 
                 while ((count = input.read(data)) != -1) {
 
-                    if(emitter.isDisposed()) break;
+                    if (emitter.isDisposed()) {
+                        break;
+                    }
 
                     total += count;
                     output.write(data, 0, count);
@@ -129,7 +133,7 @@ public final class DownloadTask {
 
                 emitter.onComplete();
             } catch (final Throwable e) {
-                if (emitter.isDisposed()) {
+                if (!emitter.isDisposed()) {
                     emitter.onError(e);
                 }
             }

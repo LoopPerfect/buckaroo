@@ -2,7 +2,7 @@
   "cookbooks": [
     {
       "name": "buckaroo-recipes",
-      "url": "git@github.com:loopperfect/buckaroo-recipes.git"
+      "url": "https://github.com/LoopPerfect/buckaroo-recipes.git"
     }
   ],
   "analytics": "https://analytics.buckaroo.pm"

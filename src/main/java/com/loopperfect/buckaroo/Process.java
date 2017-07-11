@@ -25,44 +25,97 @@ public final class Process<S, T> {
     }
 
     public Observable<S> states() {
+
+        final Object lock = new Object();
+
         return Observable.create(new ObservableOnSubscribe<S>() {
+
             private boolean isComplete = false;
 
             @Override
             public void subscribe(@NonNull final ObservableEmitter<S> emitter) throws Exception {
-                observable.subscribe(next -> {
-                    if (isComplete) {
-                        emitter.onError(new ProcessException("Process must push exactly one result. "));
-                    } else {
-                        if (next.isRight()) {
-                            isComplete = true;
+                observable.subscribe(
+                    next -> {
+                        if (isComplete) {
+                            if (emitter.isDisposed()) {
+                                return;
+                            }
+                            synchronized (lock) {
+                                if (!emitter.isDisposed()) {
+                                    emitter.onError(new ProcessException("Process must push exactly one result. "));
+                                }
+                            }
                         } else {
-                            emitter.onNext(next.left().get());
+                            if (next.isRight()) {
+                                isComplete = true;
+                            } else {
+                                emitter.onNext(next.left().get());
+                            }
                         }
-                    }
-                }, emitter::onError, emitter::onComplete);
+                    },
+                    error -> {
+                        if (emitter.isDisposed()) {
+                            return;
+                        }
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(error);
+                            }
+                        }
+                    },
+                    () -> {
+                        if (emitter.isDisposed()) {
+                            return;
+                        }
+                        emitter.onComplete();
+                    });
             }
         });
     }
 
     public Single<T> result() {
+        final Object lock = new Object();
         return Single.create(emitter -> {
             final Mutable<Optional<T>> result = new Mutable<>(Optional.empty());
             observable.subscribe(
                 next -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
                     if (result.value.isPresent()) {
-                        emitter.onError(new ProcessException("Process must not push states after the result. "));
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(new ProcessException("Process must not push states after the result. "));
+                            }
+                        }
                     } else {
                         if (next.isRight()) {
                             result.value = next.right();
                         }
                     }
-                }, emitter::onError,
+                },
+                error -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
+                    synchronized (lock) {
+                        if (!emitter.isDisposed()) {
+                            emitter.onError(error);
+                        }
+                    }
+                },
                 () -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
                     if (result.value.isPresent()) {
                         emitter.onSuccess(result.value.get());
                     } else {
-                        emitter.onError(new ProcessException("Process must push a result. "));
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(new ProcessException("Process must push a result. "));
+                            }
+                        }
                     }
                 });
         });
@@ -179,12 +232,21 @@ public final class Process<S, T> {
                             lastState = next.left();
                         }
                     }
-                }, emitter::onError, () -> {
+                }, error -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
+                    emitter.onError(error);
+                }, () -> {
                     if (result.isPresent()) {
                         final Observable<Either<S, U>> nextObservable = f.apply(result.get()).toObservable();
                         nextObservable.subscribe(emitter::onNext, emitter::onError, emitter::onComplete);
                     } else {
                         emitter.onError(new ProcessException("A process must have a result. "));
+                    }
+                }, subscription -> {
+                    if (emitter.isDisposed() && !subscription.isDisposed()) {
+                        subscription.dispose();
                     }
                 });
             }
@@ -278,31 +340,55 @@ public final class Process<S, T> {
             final Mutable<Optional<T1>> resultA = new Mutable<>(Optional.empty());
             final Mutable<Optional<T2>> resultB = new Mutable<>(Optional.empty());
 
-            a.toObservable()
-                .subscribe(next -> {
+            a.toObservable().subscribe(
+                next -> {
                     if (next.isLeft()) {
                         emitter.onNext(Either.left(next.left().get()));
                     } else {
                         resultA.value = next.right();
                     }
-                }, emitter::onError, () -> {
+                },
+                error -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
+                    emitter.onError(error);
+                },
+                () -> {
                     if (!emitter.isDisposed() && resultA.value.isPresent() && resultB.value.isPresent()) {
                         emitter.onNext(Either.right(Pair.with(resultA.value.get(), resultB.value.get())));
                         emitter.onComplete();
                     }
+                },
+                subscription -> {
+                    if (emitter.isDisposed() && !subscription.isDisposed()) {
+                        subscription.dispose();
+                    }
                 });
 
-            b.toObservable()
-                .subscribe(next -> {
+            b.toObservable().subscribe(
+                next -> {
                     if (next.isLeft()) {
                         emitter.onNext(Either.left(next.left().get()));
                     } else {
                         resultB.value = next.right();
                     }
-                }, emitter::onError, () -> {
+                },
+                error -> {
+                    if (emitter.isDisposed()) {
+                        return;
+                    }
+                    emitter.onError(error);
+                },
+                () -> {
                     if (!emitter.isDisposed() && resultA.value.isPresent() && resultB.value.isPresent()) {
                         emitter.onNext(Either.right(Pair.with(resultA.value.get(), resultB.value.get())));
                         emitter.onComplete();
+                    }
+                },
+                subscription -> {
+                    if (emitter.isDisposed() && !subscription.isDisposed()) {
+                        subscription.dispose();
                     }
                 });
         });
@@ -311,6 +397,7 @@ public final class Process<S, T> {
     }
 
     public static <S, T> Process<S, ImmutableList<T>> merge(final ImmutableList<Process<S, T>> xs) {
+        Objects.requireNonNull(xs);
         return xs.stream()
             .map(i -> i.map(ImmutableList::of))
             .reduce(

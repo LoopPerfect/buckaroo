@@ -8,9 +8,14 @@ import io.reactivex.Observable;
 
 import java.net.URL;
 import java.nio.file.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class CacheTasks {
+
+    private static final Map<Path, Observable<Event>> inProgress = new ConcurrentHashMap<>();
 
     private CacheTasks() {
 
@@ -62,11 +67,7 @@ public final class CacheTasks {
                 () -> URLUtils.getExtension(url).map(x -> "." + x).orElse("")));
     }
 
-    public static Path getCachePath(final FileSystem fs, final URL url) {
-        return getCachePath(fs, url, Optional.empty());
-    }
-
-    public static Observable<Event> downloadToCache(final FileSystem fs, final RemoteFile file) {
+    private static Observable<Event> downloadToCacheUnsecure(final FileSystem fs, final RemoteFile file) {
 
         Preconditions.checkNotNull(file);
 
@@ -109,18 +110,25 @@ public final class CacheTasks {
         });
     }
 
-    public static Observable<Event> downloadToCache(final FileSystem fs, final URL url) {
+    public static Observable<Event> downloadToCache(final FileSystem fs, final RemoteFile file) {
+        final Path cachePath = getCachePath(fs, file);
+            synchronized (inProgress) {
 
-        Preconditions.checkNotNull(fs);
-        Preconditions.checkNotNull(url);
+                if (inProgress.containsKey(cachePath)) {
+                    return inProgress.get(cachePath);
+                }
 
-        final Path cachePath = getCachePath(fs, url);
+                final Observable<Event> downloading = downloadToCacheUnsecure(fs, file)
+                    .cast(Event.class)
+                    .publish().autoConnect();
 
-        if (Files.exists(cachePath)) {
-            return Observable.empty();
-        }
+                inProgress.put(cachePath, downloading
+                    .lastElement()
+                    .toObservable()
+                    .startWith(Notification.of("already downloading by another dependency")));
 
-        return DownloadTask.download(url, cachePath).cast(Event.class);
+                return downloading;
+            }
     }
 
     public static Observable<Event> downloadUsingCache(final RemoteFile file, final Path target) {

@@ -140,9 +140,13 @@ public final class CommonTasks {
 
     public static Single<Recipe> readRecipeFile(final Path path) {
         Preconditions.checkNotNull(path);
-        return Single.fromCallable(() ->
-            Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path))))
-            .subscribeOn(Schedulers.io());
+        return Single.fromCallable(() -> {
+            try {
+                return Either.orThrow(Serializers.parseRecipe(EvenMoreFiles.read(path)));
+            } catch (final Throwable error) {
+                throw ReadRecipeFileException.wrap(path, error);
+            }
+        }).subscribeOn(Schedulers.io());
     }
 
     public static Single<ReadConfigFileEvent> readConfigFile(final Path path) {
@@ -225,8 +229,10 @@ public final class CommonTasks {
                     }).cast(Event.class),
 
             // Verify the hash
-            ensureHash(target, remoteFile.sha256)
-        );
+            ensureHash(target, remoteFile.sha256))
+            .onErrorResumeNext(
+                (Throwable cause) ->
+                    Observable.error(DownloadFileException.wrap(remoteFile, target, cause)));
     }
 
     public static Observable<Event> downloadRemoteArchive(final FileSystem fs, final RemoteArchive remoteArchive, final Path targetDirectory) {
@@ -254,19 +260,19 @@ public final class CommonTasks {
 
 
     public static ImmutableList<RecipeIdentifier> readCookBook(final Path path) throws IOException {
-        final FileSystem fs = path.getFileSystem();
-        System.out.println(path.resolve("recipes").toString());
         final Path recipeFolder = path.resolve("recipes");
-            return Files.find(recipeFolder, 2, (filePath, attr) -> true)
-                .filter(filePath -> filePath.toString().endsWith(".json") && !filePath.getParent().toString().endsWith("recipes"))
-                .map(filePath -> {
-                    final int parts = filePath.getNameCount();
-                    final String fileName = filePath.getName(parts - 1).toString();
-                    final String orgName = filePath.getName(parts - 2).toString();
-                    final String recipe = fileName.replace(".json", "");
-                    return RecipeIdentifier.parse(orgName+"/"+recipe);
-                }).filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(toImmutableList());
+        return Files.find(recipeFolder, 2, (filePath, attr) -> true)
+            .filter(filePath -> filePath.toString().endsWith(".json") &&
+                !filePath.getParent().toString().endsWith("recipes"))
+            .map(filePath -> {
+                final int parts = filePath.getNameCount();
+                final String fileName = filePath.getName(parts - 1).toString();
+                final String orgName = filePath.getName(parts - 2).toString();
+                final String recipe = fileName.replace(".json", "");
+                return RecipeIdentifier.parse(orgName + "/" + recipe);
+            })
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(toImmutableList());
     }
 }

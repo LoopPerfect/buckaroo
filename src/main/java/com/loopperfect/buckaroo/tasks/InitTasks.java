@@ -52,7 +52,7 @@ public final class InitTasks {
                 CommonTasks.touchFile(projectDirectory.resolve(".buckconfig").toAbsolutePath())
                     .toObservable(),
 
-                Observable.just(Notification.of("initialization complete"))
+                Observable.just(Notification.of("Initialization complete. "))
             )
         );
     }

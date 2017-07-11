@@ -8,7 +8,7 @@ import com.loopperfect.buckaroo.tasks.CommonTasks;
 import io.reactivex.Single;
 
 import java.nio.file.Path;
-import java.util.Optional;
+import java.util.Objects;
 
 public final class LazyCookbookRecipeSource implements RecipeSource {
 
@@ -19,27 +19,45 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
         this.path = path;
     }
 
+    public boolean equals(final LazyCookbookRecipeSource other) {
+        Preconditions.checkNotNull(other);
+        return Objects.equals(path, other.path);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        return this == obj ||
+            obj != null &&
+                obj instanceof LazyCookbookRecipeSource &&
+                equals((LazyCookbookRecipeSource)obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(path);
+    }
+
     @Override
     public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
 
         Preconditions.checkNotNull(identifier);
 
-        return Process.of( Single.fromCallable(() -> {
+        final Single<Recipe> readRecipe = Single.fromCallable(() -> {
             if (identifier.source.isPresent()) {
                 throw new IllegalArgumentException(identifier.encode() + " should be found on " + identifier.source.get());
             }
-            return path.getFileSystem().getPath(
-                path.toString(),
-                "recipes",
-                identifier.organization.name,
-                identifier.recipe.name + ".json");
-        }).flatMap( (pathToRecipe) -> CommonTasks.readRecipeFile(pathToRecipe)
-            .map(Optional::of)
-            .onErrorReturnItem(Optional.empty())
-            .map(x-> {
-                if(x.isPresent()) return x.get();
-                throw new RecipeNotFoundException(this, identifier);
-            })));
+            try {
+                return path.getFileSystem().getPath(
+                    path.toString(),
+                    "recipes",
+                    identifier.organization.name,
+                    identifier.recipe.name + ".json");
+            } catch (final Throwable exception) {
+                throw RecipeFetchException.wrap(this, identifier, exception);
+            }
+        }).flatMap(CommonTasks::readRecipeFile);
+
+        return Process.of(readRecipe);
     }
 
     @Override

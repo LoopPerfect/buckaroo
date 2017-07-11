@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public final class CommonTasksTest {
+public final class CommonTasksIntegrationsTests {
 
     @Test
     public void downloadRemoteFileCompletes() throws Exception {

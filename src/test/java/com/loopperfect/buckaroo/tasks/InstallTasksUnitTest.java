@@ -2,12 +2,17 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
+import com.loopperfect.buckaroo.sources.LazyCookbookRecipeSource;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
@@ -45,5 +50,28 @@ public final class InstallTasksUnitTest {
             Dependency.of(RecipeIdentifier.of("org", "example"), ExactSemanticVersion.of(SemanticVersion.of(2))));
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void completeDependenciesFailsGracefully() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final RecipeSource recipeSource = LazyCookbookRecipeSource.of(fs.getPath("nocookbookhere"));
+
+        final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
+            PartialDependency.of(Identifier.of("org"), Identifier.of("example")));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        InstallTasks.completeDependencies(recipeSource, partialDependencies).result().subscribe(
+            x -> {
+
+            },
+            error -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 }
