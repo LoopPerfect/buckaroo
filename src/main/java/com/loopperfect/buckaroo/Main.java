@@ -65,17 +65,28 @@ public final class Main {
 
             final Observable<Event> task = command.routine().apply(fs);
 
+
+            // our renderers can't handle errors properly let's eitherize the stream
+            // and split it to two stream in publish.
             final Observable<Either<Throwable, Event>> errorOrEvent = task
                 .map(Either::<Throwable, Event>right)
                 .onErrorReturn(Either::<Throwable, Event>left);
 
             final Observable<Component> components = errorOrEvent
                 .publish(upstream -> {
-                        Observable<Component> errors  = upstream.filter(Either::isLeft).map(x->x.left().get()).cache()
-                            .take(1).flatMap(Observable::error).cast(Component.class);
+                        // It's crucial that we don't subscribe multiple times to our event emitters as they do I/O.
+                        Observable<Component> errors  = upstream
+                            .filter(Either::isLeft)
+                            .map(x->x.left().get())
+                            .cache() // upstream is a hot observable, we want make sure we don't lose the error
+                            .flatMap(Observable::error)
+                            .cast(Component.class);
 
-                        return upstream.takeUntil(errors).filter(Either::isRight).map(e -> e.right().get()).compose(u ->
-                            Observable.combineLatest(
+                        return upstream
+                            .takeUntil(errors) // stop when an error occurs, takeUntil also propagates the error further down the chain.
+                            .filter(Either::isRight)
+                            .map(e -> e.right().get())
+                            .compose(u -> Observable.combineLatest(
                                     ProgressView.render(u)
                                         .startWith(StackLayout.of())
                                         .subscribeOn(Schedulers.computation())
@@ -89,16 +100,13 @@ public final class Main {
                                         .takeLast(1)
                                         .startWith(StackLayout.of()),
                                 (x, y, z) -> (Component) StackLayout.of(x, y, z))
-
                         );
                 })
                 .subscribeOn(Schedulers.computation())
-                .sample(100, TimeUnit.MILLISECONDS, true)
-                .distinctUntilChanged()
-                .doOnNext(x->{ System.gc(); });
+                .sample(100, TimeUnit.MILLISECONDS, true) //most terminals can't handle more than 10fps
+                .distinctUntilChanged();
 
             AnsiConsole.systemInstall();
-
             final TerminalBuffer buffer = new TerminalBuffer();
 
             final SettableFuture<Throwable> errorF = SettableFuture.create();
@@ -106,7 +114,13 @@ public final class Main {
             components
                 .map(x -> x.render(TERMINAL_WIDTH))
                 .subscribe(
-                    buffer::flip,
+                    str -> {
+                        buffer.flip(str);
+                        // This is only a hint for garbage collection.
+                        // This is an opportune moment for collection as we accumulated a lot of Components.
+                        // The next render wont happen in the next 100ms anyway...
+                        System.gc();
+                    },
                     error -> {
                         errorF.set(error);
                         taskLatch.countDown();
@@ -115,9 +129,12 @@ public final class Main {
                         taskLatch.countDown();
                     });
 
+            //makes sure we don't exit main before we sucessfully unsubscribed from the eventstream
             taskLatch.await();
 
             if (errorF.isDone()) {
+                // It turns out rxJava does not guaranty that onNext wont be called onError in a multithreaded enviroment.
+                // Lets store the error in a future, wait untill all events stopped firing and render a message to the user.
                 handleErrors(errorF.get(), buffer, fs);
             }
 
