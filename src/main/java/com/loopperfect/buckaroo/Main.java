@@ -23,6 +23,7 @@ import org.fusesource.jansi.AnsiConsole;
 import org.jparsec.Parser;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -34,10 +35,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.loopperfect.buckaroo.ErrorHandler.handleErrors;
 
 public final class Main {
 
-    private static final int TERMINAL_WIDTH = 80;
+    public static final int TERMINAL_WIDTH = 80;
 
     private Main() {}
 
@@ -49,14 +51,6 @@ public final class Main {
             return;
         }
 
-        // We need to change the default behaviour of Schedulers.io()
-        // so that it has a bounded thread-pool.
-        // Take at least 2 threads to prevent dead-locks.
-        // Take at most 12 to prevent too many downloads happening in parallel
-        final int threads = Math.min(Math.max(2, Runtime.getRuntime().availableProcessors() * 2), 12);
-
-        final ExecutorService executor = Executors.newFixedThreadPool(threads);
-        final Scheduler scheduler = Schedulers.from(executor);
         final FileSystem fs = FileSystems.getDefault();
 
         final String rawCommand = String.join(" ", args);
@@ -84,11 +78,9 @@ public final class Main {
         try {
             final CLICommand command = commandParser.parse(rawCommand);
 
-            final Observable<Event> task = command.routine().apply(fs)
-                .subscribeOn(scheduler);
+            final Observable<Event> task = command.routine().apply(fs);
 
             final Observable<Either<Throwable, Event>> errorOrEvent = task
-                .subscribeOn(scheduler)
                 .map(Either::<Throwable, Event>right)
                 .onErrorReturn(Either::<Throwable, Event>left);
 
@@ -96,6 +88,7 @@ public final class Main {
                 .publish(upstream -> {
                         Observable<Component> errors  = upstream.filter(Either::isLeft).map(x->x.left().get()).cache()
                             .take(1).flatMap(Observable::error).cast(Component.class);
+
                         return upstream.takeUntil(errors).filter(Either::isRight).map(e -> e.right().get()).compose(u ->
                             Observable.combineLatest(
                                     ProgressView.render(u)
@@ -111,7 +104,8 @@ public final class Main {
                                         .takeLast(1)
                                         .startWith(StackLayout.of()),
                                 (x, y, z) -> (Component) StackLayout.of(x, y, z))
-                        ).concatWith(errors);
+
+                        );
                 })
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
@@ -127,61 +121,20 @@ public final class Main {
                 .subscribe(
                     buffer::flip,
                     error -> {
-                        executor.shutdown();
-                        scheduler.shutdown();
                         taskLatch.countDown();
-
-                        if (error instanceof RecipeNotFoundException) {
-                            final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
-
-                            final ImmutableList<Component> candidates =
-                                Streams.stream(notFound.source.findCandidates(notFound.identifier))
-                                    .limit(3)
-                                    .map(GenericEventRenderer::render)
-                                    .collect(toImmutableList());
-
-                            if(candidates.size()>0) {
-                                buffer.flip(
-                                    StackLayout.of(
-                                        Text.of("Error! \n" + error.toString(), Color.RED),
-                                        Text.of("Maybe you meant to install one of the following?"),
-                                        ListLayout.of(candidates)).render(TERMINAL_WIDTH));
-                            } else {
-                                buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
-                            }
-                            return;
-                        }
-
-                        if(error instanceof CookbookUpdateException) {
-                            buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
-                            return;
-                        }
-
-                        try {
-                            EvenMoreFiles.writeFile(
-                                fs.getPath("buckaroo-stacktrace.log"),
-                                Arrays.stream(error.getStackTrace())
-                                    .map(StackTraceElement::toString)
-                                    .reduce(Instant.now().toString() + ": ", (a, b) -> a + "\n" + b),
-                                Charset.defaultCharset(),
-                                true);
-                        } catch (final IOException ignored) {
-
-                        }
-                        buffer.flip(
-                            StackLayout.of(
-                                Text.of("Error! \n" + error.toString(), Color.RED),
-                                Text.of("The stacktrace was written to buckaroo-stacktrace.log. ", Color.YELLOW)).
-                                render(TERMINAL_WIDTH));
+                        handleErrors(error, buffer, fs);
                     },
                     () -> {
-                        executor.shutdown();
-                        scheduler.shutdown();
                         taskLatch.countDown();
                     });
 
             taskLatch.await();
-            loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
+
+            try {
+                loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
+            } catch (Throwable ignored) {
+
+            }
 
         } catch (final Throwable e) {
             System.out.println("Uh oh!");
