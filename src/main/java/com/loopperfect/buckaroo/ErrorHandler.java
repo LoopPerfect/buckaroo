@@ -18,13 +18,12 @@ import java.time.Instant;
 import java.util.Arrays;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.loopperfect.buckaroo.Main.TERMINAL_WIDTH;
 
 /**
  * Created by gaetano on 11/07/17.
  */
 public class ErrorHandler {
-
-    private static int TERMINAL_WIDTH = 60;
 
     public static void handleErrors(final Throwable error, final TerminalBuffer buffer, final FileSystem fs){
         handleRecipeError(error, buffer);

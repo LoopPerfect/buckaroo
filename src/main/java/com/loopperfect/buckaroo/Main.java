@@ -39,7 +39,7 @@ import static com.loopperfect.buckaroo.ErrorHandler.handleErrors;
 
 public final class Main {
 
-    private static final int TERMINAL_WIDTH = 80;
+    public static final int TERMINAL_WIDTH = 80;
 
     private Main() {}
 
@@ -129,7 +129,12 @@ public final class Main {
                     });
 
             taskLatch.await();
-            loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
+
+            try {
+                loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
+            } catch (Throwable ignored) {
+
+            }
 
         } catch (final Throwable e) {
             System.out.println("Uh oh!");
