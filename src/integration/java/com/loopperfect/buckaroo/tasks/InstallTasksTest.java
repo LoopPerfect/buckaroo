@@ -7,6 +7,7 @@ import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URL;
@@ -210,5 +211,47 @@ public final class InstallTasksTest {
         }
 
         assertTrue(Files.exists(fs.getPath("BUCKAROO_DEPS")));
+    }
+
+    @Test
+    public void failsGracefullyForIncorrectHashes() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.json"), Serializers.serialize(Project.of("test")));
+
+        final Recipe recipe = Recipe.of(
+            "Valuable",
+            "http://www.example.com",
+            ImmutableMap.of(
+                SemanticVersion.of(1),
+                RecipeVersion.of(
+                    RemoteArchive.of(
+                        new URL("https://github.com/LoopPerfect/valuable/archive/v0.1.0.zip"),
+                        HashCode.fromString("aaaaaaaaaaaaaaaaaaaaaaa71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
+                        "valuable-0.1.0"))));
+
+        EvenMoreFiles.writeFile(
+            fs.getPath(System.getProperty("user.home"),
+                ".buckaroo", "buckaroo-recipes", "recipes", "loopperfect", "valuable.json"),
+            Serializers.serialize(recipe));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final ImmutableList<PartialDependency> toInstall = ImmutableList.of(
+            PartialDependency.of(Identifier.of("loopperfect"), Identifier.of("valuable")));
+
+        InstallTasks.installDependencyInWorkingDirectory(fs, toInstall)
+            .subscribe(
+                next -> {
+
+                }, error -> {
+                    Assert.assertTrue(error instanceof HashMismatchException);
+                    latch.countDown();
+                }, () -> {
+
+                });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 }
