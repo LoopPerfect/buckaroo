@@ -11,6 +11,8 @@ import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
 
@@ -93,5 +95,38 @@ public final class InstallExistingTasksTest {
 
         assertTrue(Files.exists(fs.getPath("buckaroo", "official", "loopperfect", "valuable", "BUCK")));
         assertTrue(Files.exists(fs.getPath("buckaroo", "official", "loopperfect", "neither", "BUCK")));
+    }
+
+    @Test
+    public void failsGracefullyForIncorrectHashes() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final DependencyLocks locks = DependencyLocks.of(ImmutableList.of(
+            DependencyLock.of(
+                RecipeIdentifier.of("loopperfect", "valuable"),
+                ResolvedDependency.of(Either.right(
+                    RemoteArchive.of(
+                        new URL("https://github.com/LoopPerfect/valuable/archive/v0.1.0.zip"),
+                        HashCode.fromString("aaaaaaaaaaaaaaaaaaaaaaa71dd4a1fd3400f1d04b84954beb2f514ec69934c0"),
+                        "valuable-0.1.0"))))));
+
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
+        EvenMoreFiles.writeFile(fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs)
+            .subscribe(
+                next -> {
+
+                }, error -> {
+                    assertTrue(error instanceof HashMismatchException);
+                    latch.countDown();
+                }, () -> {
+
+                });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
     }
 }
