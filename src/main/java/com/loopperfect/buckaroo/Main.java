@@ -59,8 +59,6 @@ public final class Main {
         final Scheduler scheduler = Schedulers.from(executor);
         final FileSystem fs = FileSystems.getDefault();
 
-        //RxJavaPlugins.setErrorHandler((Throwable e) -> {});
-
         final String rawCommand = String.join(" ", args);
 
         final CountDownLatch taskLatch = new CountDownLatch(1);
@@ -99,30 +97,27 @@ public final class Main {
                     return e;
                 });
 
-            final Observable<Either<Throwable, Component>> components = errorOrEvent
-                .publish(upstream -> upstream
-                    .flatMap(u -> {
-                      if( u.isLeft()) return Observable.error(u.left().get());
-                      return Observable.just(u);
-                    })
-                    .map(x -> x.right().get())
-                    .compose(u ->
-                        Observable.combineLatest(
-                            ProgressView.render(u)
-                                .startWith(StackLayout.of())
-                                .subscribeOn(Schedulers.computation())
-                                .concatWith(Observable.just(StackLayout.of())),
-                            StatsView.render(u)
-                                .subscribeOn(Schedulers.computation())
-                                .skip(300, TimeUnit.MILLISECONDS)
-                                .startWith(StackLayout.of()),
-                            SummaryView.render(u)
-                                .takeLast(1)
-                                .startWith(StackLayout.of()),
-                            (x, y, z) -> {
-                                Either<Throwable, Component> e = Either.right((Component)StackLayout.of(x, y, z));
-                                return e;
-                            })))
+            final Observable<Component> components = errorOrEvent
+                .publish(upstream -> {
+                        Observable<Component> errors  = upstream.filter(Either::isLeft).map(x->x.left().get()).cache()
+                            .take(1).flatMap(Observable::error).cast(Component.class);
+                        return upstream.takeUntil(errors).filter(Either::isRight).map(e -> e.right().get()).compose(u ->
+                            Observable.combineLatest(
+                                    ProgressView.render(u)
+                                        .startWith(StackLayout.of())
+                                        .subscribeOn(Schedulers.computation())
+                                        .concatWith(Observable.just(StackLayout.of())),
+                                    StatsView.render(u)
+                                        .subscribeOn(Schedulers.computation())
+                                        .skip(300, TimeUnit.MILLISECONDS)
+                                        .takeUntil(upstream.lastElement().toObservable())
+                                        .startWith(StackLayout.of()),
+                                    SummaryView.render(u)
+                                        .takeLast(1)
+                                        .startWith(StackLayout.of()),
+                                (x, y, z) -> (Component) StackLayout.of(x, y, z))
+                        ).concatWith(errors);
+                })
                 .subscribeOn(Schedulers.computation())
                 .sample(100, TimeUnit.MILLISECONDS, true)
                 .distinctUntilChanged()
@@ -133,15 +128,14 @@ public final class Main {
             final TerminalBuffer buffer = new TerminalBuffer();
 
             components
-                .map(x -> x.right().get())
-                .map(x -> x.render(60))
+                .map(x -> x.render(TERMINAL_WIDTH))
                 .subscribe(
                     buffer::flip,
                     error -> {
-                        
+
                         executor.shutdown();
                         scheduler.shutdown();
-                        latch.countDown();
+                        taskLatch.countDown();
 
                         if(error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
@@ -157,15 +151,15 @@ public final class Main {
                                     StackLayout.of(
                                         Text.of("Error! \n" + error.toString(), Color.RED),
                                         Text.of("Maybe you meant to install one of the following?"),
-                                        ListLayout.of(candidates)).render(60));
+                                        ListLayout.of(candidates)).render(TERMINAL_WIDTH));
                             } else {
-                                buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
+                                buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
                             }
                             return;
                         }
 
                         if (error instanceof CookbookUpdateException) {
-                            buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
+                            buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
                             return;
                         }
 
@@ -185,7 +179,7 @@ public final class Main {
                             StackLayout.of(
                                 Text.of("Error! \n" + error.toString(), Color.RED),
                                 Text.of("The stacktrace was written to buckaroo-stacktrace.log. ", Color.YELLOW)).
-                                render(60));
+                                render(TERMINAL_WIDTH));
                     },
                     () -> {
                         executor.shutdown();
