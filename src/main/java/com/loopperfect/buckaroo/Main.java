@@ -89,13 +89,8 @@ public final class Main {
 
             final Observable<Either<Throwable, Event>> errorOrEvent = task
                 .subscribeOn(scheduler)
-                .map(x -> {
-                    final Either<Throwable, Event> e = Either.right(x);
-                    return e;
-                }).onErrorReturn(x -> {
-                    final Either<Throwable, Event> e = Either.left(x);
-                    return e;
-                });
+                .map(Either::<Throwable, Event>right)
+                .onErrorReturn(Either::<Throwable, Event>left);
 
             final Observable<Component> components = errorOrEvent
                 .publish(upstream -> {
@@ -136,7 +131,7 @@ public final class Main {
                         scheduler.shutdown();
                         taskLatch.countDown();
 
-                        if(error instanceof RecipeNotFoundException) {
+                        if (error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
 
                             final ImmutableList<Component> candidates =
