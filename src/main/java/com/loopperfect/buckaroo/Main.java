@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo;
 
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.cli.CLICommand;
 import com.loopperfect.buckaroo.cli.CLIParsers;
 import com.loopperfect.buckaroo.tasks.LoggingTasks;
@@ -100,19 +101,25 @@ public final class Main {
 
             final TerminalBuffer buffer = new TerminalBuffer();
 
+            final SettableFuture<Throwable> errorF = SettableFuture.create();
+
             components
                 .map(x -> x.render(TERMINAL_WIDTH))
                 .subscribe(
                     buffer::flip,
                     error -> {
+                        errorF.set(error);
                         taskLatch.countDown();
-                        handleErrors(error, buffer, fs);
                     },
                     () -> {
                         taskLatch.countDown();
                     });
 
             taskLatch.await();
+
+            if (errorF.isDone()) {
+                handleErrors(errorF.get(), buffer, fs);
+            }
 
             try {
                 loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
