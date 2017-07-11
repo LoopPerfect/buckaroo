@@ -65,8 +65,7 @@ public final class Main {
 
             final Observable<Event> task = command.routine().apply(fs);
 
-
-            // our renderers can't handle errors properly let's eitherize the stream
+            // Our renderers can't handle errors properly, so let's either-ize the stream
             // and split it to two stream in publish.
             final Observable<Either<Throwable, Event>> errorOrEvent = task
                 .map(Either::<Throwable, Event>right)
