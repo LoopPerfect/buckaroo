@@ -2,7 +2,7 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
-import com.loopperfect.buckaroo.sources.RecipeNotFoundException;
+import com.loopperfect.buckaroo.sources.RecipeFetchException;
 import com.loopperfect.buckaroo.views.GenericEventRenderer;
 import com.loopperfect.buckaroo.virtualterminal.Color;
 import com.loopperfect.buckaroo.virtualterminal.TerminalBuffer;
@@ -25,17 +25,21 @@ import static com.loopperfect.buckaroo.Main.TERMINAL_WIDTH;
  */
 public class ErrorHandler {
 
-    public static void handleErrors(final Throwable error, final TerminalBuffer buffer, final FileSystem fs){
-        handleRecipeError(error, buffer);
-        handleCookbookError(error, buffer);
-        handleHashMismatchError(error, buffer);
-        handleSocketTimeoutError(error, buffer);
-        handleUnexpectedError(error, buffer, fs);
+    public static void handleErrors(final Throwable error, final TerminalBuffer buffer, final FileSystem fs) {
+        boolean expected = false;
+        expected  = handleRecipeError(error, buffer);
+        expected |= handleCookbookError(error, buffer);
+        expected |= handleHashMismatchError(error, buffer);
+        expected |= handleSocketTimeoutError(error, buffer);
+
+        if (!expected) {
+            handleUnexpectedError(error, buffer, fs);
+        }
     }
 
-    private static void handleRecipeError(final Throwable error, final TerminalBuffer buffer) {
-        if (error instanceof RecipeNotFoundException) {
-            final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
+    private static boolean handleRecipeError(final Throwable error, final TerminalBuffer buffer) {
+        if (error instanceof RecipeFetchException) {
+            final RecipeFetchException notFound = (RecipeFetchException)error;
 
             final ImmutableList<Component> candidates =
                 Streams.stream(notFound.source.findCandidates(notFound.identifier))
@@ -52,26 +56,32 @@ public class ErrorHandler {
             } else {
                 buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
             }
+            return true;
         }
+        return false;
     }
 
-    private static void handleCookbookError(final Throwable error, final TerminalBuffer buffer) {
+    private static boolean handleCookbookError(final Throwable error, final TerminalBuffer buffer) {
         if(error instanceof CookbookUpdateException) {
             buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
+            return true;
         }
+        return false;
     }
 
-    private static void handleSocketTimeoutError(final Throwable error, final TerminalBuffer buffer) {
+    private static boolean handleSocketTimeoutError(final Throwable error, final TerminalBuffer buffer) {
         if (error instanceof SocketTimeoutException) {
             buffer.flip(StackLayout.of(
                 Text.of("Error! \n" + error.toString(), Color.RED),
                 Text.of("Server did not respond in time. Are you connected to the internet?")
             ).render(TERMINAL_WIDTH));
+            return true;
         }
+        return false;
     }
 
 
-    private static void handleHashMismatchError(final Throwable error, final TerminalBuffer buffer) {
+    private static boolean handleHashMismatchError(final Throwable error, final TerminalBuffer buffer) {
         if(error instanceof HashMismatchException) {
             buffer.flip(StackLayout.of(
                 Text.of("Error! \n" + error.toString(), Color.RED),
@@ -83,7 +93,9 @@ public class ErrorHandler {
                     Text.of("An error occured while extracting the archive")
                 )
             ).render(TERMINAL_WIDTH));
+            return true;
         }
+        return false;
     }
 
     private static void handleUnexpectedError(final Throwable error, final TerminalBuffer buffer, final FileSystem fs) {
