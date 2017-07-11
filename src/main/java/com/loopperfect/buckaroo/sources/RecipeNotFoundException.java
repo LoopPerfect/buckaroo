@@ -29,4 +29,17 @@ public class RecipeNotFoundException extends Exception {
     public String getMessage() {
         return "RecipeNotFoundException: " + identifier.toString();
     }
+
+    public static RecipeNotFoundException wrap(final RecipeSource source, final RecipeIdentifier identifier, final Throwable throwable) {
+        Preconditions.checkNotNull(source);
+        Preconditions.checkNotNull(identifier);
+        Preconditions.checkNotNull(throwable);
+        if (throwable instanceof RecipeNotFoundException) {
+            final RecipeNotFoundException recipeNotFoundException = (RecipeNotFoundException) throwable;
+            if (recipeNotFoundException.source.equals(source) && recipeNotFoundException.identifier.equals(identifier)) {
+                return recipeNotFoundException;
+            }
+        }
+        return new RecipeNotFoundException(source, identifier, throwable);
+    }
 }
