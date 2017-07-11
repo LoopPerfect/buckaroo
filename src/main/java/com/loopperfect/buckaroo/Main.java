@@ -74,6 +74,7 @@ public final class Main {
 
             final Observable<Component> components = errorOrEvent
                 .publish(upstream -> {
+                        // It's crucial that we don't subscribe multiple times to our event emitters as they do I/O.
                         Observable<Component> errors  = upstream
                             .filter(Either::isLeft)
                             .map(x->x.left().get())
