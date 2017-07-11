@@ -63,17 +63,29 @@ public final class GenericEventRenderer {
     private static final TerminalPixel downloadProgressBackground = TerminalPixel.of(
         UnicodeChar.of('\u2591'), Color.GRAY, Color.DEFAULT);
 
-    private static final ImmutableList<String> spinner = ImmutableList.of(
-        "\uD83C\uDF0D", "\uD83C\uDF0E", "\uD83C\uDF0F");
+    private static ImmutableList<String> getSpinner() {
+
+        final String osName = System.getProperty("os.name");
+
+        // macOS
+        if (osName.toLowerCase().contains("mac")) {
+            return ImmutableList.of(
+                "\uD83C\uDF0D", "\uD83C\uDF0E", "\uD83C\uDF0F");
+        }
+
+        // Fallback
+        return ImmutableList.of("◐", "◓", "◑", "◒");
+    }
 
     public static Component render(final DownloadProgress event) {
         Preconditions.checkNotNull(event);
+        final ImmutableList<String> spinner = getSpinner();
         return event.hasKnownContentLength() ?
             ProgressBar.of(event.progress(), downloadProgressFill, downloadProgressBackground) :
             FlowLayout.of(
                 Text.of("Downloaded "),
                 Text.of((event.downloaded / 1024L) + "kb", Color.GREEN),
-                Text.of(" " + spinner.get(((int)(event.downloaded / (1024L))) % spinner.size())));
+                Text.of(" " + spinner.get(((int)(event.downloaded / 1024L)) % spinner.size())));
     }
 
     public static Component render(final ReadLockFileEvent event) {
