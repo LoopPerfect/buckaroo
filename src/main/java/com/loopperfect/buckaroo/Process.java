@@ -25,6 +25,9 @@ public final class Process<S, T> {
     }
 
     public Observable<S> states() {
+
+        final Object lock = new Object();
+
         return Observable.create(new ObservableOnSubscribe<S>() {
 
             private boolean isComplete = false;
@@ -33,11 +36,15 @@ public final class Process<S, T> {
             public void subscribe(@NonNull final ObservableEmitter<S> emitter) throws Exception {
                 observable.subscribe(
                     next -> {
-                        if (emitter.isDisposed()) {
-                            return;
-                        }
                         if (isComplete) {
-                            emitter.onError(new ProcessException("Process must push exactly one result. "));
+                            if (emitter.isDisposed()) {
+                                return;
+                            }
+                            synchronized (lock) {
+                                if (!emitter.isDisposed()) {
+                                    emitter.onError(new ProcessException("Process must push exactly one result. "));
+                                }
+                            }
                         } else {
                             if (next.isRight()) {
                                 isComplete = true;
@@ -50,7 +57,11 @@ public final class Process<S, T> {
                         if (emitter.isDisposed()) {
                             return;
                         }
-                        emitter.onError(error);
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(error);
+                            }
+                        }
                     },
                     () -> {
                         if (emitter.isDisposed()) {
@@ -63,6 +74,7 @@ public final class Process<S, T> {
     }
 
     public Single<T> result() {
+        final Object lock = new Object();
         return Single.create(emitter -> {
             final Mutable<Optional<T>> result = new Mutable<>(Optional.empty());
             observable.subscribe(
@@ -71,7 +83,11 @@ public final class Process<S, T> {
                         return;
                     }
                     if (result.value.isPresent()) {
-                        emitter.onError(new ProcessException("Process must not push states after the result. "));
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(new ProcessException("Process must not push states after the result. "));
+                            }
+                        }
                     } else {
                         if (next.isRight()) {
                             result.value = next.right();
@@ -82,7 +98,11 @@ public final class Process<S, T> {
                     if (emitter.isDisposed()) {
                         return;
                     }
-                    emitter.onError(error);
+                    synchronized (lock) {
+                        if (!emitter.isDisposed()) {
+                            emitter.onError(error);
+                        }
+                    }
                 },
                 () -> {
                     if (emitter.isDisposed()) {
@@ -91,7 +111,11 @@ public final class Process<S, T> {
                     if (result.value.isPresent()) {
                         emitter.onSuccess(result.value.get());
                     } else {
-                        emitter.onError(new ProcessException("Process must push a result. "));
+                        synchronized (lock) {
+                            if (!emitter.isDisposed()) {
+                                emitter.onError(new ProcessException("Process must push a result. "));
+                            }
+                        }
                     }
                 });
         });

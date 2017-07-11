@@ -1,9 +1,7 @@
 package com.loopperfect.buckaroo.sources;
 
 import com.google.common.jimfs.Jimfs;
-import com.loopperfect.buckaroo.Identifier;
-import com.loopperfect.buckaroo.RecipeIdentifier;
-import com.loopperfect.buckaroo.RecipeSource;
+import com.loopperfect.buckaroo.*;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
@@ -29,6 +27,32 @@ public final class LazyCookbookRecipeSourceTest {
             .subscribe(x -> {
 
             }, error -> {
+                latch.countDown();
+            });
+
+        latch.await(5000L, TimeUnit.MILLISECONDS);
+    }
+
+    @Test
+    public void givesInformativeParseErrors() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        EvenMoreFiles.writeFile(
+            fs.getPath(System.getProperty("user.home"), ".buckaroo", "buckaroo-recipes", "recipes", "org", "example.json"),
+            "{ \"content\": \"this is an invalid recipe\" }");
+
+        final RecipeSource recipeSource = LazyCookbookRecipeSource.of(
+            fs.getPath(System.getProperty("user.home"), ".buckaroo", "buckaroo-recipes"));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        recipeSource.fetch(RecipeIdentifier.of(Identifier.of("org"), Identifier.of("example")))
+            .result()
+            .subscribe(x -> {
+
+            }, error -> {
+                assertTrue(error instanceof ReadRecipeFileException);
                 latch.countDown();
             });
 

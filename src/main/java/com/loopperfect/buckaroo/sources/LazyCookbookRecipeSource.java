@@ -46,13 +46,16 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
             if (identifier.source.isPresent()) {
                 throw new IllegalArgumentException(identifier.encode() + " should be found on " + identifier.source.get());
             }
-            return path.getFileSystem().getPath(
-                path.toString(),
-                "recipes",
-                identifier.organization.name,
-                identifier.recipe.name + ".json");
-        }).flatMap(CommonTasks::readRecipeFile)
-        .onErrorResumeNext(error -> Single.error(RecipeNotFoundException.wrap(this, identifier, error)));
+            try {
+                return path.getFileSystem().getPath(
+                    path.toString(),
+                    "recipes",
+                    identifier.organization.name,
+                    identifier.recipe.name + ".json");
+            } catch (final Throwable exception) {
+                throw RecipeFetchException.wrap(this, identifier, exception);
+            }
+        }).flatMap(CommonTasks::readRecipeFile);
 
         return Process.of(readRecipe);
     }

@@ -66,9 +66,15 @@ public final class CacheTasksTest {
 
         final Path path = fs.getPath("test.txt");
 
-        CacheTasks.downloadUsingCache(remoteFile, path).toList().blockingGet();
+        CacheTasks.downloadUsingCache(remoteFile, path)
+            .toList()
+            .timeout(10000L, TimeUnit.MILLISECONDS)
+            .blockingGet();
 
-        final List<Event> events = CacheTasks.downloadUsingCache(remoteFile, path).toList().blockingGet();
+        final List<Event> events = CacheTasks.downloadUsingCache(remoteFile, path)
+            .toList()
+            .timeout(10000L, TimeUnit.MILLISECONDS)
+            .blockingGet();
 
         assertTrue(Files.exists(path));
         assertEquals(remoteFile.sha256, EvenMoreFiles.hashFile(path));
