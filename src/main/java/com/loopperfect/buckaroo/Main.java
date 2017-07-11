@@ -53,30 +53,29 @@ public final class Main {
         // so that it has a bounded thread-pool.
         // Take at least 2 threads to prevent dead-locks.
         // Take at most 12 to prevent too many downloads happening in parallel
-        final int threads = 10;
+        final int threads = Math.min(Math.max(2, Runtime.getRuntime().availableProcessors() * 2), 12);
 
         final ExecutorService executor = Executors.newFixedThreadPool(threads);
         final Scheduler scheduler = Schedulers.from(executor);
         final FileSystem fs = FileSystems.getDefault();
 
-        //RxJavaPlugins.setErrorHandler((Throwable e) -> {});
-
         final String rawCommand = String.join(" ", args);
 
-        final CountDownLatch latch = new CountDownLatch(2);
+        final CountDownLatch loggingLatch = new CountDownLatch(1);
+        final CountDownLatch taskLatch = new CountDownLatch(1);
 
         // Send the command to the logging server, if present
-        LoggingTasks.log(fs, rawCommand).timeout(3000L, TimeUnit.MILLISECONDS).subscribe(
+        LoggingTasks.log(fs, rawCommand).subscribe(
             next -> {
                 // Do nothing
             },
             error -> {
                 // Do nothing
-                latch.countDown();
+                loggingLatch.countDown();
             },
             () -> {
                 // Do nothing
-                latch.countDown();
+                loggingLatch.countDown();
             });
 
         // Parse the command
@@ -129,13 +128,13 @@ public final class Main {
             final TerminalBuffer buffer = new TerminalBuffer();
 
             components
-                .map(x -> x.render(60))
+                .map(x -> x.render(TERMINAL_WIDTH))
                 .subscribe(
                     buffer::flip,
                     error -> {
                         executor.shutdown();
                         scheduler.shutdown();
-                        latch.countDown();
+                        taskLatch.countDown();
 
                         if(error instanceof RecipeNotFoundException) {
                             final RecipeNotFoundException notFound = (RecipeNotFoundException)error;
@@ -151,15 +150,15 @@ public final class Main {
                                     StackLayout.of(
                                         Text.of("Error! \n" + error.toString(), Color.RED),
                                         Text.of("Maybe you meant to install one of the following?"),
-                                        ListLayout.of(candidates)).render(60));
+                                        ListLayout.of(candidates)).render(TERMINAL_WIDTH));
                             } else {
-                                buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
+                                buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
                             }
                             return;
                         }
 
                         if(error instanceof CookbookUpdateException) {
-                            buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(60));
+                            buffer.flip(Text.of("Error! \n" + error.toString(), Color.RED).render(TERMINAL_WIDTH));
                             return;
                         }
 
@@ -178,15 +177,16 @@ public final class Main {
                             StackLayout.of(
                                 Text.of("Error! \n" + error.toString(), Color.RED),
                                 Text.of("The stacktrace was written to buckaroo-stacktrace.log. ", Color.YELLOW)).
-                                render(60));
+                                render(TERMINAL_WIDTH));
                     },
                     () -> {
                         executor.shutdown();
                         scheduler.shutdown();
-                        latch.countDown();
+                        taskLatch.countDown();
                     });
 
-            latch.await();
+            taskLatch.await();
+            loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
 
         } catch (final Throwable e) {
             System.out.println("Uh oh!");
