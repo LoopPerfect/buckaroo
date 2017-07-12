@@ -8,13 +8,13 @@ import java.util.Optional;
 public final class PartialDependency {
 
     public final Optional<Identifier> source;
-    public final Identifier organization;
+    public final Optional<Identifier> organization;
     public final Identifier project;
     public final Optional<SemanticVersionRequirement> versionRequirement;
 
     private PartialDependency(
         final Optional<Identifier> source,
-        final Identifier organization,
+        final Optional<Identifier> organization,
         final Identifier project,
         final Optional<SemanticVersionRequirement> versionRequirement) {
 
@@ -39,7 +39,7 @@ public final class PartialDependency {
 
     public String encode() {
         return source.map(x -> x + "+").orElse("") +
-            organization.name + "/" +
+            (organization.isPresent() ? organization.get().name + "/"  : "") +
             project.name +
             versionRequirement.map(x -> " " + x.encode()).orElse("");
     }
@@ -64,7 +64,7 @@ public final class PartialDependency {
 
     public static PartialDependency of(
         final Optional<Identifier> source,
-        final Identifier organization,
+        final Optional<Identifier> organization,
         final Identifier project,
         final Optional<SemanticVersionRequirement> versionRequirement) {
         return new PartialDependency(
@@ -81,7 +81,7 @@ public final class PartialDependency {
         final SemanticVersionRequirement versionRequirement) {
         return new PartialDependency(
             Optional.of(source),
-            organization,
+            Optional.of(organization),
             project,
             Optional.of(versionRequirement));
     }
@@ -92,7 +92,7 @@ public final class PartialDependency {
         final SemanticVersionRequirement versionRequirement) {
         return new PartialDependency(
             Optional.empty(),
-            organization,
+            Optional.of(organization),
             project,
             Optional.of(versionRequirement));
     }
@@ -101,7 +101,7 @@ public final class PartialDependency {
         final RecipeIdentifier recipeIdentifier) {
         return new PartialDependency(
             recipeIdentifier.source,
-            recipeIdentifier.organization,
+            Optional.of(recipeIdentifier.organization),
             recipeIdentifier.recipe,
             Optional.empty());
     }
@@ -109,7 +109,15 @@ public final class PartialDependency {
     public static PartialDependency of(final Identifier organization, final Identifier project) {
         return new PartialDependency(
             Optional.empty(),
-            organization,
+            Optional.of(organization),
+            project,
+            Optional.empty());
+    }
+
+    public static PartialDependency of(final Identifier project) {
+        return new PartialDependency(
+            Optional.empty(),
+            Optional.empty(),
             project,
             Optional.empty());
     }

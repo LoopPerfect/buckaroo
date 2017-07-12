@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.versioning.BoundedSemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
@@ -111,7 +112,7 @@ public final class CLIParsersTest {
         assertEquals(
             PartialDependency.of(
                 Optional.empty(),
-                Identifier.of("loopperfect"),
+                Optional.of(Identifier.of("loopperfect")),
                 Identifier.of("valuable"),
                 Optional.of(ExactSemanticVersion.of(SemanticVersion.of(1)))),
             parser.parse(" loopperfect /  valuable       1"));
@@ -119,7 +120,7 @@ public final class CLIParsersTest {
         assertEquals(
             PartialDependency.of(
                 Optional.of(Identifier.of("github")),
-                Identifier.of("loopperfect"),
+                Optional.of(Identifier.of("loopperfect")),
                 Identifier.of("neither"),
                 Optional.of(ExactSemanticVersion.of(SemanticVersion.of(1)))),
             parser.parse("github  + loopperfect /  neither       [ 1 ]"));
@@ -143,6 +144,12 @@ public final class CLIParsersTest {
         assertEquals(
             InstallCommand.of(PartialDependency.of(Identifier.of("org"), Identifier.of("awesome"))),
             CLIParsers.commandParser.parse(" install   org/awesome  "));
+
+        assertEquals(
+            InstallCommand.of(ImmutableList.of(
+                PartialDependency.of(Identifier.of("org"), Identifier.of("awesome")),
+                PartialDependency.of(Identifier.of("somelib")))),
+            CLIParsers.commandParser.parse(" install   org/awesome  somelib  "));
 
         assertEquals(
             InstallCommand.of(PartialDependency.of(Identifier.of("3hren"), Identifier.of("blackhole"))),
@@ -185,6 +192,15 @@ public final class CLIParsersTest {
         assertEquals(
             ResolveCommand.of(),
             CLIParsers.commandParser.parse("     resolve "));
+
+        assertEquals(
+            InstallCommand.of(PartialDependency.of(
+                Optional.empty(),
+                Optional.empty(),
+                Identifier.of("blackhole"),
+                Optional.empty())),
+            CLIParsers.commandParser.parse(" install  blackhole  "));
+
 
         try {
             parser.parse("installsomething");

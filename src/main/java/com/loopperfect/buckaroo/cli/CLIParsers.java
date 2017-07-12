@@ -38,7 +38,7 @@ public final class CLIParsers {
             identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
                 .between(ignoreParser, ignoreParser).asOptional(),
             identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
-                .between(ignoreParser, ignoreParser),
+                .between(ignoreParser, ignoreParser).asOptional(),
             identifierParser.between(ignoreParser, ignoreParser),
             VersioningParsers.semanticVersionRequirementParser
                 .between(ignoreParser, ignoreParser).asOptional(),
@@ -92,9 +92,10 @@ public final class CLIParsers {
             .map(x -> InstallExistingCommand.of());
 
     static final Parser<InstallCommand> installCommandParser =
-        installTokenParser.between(ignoreParser, ignoreParser)
-        .next(partialDependencyParser.atLeast(1))
-        .map(InstallCommand::of);
+        installTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+            .next(partialDependencyParser.atLeast(1))
+            .between(ignoreParser, ignoreParser)
+            .map(InstallCommand::of);
 
     static final Parser<UninstallCommand> uninstallCommandParser =
         uninstallTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
