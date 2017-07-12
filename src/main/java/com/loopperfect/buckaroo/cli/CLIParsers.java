@@ -38,7 +38,7 @@ public final class CLIParsers {
             identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
                 .between(ignoreParser, ignoreParser).asOptional(),
             identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
-                .between(ignoreParser, ignoreParser),
+                .between(ignoreParser, ignoreParser).asOptional(),
             identifierParser.between(ignoreParser, ignoreParser),
             VersioningParsers.semanticVersionRequirementParser
                 .between(ignoreParser, ignoreParser).asOptional(),

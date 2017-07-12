@@ -7,6 +7,7 @@ import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import io.reactivex.Single;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
 
@@ -59,7 +60,19 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
     }
 
     @Override
-    public Iterable<RecipeIdentifier> findCandidates(final RecipeIdentifier identifier) {
+    public Iterable<RecipeIdentifier> findCandidates(final PartialRecipeIdentifier partial) {
+        try {
+            return CommonTasks.readCookBook(path)
+                .stream()
+                .filter(x -> Objects.equals(x.recipe, partial.project))
+                ::iterator; // ToDo implement sorting and scoring for organizations
+        } catch (Throwable ignored) {
+            return ImmutableList.of(); //ToDo return error
+        }
+    }
+
+    @Override
+    public Iterable<RecipeIdentifier> findSimilar(final RecipeIdentifier identifier) {
         try {
             final ImmutableList<RecipeIdentifier> candidates = CommonTasks.readCookBook(path);
             return Levenstein.findClosest(candidates, identifier);
