@@ -1,0 +1,17 @@
+buckaroo (1.2.0) unstable; urgency=medium
+
+  * New Architecture based on Rx
+  * Dependency resolver now async
+  * Reactive Terminal - Rich terminal output
+  * Transitive dependencies
+  * Install from github support
+  * Downloads are now cached
+  [Masahiro Wada <argon.argon.argon@gmail.com>]
+  * Uses Levenstein metric to detect typos and make suggestions
+  * Organizations now optional
+  * Progressbars!
+  * dependency resolution strategies with backtracking and scoring
+
+ -- Gaetano Checinski <gaetano@loopperfect.com>  Wed, 12 Jul 2017 20:00:00 +0100
+
+

@@ -203,3 +203,23 @@ java_test(
     ':jansi',
   ],
 )
+
+genrule(
+  name = 'debian',
+  out  = 'out',
+  srcs = [
+    'debian/buckaroo',
+    'debian/buckaroo.equivs',
+    'Changelog',
+    'LICENSE',
+    'README.md',
+  ],
+  cmd = '&&'.join([
+    'mkdir $OUT',
+    'cp -r $SRCDIR/* $OUT',
+    'cp -r $SRCDIR/debian/* $OUT',
+    'cp $(location :buckaroo-cli) $OUT/buckaroo.jar',
+    'cd $OUT',
+    'equivs-build buckaroo.equivs'
+  ])
+)

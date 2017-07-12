@@ -1,0 +1,17 @@
+Section: Development
+Priority: optional
+Homepage: https://buckaroo.pm
+Standards-Version: 3.9.2
+
+Package: buckaroo
+Version: 1.2.0
+Maintainer: team@buckaroo.pm
+Depends: openjdk-8-jre
+Recommends: watchmen, nailgun
+Architecture: all
+Copyright: LICENSE
+Changelog: Changelog
+Readme: README.md
+Files: buckaroo /usr/bin
+ buckaroo.jar /usr/bin/
+Description: C++ Package Manager for secure and reproducible builds
