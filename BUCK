@@ -228,6 +228,8 @@ java_test(
   ],
 )
 
+# creates buck-out/gen/debian/out/buckaroo-$version-all.deb
+# install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
   name = 'debian',
   out  = 'out',
