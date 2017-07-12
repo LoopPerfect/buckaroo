@@ -30,15 +30,18 @@ public class RecipeFetchException extends Exception implements RenderableExcepti
 
     public RecipeFetchException(final RecipeSource source, final RecipeIdentifier identifier, final Throwable cause) {
 
-        super(cause);
+        super("Could not fetch " + identifier.encode(), cause);
 
         this.source = Preconditions.checkNotNull(source);
         this.identifier = Preconditions.checkNotNull(identifier);
     }
 
-    @Override
-    public String getMessage() {
-        return "RecipeFetchException: " + identifier.toString();
+    public RecipeFetchException(final RecipeSource source, final RecipeIdentifier identifier, final String message) {
+
+        super(message);
+
+        this.source = Preconditions.checkNotNull(source);
+        this.identifier = Preconditions.checkNotNull(identifier);
     }
 
     public static RecipeFetchException wrap(final RecipeSource source, final RecipeIdentifier identifier, final Throwable throwable) {
@@ -63,13 +66,24 @@ public class RecipeFetchException extends Exception implements RenderableExcepti
                 .map(GenericEventRenderer::render)
                 .collect(toImmutableList());
 
+        final Throwable cause = getCause();
+
+        final Component causeComponent = cause == null ?
+            StackLayout.of() :
+            (cause instanceof RenderableException ?
+                ((RenderableException) cause).render() :
+                Text.of(cause.toString(), Color.RED));
+
         if (candidates.size() > 0) {
             return StackLayout.of(
                 Text.of("Error! \n" + getCause().toString(), Color.RED),
+                causeComponent,
                 Text.of("Maybe you meant to install one of the following?"),
                 ListLayout.of(candidates));
         }
 
-        return Text.of("Error! \n" + this.toString(), Color.RED);
+        return StackLayout.of(
+            Text.of("Error! \n" + this.toString(), Color.RED),
+            causeComponent);
     }
 }

@@ -6,6 +6,7 @@ import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.events.*;
+import com.loopperfect.buckaroo.sources.RecipeFetchException;
 import com.loopperfect.buckaroo.tasks.CacheTasks;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import com.loopperfect.buckaroo.tasks.DownloadTask;
@@ -107,7 +108,8 @@ public final class GitHubRecipeSource implements RecipeSource {
                     Map.Entry::getValue));
 
             if (semanticVersionReleases.isEmpty()) {
-                return Process.error(new FetchRecipeException("No releases found for " + identifier.encode() + ". "));
+                return Process.error(new RecipeFetchException(
+                    this, identifier, "No releases found for " + identifier.encode() + ". "));
             }
 
             final ImmutableMap<SemanticVersion, Process<Event, RecipeVersion>> tasks = semanticVersionReleases.entrySet()
@@ -128,7 +130,7 @@ public final class GitHubRecipeSource implements RecipeSource {
                     identifier.recipe.name,
                     "https://github.com/" + identifier.organization + "/" + identifier.recipe,
                     recipeVersions));
-        });
+        }).mapErrors(error -> RecipeFetchException.wrap(this, identifier, error));
     }
 
     public static RecipeSource of(final FileSystem fs) {
