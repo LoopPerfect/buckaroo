@@ -105,6 +105,20 @@ remote_file(
   sha1 = '3e3d0b73dcf4ad649f37758ea8502d92f3d299de',
 )
 
+maven_jar(
+  name = 'slf4j-api',
+  id = 'org.slf4j:slf4j-api:1.7.6',
+  src_sha1 = '97bb93c1badeae97a3d37e3c902df2985ee3de34',
+  bin_sha1 = '562424e36df3d2327e8e9301a76027fca17d54ea',
+)
+
+maven_jar(
+  name = 'slf4j-nop',
+  id = 'org.slf4j:slf4j-nop:1.7.6',
+  src_sha1 = 'c9c49df81b8800b3b644e92ae9c8bd50cf891c52',
+  bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
+)
+
 # We need to strip out the jar signing
 # TODO: Find a better approach!
 genrule(
@@ -154,6 +168,8 @@ java_library(
     ':jsch',
     ':jimfs',
     ':jansi',
+    ':slf4j-api',
+    ':slf4j-nop',
   ],
 )
 
