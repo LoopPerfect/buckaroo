@@ -92,7 +92,7 @@ public final class CLIParsers {
             .map(x -> InstallExistingCommand.of());
 
     static final Parser<InstallCommand> installCommandParser =
-        installTokenParser.between(ignoreParser, ignoreParser)
+        installTokenParser.between(ignoreParser.atLeast(1), ignoreParser)
         .next(partialDependencyParser.atLeast(1))
         .map(InstallCommand::of);
 
