@@ -193,6 +193,15 @@ public final class CLIParsersTest {
             ResolveCommand.of(),
             CLIParsers.commandParser.parse("     resolve "));
 
+        assertEquals(
+            InstallCommand.of(PartialDependency.of(
+                Optional.empty(),
+                Optional.empty(),
+                Identifier.of("blackhole"),
+                Optional.empty())),
+            CLIParsers.commandParser.parse(" install  blackhole  "));
+
+
         try {
             parser.parse("installsomething");
             assertTrue(false);
