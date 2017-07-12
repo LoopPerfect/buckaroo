@@ -9,6 +9,7 @@ import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.DependencyResolutionException;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 
 import java.io.IOException;
@@ -72,26 +73,43 @@ public final class RecipeSources {
             LazyCookbookRecipeSource.of(cookbookPath));
     }
 
-    public static Process<Event, Dependency> resolve(final RecipeSource source, final PartialDependency dependency) {
-
-        Preconditions.checkNotNull(source);
-        Preconditions.checkNotNull(dependency);
-
+    public static Process<Event, RecipeIdentifier> selectDependency(final RecipeSource source, final PartialDependency dependency) {
+        if (dependency.organization.isPresent()) {
+            return Process.of(
+                Single.just(RecipeIdentifier.of(dependency.source, dependency.organization.get(), dependency.project))
+            );
+        }
         final ImmutableList<RecipeIdentifier> candidates = Streams.stream(source
             .findCandidates(dependency))
             .limit(5)
             .collect(toImmutableList());
 
+        if (candidates.size() == 0) {
+            return Process.error(
+                PartialDependencyResolutionException.of(candidates, dependency));
+        }
 
-        final RecipeIdentifier selected = (dependency.organization.isPresent()) ?
-            RecipeIdentifier.of(dependency.source, dependency.organization.get(), dependency.project) :
-        candidates.get(0);
+        if (candidates.size() > 1) {
+            return Process.error(PartialDependencyResolutionException.of(candidates, dependency));
+        }
 
-        return source.fetch(RecipeIdentifier.of(selected.source, selected.organization, selected.recipe))
-            .chain(recipe -> Process.of(Single.just(recipe).map(x -> Dependency.of(
-                RecipeIdentifier.of(dependency.source, selected.organization, selected.recipe),
-                ExactSemanticVersion.of(x.versions.keySet().stream()
-                    .max(Comparator.naturalOrder())
-                    .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! ")))))));
+        return Process.of(
+            Observable.just(
+                Notification.of("resolved partial dependency: " + dependency.toString()+ " to "+ candidates.get(0).toString())),
+            Single.just(candidates.get(0)));
+    }
+
+    public static Process<Event, Dependency> resolve(final RecipeSource source, final PartialDependency dependency) {
+
+        Preconditions.checkNotNull(source);
+        Preconditions.checkNotNull(dependency);
+
+        return selectDependency(source, dependency).chain(selected ->
+            source.fetch(RecipeIdentifier.of(selected.source, selected.organization, selected.recipe))
+                .chain(recipe -> Process.of(Single.just(recipe).map(x -> Dependency.of(
+                    RecipeIdentifier.of(dependency.source, selected.organization, selected.recipe),
+                        ExactSemanticVersion.of(x.versions.keySet().stream()
+                        .max(Comparator.naturalOrder())
+                        .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! "))))))));
     }
 }
