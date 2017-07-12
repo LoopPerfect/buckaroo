@@ -58,7 +58,7 @@ public class RecipeFetchException extends Exception implements RenderableExcepti
     public Component render() {
 
         final ImmutableList<Component> candidates =
-            Streams.stream(source.findCandidates(identifier))
+            Streams.stream(source.findSimilar(identifier))
                 .limit(3)
                 .map(GenericEventRenderer::render)
                 .collect(toImmutableList());

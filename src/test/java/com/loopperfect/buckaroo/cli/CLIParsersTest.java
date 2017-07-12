@@ -111,7 +111,7 @@ public final class CLIParsersTest {
         assertEquals(
             PartialDependency.of(
                 Optional.empty(),
-                Identifier.of("loopperfect"),
+                Optional.of(Identifier.of("loopperfect")),
                 Identifier.of("valuable"),
                 Optional.of(ExactSemanticVersion.of(SemanticVersion.of(1)))),
             parser.parse(" loopperfect /  valuable       1"));
@@ -119,7 +119,7 @@ public final class CLIParsersTest {
         assertEquals(
             PartialDependency.of(
                 Optional.of(Identifier.of("github")),
-                Identifier.of("loopperfect"),
+                Optional.of(Identifier.of("loopperfect")),
                 Identifier.of("neither"),
                 Optional.of(ExactSemanticVersion.of(SemanticVersion.of(1)))),
             parser.parse("github  + loopperfect /  neither       [ 1 ]"));

@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class CacheTasks {
 
+    // we must prevent parallel downloads to the same path as they will corrupt the file.
+    // this can happen if two different dependencies have the same hash
     private static final Map<Path, Observable<Event>> inProgress = new ConcurrentHashMap<>();
 
     private CacheTasks() {
