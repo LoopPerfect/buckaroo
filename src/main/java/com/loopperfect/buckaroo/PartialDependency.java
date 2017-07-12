@@ -113,4 +113,12 @@ public final class PartialDependency {
             project,
             Optional.empty());
     }
+
+    public static PartialDependency of(final Identifier project) {
+        return new PartialDependency(
+            Optional.empty(),
+            Optional.empty(),
+            project,
+            Optional.empty());
+    }
 }

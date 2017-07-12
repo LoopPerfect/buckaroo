@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.cli;
 
+import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.versioning.BoundedSemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
@@ -143,6 +144,12 @@ public final class CLIParsersTest {
         assertEquals(
             InstallCommand.of(PartialDependency.of(Identifier.of("org"), Identifier.of("awesome"))),
             CLIParsers.commandParser.parse(" install   org/awesome  "));
+
+        assertEquals(
+            InstallCommand.of(ImmutableList.of(
+                PartialDependency.of(Identifier.of("org"), Identifier.of("awesome")),
+                PartialDependency.of(Identifier.of("somelib")))),
+            CLIParsers.commandParser.parse(" install   org/awesome  somelib  "));
 
         assertEquals(
             InstallCommand.of(PartialDependency.of(Identifier.of("3hren"), Identifier.of("blackhole"))),
