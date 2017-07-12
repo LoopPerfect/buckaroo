@@ -44,18 +44,24 @@ public final class Main {
         final CountDownLatch taskLatch = new CountDownLatch(1);
 
         // Send the command to the logging server, if present
-        LoggingTasks.log(fs, rawCommand).subscribe(
-            next -> {
-                // Do nothing
-            },
-            error -> {
-                // Do nothing
-                loggingLatch.countDown();
-            },
-            () -> {
-                // Do nothing
-                loggingLatch.countDown();
-            });
+        try {
+
+            LoggingTasks.log(fs, rawCommand).subscribe(
+                next -> {
+                    // Do nothing
+                },
+                error -> {
+                    // Do nothing
+                    loggingLatch.countDown();
+                },
+                () -> {
+                    // Do nothing
+                    loggingLatch.countDown();
+                });
+
+        } catch (final Throwable ignored) {
+          loggingLatch.countDown();
+        }
 
         // Parse the command
         final Parser<CLICommand> commandParser = CLIParsers.commandParser;
@@ -139,7 +145,7 @@ public final class Main {
 
             try {
                 loggingLatch.await(1000L, TimeUnit.MILLISECONDS);
-            } catch (Throwable ignored) {
+            } catch (final Throwable ignored) {
 
             }
 
