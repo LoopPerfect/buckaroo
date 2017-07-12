@@ -95,7 +95,7 @@ public final class RecipeSources {
 
         return Process.of(
             Observable.just(
-                Notification.of("Resolved partial dependency: " + dependency.encode() + " to " + candidates.get(0).encode())),
+                Notification.of("resolved partial dependency " + dependency.toString()+ " to "+ candidates.get(0).toString())),
             Single.just(candidates.get(0)));
     }
 
