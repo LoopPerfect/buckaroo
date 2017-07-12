@@ -62,8 +62,8 @@ public final class ProgressView {
             .scan(ImmutableList.of(), MoreLists::append);
 
         final Observable<Component> total = Observable.combineLatest(
-            installing.map(ImmutableList::size).filter(x -> x > 0),
-            installed.map(ImmutableList::size),
+            installing.map(x -> x.size()).filter(x -> x > 0),
+            installed.map(x -> x.size()),
             (a, b) -> (Component)Text.of(
                 "Installed: " + b + "/" + a));
 

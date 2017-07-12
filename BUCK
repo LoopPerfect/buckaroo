@@ -15,13 +15,6 @@ maven_jar(
 )
 
 maven_jar(
-  name = 'okio',
-  id = 'com.squareup.okio:okio:1.6.0',
-  src_sha1 = 'fb6ec0fbaa0229088b0d3dfe3b1f9d24add3e775',
-  bin_sha1 = '98476622f10715998eacf9240d6b479f12c66143',
-)
-
-maven_jar(
   name = 'okhttp',
   id = 'com.squareup.okhttp3:okhttp:3.2.0',
   src_sha1 = 'c6e2cb305d0da8820c335f20db73bfc69b2156ed',
@@ -43,7 +36,7 @@ maven_jar(
 )
 
 maven_jar(
-  name = 'junit-jar',
+  name = 'junit',
   id = 'junit:junit:4.12',
   src_sha1 = 'a6c32b40bf3d76eca54e3c601e5d1470c86fcdfa',
   bin_sha1 = '2973d150c0dc1fefe998f834810d68f278ea58ec',
@@ -92,38 +85,10 @@ maven_jar(
 )
 
 maven_jar(
-  name = 'httpclient',
-  id = 'org.apache.httpcomponents:httpclient:4.3.6',
-  src_sha1 = 'af4d76be0c46ee26b0d9d1d4a34d244a633cac84',
-  bin_sha1 = '4c47155e3e6c9a41a28db36680b828ced53b8af4',
-)
-
-maven_jar(
-  name = 'httpcore',
-  id = 'org.apache.httpcomponents:httpcore:4.4.6',
-  src_sha1 = '57cc0a7af46d66754e632bddc558a913b9e66ac3',
-  bin_sha1 = 'e3fd8ced1f52c7574af952e2e6da0df8df08eb82',
-)
-
-maven_jar(
-  name = 'commons-logging',
-  id = 'commons-logging:commons-logging:1.2',
-  src_sha1 = 'ecf26c7507d67782a3bbd148d170b31dfad001aa',
-  bin_sha1 = '4bfc12adfe4842bf07b657f0369c4cb522955686',
-)
-
-maven_jar(
-  name = 'slf4j-api',
-  id = 'org.slf4j:slf4j-api:1.7.6',
-  src_sha1 = '97bb93c1badeae97a3d37e3c902df2985ee3de34',
-  bin_sha1 = '562424e36df3d2327e8e9301a76027fca17d54ea',
-)
-
-maven_jar(
-  name = 'slf4j-nop',
-  id = 'org.slf4j:slf4j-nop:1.7.6',
-  src_sha1 = 'c9c49df81b8800b3b644e92ae9c8bd50cf891c52',
-  bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
+  name = 'jansi',
+  id = 'org.fusesource.jansi:jansi:1.15',
+  src_sha1 = 'c72a0cb311211de27f2a3acd867b9281edf7c320',
+  bin_sha1 = '5292bc138cb1412ea940551c667f8ec4da52d249',
 )
 
 remote_file(
@@ -155,27 +120,6 @@ prebuilt_jar(
   binary_jar = ':jgit-jar-fixed',
 )
 
-remote_file(
-  name = 'jansi-jar',
-  out = 'jansi-1.15.jar',
-  url = 'mvn:org.fusesource.jansi:jansi:jar:1.15',
-  sha1 = '5292bc138cb1412ea940551c667f8ec4da52d249',
-)
-
-prebuilt_jar(
-  name = 'jansi',
-  source_jar = ':jansi-jar',
-  binary_jar = ':jansi-jar'
-)
-
-prebuilt_jar(
-  name = 'junit',
-  source_jar = ':junit-jar',
-  binary_jar = ':junit-jar'
-)
-
-
-
 java_library(
   name = 'buckaroo',
   source = '8',
@@ -193,20 +137,14 @@ java_library(
     ':javatuples',
     ':rxjava',
     ':reactive-streams',
-    ':okio',
     ':okhttp',
     ':guava',
     ':gson',
     ':jparsec',
     ':jgit',
     ':mustache',
-    ':slf4j-api',
-    ':slf4j-nop',
     ':jsch',
     ':jimfs',
-    ':httpclient',
-    ':httpcore',
-    ':commons-logging',
     ':jansi',
   ],
 )
