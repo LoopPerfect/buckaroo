@@ -59,7 +59,8 @@ public final class CommonTasks {
             .subscribeOn(Schedulers.io())
             .map(Either::<Event, Project>right)
             .toObservable();
-        return Process.of(Observable.concat(states, result));
+        return Process.of(Observable.concat(states, result))
+            .mapErrors(throwable -> NotAProjectDirectoryException.wrap(throwable));
     }
 
     public static Single<DependencyLocks> readLockFile(final Path path) {
