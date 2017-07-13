@@ -64,9 +64,11 @@ Package requests are handled on [the wishlist](https://github.com/LoopPerfect/bu
 
 If the bug is for the Buckaroo client, please report it [here](https://github.com/LoopPerfect/buckaroo/issues). If the bug is for a specific package, please report it on [the recipes repo](https://github.com/LoopPerfect/buckaroo-recipes).
 
+Please see [CONTRIBUTING](CONTRIBUTING.md) for more information. 
+
 ### What is your contribution policy?
 
-Buckaroo is fully open-source and we are accepting external contributions. If you would like to contribute, please create a pull-request and we will review it promptly. Note that we will only merge code that builds, passes all tests and has test-coverage for significant additions.
+Buckaroo is fully open-source and we are accepting external contributions. Please see [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 First time contributor? Take a look at the issue tracker for [issues marked "first commit"](https://github.com/LoopPerfect/buckaroo/labels/first%20commit).
 
