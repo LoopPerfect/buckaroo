@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class CacheTasks {
 
-    // we must prevent parallel downloads to the same path as they will corrupt the file.
-    // this can happen if two different dependencies have the same hash
+    // We must prevent parallel downloads to the same path as they will overwrite each-other and corrupt the file.
+    // This can happen if two different dependencies that have the same hash, and hence the same cache location.
     private static final Map<Path, Observable<Event>> inProgress = new ConcurrentHashMap<>();
 
     private CacheTasks() {
@@ -113,24 +113,28 @@ public final class CacheTasks {
     }
 
     public static Observable<Event> downloadToCache(final FileSystem fs, final RemoteFile file) {
+
         final Path cachePath = getCachePath(fs, file);
-            synchronized (inProgress) {
 
-                if (inProgress.containsKey(cachePath)) {
-                    return inProgress.get(cachePath);
-                }
+        synchronized (inProgress) {
 
-                final Observable<Event> downloading = downloadToCacheUnsecure(fs, file)
-                    .cast(Event.class)
-                    .publish().autoConnect();
-
-                inProgress.put(cachePath, downloading
-                    .lastElement()
-                    .toObservable()
-                    .startWith(Notification.of("already downloading by another dependency")));
-
-                return downloading;
+            if (inProgress.containsKey(cachePath)) {
+                return inProgress.get(cachePath);
             }
+
+            final Observable<Event> downloading = downloadToCacheUnsecure(fs, file)
+                .cast(Event.class)
+                // We use share because the download should begin again if the previous
+                // subscription has completed.
+                .share();
+
+            inProgress.put(cachePath, downloading
+                .lastElement()
+                .toObservable()
+                .startWith(Notification.of("Download already in progress; deferring to the other task. ")));
+
+            return downloading;
+        }
     }
 
     public static Observable<Event> downloadUsingCache(final RemoteFile file, final Path target) {
@@ -177,7 +181,6 @@ public final class CacheTasks {
             .toObservable();
 
         return Observable.concat(
-            GitTasks.ensureCloneAndCheckout(gitCommit, cachePath, true)
-            , copy);
+            GitTasks.ensureCloneAndCheckout(gitCommit, cachePath, true), copy);
     }
 }

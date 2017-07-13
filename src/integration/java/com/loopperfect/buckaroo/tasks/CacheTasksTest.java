@@ -64,20 +64,25 @@ public final class CacheTasksTest {
             new URL("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
             HashCode.fromString("bb7220f89f404f244ff296b0fba7a70166de35a49094631c9e8d3eacda58d67a"));
 
-        final Path path = fs.getPath("test.txt");
+        final Path path1 = fs.getPath("test.txt");
+        final Path path2 = fs.getPath("test.txt");
 
-        CacheTasks.downloadUsingCache(remoteFile, path)
+        CacheTasks.downloadUsingCache(remoteFile, path1)
             .toList()
             .timeout(10000L, TimeUnit.MILLISECONDS)
             .blockingGet();
 
-        final List<Event> events = CacheTasks.downloadUsingCache(remoteFile, path)
+        final List<Event> events = CacheTasks.downloadUsingCache(remoteFile, path2)
             .toList()
             .timeout(10000L, TimeUnit.MILLISECONDS)
             .blockingGet();
 
-        assertTrue(Files.exists(path));
-        assertEquals(remoteFile.sha256, EvenMoreFiles.hashFile(path));
+        assertTrue(Files.exists(path1));
+        assertTrue(Files.exists(path2));
+
+        assertEquals(remoteFile.sha256, EvenMoreFiles.hashFile(path1));
+        assertEquals(remoteFile.sha256, EvenMoreFiles.hashFile(path2));
+
         assertTrue(events.stream().noneMatch(x -> x instanceof DownloadProgress));
     }
 

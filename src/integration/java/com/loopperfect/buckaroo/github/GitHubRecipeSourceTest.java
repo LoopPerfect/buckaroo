@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.github;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.sources.RecipeFetchException;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import org.junit.Test;
@@ -60,7 +61,7 @@ public final class GitHubRecipeSourceTest {
             result -> {
                 assertTrue(false);
             }, error -> {
-                assertTrue(error instanceof FetchRecipeException);
+                assertTrue(error instanceof RecipeFetchException);
             });
     }
 
@@ -79,7 +80,7 @@ public final class GitHubRecipeSourceTest {
             result -> {
                 assertTrue(false);
             }, error -> {
-                assertTrue(error instanceof FetchRecipeException);
+                assertTrue(error instanceof RecipeFetchException);
             });
     }
 

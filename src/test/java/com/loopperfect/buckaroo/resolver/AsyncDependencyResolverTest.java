@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
+import com.loopperfect.buckaroo.sources.RecipeFetchException;
 import com.loopperfect.buckaroo.sources.RecipeSources;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import org.javatuples.Pair;
@@ -41,11 +42,15 @@ public final class AsyncDependencyResolverTest {
                     DependencyGroup.of(),
                     Optional.empty())));
 
-        final RecipeSource recipeSource = recipeIdentifier -> {
-            if (recipeIdentifier.equals(identifier)) {
-                return Process.just(example);
+        final RecipeSource recipeSource = new RecipeSource() {
+            @Override
+            public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
+                if (identifier.equals(identifier)) {
+                    return Process.just(example);
+                }
+                return Process.error(
+                    new RecipeFetchException(this, identifier, "Could not find " + identifier.encode() + ". "));
             }
-            return Process.error(new FetchRecipeException("Could not find " + recipeIdentifier.encode() + ". "));
         };
 
         final ImmutableList<Dependency> toResolve = ImmutableList.of(
@@ -88,14 +93,18 @@ public final class AsyncDependencyResolverTest {
                     DependencyGroup.of(),
                     Optional.empty())));
 
-        final RecipeSource recipeSource = recipeIdentifier -> {
-            if (recipeIdentifier.equals(RecipeIdentifier.of("org", "example-a"))) {
-                return Process.just(recipeA);
+        final RecipeSource recipeSource = new RecipeSource() {
+            @Override
+            public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
+                if (identifier.equals(RecipeIdentifier.of("org", "example-a"))) {
+                    return Process.just(recipeA);
+                }
+                if (identifier.equals(RecipeIdentifier.of("org", "example-b"))) {
+                    return Process.just(recipeB);
+                }
+                return Process.error(new RecipeFetchException(
+                    this, identifier, "Could not find " + identifier.encode() + ". "));
             }
-            if (recipeIdentifier.equals(RecipeIdentifier.of("org", "example-b"))) {
-                return Process.just(recipeB);
-            }
-            return Process.error(new FetchRecipeException("Could not find " + recipeIdentifier.encode() + ". "));
         };
 
         final ImmutableList<Dependency> toResolve = ImmutableList.of(

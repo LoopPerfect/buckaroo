@@ -145,6 +145,11 @@ public final class Process<S, T> {
         return Process.of(toObservable().onErrorReturn(x -> right(f.apply(x))));
     }
 
+    public Process<S, T> mapErrors(final Function<Throwable, Throwable> f) {
+        Objects.requireNonNull(f, "f is null");
+        return Process.of(toObservable().onErrorResumeNext((Throwable e) -> Observable.error(f.apply(e))));
+    }
+
     public static <S, T> Process<S, T> just(final T result) {
         return of(Observable.just(right(result)));
     }

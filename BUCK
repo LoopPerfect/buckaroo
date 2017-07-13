@@ -15,6 +15,13 @@ maven_jar(
 )
 
 maven_jar(
+  name = 'okio',
+  id = 'com.squareup.okio:okio:1.6.0',
+  src_sha1 = 'fb6ec0fbaa0229088b0d3dfe3b1f9d24add3e775',
+  bin_sha1 = '98476622f10715998eacf9240d6b479f12c66143',
+)
+
+maven_jar(
   name = 'okhttp',
   id = 'com.squareup.okhttp3:okhttp:3.2.0',
   src_sha1 = 'c6e2cb305d0da8820c335f20db73bfc69b2156ed',
@@ -98,6 +105,20 @@ remote_file(
   sha1 = '3e3d0b73dcf4ad649f37758ea8502d92f3d299de',
 )
 
+maven_jar(
+  name = 'slf4j-api',
+  id = 'org.slf4j:slf4j-api:1.7.6',
+  src_sha1 = '97bb93c1badeae97a3d37e3c902df2985ee3de34',
+  bin_sha1 = '562424e36df3d2327e8e9301a76027fca17d54ea',
+)
+
+maven_jar(
+  name = 'slf4j-nop',
+  id = 'org.slf4j:slf4j-nop:1.7.6',
+  src_sha1 = 'c9c49df81b8800b3b644e92ae9c8bd50cf891c52',
+  bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
+)
+
 # We need to strip out the jar signing
 # TODO: Find a better approach!
 genrule(
@@ -137,6 +158,7 @@ java_library(
     ':javatuples',
     ':rxjava',
     ':reactive-streams',
+    ':okio',
     ':okhttp',
     ':guava',
     ':gson',
@@ -146,6 +168,8 @@ java_library(
     ':jsch',
     ':jimfs',
     ':jansi',
+    ':slf4j-api',
+    ':slf4j-nop',
   ],
 )
 
@@ -202,4 +226,26 @@ java_test(
     ':jparsec',
     ':jansi',
   ],
+)
+
+# creates buck-out/gen/debian/out/buckaroo-$version-all.deb
+# install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
+genrule(
+  name = 'debian',
+  out  = 'out',
+  srcs = [
+    'debian/buckaroo',
+    'debian/buckaroo.equivs',
+    'Changelog',
+    'LICENSE',
+    'README.md',
+  ],
+  cmd = '&&'.join([
+    'mkdir $OUT',
+    'cp -r $SRCDIR/* $OUT',
+    'cp -r $SRCDIR/debian/* $OUT',
+    'cp $(location :buckaroo-cli) $OUT/buckaroo.jar',
+    'cd $OUT',
+    'equivs-build buckaroo.equivs'
+  ])
 )

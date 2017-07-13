@@ -73,6 +73,7 @@ public final class Main {
 
             // Our renderers can't handle errors properly, so let's either-ize the stream
             // and split it to two stream in publish.
+            // TODO: Fix error-handling in the renders
             final Observable<Either<Throwable, Event>> errorOrEvent = task
                 .map(Either::<Throwable, Event>right)
                 .onErrorReturn(Either::<Throwable, Event>left);
@@ -108,10 +109,11 @@ public final class Main {
                         );
                 })
                 .subscribeOn(Schedulers.computation())
-                .sample(100, TimeUnit.MILLISECONDS, true) //most terminals can't handle more than 10fps
+                .sample(100, TimeUnit.MILLISECONDS, true) // Most terminals can't handle more than 10fps
                 .distinctUntilChanged();
 
             AnsiConsole.systemInstall();
+
             final TerminalBuffer buffer = new TerminalBuffer();
 
             final SettableFuture<Throwable> errorF = SettableFuture.create();
