@@ -70,9 +70,7 @@ public class RecipeFetchException extends Exception implements RenderableExcepti
 
         final Component causeComponent = cause == null ?
             StackLayout.of() :
-            (cause instanceof RenderableException ?
-                ((RenderableException) cause).render() :
-                Text.of(cause.toString(), Color.RED));
+            RenderableException.render(cause);
 
         if (candidates.size() > 0) {
             return StackLayout.of(
