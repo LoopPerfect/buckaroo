@@ -72,14 +72,17 @@ public final class QuickstartTasks {
             CommonTasks.createDirectory(fs.getPath(projectDirectory.toString(), projectIdentifier.name, "include"))
                 .toObservable(),
 
+            CommonTasks.createDirectory(fs.getPath(projectDirectory.toString(), projectIdentifier.name, "detail"))
+                .toObservable(),
+
             // Write the Hello World cpp file
             Single.fromCallable(QuickstartTasks::helloWorldCpp).flatMap(content -> CommonTasks.writeFile(
                 content,
-                fs.getPath(projectDirectory.toString(), projectIdentifier.name, "src", "main.cpp"),
+                fs.getPath(projectDirectory.toString(), projectIdentifier.name, "apps", "main.cpp"),
                 false))
                 .toObservable()
                 .cast(Event.class)
-                .onErrorReturnItem(Notification.of("src/main.cpp already exists!")),
+                .onErrorReturnItem(Notification.of("apps/main.cpp already exists!")),
 
             // Generate the BUCK file
             Single.fromCallable(() -> Either.orThrow(BuckFile.generate(projectIdentifier)))
@@ -90,7 +93,7 @@ public final class QuickstartTasks {
                         false).toObservable()
                         .cast(Event.class)
                         .onErrorReturnItem(Notification.of("BUCK-file already exists!")),
-                    Observable.just(Notification.of("buck run :" + projectIdentifier))
+                    Observable.just(Notification.of("buck run :main"))
                 ))
         ));
     }
