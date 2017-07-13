@@ -13,7 +13,7 @@ cxx_library(
   ]),
   exported_headers = subdir_glob([ # public include files
     ('{{name}}/include', '**/*.h'), # those will be exported
-    ('{{name}}/include', '**/*.hpp'), # and accessible via <quick/header.h>
+    ('{{name}}/include', '**/*.hpp'), # and accessible via <{{name}}/header.h>
   ]),
   deps = BUCKAROO_DEPS,
   visibility = ['PUBLIC']
