@@ -1,10 +1,12 @@
 package com.loopperfect.buckaroo.serialization;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import org.javatuples.Pair;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -61,6 +63,45 @@ public final class RecipeSerializerTest {
                         ImmutableMap.of(
                             RecipeIdentifier.of("org", "awesome"),
                             AnySemanticVersion.of())),
+                    Optional.of(RemoteFile.of(
+                        new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
+                        Hash.sha256("Hello, world. ")))),
+                SemanticVersion.of(1, 1),
+                RecipeVersion.of(
+                    GitCommit.of("https://github.com/magicco/magiclib/commit", "c7355d5"),
+                    "my-magic-lib")));
+
+        final String serializedRecipe = Serializers.serialize(recipe);
+
+        final Either<JsonParseException, Recipe> deserializedRecipe =
+            Serializers.parseRecipe(serializedRecipe);
+
+        assertEquals(Either.right(recipe), deserializedRecipe);
+    }
+
+    @Test
+    public void test3() throws MalformedURLException {
+
+        final Recipe recipe = Recipe.of(
+            "magic-lib",
+            "https://github.com/magicco/magiclib",
+            ImmutableMap.of(
+                SemanticVersion.of(1, 0),
+                RecipeVersion.of(
+                    Either.right(RemoteArchive.of(
+                        new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
+                        Hash.sha256("Hello, world. "))),
+                    Optional.of("my-magic-lib"),
+                    DependencyGroup.of(
+                        ImmutableMap.of(
+                            RecipeIdentifier.of("org", "awesome"),
+                            AnySemanticVersion.of())),
+                    PlatformDependencyGroup.of(
+                        ImmutableList.of(
+                            Pair.with(
+                                "linux.*",
+                                DependencyGroup.of(ImmutableMap.of(
+                                    RecipeIdentifier.of("org", "example"), AnySemanticVersion.of()))))),
                     Optional.of(RemoteFile.of(
                         new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
                         Hash.sha256("Hello, world. ")))),

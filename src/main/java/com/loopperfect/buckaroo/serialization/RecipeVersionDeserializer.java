@@ -32,10 +32,14 @@ public final class RecipeVersionDeserializer implements JsonDeserializer<RecipeV
                 Optional.of(context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class)) :
                 Optional.empty();
 
+        final Optional<PlatformDependencyGroup> platformDependencies = jsonObject.has("platformDependencies") ?
+            Optional.of(context.deserialize(jsonObject.get("platformDependencies"), PlatformDependencyGroup.class)) :
+            Optional.empty();
+
         final Optional<RemoteFile> buckResource = jsonObject.has("buck") ?
                 Optional.of(context.deserialize(jsonObject.get("buck"), RemoteFile.class)) :
                 Optional.empty();
 
-        return RecipeVersion.of(source, target, dependencies, buckResource);
+        return RecipeVersion.of(source, target, dependencies, platformDependencies, buckResource);
     }
 }

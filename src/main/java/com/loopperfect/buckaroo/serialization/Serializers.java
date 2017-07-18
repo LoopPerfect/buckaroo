@@ -89,6 +89,8 @@ public final class Serializers {
         .registerTypeAdapter(Dependency.class, new DependencyDeserializer())
         .registerTypeAdapter(DependencyGroup.class, new DependencyGroupSerializer())
         .registerTypeAdapter(DependencyGroup.class, new DependencyGroupDeserializer())
+        .registerTypeAdapter(PlatformDependencyGroup.class, new PlatformDependencyGroupSerializer())
+        .registerTypeAdapter(PlatformDependencyGroup.class, new PlatformDependencyGroupDeserializer())
         .registerTypeAdapter(DependencyLocks.class, new DependencyLocksSerializer())
         .registerTypeAdapter(DependencyLocks.class, new DependencyLocksDeserializer())
         .registerTypeAdapter(ResolvedDependency.class, new ResolvedDependencySerializer())
