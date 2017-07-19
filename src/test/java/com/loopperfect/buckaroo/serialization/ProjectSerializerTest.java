@@ -1,10 +1,12 @@
 package com.loopperfect.buckaroo.serialization;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
+import org.javatuples.Pair;
 
 import java.util.Optional;
 
@@ -52,6 +54,48 @@ public final class ProjectSerializerTest {
     public void testProjectSerializer4() throws Exception {
 
         final Project project = Project.of();
+
+        final String serializedProject = Serializers.serialize(project);
+
+        final Either<JsonParseException, Project> deserializedProject =
+            Serializers.parseProject(serializedProject);
+
+        assertEquals(Either.right(project), deserializedProject);
+    }
+
+    @org.junit.Test
+    public void testProjectSerializer5() throws Exception {
+
+        final Project project = Project.of(
+            Optional.of("my-project"),
+            Optional.empty(),
+            Optional.empty(),
+            DependencyGroup.of(),
+            PlatformDependencyGroup.of());
+
+        final String serializedProject = Serializers.serialize(project);
+
+        final Either<JsonParseException, Project> deserializedProject =
+            Serializers.parseProject(serializedProject);
+
+        assertEquals(Either.right(project), deserializedProject);
+    }
+
+    @org.junit.Test
+    public void testProjectSerializer6() throws Exception {
+
+        final Project project = Project.of(
+            Optional.of("my-project"),
+            Optional.empty(),
+            Optional.empty(),
+            DependencyGroup.of(),
+            PlatformDependencyGroup.of(ImmutableList.of(
+                Pair.with("linux.*", DependencyGroup.of()),
+                Pair.with(
+                    "macos.*",
+                    DependencyGroup.of(ImmutableMap.of(
+                        RecipeIdentifier.of("org", "my-magic-lib"),
+                        ExactSemanticVersion.of(SemanticVersion.of(4, 5, 6))))))));
 
         final String serializedProject = Serializers.serialize(project);
 

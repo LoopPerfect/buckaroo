@@ -13,30 +13,37 @@ public final class Project {
     public final Optional<String> target;
     public final Optional<String> license;
     public final DependencyGroup dependencies;
+    public final PlatformDependencyGroup platformDependencies;
 
-    private Project(final Optional<String> name, final Optional<String> target, final Optional<String> license, final DependencyGroup dependencies) {
+    private Project(
+        final Optional<String> name,
+        final Optional<String> target,
+        final Optional<String> license,
+        final DependencyGroup dependencies,
+        final PlatformDependencyGroup platformDependencies) {
 
         this.name = Preconditions.checkNotNull(name);
         this.target = Preconditions.checkNotNull(target);
         this.license = Preconditions.checkNotNull(license);
         this.dependencies = Preconditions.checkNotNull(dependencies);
+        this.platformDependencies = Preconditions.checkNotNull(platformDependencies);
     }
 
     public Project addDependency(final Dependency dependency) {
         Preconditions.checkNotNull(dependency);
-        return new Project(name, target, license, dependencies.add(dependency));
+        return new Project(name, target, license, dependencies.add(dependency), platformDependencies);
     }
 
     public Project addDependencies(final List<Dependency> dependencies) {
         Preconditions.checkNotNull(dependencies);
-        return new Project(name, target, license, this.dependencies.add(dependencies));
+        return new Project(name, target, license, this.dependencies.add(dependencies), platformDependencies);
     }
 
     public Project removeDependencies(final List<Dependency> dependencies) {
 
         Preconditions.checkNotNull(dependencies);
 
-        return new Project(name, target, license, this.dependencies.remove(dependencies));
+        return new Project(name, target, license, this.dependencies.remove(dependencies), platformDependencies);
     }
 
     @Override
@@ -51,12 +58,13 @@ public final class Project {
         return Objects.equals(name, other.name) &&
             Objects.equals(target, other.target) &&
             Objects.equals(license, other.license) &&
-            Objects.equals(dependencies, other.dependencies);
+            Objects.equals(dependencies, other.dependencies) &&
+            Objects.equals(platformDependencies, other.platformDependencies);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, target, license, dependencies);
+        return Objects.hash(name, target, license, dependencies, platformDependencies);
     }
 
     @Override
@@ -66,26 +74,45 @@ public final class Project {
             .add("target", target)
             .add("license", license)
             .add("dependencies", dependencies)
+            .add("platformDependencies", platformDependencies)
             .toString();
     }
 
-    public static Project of(final Optional<String> name, final Optional<String> target, final Optional<String> license, final DependencyGroup dependencies) {
-        return new Project(name, target, license, dependencies);
+    public static Project of(
+        final Optional<String> name,
+        final Optional<String> target,
+        final Optional<String> license,
+        final DependencyGroup dependencies,
+        final PlatformDependencyGroup platformDependencies) {
+        return new Project(name, target, license, dependencies, platformDependencies);
+    }
+
+    public static Project of(
+        final Optional<String> name,
+        final Optional<String> target,
+        final Optional<String> license,
+        final DependencyGroup dependencies) {
+        return new Project(name, target, license, dependencies, PlatformDependencyGroup.of());
     }
 
     public static Project of(final Optional<String> name) {
-        return new Project(name, Optional.empty(), Optional.empty(), DependencyGroup.of());
+        return new Project(name, Optional.empty(), Optional.empty(), DependencyGroup.of(), PlatformDependencyGroup.of());
     }
 
     public static Project of(final String name) {
-        return new Project(Optional.of(name), Optional.empty(), Optional.empty(), DependencyGroup.of());
+        return new Project(Optional.of(name), Optional.empty(), Optional.empty(), DependencyGroup.of(), PlatformDependencyGroup.of());
     }
 
     public static Project of(final String name, final DependencyGroup dependencies) {
-        return new Project(Optional.of(name), Optional.empty(), Optional.empty(), dependencies);
+        return new Project(Optional.of(name), Optional.empty(), Optional.empty(), dependencies, PlatformDependencyGroup.of());
     }
 
     public static Project of() {
-        return new Project(Optional.empty(), Optional.empty(), Optional.empty(), DependencyGroup.of());
+        return new Project(
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            DependencyGroup.of(),
+            PlatformDependencyGroup.of());
     }
 }

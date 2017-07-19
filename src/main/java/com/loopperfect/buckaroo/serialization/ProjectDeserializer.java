@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.*;
 import com.loopperfect.buckaroo.DependencyGroup;
+import com.loopperfect.buckaroo.PlatformDependencyGroup;
 import com.loopperfect.buckaroo.Project;
 
 import java.lang.reflect.Type;
@@ -26,13 +27,14 @@ public final class ProjectDeserializer implements JsonDeserializer<Project> {
             Optional.of(jsonObject.get("license").getAsString()) :
             Optional.empty();
 
-        DependencyGroup dependencies;
-        if (jsonObject.has("dependencies")) {
-            dependencies = context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class);
-        } else {
-            dependencies = DependencyGroup.of();
-        }
+        final DependencyGroup dependencies = jsonObject.has("dependencies") ?
+            context.deserialize(jsonObject.get("dependencies"), DependencyGroup.class) :
+            DependencyGroup.of();
 
-        return Project.of(name, target, license, dependencies);
+        final PlatformDependencyGroup platformDependencies = jsonObject.has("platformDependencies") ?
+            context.deserialize(jsonObject.get("platformDependencies"), PlatformDependencyGroup.class) :
+            PlatformDependencyGroup.of();
+
+        return Project.of(name, target, license, dependencies, platformDependencies);
     }
 }

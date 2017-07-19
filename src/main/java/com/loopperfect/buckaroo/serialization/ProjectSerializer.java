@@ -36,6 +36,10 @@ public final class ProjectSerializer implements JsonSerializer<Project> {
             jsonObject.add("dependencies", context.serialize(project.dependencies));
         }
 
+        if (project.platformDependencies.any()) {
+            jsonObject.add("platformDependencies", context.serialize(project.platformDependencies));
+        }
+
         return jsonObject;
     }
 }
