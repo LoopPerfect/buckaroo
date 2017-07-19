@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
 import com.loopperfect.buckaroo.*;
+import org.javatuples.Pair;
 
 import java.lang.reflect.Type;
 import java.util.Optional;
@@ -33,16 +34,22 @@ public final class ResolvedDependencyDeserializer implements JsonDeserializer<Re
             Optional.of(jsonObject.get("target").getAsString()) :
             Optional.empty();
 
-        final ImmutableList<ResolvedDependencyReference> dependencies = jsonObject.has("dependencies") ?
-            context.deserialize(
-                jsonObject.get("dependencies"),
-                new TypeToken<ImmutableList<ResolvedDependencyReference>>() {}.getType()) :
-            ImmutableList.of();
-
         final Optional<RemoteFile> buckResource = jsonObject.has("buck") ?
             Optional.of(context.deserialize(jsonObject.get("buck"), RemoteFile.class)) :
             Optional.empty();
 
-        return ResolvedDependency.of(source, target, buckResource, dependencies);
+        final ImmutableList<RecipeIdentifier> dependencies = jsonObject.has("dependencies") ?
+            context.deserialize(
+                jsonObject.get("dependencies"),
+                new TypeToken<ImmutableList<RecipeIdentifier>>() {}.getType()) :
+            ImmutableList.of();
+
+        final ImmutableList<ResolvedPlatformDependencies> platformDependencies = jsonObject.has("platformDependencies") ?
+            context.deserialize(
+                jsonObject.get("platformDependencies"),
+                new TypeToken<ImmutableList<ResolvedPlatformDependencies>>() {}.getType()) :
+            ImmutableList.of();
+
+        return ResolvedDependency.of(source, target, buckResource, dependencies, platformDependencies);
     }
 }

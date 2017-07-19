@@ -110,7 +110,6 @@ public final class InstallExistingTasks {
                     dependencyDirectory.resolve(".buckconfig.local"),
                     projectDirectory,
                     lock.origin.dependencies.stream()
-                        .map(i -> i.identifier)
                         .collect(ImmutableList.toImmutableList())),
                 dependencyDirectory.resolve(".buckconfig.local"),
                 true).toObservable(),
@@ -189,9 +188,9 @@ public final class InstallExistingTasks {
                             // Generate the BUCKAROO_DEPS file
                             (Project project) -> Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(event.locks.entries()
                                 .stream()
-                                .map(i -> ResolvedDependencyReference.of(i.identifier, i.origin.target))
                                 // The top-level BUCKAROO_DEPS should only contain immediate dependencies
-                                .filter(x -> project.dependencies.requires(x.identifier))
+                                .map(x -> x.identifier)
+                                .filter(project.dependencies::requires)
                                 .collect(ImmutableList.toImmutableList())))
                                 .flatMap(content -> CommonTasks.writeFile(
                                     content, projectDirectory.resolve("BUCKAROO_DEPS"), true))

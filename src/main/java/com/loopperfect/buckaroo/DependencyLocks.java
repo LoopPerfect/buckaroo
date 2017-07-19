@@ -60,12 +60,10 @@ public final class DependencyLocks {
 
                 final RecipeVersion recipeVersion = entry.getValue().getValue1();
 
-                final ImmutableList<ResolvedDependencyReference> xs =
+                final ImmutableList<RecipeIdentifier> xs =
                     recipeVersion.dependencies.map(x -> x.dependencies.entrySet()
                         .stream()
-                        .map(i -> ResolvedDependencyReference.of(
-                            i.getKey(),
-                            resolvedDependencies.get(i.getKey()).getValue1().target))
+                        .map(Map.Entry::getKey)
                         .collect(ImmutableList.toImmutableList())).orElse(ImmutableList.of());
 
                 return DependencyLock.of(

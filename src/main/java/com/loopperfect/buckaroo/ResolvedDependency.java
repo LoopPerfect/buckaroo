@@ -17,13 +17,15 @@ public final class ResolvedDependency {
     public final Either<GitCommit, RemoteArchive> source;
     public final Optional<String> target;
     public final Optional<RemoteFile> buckResource;
-    public final ImmutableList<ResolvedDependencyReference> dependencies;
+    public final ImmutableList<RecipeIdentifier> dependencies;
+    public final ImmutableList<ResolvedPlatformDependencies> platformDependencies;
 
     private ResolvedDependency(
         final Either<GitCommit, RemoteArchive> source,
         final Optional<String> target,
         final Optional<RemoteFile> buckResource,
-        final ImmutableList<ResolvedDependencyReference> dependencies) {
+        final ImmutableList<RecipeIdentifier> dependencies,
+        final ImmutableList<ResolvedPlatformDependencies> platformDependencies) {
 
         super();
 
@@ -31,18 +33,21 @@ public final class ResolvedDependency {
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(buckResource);
         Preconditions.checkNotNull(dependencies);
+        Preconditions.checkNotNull(platformDependencies);
 
         this.source = source;
         this.target = target;
         this.buckResource = buckResource;
         this.dependencies = dependencies;
+        this.platformDependencies = platformDependencies;
     }
 
     public boolean equals(final ResolvedDependency other) {
         return Objects.equals(source, other.source) &&
             Objects.equals(target, other.target) &&
             Objects.equals(buckResource, other.buckResource) &&
-            Objects.equals(dependencies, other.dependencies);
+            Objects.equals(dependencies, other.dependencies) &&
+            Objects.equals(platformDependencies, other.platformDependencies);
     }
 
     @Override
@@ -54,7 +59,7 @@ public final class ResolvedDependency {
 
     @Override
     public int hashCode() {
-        return Objects.hash(source, target, buckResource, dependencies);
+        return Objects.hash(source, target, buckResource, dependencies, platformDependencies);
     }
 
     @Override
@@ -64,6 +69,7 @@ public final class ResolvedDependency {
             .add("target", target)
             .add("buckResource", buckResource)
             .add("dependencies", dependencies)
+            .add("platformDependencies", platformDependencies)
             .toString();
     }
 
@@ -71,29 +77,26 @@ public final class ResolvedDependency {
         final Either<GitCommit, RemoteArchive> source,
         final Optional<String> target,
         final Optional<RemoteFile> buckResource,
-        final ImmutableList<ResolvedDependencyReference> dependencies) {
-        return new ResolvedDependency(source, target, buckResource, dependencies);
+        final ImmutableList<RecipeIdentifier> dependencies,
+        final ImmutableList<ResolvedPlatformDependencies> platformDependencies) {
+        return new ResolvedDependency(source, target, buckResource, dependencies, platformDependencies);
     }
 
     public static ResolvedDependency of(
         final Either<GitCommit, RemoteArchive> source,
-        final ImmutableList<ResolvedDependencyReference> dependencies) {
-        return new ResolvedDependency(source, Optional.empty(), Optional.empty(), dependencies);
+        final Optional<String> target,
+        final Optional<RemoteFile> buckResource,
+        final ImmutableList<RecipeIdentifier> dependencies) {
+        return new ResolvedDependency(source, target, buckResource, dependencies, ImmutableList.of());
+    }
+
+    public static ResolvedDependency of(
+        final Either<GitCommit, RemoteArchive> source,
+        final ImmutableList<RecipeIdentifier> dependencies) {
+        return new ResolvedDependency(source, Optional.empty(), Optional.empty(), dependencies, ImmutableList.of());
     }
 
     public static ResolvedDependency of(final Either<GitCommit, RemoteArchive> source) {
-        return new ResolvedDependency(source, Optional.empty(), Optional.empty(), ImmutableList.of());
+        return new ResolvedDependency(source, Optional.empty(), Optional.empty(), ImmutableList.of(), ImmutableList.of());
     }
-
-//    public static ResolvedDependency from(final RecipeVersion recipeVersion) {
-//        Preconditions.checkNotNull(recipeVersion);
-//        return of(
-//            recipeVersion.source,
-//            recipeVersion.target,
-//            recipeVersion.buckResource,
-//            recipeVersion.dependencies.orElse(DependencyGroup.of()).entries()
-//                .stream()
-//                .map(x -> x.project)
-//                .collect(ImmutableList.toImmutableList()));
-//    }
 }

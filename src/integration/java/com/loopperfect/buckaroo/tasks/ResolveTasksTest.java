@@ -11,11 +11,29 @@ import io.reactivex.Observable;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
+import java.util.Optional;
 
 import static com.loopperfect.buckaroo.Either.right;
 import static org.junit.Assert.assertEquals;
 
 public final class ResolveTasksTest {
+
+    @Test
+    public void generateDependencyLocksEmpty() throws Exception {
+
+        final Project project = Project.of(
+            Optional.of("my-project"),
+            Optional.empty(),
+            Optional.empty(),
+            DependencyGroup.of());
+
+        final ResolvedDependencies resolvedDependencies = ResolvedDependencies.of();
+
+        final DependencyLocks dependencyLocks = ResolveTasks.generateDependencyLocksFromProjectAndResolvedDependencies(
+            project, resolvedDependencies);
+
+        assertEquals(DependencyLocks.of(), dependencyLocks);
+    }
 
     @Test
     public void emptyProject() throws Exception {

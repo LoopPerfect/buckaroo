@@ -2,8 +2,10 @@ package com.loopperfect.buckaroo.github;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Jimfs;
-import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.github.GitHubRecipeSource;
+import com.loopperfect.buckaroo.Dependency;
+import com.loopperfect.buckaroo.RecipeIdentifier;
+import com.loopperfect.buckaroo.RecipeSource;
+import com.loopperfect.buckaroo.ResolvedDependencies;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.Single;

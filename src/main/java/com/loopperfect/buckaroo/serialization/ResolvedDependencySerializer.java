@@ -34,12 +34,16 @@ public final class ResolvedDependencySerializer implements JsonSerializer<Resolv
             jsonObject.addProperty("target", resolvedDependency.target.get());
         }
 
+        if (resolvedDependency.buckResource.isPresent()) {
+            jsonObject.add("buck", context.serialize(resolvedDependency.buckResource.get(), RemoteFile.class));
+        }
+
         if (!resolvedDependency.dependencies.isEmpty()) {
             jsonObject.add("dependencies", context.serialize(resolvedDependency.dependencies));
         }
 
-        if (resolvedDependency.buckResource.isPresent()) {
-            jsonObject.add("buck", context.serialize(resolvedDependency.buckResource.get(), RemoteFile.class));
+        if (!resolvedDependency.platformDependencies.isEmpty()) {
+            jsonObject.add("platformDependencies", context.serialize(resolvedDependency.platformDependencies));
         }
 
         return jsonObject;

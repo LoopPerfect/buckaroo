@@ -79,7 +79,9 @@ public final class InstallTasks {
 
                                 AsyncDependencyResolver.resolve(
                                     recipeSource,
-                                    project.dependencies.add(proposedDependencies).entries())
+                                    project.dependencies.add(proposedDependencies)
+                                        .add(project.platformDependencies.allPlatforms().entries())
+                                        .entries())
                                     .map(DependencyLocks::of),
 
                                 (DependencyLocks locks) -> Process.chain(

@@ -19,6 +19,22 @@ public final class ResolveTasks {
 
     }
 
+    /**
+     * Generates the appropriate lock-file from a project and some resolved dependencies.
+     * This process is a little complex
+     * @param project
+     * @param resolvedDependencies
+     * @return
+     */
+    public static DependencyLocks generateDependencyLocksFromProjectAndResolvedDependencies(
+        final Project project, final ResolvedDependencies resolvedDependencies) {
+
+        Preconditions.checkNotNull(project);
+        Preconditions.checkNotNull(resolvedDependencies);
+
+        return DependencyLocks.of(resolvedDependencies);
+    }
+
     public static Observable<Event> resolveDependencies(final Path projectDirectory) {
 
         Preconditions.checkNotNull(projectDirectory);
@@ -37,9 +53,12 @@ public final class ResolveTasks {
                 final RecipeSource recipeSource = RecipeSources.standard(projectDirectory.getFileSystem(), config.config);
 
                 return AsyncDependencyResolver.resolve(
-                    recipeSource, project.dependencies.entries()).map(ResolvedDependenciesEvent::of);
+                    recipeSource, project.dependencies.add(project.platformDependencies.allPlatforms().entries())
+                        .entries())
+                    .map(ResolvedDependenciesEvent::of)
+                    .map(i -> generateDependencyLocksFromProjectAndResolvedDependencies(project, i.dependencies));
 
-            }).map(i -> DependencyLocks.of(i.dependencies)).chain((DependencyLocks dependencyLocks) -> {
+            }).chain((DependencyLocks dependencyLocks) -> {
 
                 final Path lockFilePath = projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath();
 

@@ -2,8 +2,8 @@ package com.loopperfect.buckaroo;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static junit.framework.TestCase.assertFalse;
+import static junit.framework.TestCase.assertTrue;
 
 public final class IdentifierTest {
 
