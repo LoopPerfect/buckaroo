@@ -1,4 +1,10 @@
-buckaroo (1.2.0) unstable; urgency=medium
+buckaroo (1.2.1) stable; urgency=low
+  * Cookbooks are fetched automatically if they don't exist
+
+ -- Gaetano Checinski <gaetano@loopperfect.com>  Wed, 20 Jul 2017 17:00:00 +0100
+
+
+buckaroo (1.2.0) stable; urgency=medium
 
   * New Architecture based on Rx
   * Dependency resolver now async
