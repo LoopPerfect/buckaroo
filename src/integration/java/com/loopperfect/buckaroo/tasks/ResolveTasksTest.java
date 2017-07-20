@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.MoreFiles;
 import com.google.common.jimfs.Jimfs;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
@@ -21,6 +22,14 @@ public final class ResolveTasksTest {
     public void emptyProject() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
+
+        // Workaround: JimFs does not implement .toFile;
+        // We clone and fail buckaroo-recipes if it does not exist, so we create it.
+        MoreFiles.createParentDirectories(fs.getPath(
+            System.getProperty("user.home"),
+            ".buckaroo",
+            "buckaroo-recipes",
+            ".git"));
 
         final Project project = Project.of();
 

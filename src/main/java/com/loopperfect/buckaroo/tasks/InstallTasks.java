@@ -15,6 +15,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.loopperfect.buckaroo.tasks.CommonTasks.maybeInitCookbooks;
 
 public final class InstallTasks {
 
@@ -56,7 +57,11 @@ public final class InstallTasks {
         return Process.chain(
 
             // Read the config file
-            Process.of(CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem())),
+            Process.usingLastAsResult(CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()).toObservable())
+                .mapStates(x->(Event)x)
+            .chain(x -> Process.of(
+                maybeInitCookbooks(projectDirectory.getFileSystem(), x.config), Single.just(x)
+            )),
 
             (ReadConfigFileEvent readConfigFileEvent) -> {
 

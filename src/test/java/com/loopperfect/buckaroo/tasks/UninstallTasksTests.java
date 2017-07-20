@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.MoreFiles;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
@@ -28,6 +29,14 @@ public final class UninstallTasksTests {
             )));
 
         Files.write(fs.getPath("buckaroo.json"), Serializers.serialize(project).getBytes(Charsets.UTF_8));
+
+        // Workaround: JimFs does not implement .toFile;
+        // We clone and fail buckaroo-recipes if it does not exist, so we create it.
+        MoreFiles.createParentDirectories(fs.getPath(
+            System.getProperty("user.home"),
+            ".buckaroo",
+            "buckaroo-recipes",
+            ".git"));
 
         UninstallTasks.uninstallInWorkingDirectory(
             fs,
