@@ -9,9 +9,12 @@ import com.loopperfect.buckaroo.resolver.ResolvedDependenciesEvent;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.sources.RecipeSources;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
+
+import static com.loopperfect.buckaroo.tasks.CommonTasks.maybeInitCookbooks;
 
 public final class ResolveTasks {
 
@@ -25,9 +28,15 @@ public final class ResolveTasks {
 
         final Path projectFilePath = projectDirectory.resolve("buckaroo.json").toAbsolutePath();
 
-        final Process<Event, ReadConfigFileEvent> p = Process.of(
-            Observable.just((Event)Notification.of("Resolving dependencies... ")),
-            CommonTasks.readAndMaybeGenerateConfigFile(projectDirectory.getFileSystem()));
+        final Process<Event, ReadConfigFileEvent> p = Process.usingLastAsResult(
+            Observable.just((Event)Notification.of("Resolving dependencies... "))
+        ).chain(x->
+            Process.usingLastAsResult(CommonTasks.readAndMaybeGenerateConfigFile(
+                projectDirectory.getFileSystem()).toObservable()
+            ).mapStates(y->(Event)y)
+        ).chain(x -> Process.of(
+            maybeInitCookbooks(projectDirectory.getFileSystem(), x.config), Single.just(x)
+        ));
 
         return p.chain(config -> {
 

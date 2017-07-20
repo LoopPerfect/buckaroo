@@ -158,6 +158,22 @@ public final class CommonTasks {
             .subscribeOn(Schedulers.io());
     }
 
+
+    public static Observable<Event> maybeInitCookbooks(final FileSystem fs, final BuckarooConfig config) {
+
+        final Path configFolder = fs.getPath(
+            System.getProperty("user.home"),
+            ".buckaroo");
+
+        return Observable.merge(config.cookbooks
+            .stream()
+            .filter(cookbook -> !Files.exists(configFolder.resolve(cookbook.name.toString())))
+            .map(cookbook ->
+                UpdateTasks.updateCookbook(configFolder, cookbook))
+            .collect(toImmutableList())
+        );
+    }
+
     public static Single<ReadConfigFileEvent> readAndMaybeGenerateConfigFile(final FileSystem fs) {
         Preconditions.checkNotNull(fs);
         return Single.fromCallable(() -> {
@@ -174,8 +190,10 @@ public final class CommonTasks {
             }
             return Either.orThrow(Serializers.parseConfig(EvenMoreFiles.read(configFilePath)));
         }).map(ReadConfigFileEvent::of)
-         .subscribeOn(Schedulers.io());
+          .cache()
+          .subscribeOn(Schedulers.io());
     }
+
 
     public static Single<FileHashEvent> hash(final Path path) {
 
