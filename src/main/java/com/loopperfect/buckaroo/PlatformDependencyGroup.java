@@ -72,7 +72,8 @@ public final class PlatformDependencyGroup {
         return new PlatformDependencyGroup(platformDependencies);
     }
 
-    public static PlatformDependencyGroup of() {
-        return new PlatformDependencyGroup(ImmutableList.of());
+    @SafeVarargs
+    public static PlatformDependencyGroup of(final Pair<String, DependencyGroup>... platformDependencies) {
+        return new PlatformDependencyGroup(ImmutableList.copyOf(platformDependencies));
     }
 }

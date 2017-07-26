@@ -11,16 +11,27 @@ import java.util.Objects;
 
 public final class DependencyLocks {
 
+    public final ImmutableList<RecipeIdentifier> projectDependencies;
+    public final ImmutableList<ResolvedPlatformDependencies> platformDependencies;
     public final ImmutableMap<RecipeIdentifier, ResolvedDependency> locks;
 
-    private DependencyLocks(final Map<RecipeIdentifier, ResolvedDependency> locks) {
+    private DependencyLocks(
+        final ImmutableList<RecipeIdentifier> projectDependencies,
+        final ImmutableList<ResolvedPlatformDependencies> platformDependencies,
+        final Map<RecipeIdentifier, ResolvedDependency> locks) {
+        Preconditions.checkNotNull(projectDependencies);
+        Preconditions.checkNotNull(platformDependencies);
         Preconditions.checkNotNull(locks);
+        this.projectDependencies = projectDependencies;
+        this.platformDependencies = platformDependencies;
         this.locks = ImmutableMap.copyOf(locks);
     }
 
     public boolean equals(final DependencyLocks other) {
         Preconditions.checkNotNull(other);
-        return Objects.equals(locks, other.locks);
+        return Objects.equals(projectDependencies, other.projectDependencies) &&
+            Objects.equals(platformDependencies, other.platformDependencies) &&
+            Objects.equals(locks, other.locks);
     }
 
     public ImmutableList<DependencyLock> entries() {
@@ -32,7 +43,7 @@ public final class DependencyLocks {
 
     @Override
     public int hashCode() {
-        return Objects.hash(locks);
+        return Objects.hash(projectDependencies, platformDependencies, locks);
     }
 
     @Override
@@ -80,12 +91,15 @@ public final class DependencyLocks {
     }
 
     public static DependencyLocks of(final Map<RecipeIdentifier, ResolvedDependency> locks) {
-        return new DependencyLocks(locks);
+        return new DependencyLocks(ImmutableList.of(), ImmutableList.of(), locks);
     }
 
     public static DependencyLocks of(final Collection<DependencyLock> locks) {
-        return new DependencyLocks(locks.stream()
-            .collect(ImmutableMap.toImmutableMap(x -> x.identifier, x -> x.origin)));
+        return new DependencyLocks(
+            ImmutableList.of(),
+            ImmutableList.of(),
+            locks.stream()
+                .collect(ImmutableMap.toImmutableMap(x -> x.identifier, x -> x.origin)));
     }
 
     public static DependencyLocks of(final DependencyLock... locks) {
@@ -93,6 +107,6 @@ public final class DependencyLocks {
     }
 
     public static DependencyLocks of() {
-        return new DependencyLocks(ImmutableMap.of());
+        return new DependencyLocks(ImmutableList.of(), ImmutableList.of(), ImmutableMap.of());
     }
 }

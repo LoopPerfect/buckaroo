@@ -5,7 +5,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -135,5 +137,12 @@ public final class DependencyGroup {
 
     public static DependencyGroup of() {
         return new DependencyGroup(ImmutableMap.of());
+    }
+
+    public static DependencyGroup of(final Dependency dependency, final Dependency... dependencies) {
+        final ImmutableMap<RecipeIdentifier, SemanticVersionRequirement> x =
+            Streams.concat(Stream.of(dependency), Arrays.stream(dependencies))
+                .collect(ImmutableMap.toImmutableMap(i -> i.project, i -> i.requirement));
+        return new DependencyGroup(x);
     }
 }

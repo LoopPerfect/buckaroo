@@ -8,11 +8,14 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.Observable;
+import org.eclipse.jgit.api.Git;
+import org.javatuples.Pair;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
 import java.util.Optional;
 
+import static com.loopperfect.buckaroo.Either.left;
 import static com.loopperfect.buckaroo.Either.right;
 import static org.junit.Assert.assertEquals;
 
@@ -33,6 +36,77 @@ public final class ResolveTasksTest {
             project, resolvedDependencies);
 
         assertEquals(DependencyLocks.of(), dependencyLocks);
+    }
+
+    @Test
+    public void generateDependencyLocks1() throws Exception {
+
+        final Project project = Project.of(
+            Optional.of("my-project"),
+            Optional.empty(),
+            Optional.empty(),
+            DependencyGroup.of(
+                Dependency.of(
+                    RecipeIdentifier.of("org", "example"),
+                    AnySemanticVersion.of())));
+
+        final ResolvedDependencies resolvedDependencies = ResolvedDependencies.of(
+            ImmutableMap.of(
+                RecipeIdentifier.of("org", "example"),
+                Pair.with(
+                    SemanticVersion.of(1),
+                    RecipeVersion.of(GitCommit.of("https://github.com/org/example/commit", "c7355d5")))));
+
+        final DependencyLocks dependencyLocks = ResolveTasks.generateDependencyLocksFromProjectAndResolvedDependencies(
+            project, resolvedDependencies);
+
+        final DependencyLocks expected = DependencyLocks.of(
+            DependencyLock.of(
+                RecipeIdentifier.of("org", "example"),
+                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/example/commit", "c7355d5")))));
+
+        assertEquals(expected, dependencyLocks);
+    }
+
+    @Test
+    public void generateDependencyLocks2() throws Exception {
+
+        final Project project = Project.of(
+            Optional.of("my-project"),
+            Optional.empty(),
+            Optional.empty(),
+            DependencyGroup.of(
+                Dependency.of(
+                    RecipeIdentifier.of("org", "example"),
+                    AnySemanticVersion.of())),
+            PlatformDependencyGroup.of(
+                Pair.with(
+                    "^linux.*",
+                    DependencyGroup.of(
+                        Dependency.of(
+                            RecipeIdentifier.of("org", "linux-only"),
+                            AnySemanticVersion.of())))));
+
+        final ResolvedDependencies resolvedDependencies = ResolvedDependencies.of(
+            ImmutableMap.of(
+                RecipeIdentifier.of("org", "example"),
+                Pair.with(
+                    SemanticVersion.of(1),
+                    RecipeVersion.of(GitCommit.of("https://github.com/org/example/commit", "c7355d5"))),
+                RecipeIdentifier.of("org", "linux-only"),
+                Pair.with(
+                    SemanticVersion.of(1),
+                    RecipeVersion.of(GitCommit.of("https://github.com/org/linux-only/commit", "b8945e7")))));
+
+        final DependencyLocks dependencyLocks = ResolveTasks.generateDependencyLocksFromProjectAndResolvedDependencies(
+            project, resolvedDependencies);
+
+        final DependencyLocks expected = DependencyLocks.of(
+            DependencyLock.of(
+                RecipeIdentifier.of("org", "example"),
+                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/example/commit", "c7355d5")))));
+
+        assertEquals(expected, dependencyLocks);
     }
 
     @Test
