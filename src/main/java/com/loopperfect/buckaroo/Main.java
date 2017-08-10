@@ -83,7 +83,7 @@ public final class Main {
                         // It's crucial that we don't subscribe multiple times to our event emitters as they do I/O.
                         Observable<Component> errors  = upstream
                             .filter(Either::isLeft)
-                            .map(x->x.left().get())
+                            .map(x -> x.left().get())
                             .cache() // upstream is a hot observable, we want make sure we don't lose the error
                             .flatMap(Observable::error)
                             .cast(Component.class);
@@ -136,7 +136,7 @@ public final class Main {
                         taskLatch.countDown();
                     });
 
-            //makes sure we don't exit main before we sucessfully unsubscribed from the eventstream
+            // Ensure we don't exit main before we have successfully unsubscribed from the stream
             taskLatch.await();
 
             if (errorF.isDone()) {
@@ -154,6 +154,7 @@ public final class Main {
         } catch (final Throwable e) {
             System.out.println("Uh oh!");
             System.out.println(e.getMessage());
+            System.out.println("Visit https://github.com/LoopPerfect/buckaroo/issues for help");
         }
     }
 }

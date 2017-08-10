@@ -1,4 +1,4 @@
-package com.loopperfect.buckaroo.bitbucket;
+package com.loopperfect.buckaroo.gitlab;
 
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.GitCommitHash;
@@ -11,22 +11,22 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public final class BitBucketGitProvider implements GitProvider {
+public final class GitLabGitProvider implements GitProvider {
 
-    private BitBucketGitProvider() {
+    private GitLabGitProvider() {
 
     }
 
     @Override
     public Identifier recipeIdentifierPrefix() {
-        return Identifier.of("bitbucket");
+        return Identifier.of("gitlab");
     }
 
     @Override
     public String gitURL(final Identifier owner, final Identifier project) {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(project);
-        return "git@bitbucket.org:" + owner.name + "/" + project.name + ".git";
+        return "git@gitlab.com:" + owner.name + "/" + project.name + ".git";
     }
 
     @Override
@@ -34,7 +34,7 @@ public final class BitBucketGitProvider implements GitProvider {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(project);
         try {
-            return new URI("https://bitbucket.org/" + owner.name + "/" + project.name);
+            return new URI("https://gitlab.com/" + owner.name + "/" + project.name);
         } catch (final URISyntaxException e) {
             // Should not happen because identifiers are validated in their constructor.
             throw new RuntimeException(e);
@@ -47,7 +47,7 @@ public final class BitBucketGitProvider implements GitProvider {
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(commit);
         try {
-            return new URI("https://bitbucket.org/" + owner.name + "/" + project.name + "/get/" + commit.hash.substring(0, 12) + ".zip");
+            return new URI("https://gitlab.com/" + owner.name + "/" + project.name + "/repository/archive.zip?ref=" + commit.hash.substring(0, 40));
         } catch (final URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -59,10 +59,10 @@ public final class BitBucketGitProvider implements GitProvider {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(commit);
-        return Optional.of(fs.getPath(fs.getSeparator(),owner.name + "-" + project.name + "-" + commit.hash.substring(0, 12)));
+        return Optional.of(fs.getPath(fs.getSeparator(), project.name + "-" + commit.hash + "-" + commit.hash));
     }
 
-    public static BitBucketGitProvider of() {
-        return new BitBucketGitProvider();
+    public static GitLabGitProvider of() {
+        return new GitLabGitProvider();
     }
 }
