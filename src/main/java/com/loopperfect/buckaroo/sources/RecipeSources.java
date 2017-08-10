@@ -8,7 +8,6 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.bitbucket.BitBucketGitProvider;
 import com.loopperfect.buckaroo.github.GitHubGitProvider;
-import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.DependencyResolutionException;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import io.reactivex.Observable;

@@ -101,7 +101,7 @@ public final class GitTasks {
                 .filter(x -> x.getTarget().getName().startsWith(prefix))
                 .collect(ImmutableMap.toImmutableMap(
                     x -> x.getTarget().getName().substring(prefix.length()),
-                    x -> GitCommitHash.of(x.getObjectId().getName())));
+                    x -> GitCommitHash.of((x.getPeeledObjectId() == null ? x.getObjectId() : x.getPeeledObjectId()).getName())));
         });
     }
 }

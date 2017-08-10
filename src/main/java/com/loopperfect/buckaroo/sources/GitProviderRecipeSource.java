@@ -86,7 +86,7 @@ public final class GitProviderRecipeSource implements RecipeSource {
                                 final RemoteArchive remoteArchive = RemoteArchive.of(
                                     release,
                                     fileHashEvent.sha256,
-                                    subPath.toString());
+                                    subPath.map(Path::toString));
 
                                 return Process.just(RecipeVersion.of(
                                     remoteArchive,

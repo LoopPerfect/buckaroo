@@ -46,7 +46,7 @@ public final class GitTasksTest {
     public void fetchTags3() throws Exception {
 
         final ImmutableMap<String, GitCommitHash> expected = ImmutableMap.of(
-            "v0.1.0", GitCommitHash.of("5339ed577895ffd2c8e4aac683efec9f855d5c91"));
+            "v0.1.0", GitCommitHash.of("4ead5911c2d85e06873eecd0dff6229ada3e101c"));
 
         final ImmutableMap<String, GitCommitHash> actual = GitTasks.fetchTags(
             "git@bitbucket.org:njlr/hello-buckaroo.git")
