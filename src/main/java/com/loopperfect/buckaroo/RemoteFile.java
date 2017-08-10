@@ -4,15 +4,16 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.HashCode;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 
 public final class RemoteFile {
 
-    public final URL url;
+    public final URI url;
     public final HashCode sha256;
 
-    private RemoteFile(final URL url, final HashCode sha256) {
+    private RemoteFile(final URI url, final HashCode sha256) {
         super();
         this.url = Preconditions.checkNotNull(url);
         this.sha256 = Preconditions.checkNotNull(sha256);
@@ -44,7 +45,7 @@ public final class RemoteFile {
             .toString();
     }
 
-    public static RemoteFile of(final URL url, final HashCode sha256) {
+    public static RemoteFile of(final URI url, final HashCode sha256) {
         return new RemoteFile(url, sha256);
     }
 }

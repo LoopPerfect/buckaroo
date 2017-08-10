@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
+import com.loopperfect.buckaroo.bitbucket.BitBucketGitProvider;
+import com.loopperfect.buckaroo.github.GitHubGitProvider;
 import com.loopperfect.buckaroo.github.GitHubRecipeSource;
 import com.loopperfect.buckaroo.resolver.DependencyResolutionException;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
@@ -69,7 +71,8 @@ public final class RecipeSources {
 
         return RecipeSources.routed(
             ImmutableMap.of(
-                Identifier.of("github"), GitHubRecipeSource.of(fs)),
+                Identifier.of("github"), GitProviderRecipeSource.of(fs, GitHubGitProvider.of()),
+                Identifier.of("bitbucket"), GitProviderRecipeSource.of(fs, BitBucketGitProvider.of())),
             LazyCookbookRecipeSource.of(cookbookPath));
     }
 
@@ -95,7 +98,7 @@ public final class RecipeSources {
 
         return Process.of(
             Observable.just(
-                Notification.of("resolved partial dependency " + dependency.toString()+ " to "+ candidates.get(0).toString())),
+                Notification.of("Resolved partial dependency " + dependency.encode() + " to " + candidates.get(0).encode())),
             Single.just(candidates.get(0)));
     }
 

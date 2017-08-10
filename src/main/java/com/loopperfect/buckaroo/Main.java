@@ -140,8 +140,8 @@ public final class Main {
             taskLatch.await();
 
             if (errorF.isDone()) {
-                // It turns out rxJava does not guaranty that onNext wont be called onError in a multithreaded enviroment.
-                // Lets store the error in a future, wait untill all events stopped firing and render a message to the user.
+                // It turns out that RxJava does not guarantee that onNext won't be called after onError in a multi-threaded enviroment.
+                // Let's store the error in a future, wait until all events have stopped firing and render a message to the user.
                 handleErrors(errorF.get(), buffer, fs);
             }
 

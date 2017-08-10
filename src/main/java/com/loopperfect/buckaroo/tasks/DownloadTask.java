@@ -12,6 +12,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -26,7 +27,7 @@ public final class DownloadTask {
 
     }
 
-    public static Process<Event, String> download(final URL url) {
+    public static Process<Event, String> download(final URI url) {
         Preconditions.checkNotNull(url);
         return Process.of(Observable.using(
             ByteArrayOutputStream::new,
@@ -37,7 +38,7 @@ public final class DownloadTask {
             ByteArrayOutputStream::close));
     }
 
-    public static Observable<DownloadProgress> download(final URL url, final Path target, final boolean overwrite) {
+    public static Observable<DownloadProgress> download(final URI url, final Path target, final boolean overwrite) {
 
         Preconditions.checkNotNull(url);
         Preconditions.checkNotNull(target);
@@ -58,11 +59,11 @@ public final class DownloadTask {
         }).flatMapObservable(outputStream -> download(url, outputStream));
     }
 
-    public static Observable<DownloadProgress> download(final URL url, final Path target) {
+    public static Observable<DownloadProgress> download(final URI url, final Path target) {
         return download(url, target, false);
     }
 
-    public static Observable<DownloadProgress> download(final URL url, final OutputStream output) {
+    public static Observable<DownloadProgress> download(final URI url, final OutputStream output) {
 
         Preconditions.checkNotNull(url);
         Preconditions.checkNotNull(output);
@@ -75,7 +76,7 @@ public final class DownloadTask {
                 .build();
 
             final Request request = new Request.Builder()
-                .url(url)
+                .url(url.toURL())
                 .build();
 
             final Response response = client.newCall(request).execute();

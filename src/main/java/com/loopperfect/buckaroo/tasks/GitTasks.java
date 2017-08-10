@@ -1,19 +1,33 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.loopperfect.buckaroo.Event;
 import com.loopperfect.buckaroo.GitCommit;
+import com.loopperfect.buckaroo.GitCommitHash;
+import com.loopperfect.buckaroo.Identifier;
 import com.loopperfect.buckaroo.events.DeleteFileEvent;
 import com.loopperfect.buckaroo.events.GitCheckoutEvent;
 import com.loopperfect.buckaroo.events.GitCloneEvent;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import org.eclipse.jgit.api.CreateBranchCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
 
 public final class GitTasks {
 
@@ -65,6 +79,29 @@ public final class GitTasks {
             } catch (final Throwable e) {
                 emitter.onError(e);
             }
+        });
+    }
+
+    public static Single<ImmutableMap<String, GitCommitHash>> fetchTags(final String gitURL) {
+
+        Preconditions.checkNotNull(gitURL);
+
+        return Single.fromCallable(() -> {
+
+            // The repository is not actually used, JGit just seems to require it.
+            final Repository repository = FileRepositoryBuilder.create(Paths.get("").toFile());
+            final Collection<Ref> refs = new LsRemoteCommand(repository)
+                .setRemote(gitURL)
+                .setTags(true)
+                .call();
+
+            final String prefix = "refs/tags/";
+
+            return refs.stream()
+                .filter(x -> x.getTarget().getName().startsWith(prefix))
+                .collect(ImmutableMap.toImmutableMap(
+                    x -> x.getTarget().getName().substring(prefix.length()),
+                    x -> GitCommitHash.of(x.getObjectId().getName())));
         });
     }
 }

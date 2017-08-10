@@ -1,5 +1,7 @@
 package com.loopperfect.buckaroo;
 
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,5 +34,14 @@ public final class URLUtils {
         }
 
         return Optional.empty();
+    }
+
+    public static Optional<String> getExtension(final URI uri) {
+        Objects.requireNonNull(uri, "uri is null");
+        try {
+            return getExtension(uri.toURL());
+        } catch (MalformedURLException e) {
+            return Optional.empty();
+        }
     }
 }

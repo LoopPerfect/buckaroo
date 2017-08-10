@@ -6,6 +6,7 @@ import com.loopperfect.buckaroo.events.FileHashEvent;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.HashMap;
@@ -56,7 +57,7 @@ public final class CacheTasks {
                 URLUtils.getExtension(file.url).map(x -> "." + x).orElse(""));
     }
 
-    public static Path getCachePath(final FileSystem fs, final URL url, final Optional<String> extension) {
+    public static Path getCachePath(final FileSystem fs, final URI url, final Optional<String> extension) {
 
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(url);

@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.reactivex.Observable;
 import org.junit.Test;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -24,7 +25,7 @@ public final class DownloadTaskTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         DownloadTask.download(
-            new URL("http://www.google.com"),
+            new URI("http://www.google.com"),
             fs.getPath("test.txt").toAbsolutePath())
             .subscribe(
                 next -> {
@@ -49,7 +50,7 @@ public final class DownloadTaskTest {
         final SettableFuture<Integer> future = SettableFuture.create();
 
         int count = DownloadTask.download(
-            new URL("http://www.google.com"),
+            new URI("http://www.google.com"),
             fs.getPath("test.txt").toAbsolutePath())
             .reduce(0, (x, p) -> x+1)
             .blockingGet();
@@ -68,7 +69,7 @@ public final class DownloadTaskTest {
         final Path path = fs.getPath("test.txt").toAbsolutePath();
 
         final Observable<DownloadProgress> observable = DownloadTask.download(
-            new URL("http://www.google.com"),
+            new URI("http://www.google.com"),
             path);
 
         observable.subscribe(
@@ -110,7 +111,7 @@ public final class DownloadTaskTest {
 
         final Path target = fs.getPath("/a/b/c/test.txt");
 
-        DownloadTask.download(new URL("http://www.google.com"), target).toList()
+        DownloadTask.download(new URI("http://www.google.com"), target).toList()
             .blockingGet();
 
         assertTrue(Files.exists(target));
@@ -123,7 +124,7 @@ public final class DownloadTaskTest {
 
         final Path target = fs.getPath("a/b/c/test.txt").toAbsolutePath();
 
-        DownloadTask.download(new URL("http://www.google.com"), target).toList()
+        DownloadTask.download(new URI("http://www.google.com"), target).toList()
             .blockingGet();
 
         assertTrue(Files.exists(target));

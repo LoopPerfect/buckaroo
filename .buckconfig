@@ -1,5 +1,5 @@
 [project]
-  ignore = .git, .idea
+  ignore = .git, .idea, out
 
 [download]
   maven_repo = https://repo.maven.apache.org/maven2/

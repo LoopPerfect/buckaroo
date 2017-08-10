@@ -13,7 +13,8 @@ import com.loopperfect.buckaroo.tasks.DownloadTask;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.Map;
@@ -38,7 +39,7 @@ public final class GitHubRecipeSource implements RecipeSource {
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(commit);
 
-        final URL release = GitHub.zipURL(owner, project, commit);
+        final URI release = GitHub.zipURL(owner, project, commit);
         final Path cachePath = CacheTasks.getCachePath(fs, release, Optional.of("zip"));
 
         return Process.concat(
@@ -48,7 +49,7 @@ public final class GitHubRecipeSource implements RecipeSource {
                 Observable.combineLatest(
                     Observable.just(RecipeIdentifier.of(Identifier.of("github"), owner, project)),
                     DownloadTask.download(release, cachePath, true),
-                    FetchGithubProgressEvent::of
+                    FetchRecipeProgressEvent::of
                 ),
                 Single.just(FileDownloadedEvent.of(release, cachePath))),
 
@@ -120,16 +121,23 @@ public final class GitHubRecipeSource implements RecipeSource {
 
             final Process<Event, ImmutableMap<SemanticVersion, RecipeVersion>> identity = Process.just(ImmutableMap.of());
 
+
             return tasks.entrySet().stream()
                 .reduce(
                     identity,
                     (state, next) -> Process.chain(state, map ->
                         next.getValue().map(recipeVersion -> MoreMaps.with(map, next.getKey(), recipeVersion))),
                     (i, j) -> Process.chain(i, x -> j.map(y -> MoreMaps.merge(x, y))))
-                .map(recipeVersions -> Recipe.of(
-                    identifier.recipe.name,
-                    "https://github.com/" + identifier.organization + "/" + identifier.recipe,
-                    recipeVersions));
+                .map(recipeVersions -> {
+                    try {
+                        return Recipe.of(
+                            identifier.recipe.name,
+                            new URI("https://github.com/" + identifier.organization + "/" + identifier.recipe),
+                            recipeVersions);
+                    } catch (final URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
         }).mapErrors(error -> RecipeFetchException.wrap(this, identifier, error));
     }
 

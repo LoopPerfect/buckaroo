@@ -10,6 +10,8 @@ import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import io.reactivex.Observable;
 import org.junit.Test;
 
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.FileSystem;
 
 import static com.loopperfect.buckaroo.Either.right;
@@ -44,7 +46,7 @@ public final class ResolveTasksTest {
 
         final Recipe recipe = Recipe.of(
             "example",
-            "https://github.com/org/example",
+            new URI("https://github.com/org/example"),
             ImmutableMap.of(
                 SemanticVersion.of(1),
                 RecipeVersion.of(
@@ -87,7 +89,7 @@ public final class ResolveTasksTest {
 
         final Recipe recipe = Recipe.of(
             "example",
-            "https://github.com/org/example",
+            new URI("https://github.com/org/example"),
             ImmutableMap.of(
                 SemanticVersion.of(1),
                 RecipeVersion.of(

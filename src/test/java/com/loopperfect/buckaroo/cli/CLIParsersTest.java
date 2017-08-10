@@ -94,6 +94,13 @@ public final class CLIParsersTest {
                 Identifier.of("loopperfect"),
                 Identifier.of("neither")),
             parser.parse("github+loopperfect/neither       "));
+
+        assertEquals(
+            PartialRecipeIdentifier.of(
+                Identifier.of("bitbucket"),
+                Identifier.of("njlr"),
+                Identifier.of("hello-buckaroo")),
+            parser.parse("bitbucket+njlr/hello-buckaroo"));
     }
 
     @Test

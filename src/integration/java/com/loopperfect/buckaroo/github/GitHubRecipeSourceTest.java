@@ -26,8 +26,11 @@ public final class GitHubRecipeSourceTest {
             "v0.1.0", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"),
             "v1.0.0-rc1", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"));
 
-        final ImmutableMap<String, GitCommitHash> actual = GitHub.fetchTags(
-            Identifier.of("njlr"), Identifier.of("test-lib-tags"));
+        final ImmutableMap<String, GitCommitHash> actual = GitHub.fetchReleases(
+            Identifier.of("njlr"), Identifier.of("test-lib-tags"))
+            .result()
+            .timeout(5000L, TimeUnit.MILLISECONDS)
+            .blockingGet();
 
         assertEquals(expected, actual);
     }

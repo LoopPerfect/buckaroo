@@ -7,6 +7,7 @@ import com.loopperfect.buckaroo.RemoteFile;
 import com.loopperfect.buckaroo.EvenMoreFiles;
 import org.junit.Test;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
@@ -24,7 +25,7 @@ public final class CommonTasksIntegrationsTests {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final RemoteFile remoteFile = RemoteFile.of(
-            new URL("https://raw.githubusercontent.com/nikhedonia/googletest/665327f0141d4a4fc4f2496e781dce436d742645/BUCK"),
+            new URI("https://raw.githubusercontent.com/nikhedonia/googletest/665327f0141d4a4fc4f2496e781dce436d742645/BUCK"),
             HashCode.fromString("d976069f5b47fd8fc57201f47026a70dee4e47b3141ac23567b8a0c56bf9288c"));
 
         final SettableFuture<Boolean> future = SettableFuture.create();
@@ -54,7 +55,7 @@ public final class CommonTasksIntegrationsTests {
         EvenMoreFiles.writeFile(target, "hello", Charset.defaultCharset(), false);
 
         final RemoteFile remoteFile = RemoteFile.of(
-            new URL("https://raw.githubusercontent.com/nikhedonia/googletest/665327f0141d4a4fc4f2496e781dce436d742645/BUCK"),
+            new URI("https://raw.githubusercontent.com/nikhedonia/googletest/665327f0141d4a4fc4f2496e781dce436d742645/BUCK"),
             HashCode.fromString("d976069f5b47fd8fc57201f47026a70dee4e47b3141ac23567b8a0c56bf9288c"));
 
         final SettableFuture<Boolean> future = SettableFuture.create();

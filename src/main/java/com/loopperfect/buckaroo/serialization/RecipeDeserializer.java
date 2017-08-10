@@ -8,6 +8,8 @@ import com.loopperfect.buckaroo.RecipeVersion;
 import com.loopperfect.buckaroo.SemanticVersion;
 
 import java.lang.reflect.Type;
+import java.net.URI;
+import java.net.URL;
 import java.util.stream.Collectors;
 
 public final class RecipeDeserializer implements JsonDeserializer<Recipe> {
@@ -29,7 +31,7 @@ public final class RecipeDeserializer implements JsonDeserializer<Recipe> {
         if (!jsonObject.has("url")) {
             throw new JsonParseException("Recipes must have a url element. ");
         }
-        final String url = jsonObject.get("url").getAsString();
+        final URI url = context.deserialize(jsonObject.get("url"), URI.class);
 
         final JsonObject jsonObjectVersions = jsonObject.get("versions").getAsJsonObject();
 

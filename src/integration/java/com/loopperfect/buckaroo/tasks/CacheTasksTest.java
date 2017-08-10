@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import org.junit.Test;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.List;
@@ -26,7 +27,7 @@ public final class CacheTasksTest {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final RemoteFile remoteFile = RemoteFile.of(
-            new URL("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
+            new URI("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
             HashCode.fromString("bb7220f89f404f244ff296b0fba7a70166de35a49094631c9e8d3eacda58d67a"));
 
         final Path cachePath = CacheTasks.getCachePath(fs, remoteFile);
@@ -42,7 +43,7 @@ public final class CacheTasksTest {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final RemoteFile remoteFile = RemoteFile.of(
-            new URL("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
+            new URI("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
             HashCode.fromString("bb7220f89f404f244ff296b0fba7a70166de35a49094631c9e8d3eacda58d67a"));
 
         final Path cachePath = CacheTasks.getCachePath(fs, remoteFile);
@@ -61,7 +62,7 @@ public final class CacheTasksTest {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final RemoteFile remoteFile = RemoteFile.of(
-            new URL("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
+            new URI("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
             HashCode.fromString("bb7220f89f404f244ff296b0fba7a70166de35a49094631c9e8d3eacda58d67a"));
 
         final Path path1 = fs.getPath("test.txt");
@@ -113,7 +114,7 @@ public final class CacheTasksTest {
         final FileSystem fs = Jimfs.newFileSystem();
 
         final RemoteFile remoteFile = RemoteFile.of(
-            new URL("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
+            new URI("https://raw.githubusercontent.com/njlr/test-lib-a/3af013452fe6b448b1cb33bb81bb19da690ec764/BUCK"),
             HashCode.fromString("aaaaaaaaaaaaaa4f244296b0fba7a70166dea49c9e8d3eacda58d67a"));
 
         final Path cachePath = CacheTasks.getCachePath(fs, remoteFile);

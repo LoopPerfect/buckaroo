@@ -10,6 +10,10 @@ import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.FileSystem;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -23,18 +27,22 @@ public final class InstallTasksUnitTest {
 
         final RecipeSource recipeSource = recipeIdentifier -> {
             if (recipeIdentifier.equals(RecipeIdentifier.of("org", "example"))) {
-                return Process.just(Recipe.of(
-                    "example",
-                    "https://github.com/org/example",
-                    ImmutableMap.of(
-                        SemanticVersion.of(1),
-                        RecipeVersion.of(
-                            GitCommit.of("https://github.com/org/example/commit", "c7355d5"),
-                            "example"),
-                        SemanticVersion.of(2),
-                        RecipeVersion.of(
-                            GitCommit.of("https://github.com/org/example/commit", "d8255g5"),
-                            "example"))));
+                try {
+                    return Process.just(Recipe.of(
+                        "example",
+                        new URI("https://github.com/org/example"),
+                        ImmutableMap.of(
+                            SemanticVersion.of(1),
+                            RecipeVersion.of(
+                                GitCommit.of("https://github.com/org/example/commit", "c7355d5"),
+                                "example"),
+                            SemanticVersion.of(2),
+                            RecipeVersion.of(
+                                GitCommit.of("https://github.com/org/example/commit", "d8255g5"),
+                                "example"))));
+                } catch (final URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
             }
             return Process.error(new IOException(recipeIdentifier + " could not be found. "));
         };

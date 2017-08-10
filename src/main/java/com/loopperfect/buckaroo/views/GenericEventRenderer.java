@@ -166,7 +166,7 @@ public final class GenericEventRenderer {
         ));
     }
 
-    public static Component render(final FetchGithubProgressEvent event) {
+    public static Component render(final FetchRecipeProgressEvent event) {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
             FlowLayout.of(
@@ -217,8 +217,8 @@ public final class GenericEventRenderer {
         if (event instanceof DependencyInstallationEvent) {
             return render((DependencyInstallationEvent) event);
         }
-        if (event instanceof FetchGithubProgressEvent) {
-            return render((FetchGithubProgressEvent) event);
+        if (event instanceof FetchRecipeProgressEvent) {
+            return render((FetchRecipeProgressEvent) event);
         }
         if (event instanceof ResolvedDependenciesEvent) {
             return render((ResolvedDependenciesEvent) event);
