@@ -147,7 +147,7 @@ public final class GenericEventRenderer {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
             FlowLayout.of(
-                Text.of("Downloading: ", Color.GRAY),
+                Text.of("Downloading: ", Color.CYAN),
                 render(event.progress.getValue0().identifier)),
             ListLayout.of(render(event.progress.getValue1())));
     }
@@ -170,7 +170,7 @@ public final class GenericEventRenderer {
         Preconditions.checkNotNull(event);
         return StackLayout.of(
             FlowLayout.of(
-                Text.of("Downloading: ", Color.GRAY),
+                Text.of("Downloading: ", Color.CYAN),
                 render(event.identifier)),
             ListLayout.of(render(event.progress)));
     }

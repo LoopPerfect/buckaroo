@@ -3,6 +3,7 @@ package com.loopperfect.buckaroo.tasks;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
+import com.google.common.io.MoreFiles;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
@@ -87,6 +88,14 @@ public final class InstallTasksTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
+        // Workaround: JimFs does not implement .toFile;
+        // We clone and fail buckaroo-recipes if it does not exist, so we create it.
+        MoreFiles.createParentDirectories(fs.getPath(
+            System.getProperty("user.home"),
+            ".buckaroo",
+            "buckaroo-recipes",
+            ".git"));
+
         final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
             PartialDependency.of(
                 Identifier.of("github"),
@@ -111,6 +120,14 @@ public final class InstallTasksTest {
     public void installDirectlyFromGitHub2() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
+
+        // Workaround: JimFs does not implement .toFile;
+        // We clone and fail buckaroo-recipes if it does not exist, so we create it.
+        MoreFiles.createParentDirectories(fs.getPath(
+            System.getProperty("user.home"),
+            ".buckaroo",
+            "buckaroo-recipes",
+            ".git"));
 
         final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
             PartialDependency.of(

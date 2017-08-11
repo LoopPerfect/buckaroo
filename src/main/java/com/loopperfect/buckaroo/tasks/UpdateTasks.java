@@ -23,7 +23,7 @@ public final class UpdateTasks {
 
     }
 
-    private static Observable<Event> updateCookbook(final Path folder, final RemoteCookbook cookbook) {
+    public static Observable<Event> updateCookbook(final Path folder, final RemoteCookbook cookbook) {
 
         Preconditions.checkNotNull(folder);
         Preconditions.checkNotNull(cookbook);
