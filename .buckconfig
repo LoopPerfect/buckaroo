@@ -1,5 +1,8 @@
 [project]
-  ignore = .git, .idea
+  ignore = .git, .idea, out
+
+[build]
+  engine = deep
 
 [download]
   maven_repo = https://repo.maven.apache.org/maven2/

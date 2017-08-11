@@ -119,6 +119,12 @@ maven_jar(
   bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
 )
 
+remote_file(
+  name = 'packr',
+  url = 'https://oss.sonatype.org/content/repositories/snapshots/com/badlogicgames/packr/packr/2.0-SNAPSHOT/packr-2.0-20170420.100324-15-jar-with-dependencies.jar',
+  sha1 = 'ff895a52de9023cadf2c68c88420b8d4855cc202',
+)
+
 # We need to strip out the jar signing
 # TODO: Find a better approach!
 genrule(
@@ -228,8 +234,8 @@ java_test(
   ],
 )
 
-# creates buck-out/gen/debian/out/buckaroo-$version-all.deb
-# install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
+# Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
+# Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
   name = 'debian',
   out  = 'out',
@@ -247,5 +253,26 @@ genrule(
     'cp $(location :buckaroo-cli) $OUT/buckaroo.jar',
     'cd $OUT',
     'equivs-build buckaroo.equivs'
-  ])
+  ]),
+)
+
+remote_file(
+  name = 'openjdk-macosx',
+  out = 'openjdk.zip',
+  url = 'https://github.com/njlr/ojdk/releases/download/v0.1.0/jdk1.8.0_92.jdk.zip',
+  sha1 = '99743710eb642589fc9275bf34c60438608b46a9',
+)
+
+genrule(
+  name = 'buckaroo-packr-macosx',
+  out = 'buckaroo.app',
+  cmd = 'java -jar $(location :packr) ' +
+    '--platform mac ' +
+    '--jdk $(location :openjdk-macosx) ' +
+    '--executable buckaroo ' +
+    '--mainclass com.loopperfect.buckaroo.Main ' +
+    '--classpath $(location :buckaroo-cli) ' +
+    '--minimizejre soft ' +
+    '--vmargs XstartOnFirstThread ' +
+    '--output $OUT',
 )
