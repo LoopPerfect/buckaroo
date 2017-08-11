@@ -263,12 +263,34 @@ remote_file(
   sha1 = '99743710eb642589fc9275bf34c60438608b46a9',
 )
 
+remote_file(
+  name = 'openjdk-linux',
+  out = 'openjdk.zip',
+  url = 'https://github.com/ojdkbuild/ojdkbuild/releases/download/1.8.0.141-1/java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64.zip',
+  sha1 = 'a0d711e9cab447f9f22dc385e9ac5c5af40b0ab4',
+)
+
 genrule(
   name = 'buckaroo-packr-macosx',
   out = 'buckaroo.app',
   cmd = 'java -jar $(location :packr) ' +
     '--platform mac ' +
     '--jdk $(location :openjdk-macosx) ' +
+    '--executable buckaroo ' +
+    '--mainclass com.loopperfect.buckaroo.Main ' +
+    '--classpath $(location :buckaroo-cli) ' +
+    '--minimizejre soft ' +
+    '--vmargs XstartOnFirstThread ' +
+    '--output $OUT',
+)
+
+
+genrule(
+  name = 'buckaroo-packr-linux',
+  out = 'buckaroo',
+  cmd = 'java -jar $(location :packr) ' +
+    '--platform linux64 ' +
+    '--jdk $(location :openjdk-linux) ' +
     '--executable buckaroo ' +
     '--mainclass com.loopperfect.buckaroo.Main ' +
     '--classpath $(location :buckaroo-cli) ' +
