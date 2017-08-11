@@ -6,5 +6,5 @@ public final class Buckaroo {
 
     }
 
-    public static final SemanticVersion version = SemanticVersion.of(1, 2, 1);
+    public static final SemanticVersion version = SemanticVersion.of(1, 3, 0);
 }

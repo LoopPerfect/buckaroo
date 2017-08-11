@@ -11,19 +11,24 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
     public final int major;
     public final int minor;
     public final int patch;
+    public final int increment;
 
-    private SemanticVersion(final int major, final int minor, final int patch) {
+    private SemanticVersion(final int major, final int minor, final int patch, final int increment) {
 
         Preconditions.checkArgument(major >= 0, "major version must be non-negative");
         Preconditions.checkArgument(minor >= 0, "minor version must be non-negative");
         Preconditions.checkArgument(patch >= 0, "patch version must be non-negative");
+        Preconditions.checkArgument(increment >= 0, "increment version must be non-negative");
 
         this.major = major;
         this.minor = minor;
         this.patch = patch;
+        this.increment = increment;
     }
 
     public int compareTo(final SemanticVersion other) {
+
+        Preconditions.checkNotNull(other);
 
         int majorComparison = Integer.compare(major, other.major);
         if (majorComparison != 0) {
@@ -35,11 +40,19 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
             return minorComparison;
         }
 
-        return Integer.compare(patch, other.patch);
+        int patchComparison = Integer.compare(patch, other.patch);
+        if (patchComparison != 0) {
+            return patchComparison;
+        }
+
+        return Integer.compare(increment, other.increment);
     }
 
     public String encode() {
-        return major + "." + minor + "." + patch;
+        if (increment == 0) {
+            return major + "." + minor + "." + patch;
+        }
+        return major + "." + minor + "." + patch + "." + increment;
     }
 
     public boolean equals(final SemanticVersion other) {
@@ -47,7 +60,8 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
         return this == other ||
             ((major == other.major) &&
                 (minor == other.minor) &&
-                (patch == other.patch));
+                (patch == other.patch) &&
+                (increment == other.increment));
     }
 
     @Override
@@ -57,24 +71,28 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(major, minor, patch);
+        return Objects.hash(major, minor, patch, increment);
     }
 
     @Override
     public String toString() {
-        return major + "." + minor + "." + patch;
+        return major + "." + minor + "." + patch + "." + increment;
+    }
+
+    public static SemanticVersion of(final int major, final int minor, final int patch, final int increment) {
+        return new SemanticVersion(major, minor, patch, increment);
     }
 
     public static SemanticVersion of(final int major, final int minor, final int patch) {
-        return new SemanticVersion(major, minor, patch);
+        return new SemanticVersion(major, minor, patch, 0);
     }
 
     public static SemanticVersion of(final int major, final int minor) {
-        return new SemanticVersion(major, minor, 0);
+        return new SemanticVersion(major, minor, 0, 0);
     }
 
     public static SemanticVersion of(final int major) {
-        return new SemanticVersion(major, 0, 0);
+        return new SemanticVersion(major, 0, 0, 0);
     }
 
     public static Optional<SemanticVersion> parse(final String x) {

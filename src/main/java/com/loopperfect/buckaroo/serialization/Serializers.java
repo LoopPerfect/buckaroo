@@ -8,6 +8,7 @@ import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 
 import java.io.StringReader;
+import java.net.URI;
 import java.net.URL;
 
 public final class Serializers {
@@ -108,6 +109,7 @@ public final class Serializers {
         .registerTypeAdapter(RemoteFile.class, new RemoteFileSerializer())
         .registerTypeAdapter(RemoteFile.class, new RemoteFileDeserializer())
         .registerTypeAdapter(URL.class, new UrlDeserializer())
+        .registerTypeAdapter(URI.class, new UriDeserializer())
         .registerTypeAdapter(ResolvedDependencyReference.class, new ResolvedDependencyReferenceSerializer())
         .registerTypeAdapter(ResolvedDependencyReference.class, new ResolvedDependencyReferenceDeserializer())
         .registerTypeAdapterFactory(new ImmutableListTypeAdapterFactory())

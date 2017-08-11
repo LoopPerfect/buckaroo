@@ -14,6 +14,9 @@ public interface RenderableException {
         if (throwable instanceof RenderableException) {
             return ((RenderableException) throwable).render();
         }
-        return Text.of(throwable.getMessage(), Color.RED);
+        final String message = throwable.getMessage() == null ?
+            throwable.toString() :
+            throwable.getMessage();
+        return Text.of(message, Color.RED);
     }
 }

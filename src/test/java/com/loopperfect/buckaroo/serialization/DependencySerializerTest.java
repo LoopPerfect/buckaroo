@@ -52,4 +52,12 @@ public final class DependencySerializerTest {
             RecipeIdentifier.of("org", "magic-libs"),
             BoundedSemanticVersion.of(SemanticVersion.of(4), AboveOrBelow.ABOVE)));
     }
+
+    @Test
+    public void testDependencySerializer5() {
+
+        serializeDeserialize(Dependency.of(
+            RecipeIdentifier.of("g-tuc", "glm"),
+            ExactSemanticVersion.of(SemanticVersion.of(0, 9, 8, 4))));
+    }
 }

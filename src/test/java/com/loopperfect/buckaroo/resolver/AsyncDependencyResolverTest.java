@@ -10,6 +10,8 @@ import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import org.javatuples.Pair;
 import org.junit.Test;
 
+import java.net.URI;
+import java.net.URL;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -33,7 +35,7 @@ public final class AsyncDependencyResolverTest {
 
         final Recipe example = Recipe.of(
             "example",
-            "https://github.com/org/example",
+            new URI("https://github.com/org/example"),
             ImmutableMap.of(
                 SemanticVersion.of(1),
                 RecipeVersion.of(
@@ -72,7 +74,7 @@ public final class AsyncDependencyResolverTest {
 
         final Recipe recipeA = Recipe.of(
             "Example A",
-            "https://github.com/org/example-a",
+            new URI("https://github.com/org/example-a"),
             ImmutableMap.of(
                 SemanticVersion.of(1),
                 RecipeVersion.of(
@@ -84,7 +86,7 @@ public final class AsyncDependencyResolverTest {
 
         final Recipe recipeB = Recipe.of(
             "Example B",
-            "https://github.com/org/example-b",
+            new URI("https://github.com/org/example-b"),
             ImmutableMap.of(
                 SemanticVersion.of(1),
                 RecipeVersion.of(

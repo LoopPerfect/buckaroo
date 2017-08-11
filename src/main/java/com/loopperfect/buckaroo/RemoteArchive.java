@@ -4,17 +4,18 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.HashCode;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 import java.util.Optional;
 
 public final class RemoteArchive {
 
-    public final URL url;
+    public final URI url;
     public final HashCode sha256;
     public final Optional<String> subPath;
 
-    private RemoteArchive(final URL url, final HashCode sha256, final Optional<String> subPath) {
+    private RemoteArchive(final URI url, final HashCode sha256, final Optional<String> subPath) {
         super();
         this.url = Preconditions.checkNotNull(url);
         this.sha256 = Preconditions.checkNotNull(sha256);
@@ -51,15 +52,15 @@ public final class RemoteArchive {
             .toString();
     }
 
-    public static RemoteArchive of(final URL url, final HashCode sha256, final Optional<String> subPath) {
+    public static RemoteArchive of(final URI url, final HashCode sha256, final Optional<String> subPath) {
         return new RemoteArchive(url, sha256, subPath);
     }
 
-    public static RemoteArchive of(final URL url, final HashCode sha256, final String subPath) {
+    public static RemoteArchive of(final URI url, final HashCode sha256, final String subPath) {
         return new RemoteArchive(url, sha256, Optional.of(subPath));
     }
 
-    public static RemoteArchive of(final URL url, final HashCode sha256) {
+    public static RemoteArchive of(final URI url, final HashCode sha256) {
         return new RemoteArchive(url, sha256, Optional.empty());
     }
 }
