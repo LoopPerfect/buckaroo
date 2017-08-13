@@ -117,7 +117,7 @@ public final class EvenMoreFiles {
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(subPath);
         Preconditions.checkNotNull(copyOptions);
-        Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute());
+        Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute(), "subPath must be absolute");
 
         final FileSystem zipFileSystem = zipFileSystem(source);
             EvenMoreFiles.copyDirectory(

@@ -8,6 +8,7 @@ import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
 
@@ -16,11 +17,11 @@ import static org.junit.Assert.assertEquals;
 public final class RecipeSerializerTest {
 
     @Test
-    public void test1() {
+    public void test1() throws Exception {
 
         final Recipe recipe = Recipe.of(
             "magic-lib",
-            "https://github.com/magicco/magiclib",
+            new URI("https://github.com/magicco/magiclib"),
             ImmutableMap.of(
                 SemanticVersion.of(1, 0),
                 RecipeVersion.of(
@@ -45,16 +46,16 @@ public final class RecipeSerializerTest {
     }
 
     @Test
-    public void test2() throws MalformedURLException {
+    public void test2() throws Exception {
 
         final Recipe recipe = Recipe.of(
             "magic-lib",
-            "https://github.com/magicco/magiclib",
+            new URI("https://github.com/magicco/magiclib"),
             ImmutableMap.of(
                 SemanticVersion.of(1, 0),
                 RecipeVersion.of(
                     RemoteArchive.of(
-                        new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
+                        new URI("https://github.com/magicco/1.0.0/magiclib.zip"),
                         Hash.sha256("Hello, world. ")),
                     Optional.of("my-magic-lib"),
                     DependencyGroup.of(
@@ -62,7 +63,7 @@ public final class RecipeSerializerTest {
                             RecipeIdentifier.of("org", "awesome"),
                             AnySemanticVersion.of())),
                     Optional.of(RemoteFile.of(
-                        new URL("https://github.com/magicco/1.0.0/magiclib.zip"),
+                        new URI("https://github.com/magicco/1.0.0/magiclib.zip"),
                         Hash.sha256("Hello, world. ")))),
                 SemanticVersion.of(1, 1),
                 RecipeVersion.of(

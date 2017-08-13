@@ -4,16 +4,17 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.loopperfect.buckaroo.Event;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Objects;
 
 public final class FileDownloadedEvent extends Event {
 
-    public final URL source;
+    public final URI source;
     public final Path destination;
 
-    private FileDownloadedEvent(final URL source, final Path destination) {
+    private FileDownloadedEvent(final URI source, final Path destination) {
 
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(destination);
@@ -37,7 +38,7 @@ public final class FileDownloadedEvent extends Event {
             .toString();
     }
 
-    public static FileDownloadedEvent of(final URL source, final Path destination) {
+    public static FileDownloadedEvent of(final URI source, final Path destination) {
         return new FileDownloadedEvent(source, destination);
     }
 }

@@ -6,6 +6,7 @@ import com.google.gson.*;
 import com.loopperfect.buckaroo.RemoteArchive;
 
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
 
@@ -24,7 +25,7 @@ public final class RemoteArchiveDeserializer implements JsonDeserializer<RemoteA
             throw new JsonParseException("A remote archive must have a URL");
         }
 
-        final URL url = context.deserialize(jsonObject.get("url"), URL.class);
+        final URI url = context.deserialize(jsonObject.get("url"), URI.class);
         final HashCode sha256 = context.deserialize(jsonObject.get("sha256"), HashCode.class);
         final Optional<String> subPath = jsonObject.has("subPath") ?
             Optional.of(jsonObject.get("subPath").getAsString()) :

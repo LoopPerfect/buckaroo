@@ -13,7 +13,7 @@ public final class GitCommitHash {
     private static final Pattern pattern = Pattern.compile("^([a-f0-9]{5,40})$");
 
     private GitCommitHash(final String hash) {
-        Objects.requireNonNull(hash);
+        Objects.requireNonNull(hash, "hash is null");
         if (!pattern.matcher(hash).matches()) {
             throw new IllegalArgumentException("Hash must be a valid Git commit hash. Received \"" + hash + "\".  ");
         }
@@ -25,7 +25,7 @@ public final class GitCommitHash {
         return Objects.equals(hash, other.hash);
     }
 
-        @Override
+    @Override
     public int hashCode() {
         return Objects.hash(hash);
     }
@@ -48,6 +48,7 @@ public final class GitCommitHash {
     }
 
     public static Optional<GitCommitHash> parse(final String hash) {
+        Objects.requireNonNull(hash, "hash is null");
         if (pattern.matcher(hash).matches()) {
             return Optional.of(new GitCommitHash(hash));
         }

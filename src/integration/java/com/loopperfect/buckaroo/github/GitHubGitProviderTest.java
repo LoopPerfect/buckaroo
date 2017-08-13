@@ -1,8 +1,8 @@
 package com.loopperfect.buckaroo.github;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
+import com.loopperfect.buckaroo.sources.GitProviderRecipeSource;
 import com.loopperfect.buckaroo.sources.RecipeFetchException;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -16,28 +16,14 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public final class GitHubRecipeSourceTest {
-
-    @Test
-    public void fetchTags() throws Exception {
-
-        final ImmutableMap<String, GitCommitHash> expected = ImmutableMap.of(
-            "v2", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"),
-            "v0.1.0", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"),
-            "v1.0.0-rc1", GitCommitHash.of("138252fac310b976a5ee55ffaa8e9180cf44112b"));
-
-        final ImmutableMap<String, GitCommitHash> actual = GitHub.fetchTags(
-            Identifier.of("njlr"), Identifier.of("test-lib-tags"));
-
-        assertEquals(expected, actual);
-    }
+public final class GitHubGitProviderTest {
 
     @Test
     public void fetch() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+        final RecipeSource recipeSource = GitProviderRecipeSource.of(fs, GitHubGitProvider.of());
 
         final Single<Recipe> task = recipeSource.fetch(
             RecipeIdentifier.of("github", "njlr", "test-lib-c"))
@@ -51,7 +37,7 @@ public final class GitHubRecipeSourceTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+        final RecipeSource recipeSource = GitProviderRecipeSource.of(fs, GitHubGitProvider.of());
 
         final Single<Recipe> task = recipeSource.fetch(
             RecipeIdentifier.of("github", "njlr", "test-lib-no-releases"))
@@ -70,7 +56,7 @@ public final class GitHubRecipeSourceTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+        final RecipeSource recipeSource = GitProviderRecipeSource.of(fs, GitHubGitProvider.of());
 
         final Single<Recipe> task = recipeSource.fetch(
             RecipeIdentifier.of("github", "njlr", "test-lib-no-project"))
@@ -89,7 +75,7 @@ public final class GitHubRecipeSourceTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+        final RecipeSource recipeSource = GitProviderRecipeSource.of(fs, GitHubGitProvider.of());
 
         final Observable<Event> task = recipeSource.fetch(
             RecipeIdentifier.of("github", "njlr", "test-lib-c")).states();
@@ -104,7 +90,7 @@ public final class GitHubRecipeSourceTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final RecipeSource recipeSource = GitHubRecipeSource.of(fs);
+        final RecipeSource recipeSource = GitProviderRecipeSource.of(fs, GitHubGitProvider.of());
 
         final Single<Recipe> task = recipeSource.fetch(
             RecipeIdentifier.of("github", "njlr", "test-lib-d"))

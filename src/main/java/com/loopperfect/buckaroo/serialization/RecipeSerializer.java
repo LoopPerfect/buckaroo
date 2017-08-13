@@ -21,7 +21,7 @@ public final class RecipeSerializer implements JsonSerializer<Recipe> {
         final JsonObject jsonObject = new JsonObject();
 
         jsonObject.add("name", context.serialize(recipe.name));
-        jsonObject.addProperty("url", recipe.url);
+        jsonObject.addProperty("url", recipe.url.toString());
         jsonObject.add("versions", context.serialize(recipe.versions));
 
         return jsonObject;
