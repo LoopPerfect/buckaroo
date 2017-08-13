@@ -234,28 +234,6 @@ java_test(
   ],
 )
 
-# Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
-# Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
-genrule(
-  name = 'debian',
-  out  = 'out',
-  srcs = [
-    'debian/buckaroo',
-    'debian/buckaroo.equivs',
-    'Changelog',
-    'LICENSE',
-    'README.md',
-  ],
-  cmd = '&&'.join([
-    'mkdir $OUT',
-    'cp -r $SRCDIR/* $OUT',
-    'cp -r $SRCDIR/debian/* $OUT',
-    'cp $(location :buckaroo-cli) $OUT/buckaroo.jar',
-    'cd $OUT',
-    'equivs-build buckaroo.equivs'
-  ]),
-)
-
 remote_file(
   name = 'openjdk-macosx',
   out = 'openjdk.zip',
@@ -291,10 +269,33 @@ genrule(
   cmd = 'java -jar $(location :packr) ' +
     '--platform linux64 ' +
     '--jdk $(location :openjdk-linux) ' +
-    '--executable buckaroo ' +
+    '--executable buckaroo.bin ' +
     '--mainclass com.loopperfect.buckaroo.Main ' +
     '--classpath $(location :buckaroo-cli) ' +
     '--minimizejre soft ' +
     '--vmargs XstartOnFirstThread ' +
-    '--output $OUT',
+    '--output $OUT'
+)
+
+
+# Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
+# Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
+genrule(
+  name = 'debian',
+  out  = 'out',
+  srcs = [
+    'debian/buckaroo.equivs',
+    'debian/buckaroo',
+    'Changelog',
+    'LICENSE',
+    'README.md',
+  ],
+  cmd = '&&'.join([
+    'mkdir $OUT',
+    'cp -r $SRCDIR/* $OUT',
+    'cp -r $SRCDIR/debian/* $OUT',
+    'cp -r $(location :buckaroo-packr-linux)/* $OUT',
+    'cd $OUT',
+    'equivs-build buckaroo.equivs'
+  ]),
 )
