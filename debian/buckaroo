@@ -1,2 +1,3 @@
 #!/bin/sh
-java -jar /usr/bin/buckaroo.jar $*
+
+/usr/lib/buckaroo/buckaroo.bin $*
