@@ -130,7 +130,14 @@ public final class GitProviderRecipeSource implements RecipeSource {
                     .reduce(
                         identity,
                         (state, next) -> Process.chain(state, map ->
-                            next.getValue().map(recipeVersion -> MoreMaps.with(map, next.getKey(), recipeVersion))),
+                            next.getValue()
+                                // This nifty section is where we skip over any errors!
+                                // We map every success to an optional, and
+                                // then every error is mapped to an empty optional.
+                                .map(Optional::of)
+                                .onErrorReturn(throwable -> Optional.empty())
+                                .map(maybeRecipeVersion -> maybeRecipeVersion
+                                    .map(recipeVersion -> MoreMaps.with(map, next.getKey(), recipeVersion)).orElse(map))),
                         (i, j) -> Process.chain(i, x -> j.map(y -> MoreMaps.merge(x, y))))
                     .map(recipeVersions -> Recipe.of(
                         identifier.recipe.name,

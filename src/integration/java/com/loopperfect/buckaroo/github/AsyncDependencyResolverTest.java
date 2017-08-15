@@ -17,7 +17,7 @@ import static org.junit.Assert.assertTrue;
 public final class AsyncDependencyResolverTest {
 
     @Test
-    public void resolverWorksWithGitHub() throws Exception {
+    public void resolverWorksWithGitHub1() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
@@ -27,7 +27,9 @@ public final class AsyncDependencyResolverTest {
 
         final Single<ResolvedDependencies> task = AsyncDependencyResolver.resolve(
             recipeSource,
-            ImmutableList.of(Dependency.of(RecipeIdentifier.of("github", "njlr", "test-lib-a"), AnySemanticVersion.of())))
+            ImmutableList.of(Dependency.of(
+                RecipeIdentifier.of("github", "njlr", "test-lib-a"),
+                AnySemanticVersion.of())))
             .result();
 
         final ResolvedDependencies resolved =
@@ -36,5 +38,28 @@ public final class AsyncDependencyResolverTest {
         assertTrue(resolved.dependencies.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-a")));
         assertTrue(resolved.dependencies.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-b")));
         assertTrue(resolved.dependencies.containsKey(RecipeIdentifier.of("github", "njlr", "test-lib-c")));
+    }
+
+    @Test
+    public void resolverWorksWithGitHub2() throws Exception {
+
+        final FileSystem fs = Jimfs.newFileSystem();
+
+        final RecipeSource recipeSource = GitProviderRecipeSource.of(
+            fs,
+            GitHubGitProvider.of());
+
+        final Single<ResolvedDependencies> task = AsyncDependencyResolver.resolve(
+            recipeSource,
+            ImmutableList.of(Dependency.of(
+                RecipeIdentifier.of("github", "njlr", "test-lib-e"),
+                AnySemanticVersion.of())))
+            .result();
+
+        final ResolvedDependencies resolved =
+            task.timeout(120, TimeUnit.SECONDS).blockingGet();
+
+        assertTrue(resolved.dependencies.containsKey(
+            RecipeIdentifier.of("github", "njlr", "test-lib-e")));
     }
 }

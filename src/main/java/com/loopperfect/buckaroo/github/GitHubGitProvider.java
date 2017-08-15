@@ -41,7 +41,7 @@ public final class GitHubGitProvider implements GitProvider {
     @Override
     public URI zipURL(final Identifier owner, final Identifier project, final GitCommitHash commit) {
         try {
-            return new URI("https://github.com/" + owner.name + "/" + project.name + "/archive/" + commit.hash + ".zip");
+            return new URI("https://github.com/" + owner.name + "/" + project.name + "/archive/" + commit.hash.substring(0, 40) + ".zip");
         } catch (final URISyntaxException e) {
             throw new RuntimeException(e);
         }
