@@ -287,11 +287,11 @@ genrule(
 # Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
 # Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
-  name = 'debian-amd64',
+  name = 'debian-packr',
   out  = 'out',
   srcs = [
-    'debian/buckaroo.equivs',
-    'debian/buckaroo',
+    'debian/buckaroo-packr.equivs',
+    'debian/buckaroo-native',
     'debian/config.json',
     'Changelog',
     'LICENSE',
@@ -301,11 +301,33 @@ genrule(
     'mkdir $OUT',
     'cp -r $SRCDIR/* $OUT',
     'cp -r $SRCDIR/debian/* $OUT',
+    'mv $OUT/buckaroo-native $OUT/buckaroo',
     'cp -r $(location :packr-linux-x86_64) $OUT/buckaroo.bin',
     'chmod +x $OUT/buckaroo.bin',
     'cp -r $(location :buckaroo-cli) $OUT',
     'cp -r $(location :buckaroo-packr-linux)/jre $OUT',
     'cd $OUT',
-    'equivs-build buckaroo.equivs'
+    'equivs-build buckaroo-packr.equivs'
+  ])
+)
+
+genrule(
+  name = 'debian-java',
+  out  = 'out',
+  srcs = [
+    'debian/buckaroo-java.equivs',
+    'debian/buckaroo-java',
+    'Changelog',
+    'LICENSE',
+    'README.md',
+  ],
+  cmd = '&&'.join([
+    'mkdir $OUT',
+    'cp -r $SRCDIR/* $OUT',
+    'cp -r $SRCDIR/debian/* $OUT',
+    'mv $OUT/buckaroo-java $OUT/buckaroo',
+    'cp -r $(location :buckaroo-cli) $OUT',
+    'cd $OUT',
+    'equivs-build buckaroo-java.equivs'
   ])
 )
