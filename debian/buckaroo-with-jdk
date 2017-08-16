@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/usr/lib/buckaroo/jre/bin/java -jar /usr/lib/buckaroo/buckaroo-cli.jar $*

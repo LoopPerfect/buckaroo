@@ -1,3 +1,0 @@
-#!/bin/sh
-
-/usr/lib/buckaroo/buckaroo.bin $*

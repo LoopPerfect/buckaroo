@@ -12,9 +12,7 @@ Copyright: LICENSE
 Changelog: Changelog
 Readme: README.md
 Description: C++ Package Manager for secure and reproducible builds
-Files: buckaroo.bin /usr/lib/buckaroo
-  config.json /usr/lib/buckaroo
-  buckaroo-cli.jar /usr/lib/buckaroo
+Files: buckaroo-cli.jar /usr/lib/buckaroo
   buckaroo /usr/bin
   jre/bin/pack200 /usr/lib/buckaroo
   jre/bin/rmid /usr/lib/buckaroo

@@ -287,12 +287,11 @@ genrule(
 # Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
 # Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
-  name = 'debian-packr',
+  name = 'debian-with-jdk',
   out  = 'out',
   srcs = [
-    'debian/buckaroo-packr.equivs',
-    'debian/buckaroo-native',
-    'debian/config.json',
+    'debian/buckaroo-with-jdk.equivs',
+    'debian/buckaroo-with-jdk',
     'Changelog',
     'LICENSE',
     'README.md',
@@ -301,13 +300,14 @@ genrule(
     'mkdir $OUT',
     'cp -r $SRCDIR/* $OUT',
     'cp -r $SRCDIR/debian/* $OUT',
-    'mv $OUT/buckaroo-native $OUT/buckaroo',
-    'cp -r $(location :packr-linux-x86_64) $OUT/buckaroo.bin',
-    'chmod +x $OUT/buckaroo.bin',
+    'mv $OUT/buckaroo-with-jdk $OUT/buckaroo',
     'cp -r $(location :buckaroo-cli) $OUT',
-    'cp -r $(location :buckaroo-packr-linux)/jre $OUT',
+    'cp $(location :openjdk-linux)  $OUT',
     'cd $OUT',
-    'equivs-build buckaroo-packr.equivs'
+    'unzip openjdk.zip',
+    'mv java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64/jre jre',
+    'chmod +x jre/bin/java',
+    'equivs-build buckaroo-with-jdk.equivs'
   ])
 )
 
