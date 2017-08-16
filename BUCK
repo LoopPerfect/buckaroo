@@ -262,6 +262,13 @@ genrule(
     '--output $OUT',
 )
 
+remote_file(
+  name = 'packr-linux-x86_64',
+  out = 'packr-linux-x86_64',
+  url = 'https://github.com/nikhedonia/packr/releases/download/lp1.2/packr-linux-x86_64',
+  sha1 = '0206e8bce79f5ea528f531dcd98474ea769a0950'
+)
+
 
 genrule(
   name = 'buckaroo-packr-linux',
@@ -269,10 +276,9 @@ genrule(
   cmd = 'java -jar $(location :packr) ' +
     '--platform linux64 ' +
     '--jdk $(location :openjdk-linux) ' +
-    '--executable buckaroo.bin ' +
+    '--executable garbage.bin ' +
     '--mainclass com.loopperfect.buckaroo.Main ' +
-    '--classpath $(location :buckaroo-cli) ' +
-    '--minimizejre soft ' +
+    '--classpath /usr/lib/buckaroo/buckaroo-cli.jar ' +
     '--vmargs XstartOnFirstThread ' +
     '--output $OUT'
 )
@@ -281,11 +287,12 @@ genrule(
 # Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
 # Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
-  name = 'debian',
+  name = 'debian-amd64',
   out  = 'out',
   srcs = [
     'debian/buckaroo.equivs',
     'debian/buckaroo',
+    'debian/config.json',
     'Changelog',
     'LICENSE',
     'README.md',
@@ -294,8 +301,11 @@ genrule(
     'mkdir $OUT',
     'cp -r $SRCDIR/* $OUT',
     'cp -r $SRCDIR/debian/* $OUT',
-    'cp -r $(location :buckaroo-packr-linux)/* $OUT',
+    'cp -r $(location :packr-linux-x86_64) $OUT/buckaroo.bin',
+    'chmod +x $OUT/buckaroo.bin',
+    'cp -r $(location :buckaroo-cli) $OUT',
+    'cp -r $(location :buckaroo-packr-linux)/jre $OUT',
     'cd $OUT',
     'equivs-build buckaroo.equivs'
-  ]),
+  ])
 )
