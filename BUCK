@@ -262,28 +262,6 @@ genrule(
     '--output $OUT',
 )
 
-remote_file(
-  name = 'packr-linux-x86_64',
-  out = 'packr-linux-x86_64',
-  url = 'https://github.com/nikhedonia/packr/releases/download/lp1.2/packr-linux-x86_64',
-  sha1 = '0206e8bce79f5ea528f531dcd98474ea769a0950'
-)
-
-
-genrule(
-  name = 'buckaroo-packr-linux',
-  out = 'buckaroo',
-  cmd = 'java -jar $(location :packr) ' +
-    '--platform linux64 ' +
-    '--jdk $(location :openjdk-linux) ' +
-    '--executable garbage.bin ' +
-    '--mainclass com.loopperfect.buckaroo.Main ' +
-    '--classpath /usr/lib/buckaroo/buckaroo-cli.jar ' +
-    '--vmargs XstartOnFirstThread ' +
-    '--output $OUT'
-)
-
-
 # Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
 # Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
