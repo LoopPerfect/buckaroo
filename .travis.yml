@@ -35,3 +35,4 @@ deploy:
   on:
     repo: LoopPerfect/buckaroo
     tags: true
+    all_branches: true
