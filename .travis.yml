@@ -2,6 +2,8 @@ dist: trusty
 language: generic
 
 before_install:
+- sudo apt-get -qq update
+- sudo apt-get install -y equivs
 - test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git
   $HOME/.linuxbrew
 - PATH="$HOME/.linuxbrew/bin:$PATH"
