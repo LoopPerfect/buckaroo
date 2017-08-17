@@ -262,30 +262,14 @@ genrule(
     '--output $OUT',
 )
 
-
-genrule(
-  name = 'buckaroo-packr-linux',
-  out = 'buckaroo',
-  cmd = 'java -jar $(location :packr) ' +
-    '--platform linux64 ' +
-    '--jdk $(location :openjdk-linux) ' +
-    '--executable buckaroo.bin ' +
-    '--mainclass com.loopperfect.buckaroo.Main ' +
-    '--classpath $(location :buckaroo-cli) ' +
-    '--minimizejre soft ' +
-    '--vmargs XstartOnFirstThread ' +
-    '--output $OUT'
-)
-
-
 # Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
 # Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
 genrule(
-  name = 'debian',
+  name = 'debian-with-jdk',
   out  = 'out',
   srcs = [
-    'debian/buckaroo.equivs',
-    'debian/buckaroo',
+    'debian/buckaroo-with-jdk.equivs',
+    'debian/buckaroo-with-jdk',
     'Changelog',
     'LICENSE',
     'README.md',
@@ -294,8 +278,34 @@ genrule(
     'mkdir $OUT',
     'cp -r $SRCDIR/* $OUT',
     'cp -r $SRCDIR/debian/* $OUT',
-    'cp -r $(location :buckaroo-packr-linux)/* $OUT',
+    'mv $OUT/buckaroo-with-jdk $OUT/buckaroo',
+    'cp -r $(location :buckaroo-cli) $OUT',
+    'cp $(location :openjdk-linux)  $OUT',
     'cd $OUT',
-    'equivs-build buckaroo.equivs'
-  ]),
+    'unzip openjdk.zip',
+    'mv java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64/jre jre',
+    'chmod +x jre/bin/java',
+    'equivs-build buckaroo-with-jdk.equivs'
+  ])
+)
+
+genrule(
+  name = 'debian-java',
+  out  = 'out',
+  srcs = [
+    'debian/buckaroo-java.equivs',
+    'debian/buckaroo-java',
+    'Changelog',
+    'LICENSE',
+    'README.md',
+  ],
+  cmd = '&&'.join([
+    'mkdir $OUT',
+    'cp -r $SRCDIR/* $OUT',
+    'cp -r $SRCDIR/debian/* $OUT',
+    'mv $OUT/buckaroo-java $OUT/buckaroo',
+    'cp -r $(location :buckaroo-cli) $OUT',
+    'cd $OUT',
+    'equivs-build buckaroo-java.equivs'
+  ])
 )
