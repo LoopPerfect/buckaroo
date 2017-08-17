@@ -1,29 +1,35 @@
 dist: trusty
 language: generic
-
 before_install:
-  # Install Linuxbrew
-  - test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git $HOME/.linuxbrew
-  - PATH="$HOME/.linuxbrew/bin:$PATH"
-  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >> ~/.bash_profile
-  - export MANPATH="$(brew --prefix)/share/man:$MANPATH"
-  - export INFOPATH="$(brew --prefix)/share/info:$INFOPATH"
-  - brew --version
-  # Install Buck
-  - brew tap facebook/fb
-  - brew install buck
-  - buck --version
+- test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git
+  $HOME/.linuxbrew
+- PATH="$HOME/.linuxbrew/bin:$PATH"
+- echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >> ~/.bash_profile
+- export MANPATH="$(brew --prefix)/share/man:$MANPATH"
+- export INFOPATH="$(brew --prefix)/share/info:$INFOPATH"
+- brew --version
+- brew tap facebook/fb
+- brew install buck
+- buck --version
 
 script:
-  - buck build :buckaroo
-  - buck run :buckaroo-cli
-  - buck test :buckaroo-unit
-  - buck build :buckaroo-integration
+- buck build :buckaroo
+- buck run :buckaroo-cli
+- buck test :buckaroo-unit
+- buck build :buckaroo-integration
 
 branches:
   except:
-    - gh-pages
+  - gh-pages
 
 cache:
   directories:
-    - $HOME/.linuxbrew/
+  - "$HOME/.linuxbrew/"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: FIVQlzC39vyQONIxF/qnXSR09WYKHA4OUU7KTCAG93MFmLx/u0OGA/0ltt4ZlQTk1Nybv+y76u9lSVI8qXIIMtr4yYx3eS9Pvspa5sWT/L2R8AO8PSJubydymAb5IE51AmIY3jmwYnXHwuAkYTOtGn/Z/hg2S0GL6UyFCBHBj8MCVewMf475GyJihXESmeXvDeq+3rumXs4+Q8yvQ/Nkn6TyMHdw8cucRDg5SnWpBDEwHodns6xohllfz0doyOowye04yab/CuG2fKSsRQWkkKIPrxQA2/go3XjnGfRTzPi+1lthxFf3f0PrxWFpx+oUfntnDAkJXEZJz59OX7M2HqzHFfUCfPk1BfgHg0tWNS2WPJDDaviGPYaXFGAn8R3UbdgwUdqdczEE1s68jTVFDuCunm13WyIKh47MxV8MhYogCi3G6dUR7C+my1rq0HD4xjLsdZIwUMcOFy/OBXtTX3pz+uQOCthn6+qAdSPySDkKG+GJ9/UYp66QKFA05hMvomYdDcSCIlNdn0+ecE+5XA3PmJGEZcLvRRdGOCLHHu4quONi5VVtW0IlaVmnYVcln8VLu4pPE8H7y4ATOp3/NSHLPmCCVkiaENAE9eVFv9nIRhOH0VOrEY65Yl9FB4wrk9stUS1vPJ+Sdf7xrVo3Dy+CvQDuG/JEt5FZ2y/OLiw=
+  file: buck-out/gen/buckaroo-cli.jar
+  on:
+    repo: LoopPerfect/buckaroo
