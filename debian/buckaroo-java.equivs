@@ -4,7 +4,7 @@ Homepage: https://buckaroo.pm
 Standards-Version: 3.9.2
 
 Package: buckaroo
-Version: 1.3.0
+Version: 1.3.1
 Maintainer: team@buckaroo.pm
 Recommends: buck, watchman, nailgun
 Depends: openjdk-8-jre
@@ -15,5 +15,3 @@ Readme: README.md
 Description: C++ Package Manager for secure and reproducible builds
 Files: buckaroo-cli.jar /usr/lib/buckaroo
   buckaroo /usr/bin
-
-

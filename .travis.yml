@@ -2,28 +2,45 @@ dist: trusty
 language: generic
 
 before_install:
-  # Install Linuxbrew
-  - test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git $HOME/.linuxbrew
-  - PATH="$HOME/.linuxbrew/bin:$PATH"
-  - echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >> ~/.bash_profile
-  - export MANPATH="$(brew --prefix)/share/man:$MANPATH"
-  - export INFOPATH="$(brew --prefix)/share/info:$INFOPATH"
-  - brew --version
-  # Install Buck
-  - brew tap facebook/fb
-  - brew install buck
-  - buck --version
+- sudo apt-get -qq update
+- sudo apt-get install -y equivs
+- test -d $HOME/.linuxbrew/bin || git clone https://github.com/Linuxbrew/brew.git
+  $HOME/.linuxbrew
+- PATH="$HOME/.linuxbrew/bin:$PATH"
+- echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >> ~/.bash_profile
+- export MANPATH="$(brew --prefix)/share/man:$MANPATH"
+- export INFOPATH="$(brew --prefix)/share/info:$INFOPATH"
+- brew --version
+- brew tap facebook/fb
+- brew install buck
+- buck --version
 
 script:
-  - buck build :buckaroo
-  - buck run :buckaroo-cli
-  - buck test :buckaroo-unit
-  - buck build :buckaroo-integration
+- buck build :buckaroo
+- buck build :buckaroo-cli
+- buck run :buckaroo-cli
+- buck test :buckaroo-unit
+- buck build :buckaroo-integration
+- buck build :debian-with-jdk
 
 branches:
   except:
-    - gh-pages
+  - gh-pages
 
 cache:
   directories:
-    - $HOME/.linuxbrew/
+  - "$HOME/.linuxbrew/"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: fKnFdbsFZqotefPp0VrAN3CnUWsjizAs0Jnr71ZhrAX6yv82bJwa0sy3TPdWeGQcMEGWaEZYU/t1ovZ2NX1uVrkNXv9BI1GMiJdkM7IVVZ1tUYskmfr9Xvtgr84AVJbsKu775r84jUQ3/wNw2FeDBvvPbZ/1WM1nN4XaKup5rpjIU01uc1Xyzz4PhuaT4LXP7lQ82uV838cDGFn2le9AKtCLlcI5+fe6/ttjGm+46m32xSIwwbuzFNdO/Epw4TEq+VbFeoRSKmxENXa70I4CXxqaKcmSxvS5yRmQQENjNYqNXmI6Gx/9Ro7lJMni7P7jPGyh5G4G/s9UEhHefklecIgsq/eXuGprN5NcBJIOvZP5dReMR/9zAonzI4qS0V2/igoZau5VEH/twhCA2nOk4pTLRFsLbBibs2JmT6WTbAMsJuliae4EvivdQ+b99TphxTJia3EPTd2THwOfvHJ1zEc23Vgd7B7j5laVE9G553i03U/d7Cc3KNDt7yz+VDOVxm1f2CxhD1KpmQ93TDe42oNs96bcABtEQyi7IJZNz8zClBSyF1e1HwdImNojlYHnT5EkguVNpCm45dVcecHLGTvlWTkNY6J+6Br6s6BEGWTiEZDHngsi0PJ4S8La1wBJ0UGdHfxvijtAmqfCZoRUPLwDkIb/meZ7Eav/VYTIu4A=
+  file_glob: true
+  file:
+    - "buck-out/gen/buckaroo-cli.jar"
+    - "buck-out/gen/debian-with-jdk/out/buckaroo_*_amd64.deb"
+  skip_cleanup: true
+  on:
+    repo: LoopPerfect/buckaroo
+    tags: true
+    all_branches: true
