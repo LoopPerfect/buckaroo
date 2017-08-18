@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo.sources;
 
 import com.google.common.jimfs.Jimfs;
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.*;
 import org.junit.Test;
 
@@ -45,17 +46,18 @@ public final class LazyCookbookRecipeSourceTest {
         final RecipeSource recipeSource = LazyCookbookRecipeSource.of(
             fs.getPath(System.getProperty("user.home"), ".buckaroo", "buckaroo-recipes"));
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final SettableFuture<Throwable> futureError = SettableFuture.create();
 
         recipeSource.fetch(RecipeIdentifier.of(Identifier.of("org"), Identifier.of("example")))
             .result()
             .subscribe(x -> {
 
             }, error -> {
-                assertTrue(error instanceof ReadRecipeFileException);
-                latch.countDown();
+                futureError.set(error);
             });
 
-        latch.await(5000L, TimeUnit.MILLISECONDS);
+        final Throwable exception = futureError.get(5000L, TimeUnit.MILLISECONDS);
+
+        assertTrue(exception instanceof RecipeFetchException);
     }
 }

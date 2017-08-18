@@ -23,5 +23,5 @@ public interface GitProvider {
 
     URI zipURL(final Identifier owner, final Identifier project, final GitCommitHash commit);
 
-    Optional<Path> zipSubPath(final FileSystem fs, final Identifier owner, final Identifier project, final GitCommitHash commit);
+    Optional<String> zipSubPath(final Identifier owner, final Identifier project, final GitCommitHash commit);
 }

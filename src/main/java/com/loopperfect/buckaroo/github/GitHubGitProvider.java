@@ -48,8 +48,8 @@ public final class GitHubGitProvider implements GitProvider {
     }
 
     @Override
-    public Optional<Path> zipSubPath(final FileSystem fs, final Identifier owner, final Identifier project, final GitCommitHash commit) {
-        return Optional.of(fs.getPath(fs.getSeparator(), project.name + "-" + commit.hash));
+    public Optional<String> zipSubPath(final Identifier owner, final Identifier project, final GitCommitHash commit) {
+        return Optional.of(project.name + "-" + commit.hash);
     }
 
     public static GitHubGitProvider of() {

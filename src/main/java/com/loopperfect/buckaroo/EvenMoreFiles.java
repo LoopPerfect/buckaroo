@@ -111,21 +111,26 @@ public final class EvenMoreFiles {
      *
      */
     public static void unzip(
-        final Path source, final Path target, final Optional<Path> subPath, CopyOption... copyOptions) throws IOException {
+        final Path source, final Path target, final Optional<String> subPathString, CopyOption... copyOptions) throws IOException {
 
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(target);
-        Preconditions.checkNotNull(subPath);
+        Preconditions.checkNotNull(subPathString);
         Preconditions.checkNotNull(copyOptions);
-        Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute(), "subPath must be absolute");
 
         final FileSystem zipFileSystem = zipFileSystem(source);
-            EvenMoreFiles.copyDirectory(
-                subPath.map(x -> switchFileSystem(zipFileSystem, x))
-                    .orElse(zipFileSystem.getPath(zipFileSystem.getSeparator())).toAbsolutePath(),
-                target,
-                copyOptions);
 
+        final Optional<Path> subPath = subPathString.map(x -> zipFileSystem.getPath(zipFileSystem.getSeparator(), x));
+
+        Preconditions.checkArgument(!subPath.isPresent() || subPath.get().isAbsolute(), "subPath must be absolute");
+
+        final Path sourceInZip = subPath.map(x -> switchFileSystem(zipFileSystem, x))
+            .orElse(zipFileSystem.getPath(zipFileSystem.getSeparator())).toAbsolutePath();
+
+        EvenMoreFiles.copyDirectory(
+            sourceInZip,
+            target,
+            copyOptions);
     }
 
     public static String read(final Path path, final Charset charset) throws IOException {

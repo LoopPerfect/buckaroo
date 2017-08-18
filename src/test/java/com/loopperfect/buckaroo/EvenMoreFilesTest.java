@@ -1,6 +1,7 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.base.Charsets;
+import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import org.junit.Test;
 
@@ -18,6 +19,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public final class EvenMoreFilesTest {
+
+    @Test
+    public void switchFileSystem() throws Exception {
+
+        final FileSystem fs1 = Jimfs.newFileSystem();
+        final FileSystem fs2 = Jimfs.newFileSystem();
+
+        final Path path1 = fs1.getPath("a", "b", "c");
+        final Path path2 = EvenMoreFiles.switchFileSystem(fs2, path1);
+        final Path path3 = EvenMoreFiles.switchFileSystem(fs1, path2);
+
+        assertEquals(path1, path3);
+    }
 
     @Test
     public void copyDirectory() throws Exception {
@@ -80,7 +94,7 @@ public final class EvenMoreFilesTest {
     @Test
     public void unzip2() throws Exception {
 
-        final FileSystem fs = Jimfs.newFileSystem();
+        final FileSystem fs = Jimfs.newFileSystem(Configuration.unix());
 
         final String expected = "Hello, world. ";
 
@@ -109,7 +123,7 @@ public final class EvenMoreFilesTest {
         EvenMoreFiles.unzip(
             fs.getPath("stuff.zip"),
             fs.getPath("stuff"),
-            Optional.of(fs.getPath(fs.getSeparator(), "a", "b")));
+            Optional.of(fs.getPath("a", "b").toString()));
 
         // Verify the unzipped file matches the test file
         final byte[] bytes = Files.readAllBytes(fs.getPath("stuff", "c", "message.txt"));

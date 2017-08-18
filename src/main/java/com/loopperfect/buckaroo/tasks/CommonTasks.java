@@ -129,7 +129,7 @@ public final class CommonTasks {
         }).subscribeOn(Schedulers.io());
     }
 
-    public static Single<FileUnzipEvent> unzip(final Path source, final Path target, final Optional<Path> subPath, CopyOption... copyOptions) {
+    public static Single<FileUnzipEvent> unzip(final Path source, final Path target, final Optional<String> subPath, CopyOption... copyOptions) {
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(subPath);
@@ -272,7 +272,7 @@ public final class CommonTasks {
                 EvenMoreFiles.unzip(
                     zipFilePath,
                     targetDirectory,
-                    remoteArchive.subPath.map(subPath -> fs.getPath(fs.getSeparator(), subPath)),
+                    remoteArchive.subPath,
                     StandardCopyOption.REPLACE_EXISTING);
             }).toObservable()).subscribeOn(Schedulers.io());
     }

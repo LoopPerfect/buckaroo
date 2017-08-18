@@ -109,7 +109,7 @@ public final class DownloadTaskTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final Path target = fs.getPath("/a/b/c/test.txt");
+        final Path target = fs.getPath("a", "b", "c", "test.txt");
 
         DownloadTask.download(new URI("http://www.google.com"), target).toList()
             .blockingGet();
@@ -122,7 +122,7 @@ public final class DownloadTaskTest {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
-        final Path target = fs.getPath("a/b/c/test.txt").toAbsolutePath();
+        final Path target = fs.getPath("a", "b", "c", "test.txt").toAbsolutePath();
 
         DownloadTask.download(new URI("http://www.google.com"), target).toList()
             .blockingGet();

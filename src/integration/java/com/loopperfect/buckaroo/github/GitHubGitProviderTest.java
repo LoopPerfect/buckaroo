@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.github;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.sources.GitProviderRecipeSource;
@@ -18,6 +19,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -50,12 +52,17 @@ public final class GitHubGitProviderTest {
             RecipeIdentifier.of("github", "njlr", "test-lib-no-releases"))
             .result();
 
-        task.timeout(90, TimeUnit.SECONDS).subscribe(
+        final SettableFuture<Throwable> futureException = SettableFuture.create();
+
+        task.subscribe(
             result -> {
-                assertTrue(false);
             }, error -> {
-                assertTrue(error instanceof RecipeFetchException);
+                futureException.set(error);
             });
+
+        final Throwable exception = futureException.get(90, TimeUnit.SECONDS);
+
+        assertTrue(exception instanceof RecipeFetchException);
     }
 
     @Test
@@ -69,12 +76,17 @@ public final class GitHubGitProviderTest {
             RecipeIdentifier.of("github", "njlr", "test-lib-no-project"))
             .result();
 
-        task.timeout(90, TimeUnit.SECONDS).subscribe(
+        final SettableFuture<Throwable> futureException = SettableFuture.create();
+
+        task.subscribe(
             result -> {
-                assertTrue(false);
             }, error -> {
-                assertTrue(error instanceof RecipeFetchException);
+                futureException.set(error);
             });
+
+        final Throwable exception = futureException.get(90, TimeUnit.SECONDS);
+
+        assertTrue(exception instanceof RecipeFetchException);
     }
 
     @Test

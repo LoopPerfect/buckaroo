@@ -20,7 +20,7 @@ public final class GitTasksTest {
 
         final ImmutableMap<String, GitCommitHash> actual = GitTasks.fetchTags(
             "git@github.com:njlr/test-lib-tags.git")
-            .timeout(5000L, TimeUnit.MILLISECONDS)
+            .timeout(10000L, TimeUnit.MILLISECONDS)
             .blockingGet();
 
         assertEquals(expected, actual);
@@ -36,7 +36,7 @@ public final class GitTasksTest {
 
         final ImmutableMap<String, GitCommitHash> actual = GitTasks.fetchTags(
             "https://github.com/njlr/test-lib-tags.git")
-            .timeout(5000L, TimeUnit.MILLISECONDS)
+            .timeout(10000L, TimeUnit.MILLISECONDS)
             .blockingGet();
 
         assertEquals(expected, actual);

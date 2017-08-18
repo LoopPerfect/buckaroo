@@ -1,0 +1,32 @@
+os: Visual Studio 2015
+
+version: '{build}'
+
+environment:
+  matrix:
+    - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+
+install:
+  - ps: choco install wget -y -f --no-progress
+  - ps: choco install ant -y -f --no-progress
+  - ps: refreshenv
+  - ps: wget "https://github.com/njlr/choco-buck/releases/download/2016.11.11.01/buck.2016.11.11.01.nupkg" -OutFile buck.2016.11.11.01.nupkg
+  - ps: choco install buck -s ".;chocolatey" -y -f --no-progress
+  - ps: refreshenv
+  - ps: choco list --localonly
+  - ps: buck --version
+
+# Disable automatic builds by MSBuild
+build: off
+
+build_script:
+  - buck build :buckaroo
+  - buck build :buckaroo-cli
+  - buck build :buckaroo-unit
+  - buck build :buckaroo-integration
+
+test_script:
+  - buck test :buckaroo-unit
+
+artifacts:
+  - path: buck-out\gen\buckaroo-cli.jar
