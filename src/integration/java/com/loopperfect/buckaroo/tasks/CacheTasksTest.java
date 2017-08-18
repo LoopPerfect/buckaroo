@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.hash.HashCode;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.*;
 import org.junit.Test;
 
@@ -90,17 +91,21 @@ public final class CacheTasksTest {
     @Test
     public void cacheWorksForGit() throws Exception {
 
+        final FileSystem fs = FileSystems.getDefault();
+
+        final String tempDirectory = System.getProperty("java.io.tmpdir");
+
         final GitCommit gitCommit = GitCommit.of(
             "git@github.com:njlr/test-lib-d.git", "c86550e93ca45ed48fd226184c3b996923251e07");
 
-        final Path target1 = Files.createTempDirectory(Paths.get("/tmp"), "buckaroo-test")
+        final Path target1 = Files.createTempDirectory(fs.getPath(tempDirectory), "buckaroo-test")
             .toAbsolutePath();
 
         CacheTasks.cloneAndCheckoutUsingCache(gitCommit, target1).toList().blockingGet();
 
         assertTrue(Files.exists(target1.resolve("BUCK")));
 
-        final Path target2 = Files.createTempDirectory(Paths.get("/tmp"), "buckaroo-test")
+        final Path target2 = Files.createTempDirectory(fs.getPath(tempDirectory), "buckaroo-test")
             .toAbsolutePath();
 
         CacheTasks.cloneAndCheckoutUsingCache(gitCommit, target2).toList().blockingGet();
@@ -119,16 +124,18 @@ public final class CacheTasksTest {
 
         final Path cachePath = CacheTasks.getCachePath(fs, remoteFile);
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final SettableFuture<Throwable> futureException = SettableFuture.create();
 
         CacheTasks.downloadToCache(fs, remoteFile).subscribe(
             next -> {},
             error -> {
-                assertTrue(error instanceof HashMismatchException);
-                latch.countDown();
+                futureException.set(error);
             },
             () -> {});
 
-        latch.await(5000L, TimeUnit.MILLISECONDS);
+        final Throwable exception = futureException.get(5000L, TimeUnit.MILLISECONDS);
+
+        assertTrue(exception instanceof DownloadFileException);
+        assertTrue(exception.getCause() instanceof HashMismatchException);
     }
 }

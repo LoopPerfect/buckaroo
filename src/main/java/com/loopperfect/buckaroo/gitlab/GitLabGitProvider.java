@@ -54,12 +54,11 @@ public final class GitLabGitProvider implements GitProvider {
     }
 
     @Override
-    public Optional<Path> zipSubPath(final FileSystem fs, final Identifier owner, final Identifier project, final GitCommitHash commit) {
-        Preconditions.checkNotNull(fs);
+    public Optional<String> zipSubPath(final Identifier owner, final Identifier project, final GitCommitHash commit) {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(commit);
-        return Optional.of(fs.getPath(fs.getSeparator(), project.name + "-" + commit.hash + "-" + commit.hash));
+        return Optional.of(project.name + "-" + commit.hash + "-" + commit.hash);
     }
 
     public static GitLabGitProvider of() {

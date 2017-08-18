@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.google.common.io.MoreFiles;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
@@ -254,22 +255,24 @@ public final class InstallTasksTest {
                 ".buckaroo", "buckaroo-recipes", "recipes", "loopperfect", "valuable.json"),
             Serializers.serialize(recipe));
 
-        final CountDownLatch latch = new CountDownLatch(1);
-
         final ImmutableList<PartialDependency> toInstall = ImmutableList.of(
             PartialDependency.of(Identifier.of("loopperfect"), Identifier.of("valuable")));
+
+        final SettableFuture<Throwable> futureException = SettableFuture.create();
 
         InstallTasks.installDependencyInWorkingDirectory(fs, toInstall)
             .subscribe(
                 next -> {
 
                 }, error -> {
-                    Assert.assertTrue(error instanceof HashMismatchException);
-                    latch.countDown();
+                    futureException.set(error);
                 }, () -> {
 
                 });
 
-        latch.await(5000L, TimeUnit.MILLISECONDS);
+        final Throwable exception = futureException.get(5000L, TimeUnit.MILLISECONDS);
+
+        assertTrue(exception instanceof DownloadFileException);
+        assertTrue(exception.getCause() instanceof HashMismatchException);
     }
 }

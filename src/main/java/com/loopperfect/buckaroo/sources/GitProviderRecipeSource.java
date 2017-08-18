@@ -67,7 +67,7 @@ public final class GitProviderRecipeSource implements RecipeSource {
                     final FileSystem inMemoryFS = Jimfs.newFileSystem();
 
                     final Path unzipTargetPath = inMemoryFS.getPath(fileHashEvent.sha256.toString());
-                    final Optional<Path> subPath = gitProvider.zipSubPath(fs, owner, project, commit);
+                    final Optional<String> subPath = gitProvider.zipSubPath(owner, project, commit);
                     final Path projectFilePath = unzipTargetPath.resolve("buckaroo.json");
 
                     return Process.chain(
@@ -86,7 +86,7 @@ public final class GitProviderRecipeSource implements RecipeSource {
                                 final RemoteArchive remoteArchive = RemoteArchive.of(
                                     release,
                                     fileHashEvent.sha256,
-                                    subPath.map(Path::toString));
+                                    subPath);
 
                                 return Process.just(RecipeVersion.of(
                                     remoteArchive,

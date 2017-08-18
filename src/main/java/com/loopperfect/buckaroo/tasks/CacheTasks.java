@@ -1,6 +1,8 @@
 package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.base.Preconditions;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.events.FileHashEvent;
 import io.reactivex.Completable;
@@ -37,6 +39,13 @@ public final class CacheTasks {
         // Linux
         if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
             return fs.getPath(System.getProperty("user.home"), ".cache", "Buckaroo");
+        }
+
+        // Windows
+        if (osName.contains("indows")) {
+            return fs.getPath(System.getenv("LOCALAPPDATA"))
+                .resolve("Buckaroo")
+                .resolve("Caches");
         }
 
         return fs.getPath(System.getProperty("user.home"), ".buckaroo", "caches");
@@ -160,12 +169,10 @@ public final class CacheTasks {
 
         final FileSystem fs = target.getFileSystem();
         final Path cachePath = getCachePath(fs, archive.asRemoteFile());
-        final Optional<Path> subPath = archive.subPath.map(x -> fs.getPath(fs.getSeparator(), x));
 
         return Observable.concat(
             downloadToCache(fs, archive.asRemoteFile()),
-            CommonTasks.unzip(cachePath, target, subPath, copyOptions).toObservable()
-        );
+            CommonTasks.unzip(cachePath, target, archive.subPath, copyOptions).toObservable());
     }
 
     public static Observable<Event> cloneAndCheckoutUsingCache(

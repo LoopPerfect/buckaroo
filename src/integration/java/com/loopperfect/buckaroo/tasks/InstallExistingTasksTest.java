@@ -2,7 +2,9 @@ package com.loopperfect.buckaroo.tasks;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
+import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
 import org.junit.Test;
@@ -20,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 public final class InstallExistingTasksTest {
 
     @Test
-    public void worksForExistingLockFile() throws Exception {
+    public void worksForExistingLockFile1() throws Exception {
 
         final FileSystem fs = Jimfs.newFileSystem();
 
@@ -115,19 +117,21 @@ public final class InstallExistingTasksTest {
         EvenMoreFiles.writeFile(fs.getPath("buckaroo.json"), Serializers.serialize(Project.of()));
         EvenMoreFiles.writeFile(fs.getPath("buckaroo.lock.json"), Serializers.serialize(locks));
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final SettableFuture<Throwable> futureException = SettableFuture.create();
 
         InstallExistingTasks.installExistingDependenciesInWorkingDirectory(fs)
             .subscribe(
                 next -> {
 
                 }, error -> {
-                    assertTrue(error instanceof HashMismatchException);
-                    latch.countDown();
+                    futureException.set(error);
                 }, () -> {
 
                 });
 
-        latch.await(5000L, TimeUnit.MILLISECONDS);
+        final Throwable exception = futureException.get(5000L, TimeUnit.MILLISECONDS);
+
+        assertTrue(exception instanceof DownloadFileException);
+        assertTrue(exception.getCause() instanceof HashMismatchException);
     }
 }

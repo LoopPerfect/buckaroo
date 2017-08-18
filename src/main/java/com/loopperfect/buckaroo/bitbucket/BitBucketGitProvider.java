@@ -54,12 +54,11 @@ public final class BitBucketGitProvider implements GitProvider {
     }
 
     @Override
-    public Optional<Path> zipSubPath(final FileSystem fs, final Identifier owner, final Identifier project, final GitCommitHash commit) {
-        Preconditions.checkNotNull(fs);
+    public Optional<String> zipSubPath(final Identifier owner, final Identifier project, final GitCommitHash commit) {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(commit);
-        return Optional.of(fs.getPath(fs.getSeparator(),owner.name + "-" + project.name + "-" + commit.hash.substring(0, 12)));
+        return Optional.of(owner.name + "-" + project.name + "-" + commit.hash.substring(0, 12));
     }
 
     public static BitBucketGitProvider of() {
