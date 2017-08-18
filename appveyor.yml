@@ -10,7 +10,7 @@ install:
   - ps: choco install wget -y -f -i
   - ps: refreshenv
   - ps: wget "https://github.com/njlr/choco-buck/releases/download/2016.11.11.01/buck.2016.11.11.01.nupkg" -OutFile buck.2016.11.11.01.nupkg
-  - ps: choco install buck -s . -y
+  - ps: choco install buck -s ".;chocolatey" -y
   - ps: refreshenv
   - ps: python --version
   - ps: java -version
