@@ -35,7 +35,6 @@ test_script:
 
 artifacts:
   - path: buck-out\gen\buckaroo-cli.jar
-  - path: C:\ProgramData\chocolatey\logs\chocolatey.log
 
 cache:
   - C:\ProgramData\chocolatey\bin -> appveyor.yml
