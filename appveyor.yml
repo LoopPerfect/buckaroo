@@ -11,7 +11,7 @@ install:
   - ps: choco install ant -y --no-progress
   - ps: choco install git -y --no-progress
   - ps: choco install python2 -y --no-progress
-  - ps: choco install jdk8 -y --no-progress
+  - ps: choco install jdk8 -y -f -params "both=true" --no-progress
   - ps: choco install zip -y --no-progress
   - ps: choco install unzip -y --no-progress
   - ps: refreshenv
