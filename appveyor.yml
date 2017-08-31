@@ -11,12 +11,12 @@ install:
   - ps: choco install ant -y --no-progress
   - ps: choco install git -y --no-progress
   - ps: choco install python2 -y --no-progress
-  - ps: choco install jdk8 -y -f -params "both=true" --no-progress
+  - ps: choco install jdk8 -y -params "both=true" --no-progress
   - ps: choco install zip -y --no-progress
   - ps: choco install unzip -y --no-progress
   - ps: refreshenv
   - ps: wget "https://github.com/njlr/choco-buck/releases/download/2017.05.31.01/buck.2017.05.31.01.nupkg" -OutFile buck.2017.05.31.01.nupkg
-  - ps: choco install buck -s ".;chocolatey" -y -f --no-progress
+  - ps: choco install buck -s ".;chocolatey" -y --no-progress
   - ps: refreshenv
   - ps: choco list --localonly
   - ps: buck --version
@@ -35,6 +35,9 @@ test_script:
 
 artifacts:
   - path: buck-out\gen\buckaroo-cli.jar
+    name: buckaroo-cli.jar
+  - path: C:\ProgramData\chocolatey\logs\chocolatey.log
+    name: chocolatey.log
 
 cache:
   - C:\ProgramData\chocolatey\bin -> appveyor.yml
