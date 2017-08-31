@@ -15,7 +15,7 @@ install:
   - ps: choco install zip -y --no-progress
   - ps: choco install unzip -y --no-progress
   - ps: refreshenv
-  - ps: wget "https://github.com/njlr/choco-buck/releases/download/2016.11.11.01/buck.2016.11.11.01.nupkg" -OutFile buck.2016.11.11.01.nupkg
+  - ps: wget "https://github.com/njlr/choco-buck/releases/download/2017.05.31.01/buck.2017.05.31.01.nupkg" -OutFile buck.2017.05.31.01.nupkg
   - ps: choco install buck -s ".;chocolatey" -y -f --no-progress
   - ps: refreshenv
   - ps: choco list --localonly
