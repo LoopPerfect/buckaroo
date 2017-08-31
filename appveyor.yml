@@ -16,7 +16,7 @@ install:
   - ps: choco install unzip -y --no-progress
   - ps: refreshenv
   - ps: wget "https://github.com/njlr/choco-buck/releases/download/2017.05.31.01/buck.2017.05.31.01.nupkg" -OutFile buck.2017.05.31.01.nupkg
-  - ps: choco install buck -s ".;chocolatey" -y --no-progress
+  - ps: choco install buck -dv -s ".;chocolatey" -y --no-progress
   - ps: refreshenv
   - ps: choco list --localonly
   - ps: buck --version
