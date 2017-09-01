@@ -74,7 +74,7 @@ public final class GenericEventRenderer {
         }
 
         // Fallback
-        return ImmutableList.of("◐", "◓", "◑", "◒");
+        return ImmutableList.of("\u25D0", "\u25D3", "\u25D1", "\u25D2");
     }
 
     public static Component render(final DownloadProgress event) {

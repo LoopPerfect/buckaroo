@@ -154,12 +154,12 @@ java_library(
   srcs = glob([
     'src/main/java/com/**/*.java',
   ]),
+  resources_root = 'src/main/resources',
   resources = glob([
     'src/main/resources/**/*.mustache',
     'src/main/resources/**/*.cpp',
     'src/main/resources/**/*.txt',
   ]),
-  resources_root = 'src/main/resources',
   deps = [
     ':javatuples',
     ':rxjava',
