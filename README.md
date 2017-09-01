@@ -1,6 +1,9 @@
 # Buckaroo
 A source-only C++ package manager that will take you to your happy place 🏝️
 
+[![Travis](https://img.shields.io/travis/LoopPerfect/buckaroo.svg)]()
+[![AppVeyor](https://img.shields.io/appveyor/ci/njlr/buckaroo.svg)]()
+
 [buckaroo.pm](https://www.buckaroo.pm/)
 
 The Buckaroo workflow looks like this:
@@ -46,6 +49,8 @@ buck test :buckaroo-integration
 
 You can generate project files for your IDE using `buck project`. Please do not commit these to Git!
 
+Please see [CONTRIBUTING](CONTRIBUTING.md) for more information.
+
 ## FAQ
 
 ### What platforms is Buckaroo available for?
@@ -64,7 +69,7 @@ Package requests are handled on [the wishlist](https://github.com/LoopPerfect/bu
 
 If the bug is for the Buckaroo client, please report it [here](https://github.com/LoopPerfect/buckaroo/issues). If the bug is for a specific package, please report it on [the recipes repo](https://github.com/LoopPerfect/buckaroo-recipes).
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for more information. 
+Please see [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ### What is your contribution policy?
 
