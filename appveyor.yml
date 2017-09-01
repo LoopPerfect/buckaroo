@@ -9,12 +9,6 @@ environment:
 
 install:
   - ps: choco install wget -y --no-progress
-  - ps: choco install ant -y --no-progress
-  - ps: choco install git -y --no-progress
-  - ps: choco install python2 -y --no-progress
-  - ps: choco install jdk8 -y -params "both=true" --no-progress
-  - ps: choco install zip -y --no-progress
-  - ps: choco install unzip -y --no-progress
   - ps: refreshenv
   - ps: wget "https://github.com/njlr/choco-buck/releases/download/2017.05.31.01/buck.2017.05.31.01.nupkg" -OutFile buck.2017.05.31.01.nupkg
   - ps: choco install buck -s ".;chocolatey" -y --no-progress
