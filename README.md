@@ -1,3 +1,5 @@
+<a target='_blank' rel='nofollow' href='https://app.codesponsor.io/link/hq7GXSxnYW3qEM98fqMVob9v/LoopPerfect/buckaroo'>  <img alt='Sponsor' width='888' height='68' src='https://app.codesponsor.io/embed/hq7GXSxnYW3qEM98fqMVob9v/LoopPerfect/buckaroo.svg' /></a>
+
 # Buckaroo
 
 A source-only C++ package manager that will take you to your happy place 🏝️
@@ -94,3 +96,7 @@ Buckaroo is fully open-source and we are accepting external contributions. Pleas
 First time contributor? Take a look at the issue tracker for [issues marked "first commit"](https://github.com/LoopPerfect/buckaroo/labels/first%20commit).
 
 Another way to contribute is by writing recipes! Send a PR to [this repo](https://github.com/LoopPerfect/buckaroo-recipes) to add a recipe to the official cookbook. If you are looking for a library to port, [the wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) is a good place to start.
+
+We will always take the time to review a PR! 💖
+
+<a target='_blank' rel='nofollow' href='https://app.codesponsor.io/link/hq7GXSxnYW3qEM98fqMVob9v/LoopPerfect/buckaroo'>  <img alt='Sponsor' width='888' height='68' src='https://app.codesponsor.io/embed/hq7GXSxnYW3qEM98fqMVob9v/LoopPerfect/buckaroo.svg' /></a>
