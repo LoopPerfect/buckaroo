@@ -2,6 +2,7 @@ package com.loopperfect.buckaroo;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Streams;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -104,6 +105,13 @@ public final class RecipeVersion {
     public static RecipeVersion of(final GitCommit source, final Optional<String> target,
             final DependencyGroup dependencies, final Optional<RemoteFile> buckResource) {
         return new RecipeVersion(Either.left(source), target, Optional.of(dependencies), Optional.empty(), buckResource);
+    }
+
+    public static RecipeVersion of(final GitCommit source, final Optional<String> target,
+                                   final DependencyGroup dependencies, final PlatformDependencyGroup platformDependencies,
+                                   final Optional<RemoteFile> buckResource) {
+        return new RecipeVersion(Either.left(source), target,
+            Optional.of(dependencies), Optional.of(platformDependencies), buckResource);
     }
 
     @Deprecated

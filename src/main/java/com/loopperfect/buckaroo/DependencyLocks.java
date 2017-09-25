@@ -109,4 +109,11 @@ public final class DependencyLocks {
     public static DependencyLocks of() {
         return new DependencyLocks(ImmutableList.of(), ImmutableList.of(), ImmutableMap.of());
     }
+
+    public static DependencyLocks of(
+        final ImmutableList<RecipeIdentifier> projectDependencies,
+        final ImmutableList<ResolvedPlatformDependencies> platformDependencies,
+        final Map<RecipeIdentifier, ResolvedDependency> locks) {
+        return new DependencyLocks(projectDependencies, platformDependencies, locks);
+    }
 }

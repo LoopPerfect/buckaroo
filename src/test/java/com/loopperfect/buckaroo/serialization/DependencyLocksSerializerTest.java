@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.util.Optional;
 
+import static com.loopperfect.buckaroo.Either.left;
 import static com.loopperfect.buckaroo.Either.right;
 import static org.junit.Assert.assertEquals;
 
@@ -125,5 +126,27 @@ public final class DependencyLocksSerializerTest {
                         ImmutableList.of(RecipeIdentifier.of("org", "anotherexample")))))));
 
         assertEquals(right(deserialized), Serializers.parseDependencyLocks(serialized));
+    }
+
+    @Test
+    public void test7() {
+
+        final DependencyLocks dependencyLocks = DependencyLocks.of(
+            ImmutableList.of(
+                RecipeIdentifier.of("org", "example")),
+            ImmutableList.of(
+                ResolvedPlatformDependencies.of(
+                    "^linux.*",
+                    ImmutableList.of(
+                        RecipeIdentifier.of("org", "linux-only")))),
+            ImmutableMap.of(
+                RecipeIdentifier.of("org", "example"),
+                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/example/commit", "c7355d5"))),
+                RecipeIdentifier.of("org", "linux-only"),
+                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/linux-only/commit", "b8945e7")))));
+
+        assertEquals(
+            right(dependencyLocks),
+            Serializers.parseDependencyLocks(Serializers.serialize(dependencyLocks)));
     }
 }

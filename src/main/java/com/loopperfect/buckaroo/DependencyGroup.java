@@ -84,6 +84,14 @@ public final class DependencyGroup {
             .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
+    public DependencyGroup with(final DependencyGroup other) {
+        Preconditions.checkNotNull(other);
+        Preconditions.checkArgument(this.dependencies.keySet()
+            .stream()
+            .noneMatch(other.dependencies::containsKey));
+        return DependencyGroup.of(MoreMaps.merge(this.dependencies, other.dependencies));
+    }
+
     public DependencyGroup remove(final Collection<Dependency> toRemove) {
         Preconditions.checkNotNull(toRemove);
         if (toRemove.stream().noneMatch(x ->

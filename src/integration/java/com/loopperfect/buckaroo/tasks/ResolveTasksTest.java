@@ -102,9 +102,18 @@ public final class ResolveTasksTest {
             project, resolvedDependencies);
 
         final DependencyLocks expected = DependencyLocks.of(
-            DependencyLock.of(
+            ImmutableList.of(
+                RecipeIdentifier.of("org", "example")),
+            ImmutableList.of(
+                ResolvedPlatformDependencies.of(
+                    "^linux.*",
+                    ImmutableList.of(
+                        RecipeIdentifier.of("org", "linux-only")))),
+            ImmutableMap.of(
                 RecipeIdentifier.of("org", "example"),
-                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/example/commit", "c7355d5")))));
+                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/example/commit", "c7355d5"))),
+                RecipeIdentifier.of("org", "linux-only"),
+                ResolvedDependency.of(left(GitCommit.of("https://github.com/org/linux-only/commit", "b8945e7")))));
 
         assertEquals(expected, dependencyLocks);
     }

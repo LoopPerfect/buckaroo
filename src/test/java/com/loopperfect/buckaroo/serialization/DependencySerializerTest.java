@@ -34,7 +34,9 @@ public final class DependencySerializerTest {
 
         serializeDeserialize(Dependency.of(
             RecipeIdentifier.of("org", "magic-libs"),
-            ExactSemanticVersion.of(SemanticVersion.of(3, 4), SemanticVersion.of(6, 5, 1))));
+            ExactSemanticVersion.of(
+                SemanticVersion.of(3, 4),
+                SemanticVersion.of(6, 5, 1))));
     }
 
     @Test

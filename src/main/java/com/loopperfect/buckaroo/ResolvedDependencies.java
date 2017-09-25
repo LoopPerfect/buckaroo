@@ -12,7 +12,8 @@ public final class ResolvedDependencies {
 
     public final ImmutableMap<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies;
 
-    private ResolvedDependencies(final Map<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies) {
+    private ResolvedDependencies(
+        final Map<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies) {
         Preconditions.checkNotNull(dependencies);
         this.dependencies = ImmutableMap.copyOf(dependencies);
     }
@@ -28,8 +29,7 @@ public final class ResolvedDependencies {
 
     public boolean equals(final ResolvedDependencies other) {
         Preconditions.checkNotNull(other);
-        return other == this ||
-            Objects.equals(dependencies, other.dependencies);
+        return other == this || Objects.equals(dependencies, other.dependencies);
     }
 
     public Pair<SemanticVersion, RecipeVersion> get(final RecipeIdentifier identifier) {
@@ -70,7 +70,8 @@ public final class ResolvedDependencies {
             .toString();
     }
 
-    public static ResolvedDependencies of(final Map<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies) {
+    public static ResolvedDependencies of(
+        final Map<RecipeIdentifier, Pair<SemanticVersion, RecipeVersion>> dependencies) {
         return new ResolvedDependencies(dependencies);
     }
 

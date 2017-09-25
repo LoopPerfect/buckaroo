@@ -183,4 +183,76 @@ public final class AsyncDependencyResolverTest {
 //
 //        latch.await(5000L, TimeUnit.MILLISECONDS);
 //    }
+
+    @Test
+    public void resolvePlatform() throws Exception {
+
+        final RecipeIdentifier exampleIdentifier = RecipeIdentifier.of("org", "example");
+
+        final Recipe example = Recipe.of(
+            "example",
+            "https://github.com/org/example",
+            ImmutableMap.of(
+                SemanticVersion.of(1),
+                RecipeVersion.of(
+                    GitCommit.of("https://github.com/org/example/commit", "b4515d5"),
+                    Optional.empty(),
+                    DependencyGroup.of(),
+                    PlatformDependencyGroup.of(
+                        Pair.with(
+                            "^linux.*",
+                            DependencyGroup.of(
+                                Dependency.of(
+                                    RecipeIdentifier.of("org", "anotherexample"),
+                                    AnySemanticVersion.of())))),
+                    Optional.empty())));
+
+        final RecipeIdentifier anotherExampleIdentifier = RecipeIdentifier.of("org", "anotherexample");
+
+        final Recipe anotherExample = Recipe.of(
+            "Another Example",
+            "https://github.com/org/anotherexample",
+            ImmutableMap.of(
+                SemanticVersion.of(1),
+                RecipeVersion.of(
+                    GitCommit.of("https://github.com/org/example/commit", "c3715d5"),
+                    Optional.empty(),
+                    DependencyGroup.of(),
+                    PlatformDependencyGroup.of(),
+                    Optional.empty())));
+
+        final RecipeSource recipeSource = new RecipeSource() {
+
+            @Override
+            public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
+                if (identifier.equals(exampleIdentifier)) {
+                    return Process.just(example);
+                }
+                if (identifier.equals(anotherExampleIdentifier)) {
+                    return Process.just(anotherExample);
+                }
+                return Process.error(
+                    new RecipeFetchException(this, identifier, "Could not find " + identifier.encode() + ". "));
+            }
+        };
+
+        final ImmutableList<Dependency> toResolve = ImmutableList.of(
+            Dependency.of(exampleIdentifier, AnySemanticVersion.of()));
+
+        final ResolvedDependencies expected = ResolvedDependencies.of(ImmutableMap.of(
+            exampleIdentifier,
+            Pair.with(
+                SemanticVersion.of(1),
+                example.versions.get(SemanticVersion.of(1))),
+            RecipeIdentifier.of("org", "anotherexample"),
+            Pair.with(
+                SemanticVersion.of(1),
+                anotherExample.versions.get(SemanticVersion.of(1)))));
+
+        final ResolvedDependencies actual = AsyncDependencyResolver.resolve(recipeSource, toResolve)
+            .result()
+            .blockingGet();
+
+        assertEquals(expected, actual);
+    }
 }

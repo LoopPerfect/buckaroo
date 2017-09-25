@@ -52,8 +52,12 @@ public final class AsyncDependencyResolver {
                         next.project,
                         Pair.with(entry.getKey(), entry.getValue()));
 
-                    final ImmutableList<Dependency> nextDependencies = ImmutableList.copyOf(
-                        entry.getValue().dependencies.orElse(DependencyGroup.of()).entries());
+                    final ImmutableList<Dependency> nextDependencies = entry.getValue().dependencies
+                        .orElse(DependencyGroup.of())
+                        .with(entry.getValue()
+                            .platformDependencies.orElse(PlatformDependencyGroup.of())
+                            .allPlatforms())
+                        .entries();
 
                     return resolve(
                         recipeSource,
