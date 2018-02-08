@@ -7,6 +7,7 @@ A source-only C++ package manager that will take you to your happy place 🏝️
 [![Travis](https://img.shields.io/travis/LoopPerfect/buckaroo.svg)](https://travis-ci.org/LoopPerfect/buckaroo)
 [![AppVeyor](https://img.shields.io/appveyor/ci/njlr/buckaroo.svg)](https://ci.appveyor.com/project/njlr/buckaroo)
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/LoopPerfect/buckaroo)
+[![Open Source Helpers](https://www.codetriage.com/loopperfect/buckaroo/badges/users.svg)](https://www.codetriage.com/loopperfect/buckaroo)
 
 [buckaroo.pm](https://www.buckaroo.pm/)
 
