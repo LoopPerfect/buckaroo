@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="SemVer.fs" />
+    <Compile Include="Version.fs" />
+    <Compile Include="Project.fs" />
+    <Compile Include="Atom.fs" />
+    <Compile Include="Constraint.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+</Project>
