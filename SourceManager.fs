@@ -40,3 +40,53 @@ let fetchVersions (p : Project.Project) =
       |> Seq.append semVers 
       |> Seq.toList
   }
+
+let fetchRevisions (a : Atom.Atom) = 
+  async {
+    let url = Project.sourceLocation a.Project
+    let target = Path.Combine(Path.GetTempPath(), "buckaroo-" + Path.GetRandomFileName())
+    let! gitPath = clone url target
+    use repo = new Repository(gitPath)
+    return 
+      match a.Version with 
+      | Version.SemVerVersion semVer -> 
+        repo.Tags 
+          |> Seq.filter (fun t -> SemVer.parse t.FriendlyName = Some semVer)
+          |> Seq.map (fun t -> t.Target.Sha)
+          |> Seq.distinct
+          |> Seq.toList
+      | Version.BranchVersion b -> 
+        let branch = 
+          repo.Branches
+            |> Seq.filter (fun x -> x.FriendlyName = b)
+            |> Seq.item 0
+        Commands.Checkout(repo, branch) |> ignore
+        branch.Commits
+          |> Seq.map (fun c -> c.Sha)
+          |> Seq.distinct
+          |> Seq.toList
+      | Version.RevisionVersion r -> 
+        repo.Commits
+          |> Seq.map (fun c -> c.Sha)
+          |> Seq.filter (fun c -> c = r)
+          |> Seq.take 1 
+          |> Seq.toList
+      | Version.TagVersion tag -> 
+        repo.Tags 
+          |> Seq.filter (fun t -> t.FriendlyName = tag)
+          |> Seq.map (fun t -> t.Target.Sha)
+          |> Seq.distinct
+          |> Seq.toList
+  }
+
+let fetchManifest (project : Project.Project) (revision : string) = 
+  async {
+    let url = Project.sourceLocation project
+    let target = Path.Combine(Path.GetTempPath(), "buckaroo-" + Path.GetRandomFileName())
+    let! gitPath = clone url target
+    use repo = new Repository(gitPath)
+    Commands.Checkout(repo, revision) |> ignore
+    let blob = repo.Head.Tip.["readme.md"].Target :?> Blob;
+    let content = blob.GetContentText()
+    return content
+  }
