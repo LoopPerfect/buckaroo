@@ -6,6 +6,17 @@ type SemVer = { Major : int; Minor : int; Patch : int; Increment : int }
 
 let zero : SemVer = { Major = 0; Minor = 0; Patch = 0; Increment = 0 }
 
+let compare (x : SemVer) (y : SemVer) = 
+  match x.Major.CompareTo y.Major with
+  | 0 -> 
+    match x.Minor.CompareTo y.Minor with
+    | 0 -> 
+      match x.Patch.CompareTo y.Patch with
+      | 0 -> x.Increment.CompareTo y.Increment
+      | c -> c
+    | c -> c
+  | c -> c
+
 let show (x : SemVer) : string = 
   let elements = 
     if x.Increment = 0 

@@ -4,13 +4,18 @@ open System
 open System.IO
 open LibGit2Sharp
 
+open Project
+open Version
+open Dependency
+open Manifest
+
 let clone (url : string) (target : string) = 
   async {
     let path = Repository.Clone(url, target)
     return path
   }
 
-let fetchVersions (p : Project.Project) = 
+let fetchVersions (p : Project) = 
   async {
     let url = Project.sourceLocation p
     let target = Path.Combine(Path.GetTempPath(), "buckaroo-" + Path.GetRandomFileName())
@@ -41,14 +46,14 @@ let fetchVersions (p : Project.Project) =
       |> Seq.toList
   }
 
-let fetchRevisions (a : Atom.Atom) = 
+let fetchRevisions (project : Project) (version : Version) = 
   async {
-    let url = Project.sourceLocation a.Project
+    let url = Project.sourceLocation project
     let target = Path.Combine(Path.GetTempPath(), "buckaroo-" + Path.GetRandomFileName())
     let! gitPath = clone url target
     use repo = new Repository(gitPath)
     return 
-      match a.Version with 
+      match version with 
       | Version.SemVerVersion semVer -> 
         repo.Tags 
           |> Seq.filter (fun t -> SemVer.parse t.FriendlyName = Some semVer)
@@ -88,5 +93,6 @@ let fetchManifest (project : Project.Project) (revision : string) =
     Commands.Checkout(repo, revision) |> ignore
     let blob = repo.Head.Tip.["readme.md"].Target :?> Blob;
     let content = blob.GetContentText()
-    return content
+    // return content
+    return { Dependencies = [] }
   }

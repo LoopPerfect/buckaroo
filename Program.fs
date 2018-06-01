@@ -21,7 +21,7 @@ let main argv =
   //     |> Async.RunSynchronously
   //     |> String.concat ", "
   // Console.WriteLine revisions
-  SourceManager.fetchManifest p r 
-    |> Async.RunSynchronously
-    |> Console.WriteLine
+  // SourceManager.fetchManifest p r 
+  //   |> Async.RunSynchronously
+  //   |> Console.WriteLine
   0

@@ -16,6 +16,7 @@
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
     <Compile Include="SourceManager.fs" />
+    <Compile Include="Solver.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

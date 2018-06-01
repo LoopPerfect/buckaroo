@@ -14,6 +14,12 @@ let ``SemVer.parse works correctly`` () =
   Assert.True(SemVer.parse("abc") = None)
 
 [<Fact>]
+let ``SemVer.compare works correctly`` () =
+  Assert.True(SemVer.compare SemVer.zero SemVer.zero = 0)
+  Assert.True(SemVer.compare { SemVer.zero with Major = 1 } SemVer.zero = 1)
+  Assert.True(SemVer.compare { SemVer.zero with Major = 1; Minor = 2 } { SemVer.zero with Major = 1 } = 1)
+
+[<Fact>]
 let ``Constraint.satisfies works correctly`` () =
   let v = Version.RevisionVersion "aabbccddee"
   let w = Version.TagVersion "rc1"
