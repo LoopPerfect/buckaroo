@@ -2,10 +2,13 @@ module Project
 
 type GitHubProject = { Owner : string; Project : string }
 
-type Project = GitHubProject
+type Project = 
+| GitHub of GitHubProject
 
-let showGitHubProject (p : GitHubProject) : string = 
-  "github.com/" + p.Owner + "/" + p.Project
+let sourceLocation (p : Project) = 
+  match p with
+  | GitHub x -> "https://github.com/" + x.Owner + "/" + x.Project + ".git"
 
 let show (p : Project) : string = 
-  showGitHubProject p
+  match p with
+  | GitHub x -> "github.com/" + x.Owner + "/" + x.Project

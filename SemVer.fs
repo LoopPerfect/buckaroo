@@ -1,5 +1,7 @@
 module SemVer
 
+open System
+
 type SemVer = { Major : int; Minor : int; Patch : int; Increment : int }
 
 let zero : SemVer = { Major = 0; Minor = 0; Patch = 0; Increment = 0 }
@@ -20,7 +22,12 @@ let parseInt (x : string) =
   with _ -> None
 
 let parse (x : string) : Option<SemVer> = 
-  let parts = x.Split [|'.'|]
+  let y = 
+    let trimmed = x.Trim()
+    if trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+    then trimmed.Substring 1
+    else trimmed
+  let parts = y.Split [|'.'|]
   match parts.Length with 
   | x when x = 3 || x = 4 -> 
     let step state next = 

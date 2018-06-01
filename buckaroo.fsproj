@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -12,11 +11,17 @@
     <Compile Include="Constraint.fs" />
     <Compile Include="Project.fs" />
     <Compile Include="Atom.fs" />
+    <Compile Include="Dependency.fs" />
+    <Compile Include="SourceLocation.fs" />
+    <Compile Include="Manifest.fs" />
+    <Compile Include="ResolvedVersion.fs" />
+    <Compile Include="SourceManager.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
     <PackageReference Include="xunit" Version="2.3.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
