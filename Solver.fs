@@ -50,10 +50,10 @@ let rec step (selected : Set<ResolvedPackage>,
       // TODO: Improve sort
       let rank (v : Version) = 
         match v with
-        | RevisionVersion _ -> 3
-        | TagVersion _ -> 2
-        | SemVerVersion _ -> 1
-        | BranchVersion _ -> 0
+        | Version.Revision _ -> 3
+        | Version.Tag _ -> 2
+        | Version.SemVerVersion _ -> 1
+        | Version.Branch _ -> 0
 
       let sortedVersions = 
         availableVersions

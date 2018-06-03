@@ -1,6 +1,7 @@
 module Manifest
 
 open Newtonsoft.Json
+open FParsec
 
 open Dependency
 
@@ -12,10 +13,4 @@ type Manifest = { Dependencies : List<Dependency> }
 //   |> Seq.distinct
 //   |> Seq.toList
 
-let parse (content : string) = 
-  // let data = JObject.Parse content 
-  let dependencies = []
-    // data.["dependencies"] 
-    // |> Seq.map (fun x -> )
-    // |> Seq.toList
-  Some { Dependencies = dependencies }
+

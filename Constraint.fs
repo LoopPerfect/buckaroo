@@ -2,12 +2,15 @@ module Constraint
 
 open FParsec
 
+type Version = Version.Version
+
 type Constraint = 
-| Wildcard 
-| Exactly of Version.Version
-| Not of Constraint
+| Exactly of Version
+| Complement of Constraint
 | Any of List<Constraint>
 | All of List<Constraint>
+
+let wildcard = All []
 
 let intersection (c : Constraint) (d : Constraint) : Constraint = 
   All [ c; d ]
@@ -16,21 +19,19 @@ let union (c : Constraint) (d : Constraint) : Constraint =
   Any [ c; d ]
 
 let complement (c : Constraint) : Constraint = 
-  Not c
+  Complement c
 
-let rec satisfies (c : Constraint) (v : Version.Version) : bool = 
+let rec satisfies (c : Constraint) (v : Version) : bool = 
   match c with
-  | Wildcard -> true
   | Exactly x -> v = x 
-  | Not c -> satisfies c v |> not 
+  | Complement x -> satisfies x v |> not 
   | Any xs -> xs |> Seq.exists(fun c -> satisfies c v)
   | All xs -> xs |> Seq.forall(fun c -> satisfies c v)
 
 let rec show ( c : Constraint) : string = 
   match c with
-  | Wildcard -> "*"
   | Exactly v -> Version.show v
-  | Not v -> "!" + show v
+  | Complement c -> "!" + show c
   | Any xs -> 
     "any(" + 
     (xs 
@@ -38,18 +39,54 @@ let rec show ( c : Constraint) : string =
       |> String.concat ", ") + 
     ")"
   | All xs -> 
-    "all(" + 
-    (xs 
-      |> Seq.map (fun x -> show x) 
-      |> String.concat ", ") + 
-    ")"
+    if Seq.isEmpty xs 
+    then "*"
+    else 
+      "all(" + 
+      (xs 
+        |> Seq.map (fun x -> show x) 
+        |> String.concat ", ") + 
+      ")"
 
 let wildcardParser = parse {
   do! CharParsers.skipString "*"
-  return Wildcard
+  return All []
 }
 
-let parser = wildcardParser
+let exactlyParser = parse {
+  let! version = Version.parser
+  return Exactly version
+}
+
+#nowarn "40"
+let rec parser = parse {
+  let complementParser = parse {
+    do! CharParsers.skipString "!"
+    let! c = parser
+    return Complement c
+  }
+
+  let anyParser = parse {
+    do! CharParsers.skipString "any("
+    let! elements = CharParsers.spaces1 |> Primitives.sepBy parser
+    do! CharParsers.skipString ")"
+    return Any elements
+  }
+
+  let allParser = parse {
+    do! CharParsers.skipString "all("
+    let! elements = CharParsers.spaces1 |> Primitives.sepBy parser
+    do! CharParsers.skipString ")"
+    return All elements
+  }
+
+  return! 
+    wildcardParser 
+    <|> exactlyParser 
+    <|> complementParser 
+    <|> anyParser
+    <|> allParser
+}
 
 let parse (x : string) : Option<Constraint> = 
   match run parser x with

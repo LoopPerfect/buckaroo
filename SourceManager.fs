@@ -26,11 +26,11 @@ let fetchVersions (p : Project) =
         |> Seq.filter (fun b -> b.IsRemote)
         |> Seq.map (fun b -> b.RemoteName)
         |> Seq.distinct
-        |> Seq.map (fun b -> Version.BranchVersion b)
+        |> Seq.map (fun b -> Version.Branch b)
     let tags = 
       repo.Tags 
         |> Seq.map (fun t -> t.FriendlyName)
-        |> Seq.map (fun b -> Version.TagVersion b)
+        |> Seq.map (fun b -> Version.Tag b)
     let semVers = 
       repo.Tags 
         |> Seq.map (fun t -> SemVer.parse t.FriendlyName)
@@ -60,7 +60,7 @@ let fetchRevisions (project : Project) (version : Version) =
           |> Seq.map (fun t -> t.Target.Sha)
           |> Seq.distinct
           |> Seq.toList
-      | Version.BranchVersion b -> 
+      | Version.Branch b -> 
         let branch = 
           repo.Branches
             |> Seq.filter (fun x -> x.FriendlyName = b)
@@ -70,13 +70,13 @@ let fetchRevisions (project : Project) (version : Version) =
           |> Seq.map (fun c -> c.Sha)
           |> Seq.distinct
           |> Seq.toList
-      | Version.RevisionVersion r -> 
+      | Version.Revision r -> 
         repo.Commits
           |> Seq.map (fun c -> c.Sha)
           |> Seq.filter (fun c -> c = r)
           |> Seq.take 1 
           |> Seq.toList
-      | Version.TagVersion tag -> 
+      | Version.Tag tag -> 
         repo.Tags 
           |> Seq.filter (fun t -> t.FriendlyName = tag)
           |> Seq.map (fun t -> t.Target.Sha)

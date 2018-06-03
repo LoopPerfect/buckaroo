@@ -44,14 +44,14 @@ let parser : Parser<SemVer, unit> = parse {
     do! CharParsers.skipString "."
     return! integerParser
   }
-  let! minor = segment
-  let! patch = segment
+  let! minor = segment |> Primitives.opt
+  let! patch = segment |> Primitives.opt
   let! increment = segment |> Primitives.opt
   do! CharParsers.spaces
   return { 
     Major = major; 
-    Minor = minor; 
-    Patch = patch; 
+    Minor = minor |> Option.defaultValue 0; 
+    Patch = patch |> Option.defaultValue 0; 
     Increment = increment |> Option.defaultValue 0 
   }
 }
