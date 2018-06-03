@@ -1,6 +1,7 @@
 module SemVer
 
 open System
+open FParsec
 
 type SemVer = { Major : int; Minor : int; Patch : int; Increment : int }
 
@@ -26,36 +27,36 @@ let show (x : SemVer) : string =
     |> Seq.map (fun x -> string x)
     |> String.concat "."
 
-let parseInt (x : string) = 
-  try
-      let i = System.Int32.Parse x
-      Some i
-  with _ -> None
+let integerParser = parse {
+  let! digits = CharParsers.digit |> Primitives.many1
+  let inline charToInt c = int c - int '0'
+  return 
+    digits 
+    |> Seq.map charToInt 
+    |> Seq.fold (fun acc elem -> acc * 10 + elem) 0
+}
+
+let parser : Parser<SemVer, unit> = parse {
+  do! CharParsers.spaces
+  do! CharParsers.skipString "v" <|> CharParsers.skipString "V" |> Primitives.optional
+  let! major = integerParser
+  let segment = parse {
+    do! CharParsers.skipString "."
+    return! integerParser
+  }
+  let! minor = segment
+  let! patch = segment
+  let! increment = segment |> Primitives.opt
+  do! CharParsers.spaces
+  return { 
+    Major = major; 
+    Minor = minor; 
+    Patch = patch; 
+    Increment = increment |> Option.defaultValue 0 
+  }
+}
 
 let parse (x : string) : Option<SemVer> = 
-  let y = 
-    let trimmed = x.Trim()
-    if trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase)
-    then trimmed.Substring 1
-    else trimmed
-  let parts = y.Split [|'.'|]
-  match parts.Length with 
-  | x when x = 3 || x = 4 -> 
-    let step state next = 
-      match (state, next) with
-      | (Some xs, Some x) -> [ x ] |> List.append xs |> Some
-      | _ -> None
-    let intParts = 
-      parts 
-        |> Seq.map parseInt
-        |> Seq.fold step (Some [])
-    match intParts with
-    | Some xs -> 
-      { 
-        zero with 
-          Major = xs.[0]; 
-          Minor = xs.[1]; 
-          Patch = xs.[2]; 
-          Increment = try xs.[3] with | _ -> 0 } |> Some
-    | None -> None
-  | _ -> None
+  match run parser x with
+  | Success(result, _, _) -> Some result
+  | Failure(errorMsg, _, _) -> None

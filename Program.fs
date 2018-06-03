@@ -21,7 +21,11 @@ let main argv =
   //     |> Async.RunSynchronously
   //     |> String.concat ", "
   // Console.WriteLine revisions
-  // SourceManager.fetchManifest p r 
-  //   |> Async.RunSynchronously
-  //   |> Console.WriteLine
+  let manifest = 
+    SourceManager.fetchManifest p r 
+    |> Async.RunSynchronously
+  manifest.Dependencies 
+    |> Seq.map Dependency.show 
+    |> String.concat "+" 
+    |> Console.WriteLine
   0
