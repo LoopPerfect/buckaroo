@@ -94,17 +94,21 @@ let ``Project.parse works correctly`` () =
   for (input, expected) in cases do
     Assert.Equal(expected, Project.parse input)
 
-// [<Fact>]
-// let ``Manifest.parse works correctly`` () =
-//   let content = "{ \"dependencies\": { \"github+njlr/test-lib-b\": \"*\" } }"
-//   let manifest = 
-//     { 
-//       Dependencies = 
-//         [ 
-//           { 
-//             Project = Project.GitHub { Owner = "njlr"; Project = "test-lib-b" }; 
-//             Constraint = Constraint.Wildcard 
-//           } 
-//         ] 
-//     }
-//   Assert.True(Manifest.parse content = Some manifest)
+[<Fact>]
+let ``Manifest.parse works correctly`` () =
+  let a = { 
+    Project = Project.GitHub { Owner = "abc"; Project = "def" }; 
+    Constraint = Constraint.wildcard 
+  } 
+  let b = { 
+    Project = Project.GitHub { Owner = "ijk"; Project = "xyz" }; 
+    Constraint = Constraint.wildcard 
+  } 
+  let cases = [
+    ("github.com/abc/def@*", Some { Dependencies = [ a ] });
+    ("   \n github.com/abc/def@*  \n\n", Some { Dependencies = [ a ] });
+    ("github.com/abc/def@* github.com/ijk/xyz@*", Some { Dependencies = [ a; b ] });
+    (" \n\ngithub.com/abc/def@*\ngithub.com/ijk/xyz@*\n", Some { Dependencies = [ a; b ] });
+  ]
+  for (input, expected) in cases do
+    Assert.Equal(expected, Manifest.parse input)

@@ -3,6 +3,7 @@ module SourceManager
 open System
 open System.IO
 open LibGit2Sharp
+open FParsec
 
 open Project
 open Version
@@ -91,8 +92,10 @@ let fetchManifest (project : Project.Project) (revision : string) =
     let! gitPath = clone url target
     use repo = new Repository(gitPath)
     Commands.Checkout(repo, revision) |> ignore
-    let blob = repo.Head.Tip.["readme.md"].Target :?> Blob;
-    let content = blob.GetContentText()
-    // return content
-    return { Dependencies = [] }
+    let blob = repo.Head.Tip.["buckaroo.txt"].Target :?> Blob;
+    let content : string = blob.GetContentText()
+    return 
+      match run Manifest.parser content with
+      | Success(manifest, _, _) -> manifest
+      | Failure(errorMessage, _, _) -> raise (new Exception("Invalid buckaroo.txt file. \n" + errorMessage))
   }

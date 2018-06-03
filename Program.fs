@@ -3,11 +3,11 @@ open System.IO
 
 [<EntryPoint>]
 let main argv =
-  let p = Project.Project.GitHub { Owner = "parro-it"; Project = "libui-node" }
+  let p = Project.Project.GitHub { Owner = "njlr"; Project = "test-lib-a" }
   let v = Version.SemVerVersion { SemVer.zero with Minor = 2 }
   // let v = Version.Tag "v0.2.0"
   // let v = Version.Branch "master"
-  let r = "46291ff331784b5831696cfe3fa02dc41117adc2"
+  let r = "0aea4adf4a3b8c11eaaa14e87fa3552d7680d02a"
   let v = Version.Revision r
   let a : Atom.Atom = { Project = p; Version = v }
   // let versions = 
@@ -26,6 +26,6 @@ let main argv =
     |> Async.RunSynchronously
   manifest.Dependencies 
     |> Seq.map Dependency.show 
-    |> String.concat "+" 
+    |> String.concat "\n" 
     |> Console.WriteLine
   0
