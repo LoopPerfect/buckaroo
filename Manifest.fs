@@ -20,6 +20,11 @@ let parse (x : string) : Option<Manifest> =
     System.Console.WriteLine errorMsg
     None
 
+let show (x : Manifest) : string = 
+  x.Dependencies 
+  |> Seq.map Dependency.show 
+  |> String.concat "\n"
+
 // let freeVariables (xs : Seq<Dependency.Dependency>) = 
 //   xs 
 //   |> Seq.map (fun x -> x.Project)

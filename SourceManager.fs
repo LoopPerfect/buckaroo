@@ -25,7 +25,7 @@ let fetchVersions (p : Project) =
     let branches = 
       repo.Branches
         |> Seq.filter (fun b -> b.IsRemote)
-        |> Seq.map (fun b -> b.RemoteName)
+        |> Seq.map (fun b -> b.FriendlyName)
         |> Seq.distinct
         |> Seq.map (fun b -> Version.Branch b)
     let tags = 

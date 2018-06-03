@@ -12,6 +12,16 @@ type Resolution =
 | Conflict of Set<Dependency>
 | Ok of Set<ResolvedPackage>
 
+let show resolution = 
+  match resolution with
+  | Conflict xs -> "Conflict! " + (xs |> Seq.map Dependency.show |> String.concat " ")
+  | Ok xs -> 
+    "Success! " + (
+      xs 
+      |> Seq.map (fun x -> Project.show x.Project + "@" + ResolvedVersion.show x.Resolution) 
+      |> String.concat " "
+    )
+
 let selectNextOpen (pending : Set<Dependency>) = 
   // TODO: Prioritise correctly 
   match Seq.toList pending with 
@@ -90,3 +100,6 @@ let rec step (selected : Set<ResolvedPackage>,
 
     | None -> return Resolution.Ok selected
   }
+
+let solve (manifest : Manifest) = 
+  step (Set.empty, manifest.Dependencies |> Set.ofSeq, Set.empty)
