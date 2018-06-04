@@ -14,6 +14,14 @@ type Version =
 | Revision of Revision
 | Tag of Tag
 
+let harmonious (v : Version) (u : Version) = 
+  match (v, u) with 
+  | (Version.SemVerVersion x, Version.SemVerVersion y) -> x = y
+  | (Version.Branch x, Version.Branch y) -> x = y
+  | (Version.Revision x, Version.Revision y) -> x = y
+  | (Version.Tag x, Version.Tag y) -> x = y
+  | _ -> true
+
 let show (v : Version) : string = 
   match v with 
   | SemVerVersion semVer -> SemVer.show semVer
@@ -25,7 +33,7 @@ let identifierParser = CharParsers.regex @"[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d
 
 let tagVersionParser = parse {
   do! CharParsers.skipString "tag="
-  let! tag = identifierParser
+  let! tag = CharParsers.regex @"[a-zA-Z\d\\\.-_]{2,64}"
   return Tag tag
 }
 

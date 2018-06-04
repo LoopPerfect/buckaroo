@@ -33,6 +33,8 @@ let ``SemVer.compare works correctly`` () =
 let ``Version.parse works correctly`` () =
   let cases = [
     ("tag=abc", Version.Tag "abc" |> Some);
+    ("tag=foo/bar", Version.Tag "foo/bar" |> Some);
+    ("tag=v3.0.0", Version.Tag "v3.0.0" |> Some);
     ("branch=master", Version.Branch "master" |> Some);
     ("revision=aabbccddee", Version.Revision "aabbccddee" |> Some);
     ("1.2", Version.SemVerVersion { SemVer.zero with Major = 1; Minor = 2 } |> Some);
@@ -40,6 +42,20 @@ let ``Version.parse works correctly`` () =
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Version.parse input)
+ 
+[<Fact>]
+let ``Version.harmonious works correctly`` () =
+  let cases = [
+    (Version.Revision "aabbccddee", Version.Tag "aabbccddee", true);
+    (Version.Tag "abc", Version.Tag "abc", true);
+    (Version.Branch "master", Version.Branch "master", true);
+    (Version.SemVerVersion SemVer.zero, Version.SemVerVersion SemVer.zero, true);
+    (Version.SemVerVersion SemVer.zero, Version.Revision "aabbccddee", true);
+    (Version.SemVerVersion SemVer.zero, Version.Tag "abc", true);
+    (Version.Branch "master", Version.Branch "develop", false);
+  ]
+  for (v, u, expected) in cases do
+    Assert.Equal(expected, Version.harmonious v u)
 
 [<Fact>]
 let ``Constraint.parse works correctly`` () =
@@ -62,6 +78,16 @@ let ``Constraint.satisfies works correctly`` () =
   let c = Constraint.Exactly v
   Assert.True(Constraint.satisfies c v)
   Assert.False(Constraint.satisfies c w)
+
+[<Fact>]
+let ``Constraint.agreesWith works correctly`` () =
+  let v = Version.Revision "aabbccddee"
+  let w = Version.Tag "rc1"
+  let x = Version.Revision "ffgghhiijjkk"
+  let c = Constraint.Exactly v
+  Assert.True(Constraint.agreesWith c v)
+  Assert.True(Constraint.agreesWith c w)
+  Assert.False(Constraint.agreesWith c x)
 
 [<Fact>]
 let ``Dependency.parse works correctly`` () =
@@ -105,6 +131,7 @@ let ``Manifest.parse works correctly`` () =
     Constraint = Constraint.wildcard 
   } 
   let cases = [
+    ("", Some { Dependencies = [] });
     ("github.com/abc/def@*", Some { Dependencies = [ a ] });
     ("   \n github.com/abc/def@*  \n\n", Some { Dependencies = [ a ] });
     ("github.com/abc/def@* github.com/ijk/xyz@*", Some { Dependencies = [ a; b ] });

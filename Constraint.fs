@@ -23,10 +23,23 @@ let complement (c : Constraint) : Constraint =
 
 let rec satisfies (c : Constraint) (v : Version) : bool = 
   match c with
-  | Exactly x -> v = x 
+  | Exactly u -> v = u
   | Complement x -> satisfies x v |> not 
   | Any xs -> xs |> Seq.exists(fun c -> satisfies c v)
   | All xs -> xs |> Seq.forall(fun c -> satisfies c v)
+
+let rec agreesWith (c : Constraint) (v : Version) : bool = 
+  match c with
+  | Exactly u -> 
+    match (v, u) with 
+    | (Version.SemVerVersion x, Version.SemVerVersion y) -> x = y
+    | (Version.Branch x, Version.Branch y) -> x = y
+    | (Version.Revision x, Version.Revision y) -> x = y
+    | (Version.Tag x, Version.Tag y) -> x = y
+    | _ -> true
+  | Complement x -> agreesWith x v |> not 
+  | Any xs -> xs |> Seq.exists(fun c -> agreesWith c v)
+  | All xs -> xs |> Seq.forall(fun c -> agreesWith c v)
 
 let rec show ( c : Constraint) : string = 
   match c with
