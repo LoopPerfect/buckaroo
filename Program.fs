@@ -2,7 +2,7 @@ open System
 open System.IO
 
 let readFile path = async {
-  return IO.File.ReadAllText "buckaroo.txt"
+  return IO.File.ReadAllText path
 }
 
 [<EntryPoint>]
@@ -33,11 +33,15 @@ let main argv =
   //   |> Seq.map Dependency.show 
   //   |> String.concat "\n" 
   //   |> Console.WriteLine
-  let content = "buckaroo.txt" |> readFile |> Async.RunSynchronously
-  let manifest = Manifest.parse content |> Option.get
-  Console.WriteLine "Manifest: "
-  Console.WriteLine (Manifest.show manifest)
-  Console.WriteLine "Resolving... "
-  let resolution = Solver.solve manifest |> Async.RunSynchronously
-  Console.WriteLine (Solver.show resolution)
+  // let content = "buckaroo.txt" |> readFile |> Async.RunSynchronously
+  // let manifest = Manifest.parse content |> Option.get
+  // Console.WriteLine "Manifest: "
+  // Console.WriteLine (Manifest.show manifest)
+  // Console.WriteLine "Resolving... "
+  // let resolution = Solver.solve manifest |> Async.RunSynchronously
+  // Console.WriteLine (Solver.show resolution)
+  let input = argv |> String.concat " "
+  match Command.parse input with 
+  | Ok command -> command |> Command.runCommand |> Async.RunSynchronously
+  | Error error -> Console.WriteLine error
   0

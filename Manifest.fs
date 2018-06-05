@@ -13,12 +13,10 @@ let parser = parse {
   return { Dependencies = deps }
 }
 
-let parse (x : string) : Option<Manifest> = 
+let parse x = 
   match run parser x with
-  | Success(result, _, _) -> Some result
-  | Failure(errorMsg, _, _) -> 
-    System.Console.WriteLine errorMsg
-    None
+  | Success(result, _, _) -> Result.Ok result
+  | Failure(error, _, _) -> Result.Error error
 
 let show (x : Manifest) : string = 
   x.Dependencies 

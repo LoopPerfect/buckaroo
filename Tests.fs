@@ -131,11 +131,11 @@ let ``Manifest.parse works correctly`` () =
     Constraint = Constraint.wildcard 
   } 
   let cases = [
-    ("", Some { Dependencies = [] });
-    ("github.com/abc/def@*", Some { Dependencies = [ a ] });
-    ("   \n github.com/abc/def@*  \n\n", Some { Dependencies = [ a ] });
-    ("github.com/abc/def@* github.com/ijk/xyz@*", Some { Dependencies = [ a; b ] });
-    (" \n\ngithub.com/abc/def@*\ngithub.com/ijk/xyz@*\n", Some { Dependencies = [ a; b ] });
+    ("", Ok { Dependencies = [] });
+    ("github.com/abc/def@*", Ok { Dependencies = [ a ] });
+    ("   \n github.com/abc/def@*  \n\n", Ok { Dependencies = [ a ] });
+    ("github.com/abc/def@* github.com/ijk/xyz@*", Ok { Dependencies = [ a; b ] });
+    (" \n\ngithub.com/abc/def@*\ngithub.com/ijk/xyz@*\n", Ok { Dependencies = [ a; b ] });
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Manifest.parse input)
