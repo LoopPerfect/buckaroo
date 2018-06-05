@@ -1,12 +1,12 @@
 module Lock
 
 type Project = Project.Project
+type ResolvedPackage = ResolvedPackage.ResolvedPackage
 type Revision = string
 type Location = string
 
 type LockedPackage = {
   Project : Project; 
-  Dependencies : Set<Project>; 
   Location : Location; 
   Revision : Revision;
 }
@@ -16,14 +16,12 @@ type Lock = {
 }
 
 let fromSolution (packages : Set<ResolvedPackage>) : Lock = 
-  {
-    Packages = 
-      packages 
-      |> Seq.map (fun x -> { 
+  let lockedPackages = 
+    packages 
+    |> Seq.map (fun x -> 
+      { 
         Project = x.Project; 
         Location = Project.sourceLocation x.Project; 
-        Revision = x.Revision; 
-      })
-      |> Set.ofSeq
-  }
-
+        Revision = x.Revision; })
+    |> Set.ofSeq; 
+  { Packages = lockedPackages }

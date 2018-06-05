@@ -3,12 +3,15 @@ module Command
 open System
 open FParsec
 
+open Lock
+
 type Dependency = Dependency.Dependency
 type Manifest = Manifest.Manifest
 
 type Command = 
 | ListDependencies
 | Resolve
+| Install
 | AddDependencies of List<Dependency>
 
 let listDependenciesParser = parse {
@@ -18,14 +21,21 @@ let listDependenciesParser = parse {
   return ListDependencies
 }
 
-let resolveParsers = parse {
+let resolveParser = parse {
   do! CharParsers.spaces
   do! CharParsers.skipString "resolve"
   do! CharParsers.spaces
   return Resolve
 }
 
-let addDependenciesParsers = parse {
+let installParser = parse {
+  do! CharParsers.spaces
+  do! CharParsers.skipString "install"
+  do! CharParsers.spaces
+  return Install
+}
+
+let addDependenciesParser = parse {
   do! CharParsers.spaces
   do! CharParsers.skipString "add"
   do! CharParsers.spaces1
@@ -35,8 +45,9 @@ let addDependenciesParsers = parse {
 
 let parser = 
   listDependenciesParser 
-  <|> resolveParsers
-  <|> addDependenciesParsers
+  <|> resolveParser
+  <|> addDependenciesParser
+  <|> installParser
 
 let parse x = 
   match run parser x with
@@ -64,6 +75,11 @@ let readManifest = async {
 let writeManifest (manifest : Manifest) = async {
   let content = Manifest.show manifest
   return! writeFile "buckaroo.txt" content
+}
+
+let readLock = async {
+  let! content = readFile "buckaroo.lock.txt"
+  return { Packages = set [] } // TODO
 }
 
 let listDependencies = async {
@@ -100,8 +116,14 @@ let resolve = async {
   return ()
 }
 
+let install = async {
+  let! lock = readLock
+  return ()
+}
+
 let runCommand command = 
   match command with
   | ListDependencies -> listDependencies
   | Resolve -> resolve
+  | Install -> install
   | AddDependencies dependencies -> add dependencies

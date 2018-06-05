@@ -7,10 +7,9 @@ open ResolvedVersion
 open Dependency
 open Version
 open Manifest
+open ResolvedPackage
 
 type Revision = string
-
-type ResolvedPackage = { Project : Project; Revision : Revision; Version : Version }
 
 type Resolution = 
 | Conflict of Set<Dependency>
