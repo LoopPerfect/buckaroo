@@ -83,9 +83,7 @@ let add dependencies = async {
       Dependencies = 
         manifest.Dependencies 
         |> Seq.append dependencies 
-        |> Seq.distinct 
-        |> Seq.toList
-        |> List.sort; 
+        |> Set.ofSeq;
   }
   if manifest = newManifest 
   then return ()

@@ -103,7 +103,6 @@ let rec step (selected : Set<ResolvedPackage>,
               |> Set.add { Project = next.Project; Revision = v.Revision; Version = v.Version }
             let nextPending = 
               manifest.Dependencies 
-              |> Set.ofList 
               |> Set.union stillPending
             let nextClosed = Set.add next closed
             return! step (nextSelected, nextPending, nextClosed)

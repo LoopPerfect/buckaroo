@@ -5,12 +5,12 @@ open FParsec
 
 type Dependency = Dependency.Dependency
 
-type Manifest = { Dependencies : List<Dependency> }
+type Manifest = { Dependencies : Set<Dependency> }
 
 let parser = parse {
   do! CharParsers.spaces
   let! deps = Primitives.sepEndBy Dependency.parser CharParsers.spaces1
-  return { Dependencies = deps }
+  return { Dependencies = deps |> Set.ofSeq }
 }
 
 let parse x = 
@@ -21,6 +21,7 @@ let parse x =
 let show (x : Manifest) : string = 
   x.Dependencies 
   |> Seq.map Dependency.show 
+  |> Seq.sort
   |> String.concat "\n"
 
 // let freeVariables (xs : Seq<Dependency.Dependency>) = 
