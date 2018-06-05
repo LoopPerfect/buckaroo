@@ -10,6 +10,14 @@ open Version
 open Dependency
 open Manifest
 
+type Revision = string
+
+type SourceManager = {
+  FetchVersions : Project -> Async<List<Version>>;
+  FetchRevisions : Project -> Version -> Async<List<Revision>>;
+  FetchManifest : Project -> Revision -> Async<Manifest>
+}
+
 let clone (url : string) (target : string) = 
   async {
     let path = Repository.Clone(url, target)
@@ -113,3 +121,9 @@ let fetchManifest (project : Project.Project) (revision : string) =
         | Success(manifest, _, _) -> manifest
         | Failure(errorMessage, _, _) -> raise (new Exception("Invalid buckaroo.txt file. \n" + errorMessage))
   }
+
+let defaultSourceManager = {
+  FetchVersions = fetchVersions;
+  FetchRevisions = fetchRevisions;
+  FetchManifest = fetchManifest
+}

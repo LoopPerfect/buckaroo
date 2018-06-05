@@ -15,6 +15,12 @@ type Lock = {
   Packages : Set<LockedPackage>; 
 }
 
+let show (x : Lock) : string = 
+  x.Packages 
+  |> Seq.map (fun p -> Project.show p.Project + "=" + p.Location + "@" + p.Revision)
+  |> Seq.sort
+  |> String.concat "\n"
+
 let fromSolution (packages : Set<ResolvedPackage>) : Lock = 
   let lockedPackages = 
     packages 

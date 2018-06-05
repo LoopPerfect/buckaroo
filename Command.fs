@@ -3,6 +3,8 @@ module Command
 open System
 open FParsec
 
+open Constants
+open Solver
 open Lock
 
 type Dependency = Dependency.Dependency
@@ -65,7 +67,7 @@ let writeFile (path : string) (content : string) = async {
 }
 
 let readManifest = async {
-  let! content = readFile "buckaroo.txt"
+  let! content = readFile ManifestFileName
   return 
     match Manifest.parse content with 
     | Result.Ok manifest -> manifest
@@ -74,12 +76,17 @@ let readManifest = async {
 
 let writeManifest (manifest : Manifest) = async {
   let content = Manifest.show manifest
-  return! writeFile "buckaroo.txt" content
+  return! writeFile ManifestFileName content
 }
 
 let readLock = async {
-  let! content = readFile "buckaroo.lock.txt"
+  let! content = readFile LockFileName
   return { Packages = set [] } // TODO
+}
+
+let writeLock (lock : Lock) = async {
+  let content = Lock.show lock
+  return! writeFile LockFileName content
 }
 
 let listDependencies = async {
@@ -111,9 +118,21 @@ let add dependencies = async {
 
 let resolve = async {
   let! manifest = readManifest
+  "Resolving dependencies... " |> Console.WriteLine
   let! resolution = Solver.solve manifest
-  Console.WriteLine (Solver.show resolution)
-  return ()
+  match resolution with
+  | Resolution.Conflict x -> 
+    "Conflict! " |> Console.WriteLine
+    x |> Console.WriteLine
+    return ()
+  | Resolution.Error e -> 
+    "Error! " |> Console.WriteLine
+    e |> Console.WriteLine
+    return ()
+  | Resolution.Ok solution -> 
+    "Success! " |> Console.WriteLine
+    let lock = Lock.fromSolution solution
+    return! writeLock lock
 }
 
 let install = async {
