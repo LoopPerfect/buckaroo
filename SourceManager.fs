@@ -117,9 +117,9 @@ let fetchManifest (project : Project.Project) (revision : string) =
       | x -> 
         let blob = x.Target :?> Blob;
         let content : string = blob.GetContentText()
-        match run Manifest.parser content with
-        | Success(manifest, _, _) -> manifest
-        | Failure(errorMessage, _, _) -> raise (new Exception("Invalid buckaroo.txt file. \n" + errorMessage))
+        match Manifest.parse content with
+        | Result.Ok manifest -> manifest
+        | Result.Error errorMessage -> raise (new Exception("Invalid buckaroo.txt file. \n" + errorMessage))
   }
 
 let defaultSourceManager = {

@@ -1,33 +1,43 @@
 module Manifest
 
-open Newtonsoft.Json
-open FParsec
-
 type Dependency = Dependency.Dependency
 
-type Manifest = { Dependencies : Set<Dependency> }
-
-let parser = parse {
-  do! CharParsers.spaces
-  let! deps = Primitives.sepEndBy Dependency.parser CharParsers.spaces1
-  return { Dependencies = deps |> Set.ofSeq }
+type Manifest = { 
+  Tags : Set<string>; 
+  Dependencies : Set<Dependency>
 }
 
-let parse x = 
-  match run parser x with
-  | Success(result, _, _) -> Result.Ok result
-  | Failure(error, _, _) -> Result.Error error
+let tomlTableToDependency (x : Nett.TomlTable) : Dependency = 
+  let name = Toml.asString x.["name"] |> Option.get
+  let version = Toml.asString x.["version"] |> Option.get
+  let p = 
+    name 
+    |> Project.parse
+    |> Option.get
+  let c = 
+    version
+    |> Constraint.parse
+    |> Option.get
+  { Project = p; Constraint = c }
+
+let parse (x : string) : Result<Manifest, string> = 
+  let table = Toml.parse x
+  try 
+    match table with 
+    | Result.Ok t -> 
+      let dependencies = 
+        t.Values
+        |> Seq.choose Toml.asTableArray
+        |> Seq.collect (fun x -> x.Items)
+        |> Seq.map tomlTableToDependency
+        |> Set.ofSeq
+      Result.Ok { Tags = set []; Dependencies = dependencies }
+    | Result.Error e -> Result.Error e.Message
+  with 
+  | e -> Result.Error e.Message
 
 let show (x : Manifest) : string = 
   x.Dependencies 
   |> Seq.map Dependency.show 
   |> Seq.sort
   |> String.concat "\n"
-
-// let freeVariables (xs : Seq<Dependency.Dependency>) = 
-//   xs 
-//   |> Seq.map (fun x -> x.Project)
-//   |> Seq.distinct
-//   |> Seq.toList
-
-
