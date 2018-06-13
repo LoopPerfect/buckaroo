@@ -1,11 +1,16 @@
-// // based on 
-// // https://github.com/mackwic/To.ml
-// // https://github.com/seliopou/toml
-
 module Toml
 
 open System
-open System.Globalization
+
+let get (key : string) (table : Nett.TomlTable) : Option<Nett.TomlObject> = 
+  match table.TryGetValue key with 
+  | null -> None
+  | value -> Some value
+
+let asArray (x : Nett.TomlObject) : Option<Nett.TomlArray> = 
+  try 
+    (x :?> Nett.TomlArray) |> Some
+  with | _ -> None
 
 let asString (x : Nett.TomlObject) : Option<string> = 
   try 

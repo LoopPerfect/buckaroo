@@ -101,7 +101,7 @@ let rec parser = parse {
     <|> allParser
 }
 
-let parse (x : string) : Option<Constraint> = 
-  match run parser x with
-  | Success(result, _, _) -> Some result
-  | Failure(errorMsg, _, _) -> None
+let parse (x : string) : Result<Constraint, string> = 
+  match run (parser .>> CharParsers.eof) x with
+  | Success(result, _, _) -> Result.Ok result
+  | Failure(error, _, _) -> Result.Error error

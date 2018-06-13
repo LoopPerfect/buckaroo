@@ -6,8 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ResultBuilder.fs" />
     <Compile Include="Constants.fs" />
     <Compile Include="Toml.fs" />
+    <Compile Include="Files.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
     <Compile Include="Constraint.fs" />
@@ -18,9 +20,9 @@
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
     <Compile Include="ResolvedPackage.fs" />
-    <Compile Include="Lock.fs" />
     <Compile Include="SourceManager.fs" />
     <Compile Include="Solver.fs" />
+    <Compile Include="Lock.fs" />
     <Compile Include="Command.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />

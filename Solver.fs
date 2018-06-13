@@ -1,8 +1,5 @@
 module Solver
 
-open System
-
-open Project
 open ResolvedVersion
 open Dependency
 open Version
@@ -10,11 +7,14 @@ open Manifest
 open ResolvedPackage
 
 type Revision = string
+type SourceManager = SourceManager.SourceManager
+
+type Solution = Map<Project, ResolvedVersion>
 
 type Resolution = 
 | Conflict of Set<Dependency>
 | Error of System.Exception
-| Ok of Set<ResolvedPackage>
+| Ok of Solution
 
 let show resolution = 
   match resolution with
@@ -23,7 +23,7 @@ let show resolution =
   | Ok xs -> 
     "Success! " + (
       xs 
-      |> Seq.map (fun x -> Project.show x.Project + "@" + Version.show x.Version + "(" + x.Revision + ")") 
+      |> Seq.map (fun x -> Project.show x.Key + "@" + ResolvedVersion.show x.Value) 
       |> String.concat " "
     )
 
@@ -47,14 +47,15 @@ let selectNextOpen (pending : Set<Dependency>) =
   | head :: tail -> Some (head, Set.ofSeq tail)
   | [] -> None
 
-let rec step (selected : Set<ResolvedPackage>, 
+let rec step (sourceManager : SourceManager) 
+             (selected : Map<Project, ResolvedVersion>, 
               pending : Set<Dependency>, 
               closed : Set<Dependency>) = 
   async {
     match selectNextOpen pending with
     | Some (next, stillPending) -> 
       let! availableVersions = async {
-        let! versions = SourceManager.fetchVersions next.Project
+        let! versions = sourceManager.FetchVersions next.Project
         let satisfactoryVersions = 
           versions
           |> Seq.filter (Constraint.satisfies next.Constraint)
@@ -62,22 +63,22 @@ let rec step (selected : Set<ResolvedPackage>,
         let! resolvedVersions = 
           satisfactoryVersions 
           |> Seq.map (fun v -> async {
-            let! revisions = SourceManager.fetchRevisions next.Project v
+            let! revisions = sourceManager.FetchRevisions next.Project v
             return 
               revisions
               |> Seq.map (fun r -> { Version = v; Revision = r })
               |> Seq.toList
           })
           |> Async.Parallel
-        return resolvedVersions |> Seq.collect (fun x -> x) |> Seq.toList
+        return resolvedVersions |> Seq.collect id |> Seq.toList
       }
 
       let compatibleVersions = 
         availableVersions
         |> Seq.filter (fun v -> 
-          selected 
-          |> Seq.filter (fun p -> p.Project = next.Project)
-          |> Seq.forall (fun p -> p.Revision = v.Revision && Version.harmonious p.Version v.Version)
+          match Map.tryFind next.Project selected with 
+          | Some p -> p.Revision = v.Revision && Version.harmonious p.Version v.Version
+          | None -> true
         )
         |> Seq.toList
       
@@ -94,21 +95,20 @@ let rec step (selected : Set<ResolvedPackage>,
 
       let resolutions = 
         sortedVersions
-        |> Seq.map (fun v -> async {
+        |> Seq.map (fun v -> Async.RunSynchronously (async {
           try
-            let! manifest = SourceManager.fetchManifest next.Project v.Revision
+            let! manifest = sourceManager.FetchManifest next.Project v.Revision
             let nextSelected = 
               selected
-              |> Set.add { Project = next.Project; Revision = v.Revision; Version = v.Version }
+              |> Map.add next.Project { Revision = v.Revision; Version = v.Version }
             let nextPending = 
               manifest.Dependencies 
               |> Set.union stillPending
             let nextClosed = Set.add next closed
-            return! step (nextSelected, nextPending, nextClosed)
+            return! step sourceManager (nextSelected, nextPending, nextClosed)
           with error -> 
             return Resolution.Error error
-        })
-        |> Seq.map Async.RunSynchronously
+        }))
         |> Seq.toList
 
       let okResolution = 
@@ -139,5 +139,5 @@ let rec step (selected : Set<ResolvedPackage>,
     | None -> return Resolution.Ok selected
   }
 
-let solve (manifest : Manifest) = 
-  step (Set.empty, manifest.Dependencies |> Set.ofSeq, Set.empty)
+let solve (sourceManager : SourceManager) (manifest : Manifest) = 
+  step sourceManager (Map.empty, manifest.Dependencies |> Set.ofSeq, Set.empty)

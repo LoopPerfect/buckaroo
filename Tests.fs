@@ -7,6 +7,11 @@ open Constraint
 open Dependency
 open Manifest
 
+let dropError<'T, 'E> (x : Result<'T, 'E>) =
+  match x with 
+  | Result.Ok o -> Some o
+  | Result.Error _ -> None
+
 [<Fact>]
 let ``SemVer.parse works correctly`` () =
   let cases = [
@@ -19,9 +24,10 @@ let ``SemVer.parse works correctly`` () =
     ("V4.2.7", Some { SemVer.zero with Major = 4; Minor = 2; Patch = 7 });
     ("", None);
     ("abc", None);
+    ("v0.9.0-g++-4.9", None);
   ]
   for (input, expected) in cases do
-    Assert.Equal(expected, SemVer.parse input)
+    Assert.Equal(expected, SemVer.parse input |> dropError)
 
 [<Fact>]
 let ``SemVer.compare works correctly`` () =
@@ -69,7 +75,7 @@ let ``Constraint.parse works correctly`` () =
     ("", None); 
   ]
   for (input, expected) in cases do
-    Assert.Equal(expected, Constraint.parse input)
+    Assert.Equal(expected, Constraint.parse input |> dropError)
 
 [<Fact>]
 let ``Constraint.satisfies works correctly`` () =
@@ -114,11 +120,12 @@ let ``ResolvedVersion.isCompatible works correctly`` () =
 let ``Project.parse works correctly`` () = 
   let cases = [
     ("github.com/abc/def", Project.GitHub { Owner = "abc"; Project = "def" } |> Some);
+    ("github.com/abc/def.ghi", Project.GitHub { Owner = "abc"; Project = "def.ghi" } |> Some);
     ("github+abc/def", Project.GitHub { Owner = "abc"; Project = "def" } |> Some);
     ("", None)
   ]
   for (input, expected) in cases do
-    Assert.Equal(expected, Project.parse input)
+    Assert.Equal(expected, Project.parse input |> dropError)
 
 [<Fact>]
 let ``Manifest.parse works correctly`` () =
@@ -131,8 +138,8 @@ let ``Manifest.parse works correctly`` () =
     Constraint = Constraint.wildcard 
   } 
   let cases = [
-    ("", Ok { Tags = set []; Dependencies = set [] });
-    ("[[dependency]]\nname = \"github.com/abc/def\"\nversion = \"*\"", Ok { Tags = set []; Dependencies = set [ a ] });
+    ("", Ok { Manifest.zero with Dependencies = set [] });
+    ("[[dependency]]\nname = \"github.com/abc/def\"\nversion = \"*\"", Ok { Manifest.zero with Dependencies = set [ a ] });
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Manifest.parse input)

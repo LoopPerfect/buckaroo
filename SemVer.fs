@@ -56,7 +56,7 @@ let parser : Parser<SemVer, unit> = parse {
   }
 }
 
-let parse (x : string) : Option<SemVer> = 
-  match run parser x with
-  | Success(result, _, _) -> Some result
-  | Failure(errorMsg, _, _) -> None
+let parse (x : string) : Result<SemVer, String> = 
+  match run (parser .>> CharParsers.eof) x with
+  | Success(result, _, _) -> Result.Ok result
+  | Failure(errorMsg, _, _) -> Result.Error errorMsg

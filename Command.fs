@@ -1,22 +1,27 @@
 module Command
 
 open System
+open System.IO
 open FParsec
 
 open Constants
 open Solver
-open Lock
+open LibGit2Sharp
 
 type Dependency = Dependency.Dependency
 type Manifest = Manifest.Manifest
+type Project = Project.Project
+type Lock = Lock.Lock
+type ExactLocation = Lock.ExactLocation
 
 type Command = 
 | ListDependencies
 | Resolve
 | Install
 | AddDependencies of List<Dependency>
+| ShowVersions of Project
 
-let listDependenciesParser = parse {
+let listDependenciesParser : Parser<Command, Unit> = parse {
   do! CharParsers.spaces
   do! CharParsers.skipString "list"
   do! CharParsers.spaces
@@ -45,14 +50,23 @@ let addDependenciesParser = parse {
   return AddDependencies deps
 }
 
+let showVersionsParser = parse {
+  do! CharParsers.spaces
+  do! CharParsers.skipString "show-versions"
+  do! CharParsers.spaces1
+  let! project = Project.parser
+  return ShowVersions project
+}
+
 let parser = 
   listDependenciesParser 
   <|> resolveParser
   <|> addDependenciesParser
   <|> installParser
+  <|> showVersionsParser
 
-let parse x = 
-  match run parser x with
+let parse (x : string) : Result<Command, string> = 
+  match run (parser .>> CharParsers.eof) x with
   | Success(result, _, _) -> Result.Ok result
   | Failure(error, _, _) -> Result.Error error
 
@@ -81,11 +95,14 @@ let writeManifest (manifest : Manifest) = async {
 
 let readLock = async {
   let! content = readFile LockFileName
-  return { Packages = set [] } // TODO
+  match Lock.parse content with
+  | Result.Ok lock -> return lock
+  | Result.Error error -> 
+    return new Exception("Error reading lock file. " + error) |> raise
 }
 
 let writeLock (lock : Lock) = async {
-  let content = Lock.show lock
+  let content = Lock.toToml lock
   return! writeFile LockFileName content
 }
 
@@ -111,15 +128,18 @@ let add dependencies = async {
   if manifest = newManifest 
   then return ()
   else 
-    let! resolution = Solver.solve newManifest
+    let sourceManager = SourceManager.create () |> SourceManager.cached
+    let! resolution = Solver.solve sourceManager newManifest
     do! writeManifest newManifest
+    // TODO: Write lock file! 
     return ()
 }
 
 let resolve = async {
+  let sourceManager = SourceManager.create () |> SourceManager.cached
   let! manifest = readManifest
   "Resolving dependencies... " |> Console.WriteLine
-  let! resolution = Solver.solve manifest
+  let! resolution = Solver.solve sourceManager manifest
   match resolution with
   | Resolution.Conflict x -> 
     "Conflict! " |> Console.WriteLine
@@ -131,12 +151,66 @@ let resolve = async {
     return ()
   | Resolution.Ok solution -> 
     "Success! " |> Console.WriteLine
-    let lock = Lock.fromSolution solution
+    let lock = Lock.fromManifestAndSolution manifest solution
     return! writeLock lock
 }
 
+let showVersions (project : Project) = async {
+  let sourceManager = SourceManager.create () |> SourceManager.cached
+  let! versions = sourceManager.FetchVersions project
+  for v in versions do
+    Version.show v |> Console.WriteLine
+  return ()
+}
+
+let buckarooDeps (sourceManager : SourceManager) (lock : Lock) = async {
+  let requiredPackages = 
+    lock.Dependencies 
+    |> Seq.toList
+  let! buckDependencies = 
+    requiredPackages 
+    |> Seq.map (fun project -> async {
+      match lock.Packages |> Map.tryFind project with
+      | Some exactLocation -> 
+        let! manifest = sourceManager.FetchManifest project exactLocation.Revision
+        return 
+          manifest.Target 
+          |> Option.defaultValue (Project.defaultTarget project)
+          |> Manifest.normalizeTarget
+          |> (fun target -> (Project.cellName project) + target)
+      | None -> 
+        return raise <| new Exception((Project.show project) + " was not present in the lock")
+    })
+    |> Async.Parallel
+  return 
+    "BUCKAROO_DEPS = [\n" + 
+    (buckDependencies |> Seq.map (fun x -> "  \"" + x + "\"") |> String.concat ", \n") + 
+    "\n]\n"
+}
+
+let installLockedPackage (lockedPackage : (Project * ExactLocation)) = async {
+  let ( project, exactLocation ) = lockedPackage
+  let! gitPath = SourceManager.ensureClone exactLocation.Location
+  use repo = new Repository(gitPath)
+  Commands.Checkout(repo, exactLocation.Revision) |> ignore
+  let installPath = Path.Combine(".", "buckaroo", (Project.installSubPath project))
+  let! deletedExistingInstall = Files.deleteDirectoryIfExists installPath
+  if deletedExistingInstall
+  then "Deleted the existing folder at " + installPath |> Console.WriteLine
+  let destination = installPath
+  return! Files.copyDirectory gitPath destination
+}
+
 let install = async {
+  let sourceManager = SourceManager.create () |> SourceManager.cached
   let! lock = readLock
+  for kv in lock.Packages do
+    let project = kv.Key
+    let exactLocation = kv.Value
+    "Installing " + (Project.show project) + "... " |> Console.WriteLine
+    do! installLockedPackage (project, exactLocation)
+  let! buckarooDepsContent = buckarooDeps sourceManager lock 
+  do! writeFile BuckarooDepsFileName buckarooDepsContent
   return ()
 }
 
@@ -146,3 +220,4 @@ let runCommand command =
   | Resolve -> resolve
   | Install -> install
   | AddDependencies dependencies -> add dependencies
+  | ShowVersions project -> showVersions project

@@ -22,6 +22,6 @@ let parser = parse {
 }
 
 let parse (x : string) : Option<Dependency> = 
-  match run parser x with
+  match run (parser .>> CharParsers.eof) x with
   | Success(result, _, _) -> Some result
   | Failure(errorMsg, _, _) -> None
