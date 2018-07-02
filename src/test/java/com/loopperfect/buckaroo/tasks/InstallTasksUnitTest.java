@@ -23,30 +23,30 @@ import static org.junit.Assert.assertEquals;
 
 public final class InstallTasksUnitTest {
 
-    @Test
-    public void completeDependencies() throws Exception {
-
-        final RecipeSource recipeSource = recipeIdentifier -> {
-            if (recipeIdentifier.equals(RecipeIdentifier.of("org", "example"))) {
-                try {
-                    return Process.just(Recipe.of(
+    private static final RecipeSource recipeSource = recipeIdentifier -> {
+        if (recipeIdentifier.equals(RecipeIdentifier.of("org", "example"))) {
+            try {
+                return Process.just(Recipe.of(
                         "example",
                         new URI("https://github.com/org/example"),
                         ImmutableMap.of(
-                            SemanticVersion.of(1),
-                            RecipeVersion.of(
-                                GitCommit.of("https://github.com/org/example/commit", "c7355d5"),
-                                "example"),
-                            SemanticVersion.of(2),
-                            RecipeVersion.of(
-                                GitCommit.of("https://github.com/org/example/commit", "d8255g5"),
-                                "example"))));
-                } catch (final URISyntaxException e) {
-                    throw new RuntimeException(e);
-                }
+                                SemanticVersion.of(1),
+                                RecipeVersion.of(
+                                        GitCommit.of("https://github.com/org/example/commit", "c7355d5"),
+                                        "example"),
+                                SemanticVersion.of(2),
+                                RecipeVersion.of(
+                                        GitCommit.of("https://github.com/org/example/commit", "d8255g5"),
+                                        "example"))));
+            } catch (final URISyntaxException e) {
+                throw new RuntimeException(e);
             }
-            return Process.error(new IOException(recipeIdentifier + " could not be found. "));
-        };
+        }
+        return Process.error(new IOException(recipeIdentifier + " could not be found. "));
+    };
+
+    @Test
+    public void completeDependencies() throws Exception {
 
         final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
             PartialDependency.of(Identifier.of("org"), Identifier.of("example")));
@@ -57,6 +57,22 @@ public final class InstallTasksUnitTest {
 
         final ImmutableList<Dependency> expected = ImmutableList.of(
             Dependency.of(RecipeIdentifier.of("org", "example"), ExactSemanticVersion.of(SemanticVersion.of(2))));
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void installSpecificVersion() throws Exception {
+
+        final ImmutableList<PartialDependency> partialDependencies = ImmutableList.of(
+                PartialDependency.of(Identifier.of("org"), Identifier.of("example"), ExactSemanticVersion.of(SemanticVersion.of(1,0,0))));
+
+        final ImmutableList<Dependency> actual = InstallTasks.completeDependencies(recipeSource, partialDependencies)
+                .result()
+                .blockingGet();
+
+        final ImmutableList<Dependency> expected = ImmutableList.of(
+                Dependency.of(RecipeIdentifier.of("org", "example"), ExactSemanticVersion.of(SemanticVersion.of(1))));
 
         assertEquals(expected, actual);
     }

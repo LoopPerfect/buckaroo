@@ -10,6 +10,7 @@ import com.loopperfect.buckaroo.bitbucket.BitBucketGitProvider;
 import com.loopperfect.buckaroo.github.GitHubGitProvider;
 import com.loopperfect.buckaroo.gitlab.GitLabGitProvider;
 import com.loopperfect.buckaroo.resolver.DependencyResolutionException;
+import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -107,13 +108,15 @@ public final class RecipeSources {
 
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(dependency);
+        final SemanticVersionRequirement requirement = dependency.versionRequirement.orElseGet(()->AnySemanticVersion.of());
 
         return selectDependency(source, dependency).chain(selected ->
             source.fetch(RecipeIdentifier.of(selected.source, selected.organization, selected.recipe))
                 .chain(recipe -> Process.of(Single.just(recipe).map(x -> Dependency.of(
                     RecipeIdentifier.of(dependency.source, selected.organization, selected.recipe),
                         ExactSemanticVersion.of(x.versions.keySet().stream()
-                        .max(Comparator.naturalOrder())
-                        .orElseThrow(() -> new IOException(dependency.encode() + " has no versions! "))))))));
+                                .filter(requirement::isSatisfiedBy)
+                                .max(Comparator.naturalOrder())
+                        .orElseThrow(() -> new IOException(dependency.encode() + " not found!"))))))));
     }
 }
