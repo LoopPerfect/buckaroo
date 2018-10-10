@@ -119,6 +119,13 @@ maven_jar(
   bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
 )
 
+maven_jar(
+  name = 'ini4j',
+  id = 'org.ini4j:ini4j:0.5.4',
+  src_sha1 = '740798033b8a76f216de6a787684a6206a6f6a03',
+  bin_sha1 = '4a3ee4146a90c619b20977d65951825f5675b560',
+)
+
 remote_file(
   name = 'packr',
   url = 'https://oss.sonatype.org/content/repositories/snapshots/com/badlogicgames/packr/packr/2.0-SNAPSHOT/packr-2.0-20170420.100324-15-jar-with-dependencies.jar',
