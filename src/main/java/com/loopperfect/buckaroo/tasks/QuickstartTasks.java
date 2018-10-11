@@ -26,6 +26,12 @@ public final class QuickstartTasks {
             Charsets.UTF_8);
     }
 
+    private static String defaultBuckConfig() throws IOException {
+        return Resources.toString(
+                Resources.getResource("com.loopperfect.buckaroo/DefaultBuckConfig.ini"),
+                Charsets.UTF_8);
+    }
+
     private static Observable<Event> createAppSkeleton(final Path projectDirectory, final Project project) {
 
         Preconditions.checkNotNull(projectDirectory);
@@ -47,9 +53,16 @@ public final class QuickstartTasks {
                 .cast(Event.class)
                 .onErrorReturnItem(Notification.of("buckaroo.json already exists!")),
 
-            // Touch the .buckconfig
-            CommonTasks.touchFile(fs.getPath(projectDirectory.toString(), ".buckconfig"))
-                .toObservable(),
+            // Write the default .buckconfig
+            Single.fromCallable(QuickstartTasks::defaultBuckConfig)
+                .flatMap(content ->
+                    CommonTasks.writeFile(
+                            content,
+                            fs.getPath(".buckconfig").toAbsolutePath(),
+                            false))
+                .toObservable()
+                .cast(Event.class)
+                .onErrorReturnItem(Notification.of(".buckconfig already exists!")),
 
             // Generate an empty BUCKAROO_DEPS
             Single.fromCallable(() -> CommonTasks.generateBuckarooDeps(ImmutableList.of()))

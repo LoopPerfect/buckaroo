@@ -166,6 +166,7 @@ java_library(
     'src/main/resources/**/*.mustache',
     'src/main/resources/**/*.cpp',
     'src/main/resources/**/*.txt',
+    'src/main/resources/**/*.ini',
   ]),
   deps = [
     ':javatuples',
