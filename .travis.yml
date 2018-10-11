@@ -21,10 +21,6 @@ branches:
   except:
   - gh-pages
 
-cache:
-  directories:
-  - "$HOME/.linuxbrew/"
-
 deploy:
   provider: releases
   api_key:

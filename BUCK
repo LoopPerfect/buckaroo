@@ -290,7 +290,6 @@ genrule(
     'README.md',
   ],
   cmd = '&&'.join([
-    # 'mkdir $OUT',
     'mkdir -p $TMP', 
     'cd $TMP',
     'cp -r $SRCDIR/* $TMP',
@@ -299,17 +298,16 @@ genrule(
     'cp -r $(location :buckaroo-cli) $TMP',
     'cp -r $(location :openjdk-linux)/jre $TMP/jre',
     'chmod +x $TMP/jre/bin/java',
-    # 'equivs-build buckaroo-with-jdk.equivs', 
     '$SRCDIR/debian/equivs-build.pl buckaroo-with-jdk.equivs', 
     'cp buckaroo_*_*.deb $OUT', 
-    # 'cp buckaroo.deb $OUT', 
   ])
 )
 
 genrule(
   name = 'debian-java',
-  out  = 'out',
+  out  = 'buckaroo.deb',
   srcs = [
+    'debian/equivs-build.pl', 
     'debian/buckaroo-java.equivs',
     'debian/buckaroo-java',
     'Changelog',
@@ -317,12 +315,13 @@ genrule(
     'README.md',
   ],
   cmd = '&&'.join([
-    'mkdir $OUT',
-    'cp -r $SRCDIR/* $OUT',
-    'cp -r $SRCDIR/debian/* $OUT',
-    'mv $OUT/buckaroo-java $OUT/buckaroo',
-    'cp -r $(location :buckaroo-cli) $OUT',
-    'cd $OUT',
-    'equivs-build buckaroo-java.equivs'
+    'mkdir -p $TMP', 
+    'cd $TMP',
+    'cp -r $SRCDIR/* $TMP',
+    'cp -r $SRCDIR/debian/* $TMP',
+    'mv $TMP/buckaroo-java $TMP/buckaroo',
+    'cp -r $(location :buckaroo-cli) $TMP',
+    '$SRCDIR/debian/equivs-build.pl buckaroo-java.equivs', 
+    'cp $TMP/buckaroo_*_*.deb $OUT', 
   ])
 )
