@@ -60,7 +60,7 @@ public final class CommonTasks {
             .map(Either::<Event, Project>right)
             .toObservable();
         return Process.of(Observable.concat(states, result))
-            .mapErrors(throwable -> NotAProjectDirectoryException.wrap(throwable));
+            .mapErrors(NotAProjectDirectoryException::wrap);
     }
 
     public static Single<DependencyLocks> readLockFile(final Path path) {

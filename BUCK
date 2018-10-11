@@ -119,6 +119,13 @@ maven_jar(
   bin_sha1 = '3d219ee4ed4965348a630ff6ef2a5418032b9466',
 )
 
+maven_jar(
+  name = 'ini4j',
+  id = 'org.ini4j:ini4j:0.5.4',
+  src_sha1 = '740798033b8a76f216de6a787684a6206a6f6a03',
+  bin_sha1 = '4a3ee4146a90c619b20977d65951825f5675b560',
+)
+
 remote_file(
   name = 'packr',
   url = 'https://oss.sonatype.org/content/repositories/snapshots/com/badlogicgames/packr/packr/2.0-SNAPSHOT/packr-2.0-20170420.100324-15-jar-with-dependencies.jar',
@@ -176,6 +183,7 @@ java_library(
     ':jansi',
     ':slf4j-api',
     ':slf4j-nop',
+    ':ini4j', 
   ],
 )
 
@@ -207,6 +215,7 @@ java_test(
     ':jimfs',
     ':jparsec',
     ':jansi',
+    ':ini4j', 
   ],
 )
 
@@ -241,11 +250,15 @@ remote_file(
   sha1 = '99743710eb642589fc9275bf34c60438608b46a9',
 )
 
-remote_file(
+http_archive(
   name = 'openjdk-linux',
-  out = 'openjdk.zip',
-  url = 'https://github.com/ojdkbuild/ojdkbuild/releases/download/1.8.0.141-1/java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64.zip',
-  sha1 = 'a0d711e9cab447f9f22dc385e9ac5c5af40b0ab4',
+  out = 'out',
+  urls = [
+    'https://github.com/ojdkbuild/ojdkbuild/releases/download/1.8.0.141-1/java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64.zip', 
+  ],
+  type = 'zip', 
+  sha256 = 'ccb2db52f90b91251a5af52c48da8774434bba2ad366c4734bfc8b153b67d466',
+  strip_prefix = 'java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64', 
 )
 
 genrule(
@@ -262,12 +275,14 @@ genrule(
     '--output $OUT',
 )
 
-# Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
-# Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
+# Creates a Debian package bundling the JRE
+# Install with: 
+#   sudo dpkg -i ./buck-out/gen/debian-with-jdk/buckaroo.deb 
 genrule(
   name = 'debian-with-jdk',
-  out  = 'out',
+  out  = 'buckaroo.deb',
   srcs = [
+    'debian/equivs-build.pl', 
     'debian/buckaroo-with-jdk.equivs',
     'debian/buckaroo-with-jdk',
     'Changelog',
@@ -275,24 +290,24 @@ genrule(
     'README.md',
   ],
   cmd = '&&'.join([
-    'mkdir $OUT',
-    'cp -r $SRCDIR/* $OUT',
-    'cp -r $SRCDIR/debian/* $OUT',
-    'mv $OUT/buckaroo-with-jdk $OUT/buckaroo',
-    'cp -r $(location :buckaroo-cli) $OUT',
-    'cp $(location :openjdk-linux)  $OUT',
-    'cd $OUT',
-    'unzip openjdk.zip',
-    'mv java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64/jre jre',
-    'chmod +x jre/bin/java',
-    'equivs-build buckaroo-with-jdk.equivs'
+    'mkdir -p $TMP', 
+    'cd $TMP',
+    'cp -r $SRCDIR/* $TMP',
+    'cp -r $SRCDIR/debian/* $TMP',
+    'mv $TMP/buckaroo-with-jdk $TMP/buckaroo',
+    'cp -r $(location :buckaroo-cli) $TMP',
+    'cp -r $(location :openjdk-linux)/jre $TMP/jre',
+    'chmod +x $TMP/jre/bin/java',
+    '$SRCDIR/debian/equivs-build.pl buckaroo-with-jdk.equivs', 
+    'cp buckaroo_*_*.deb $OUT', 
   ])
 )
 
 genrule(
   name = 'debian-java',
-  out  = 'out',
+  out  = 'buckaroo.deb',
   srcs = [
+    'debian/equivs-build.pl', 
     'debian/buckaroo-java.equivs',
     'debian/buckaroo-java',
     'Changelog',
@@ -300,12 +315,13 @@ genrule(
     'README.md',
   ],
   cmd = '&&'.join([
-    'mkdir $OUT',
-    'cp -r $SRCDIR/* $OUT',
-    'cp -r $SRCDIR/debian/* $OUT',
-    'mv $OUT/buckaroo-java $OUT/buckaroo',
-    'cp -r $(location :buckaroo-cli) $OUT',
-    'cd $OUT',
-    'equivs-build buckaroo-java.equivs'
+    'mkdir -p $TMP', 
+    'cd $TMP',
+    'cp -r $SRCDIR/* $TMP',
+    'cp -r $SRCDIR/debian/* $TMP',
+    'mv $TMP/buckaroo-java $TMP/buckaroo',
+    'cp -r $(location :buckaroo-cli) $TMP',
+    '$SRCDIR/debian/equivs-build.pl buckaroo-java.equivs', 
+    'cp $TMP/buckaroo_*_*.deb $OUT', 
   ])
 )

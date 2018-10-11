@@ -93,6 +93,12 @@ To run the project:
 buck build :buckaroo-cli
 ```
 
+To build the Debian bundle you will need `equivs`: 
+
+```bash=
+sudo apt install -y equivs
+```
+
 ### IntelliJ IDEA
 
 To generate IntelliJ IDEA project files:

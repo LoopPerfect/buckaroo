@@ -5,7 +5,7 @@ language: generic
 before_install:
 - sudo apt-get -qq update
 - sudo apt-get install -y equivs openjdk-8-jdk
-- wget -O buck.deb https://github.com/facebook/buck/releases/download/v2017.09.04.02/buck-2017.09.04.02_all.deb
+- wget -O buck.deb https://github.com/facebook/buck/releases/download/v2018.08.27.01/buck.2018.08.27.01_all.deb
 - sudo dpkg -i buck.deb
 - buck --version
 
@@ -21,10 +21,6 @@ branches:
   except:
   - gh-pages
 
-cache:
-  directories:
-  - "$HOME/.linuxbrew/"
-
 deploy:
   provider: releases
   api_key:
@@ -32,7 +28,7 @@ deploy:
   file_glob: true
   file:
     - "buck-out/gen/buckaroo-cli.jar"
-    - "buck-out/gen/debian-with-jdk/out/buckaroo_*_amd64.deb"
+    - "buck-out/gen/debian-with-jdk/buckaroo.deb"
   skip_cleanup: true
   on:
     repo: LoopPerfect/buckaroo
