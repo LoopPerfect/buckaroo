@@ -32,7 +32,7 @@ deploy:
   file_glob: true
   file:
     - "buck-out/gen/buckaroo-cli.jar"
-    - "buck-out/gen/debian-with-jdk/out/buckaroo_*_amd64.deb"
+    - "buck-out/gen/debian-with-jdk/buckaroo.deb"
   skip_cleanup: true
   on:
     repo: LoopPerfect/buckaroo
