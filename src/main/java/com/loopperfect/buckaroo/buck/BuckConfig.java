@@ -1,5 +1,6 @@
 package com.loopperfect.buckaroo.buck;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.ini4j.Ini;
@@ -81,5 +82,30 @@ public final class BuckConfig {
         }
 
         return builder.build();
+    }
+
+    public static String serialize(final ImmutableMap<String, ImmutableMap<String, String>> config) {
+        Preconditions.checkNotNull(config);
+
+        final StringBuilder builder = new StringBuilder();
+
+        for (final Map.Entry<String, ImmutableMap<String, String>> section : config.entrySet()) {
+            builder.append("[");
+            builder.append(section.getKey());
+            builder.append("]");
+            builder.append("\n");
+
+            for (final Map.Entry<String, String> entry : section.getValue().entrySet()) {
+                builder.append("  ");
+                builder.append(entry.getKey());
+                builder.append(" = ");
+                builder.append(entry.getValue());
+                builder.append("\n");
+            }
+
+            builder.append("\n");
+        }
+
+        return builder.toString();
     }
 }

@@ -80,4 +80,23 @@ public final class BuckConfigTest {
 
         assertEquals(expected, actual);
     }
+
+    @Test
+    public void serialize() {
+        final ImmutableMap<String, ImmutableMap<String, String>> config = ImmutableMap.of(
+                "repositories",
+                ImmutableMap.of(
+                        "custom",
+                        "./third-party/custom"
+                )
+        );
+
+        final String actual = BuckConfig.serialize(config);
+
+        final String expected = "[repositories]\n" +
+                "  custom = ./third-party/custom\n" +
+                "\n";
+
+        assertEquals(expected, actual);
+    }
 }

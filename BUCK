@@ -250,11 +250,15 @@ remote_file(
   sha1 = '99743710eb642589fc9275bf34c60438608b46a9',
 )
 
-remote_file(
+http_archive(
   name = 'openjdk-linux',
-  out = 'openjdk.zip',
-  url = 'https://github.com/ojdkbuild/ojdkbuild/releases/download/1.8.0.141-1/java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64.zip',
-  sha1 = 'a0d711e9cab447f9f22dc385e9ac5c5af40b0ab4',
+  out = 'out',
+  urls = [
+    'https://github.com/ojdkbuild/ojdkbuild/releases/download/1.8.0.141-1/java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64.zip', 
+  ],
+  type = 'zip', 
+  sha256 = 'ccb2db52f90b91251a5af52c48da8774434bba2ad366c4734bfc8b153b67d466',
+  strip_prefix = 'java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64', 
 )
 
 genrule(
@@ -271,12 +275,14 @@ genrule(
     '--output $OUT',
 )
 
-# Creates buck-out/gen/debian/out/buckaroo-$version-all.deb
-# Install with sudo dpkg -i buck-out/gen/debian/out/buckaroo-$version-all.deb
+# Creates a Debian package bundling the JRE
+# Install with: 
+#   sudo dpkg -i ./buck-out/gen/debian-with-jdk/buckaroo.deb 
 genrule(
   name = 'debian-with-jdk',
-  out  = 'out',
+  out  = 'buckaroo.deb',
   srcs = [
+    'debian/equivs-build.pl', 
     'debian/buckaroo-with-jdk.equivs',
     'debian/buckaroo-with-jdk',
     'Changelog',
@@ -284,17 +290,19 @@ genrule(
     'README.md',
   ],
   cmd = '&&'.join([
-    'mkdir $OUT',
-    'cp -r $SRCDIR/* $OUT',
-    'cp -r $SRCDIR/debian/* $OUT',
-    'mv $OUT/buckaroo-with-jdk $OUT/buckaroo',
-    'cp -r $(location :buckaroo-cli) $OUT',
-    'cp $(location :openjdk-linux)  $OUT',
-    'cd $OUT',
-    'unzip openjdk.zip',
-    'mv java-1.8.0-openjdk-1.8.0.141-2.b16.el6_9.x86_64/jre jre',
-    'chmod +x jre/bin/java',
-    'equivs-build buckaroo-with-jdk.equivs'
+    # 'mkdir $OUT',
+    'mkdir -p $TMP', 
+    'cd $TMP',
+    'cp -r $SRCDIR/* $TMP',
+    'cp -r $SRCDIR/debian/* $TMP',
+    'mv $TMP/buckaroo-with-jdk $TMP/buckaroo',
+    'cp -r $(location :buckaroo-cli) $TMP',
+    'cp -r $(location :openjdk-linux)/jre $TMP/jre',
+    'chmod +x $TMP/jre/bin/java',
+    # 'equivs-build buckaroo-with-jdk.equivs', 
+    '$SRCDIR/debian/equivs-build.pl buckaroo-with-jdk.equivs', 
+    'cp buckaroo_*_*.deb $OUT', 
+    # 'cp buckaroo.deb $OUT', 
   ])
 )
 
