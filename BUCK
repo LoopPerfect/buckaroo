@@ -183,6 +183,7 @@ java_library(
     ':jansi',
     ':slf4j-api',
     ':slf4j-nop',
+    ':ini4j', 
   ],
 )
 
@@ -214,6 +215,7 @@ java_test(
     ':jimfs',
     ':jparsec',
     ':jansi',
+    ':ini4j', 
   ],
 )
 
