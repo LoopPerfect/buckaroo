@@ -100,12 +100,10 @@ public final class GitProviderRecipeSource implements RecipeSource {
 
     @Override
     public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
-
         Preconditions.checkNotNull(identifier);
 
         return Process.of(GitTasks.fetchTags(gitProvider.gitURL(identifier.organization, identifier.recipe)), Event.class)
             .chain(tags -> {
-
                 final ImmutableMap<SemanticVersion, GitCommitHash> semanticVersionReleases = tags.entrySet()
                     .stream()
                     .filter(x -> SemanticVersion.parse(x.getKey()).isPresent())

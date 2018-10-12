@@ -3,8 +3,6 @@ package com.loopperfect.buckaroo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
-import java.io.IOException;
-
 @FunctionalInterface
 public interface RecipeSource {
 
@@ -12,6 +10,7 @@ public interface RecipeSource {
 
     default Iterable<RecipeIdentifier> findCandidates(final PartialDependency partial) {
         Preconditions.checkNotNull(partial);
+
         return findCandidates(PartialRecipeIdentifier.of(
             partial.source,
             partial.organization,

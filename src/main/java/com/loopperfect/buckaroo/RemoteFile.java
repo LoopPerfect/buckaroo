@@ -5,7 +5,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.hash.HashCode;
 
 import java.net.URI;
-import java.net.URL;
 import java.util.Objects;
 
 public final class RemoteFile {

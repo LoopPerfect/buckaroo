@@ -4,11 +4,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
+import com.loopperfect.buckaroo.tasks.CacheTasks;
 import com.loopperfect.buckaroo.tasks.CommonTasks;
 import io.reactivex.Single;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class LazyCookbookRecipeSource implements RecipeSource {
 
@@ -16,11 +19,13 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
 
     private LazyCookbookRecipeSource(final Path path) {
         Preconditions.checkNotNull(path);
+
         this.path = path;
     }
 
     public boolean equals(final LazyCookbookRecipeSource other) {
         Preconditions.checkNotNull(other);
+
         return Objects.equals(path, other.path);
     }
 
@@ -39,21 +44,27 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
 
     @Override
     public Process<Event, Recipe> fetch(final RecipeIdentifier identifier) {
-
         Preconditions.checkNotNull(identifier);
 
         final Single<Recipe> readRecipe = Single.fromCallable(() -> {
             if (identifier.source.isPresent()) {
                 throw new IllegalArgumentException(identifier.encode() + " should be found on " + identifier.source.get());
             }
+
             return path.getFileSystem().getPath(
                 path.toString(),
                 "recipes",
                 identifier.organization.name,
                 identifier.recipe.name + ".json");
-        }).flatMap(CommonTasks::readRecipeFile).onErrorResumeNext(error->
-            Single.error(RecipeFetchException.wrap(this, identifier, error))
-        );
+        })
+            // Read the (unlocked) recipe
+            .flatMap(CommonTasks::readRecipeUnlockedFile)
+            // Lock the recipe by fetching it
+            .flatMap(recipeUnlocked -> {
+                final URI release = recipeUnlocked.;
+                final Path cachePath = CacheTasks.getCachePath(fs, release, Optional.of("zip"));
+            })
+            .onErrorResumeNext(error -> Single.error(RecipeFetchException.wrap(this, identifier, error)));
 
         return Process.of(readRecipe);
     }
@@ -74,6 +85,7 @@ public final class LazyCookbookRecipeSource implements RecipeSource {
     public Iterable<RecipeIdentifier> findSimilar(final RecipeIdentifier identifier) {
         try {
             final ImmutableList<RecipeIdentifier> candidates = CommonTasks.readCookBook(path);
+
             return Levenstein.findClosest(candidates, identifier);
         } catch (Throwable e) {
             return ImmutableList.of();

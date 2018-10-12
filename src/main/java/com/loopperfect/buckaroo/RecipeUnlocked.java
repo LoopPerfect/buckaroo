@@ -7,13 +7,13 @@ import com.google.common.collect.ImmutableMap;
 import java.net.URI;
 import java.util.Objects;
 
-public final class Recipe {
+public final class RecipeUnlocked {
 
     public final String name;
     public final URI url;
-    public final ImmutableMap<SemanticVersion, RecipeVersion> versions;
+    public final ImmutableMap<SemanticVersion, RecipeVersionUnlocked> versions;
 
-    private Recipe(final String name, final URI url, final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
+    private RecipeUnlocked(final String name, final URI url, final ImmutableMap<SemanticVersion, RecipeVersionUnlocked> versions) {
         super();
 
         this.name = Preconditions.checkNotNull(name);
@@ -21,20 +21,20 @@ public final class Recipe {
         this.versions = Preconditions.checkNotNull(versions);
     }
 
-    public boolean equals(final Recipe other) {
+    public boolean equals(final RecipeUnlocked other) {
         Preconditions.checkNotNull(other);
 
         return this == other ||
             Objects.equals(name, other.name) &&
-            Objects.equals(url, other.url) &&
-            Objects.equals(versions, other.versions);
+                Objects.equals(url, other.url) &&
+                Objects.equals(versions, other.versions);
     }
 
     @Override
     public boolean equals(final Object obj) {
         return this == obj || obj != null &&
-            obj instanceof Recipe &&
-            equals((Recipe) obj);
+            obj instanceof RecipeUnlocked &&
+            equals((RecipeUnlocked) obj);
     }
 
     @Override
@@ -51,10 +51,10 @@ public final class Recipe {
             .toString();
     }
 
-    public static Recipe of(
-            final String name,
-            final URI url,
-            final ImmutableMap<SemanticVersion, RecipeVersion> versions) {
-        return new Recipe(name, url, versions);
+    public static RecipeUnlocked of(
+        final String name,
+        final URI url,
+        final ImmutableMap<SemanticVersion, RecipeVersionUnlocked> versions) {
+        return new RecipeUnlocked(name, url, versions);
     }
 }

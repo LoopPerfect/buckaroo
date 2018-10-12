@@ -51,6 +51,10 @@ public final class Serializers {
         return parse(x, Recipe.class);
     }
 
+    public static Either<JsonParseException, RecipeUnlocked> parseRecipeUnlocked(final String x) {
+        return parse(x, RecipeUnlocked.class);
+    }
+
     public static String serialize(final BuckarooConfig config) {
         Preconditions.checkNotNull(config);
         return gson.toJson(config);
@@ -96,6 +100,8 @@ public final class Serializers {
         .registerTypeAdapter(ResolvedDependency.class, new ResolvedDependencyDeserializer())
         .registerTypeAdapter(RecipeVersion.class, new RecipeVersionSerializer())
         .registerTypeAdapter(RecipeVersion.class, new RecipeVersionDeserializer())
+        .registerTypeAdapter(RecipeVersionUnlocked.class, new RecipeVersionUnlockedSerializer())
+        .registerTypeAdapter(RecipeVersionUnlocked.class, new RecipeVersionUnlockedDeserializer())
         .registerTypeAdapter(Recipe.class, new RecipeSerializer())
         .registerTypeAdapter(Recipe.class, new RecipeDeserializer())
         .registerTypeAdapter(Project.class, new ProjectSerializer())
@@ -104,6 +110,8 @@ public final class Serializers {
         .registerTypeAdapter(BuckarooConfig.class, new BuckarooConfigDeserializer())
         .registerTypeAdapter(RemoteArchive.class, new RemoteArchiveSerializer())
         .registerTypeAdapter(RemoteArchive.class, new RemoteArchiveDeserializer())
+        .registerTypeAdapter(RemoteArchiveUnlocked.class, new RemoteArchiveUnlockedSerializer())
+        .registerTypeAdapter(RemoteArchiveUnlocked.class, new RemoteArchiveUnlockedDeserializer())
         .registerTypeAdapter(RemoteCookbook.class, new RemoteCookBookSerializer())
         .registerTypeAdapter(RemoteCookbook.class, new RemoteCookBookDeserializer())
         .registerTypeAdapter(RemoteFile.class, new RemoteFileSerializer())

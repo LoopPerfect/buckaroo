@@ -13,6 +13,7 @@ public final class RemoteCookbook {
     private RemoteCookbook(final Identifier name, final String url) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(url);
+
         this.name = name;
         this.url = url;
     }

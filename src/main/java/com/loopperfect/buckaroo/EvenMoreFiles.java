@@ -143,7 +143,9 @@ public final class EvenMoreFiles {
 
     public static void copyDirectory(final Path source, final Path target, final CopyOption... copyOptions) throws IOException {
         final CopyFileVisitor visitor = new CopyFileVisitor(source, target, copyOptions);
+
         Files.walkFileTree(source, visitor);
+
         if (visitor.error.isPresent()) {
             throw visitor.error.get();
         }
@@ -185,16 +187,17 @@ public final class EvenMoreFiles {
                 final Path nextDirectory = target.resolve(
                     switchFileSystem(target.getFileSystem(), source.relativize(directory)));
                 Files.createDirectories(nextDirectory);
+
                 return FileVisitResult.CONTINUE;
             } catch (final IOException exception) {
                 this.error = Optional.of(exception);
+
                 return FileVisitResult.TERMINATE;
             }
         }
     }
 
     public static Path switchFileSystem(final FileSystem fs, final Path path) {
-
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(path);
 
