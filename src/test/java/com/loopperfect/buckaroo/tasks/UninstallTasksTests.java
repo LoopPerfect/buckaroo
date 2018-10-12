@@ -7,7 +7,7 @@ import com.google.common.io.MoreFiles;
 import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
@@ -25,7 +25,7 @@ public final class UninstallTasksTests {
         final Project project = Project.of(
             "My Project",
             DependencyGroup.of(ImmutableMap.of(
-                RecipeIdentifier.of("org", "example"), AnySemanticVersion.of()
+                RecipeIdentifier.of("org", "example"), WildcardVersion.of()
             )));
 
         Files.write(fs.getPath("buckaroo.json"), Serializers.serialize(project).getBytes(Charsets.UTF_8));

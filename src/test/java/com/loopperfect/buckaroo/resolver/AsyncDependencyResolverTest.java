@@ -6,7 +6,7 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.Process;
 import com.loopperfect.buckaroo.sources.RecipeFetchException;
 import com.loopperfect.buckaroo.sources.RecipeSources;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import org.javatuples.Pair;
 import org.junit.Test;
 
@@ -56,7 +56,7 @@ public final class AsyncDependencyResolverTest {
         };
 
         final ImmutableList<Dependency> toResolve = ImmutableList.of(
-            Dependency.of(identifier, AnySemanticVersion.of()));
+            Dependency.of(identifier, WildcardVersion.of()));
 
         final ResolvedDependencies expected = ResolvedDependencies.of(ImmutableMap.of(
             identifier,
@@ -81,7 +81,7 @@ public final class AsyncDependencyResolverTest {
                     GitCommit.of("https://github.com/org/example-a/commit", "a0215d5"),
                     Optional.empty(),
                     DependencyGroup.of(ImmutableMap.of(
-                        RecipeIdentifier.of("org", "example-b"), AnySemanticVersion.of())),
+                        RecipeIdentifier.of("org", "example-b"), WildcardVersion.of())),
                     Optional.empty())));
 
         final Recipe recipeB = Recipe.of(
@@ -110,7 +110,7 @@ public final class AsyncDependencyResolverTest {
         };
 
         final ImmutableList<Dependency> toResolve = ImmutableList.of(
-            Dependency.of(RecipeIdentifier.of("org", "example-a"), AnySemanticVersion.of()));
+            Dependency.of(RecipeIdentifier.of("org", "example-a"), WildcardVersion.of()));
 
         final ResolvedDependencies expected = ResolvedDependencies.of(ImmutableMap.of(
             RecipeIdentifier.of("org", "example-a"),

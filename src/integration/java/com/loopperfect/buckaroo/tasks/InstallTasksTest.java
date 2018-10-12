@@ -8,9 +8,10 @@ import com.google.common.jimfs.Jimfs;
 import com.google.common.util.concurrent.SettableFuture;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import org.junit.Assert;
 import org.junit.Test;
+import sun.reflect.generics.tree.Wildcard;
 
 import java.net.URI;
 import java.net.URL;
@@ -45,7 +46,7 @@ public final class InstallTasksTest {
             PartialDependency.of(
                 Identifier.of("loopperfect"),
                 Identifier.of("valuable"),
-                AnySemanticVersion.of()));
+                WildcardVersion.of()));
 
         EvenMoreFiles.writeFile(fs.getPath(System.getProperty("user.home"),
             ".buckaroo", "buckaroo-recipes", "recipes", "loopperfect", "valuable.json"),
@@ -102,7 +103,7 @@ public final class InstallTasksTest {
                 Identifier.of("github"),
                 Identifier.of("njlr"),
                 Identifier.of("test-lib-a"),
-                AnySemanticVersion.of()));
+                WildcardVersion.of()));
 
         InitTasks.initWorkingDirectory(fs).toList().blockingGet();
 
@@ -135,7 +136,7 @@ public final class InstallTasksTest {
                 Identifier.of("github"),
                 Identifier.of("njlr"),
                 Identifier.of("test-lib-d"),
-                AnySemanticVersion.of()));
+                WildcardVersion.of()));
 
         InitTasks.initWorkingDirectory(fs).toList().blockingGet();
 
@@ -197,7 +198,7 @@ public final class InstallTasksTest {
                 PartialDependency.of(
                     Identifier.of("loopperfect"),
                     Identifier.of("valuable"),
-                    AnySemanticVersion.of()));
+                    WildcardVersion.of()));
 
             InstallTasks.installDependencyInWorkingDirectory(fs, partialDependencies)
                 .toList()
@@ -216,7 +217,7 @@ public final class InstallTasksTest {
                 PartialDependency.of(
                     Identifier.of("loopperfect"),
                     Identifier.of("neither"),
-                    AnySemanticVersion.of()));
+                    WildcardVersion.of()));
 
             InstallTasks.installDependencyInWorkingDirectory(fs, partialDependencies)
                 .toList()

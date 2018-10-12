@@ -74,8 +74,8 @@ public final class VersioningParsersTest {
 
         final Parser<SemanticVersionRequirement> parser = VersioningParsers.semanticVersionRequirementParser;
 
-        assertEquals(AnySemanticVersion.of(), parser.parse("*"));
-        assertEquals(AnySemanticVersion.of(), parser.parse("  *  "));
+        assertEquals(WildcardVersion.of(), parser.parse("*"));
+        assertEquals(WildcardVersion.of(), parser.parse("  *  "));
 
         assertEquals(ExactSemanticVersion.of(SemanticVersion.of(1, 2, 3)), parser.parse("1.2.3"));
         assertEquals(ExactSemanticVersion.of(SemanticVersion.of(2, 4)), parser.parse("  2.4"));
@@ -105,5 +105,17 @@ public final class VersioningParsersTest {
         assertEquals(
             SemanticVersionRange.of(SemanticVersion.of(1, 0, 1), SemanticVersion.of(4, 3)),
             parser.parse("1.0.1-4.3"));
+
+        assertEquals(
+            WildcardVersion.of(1),
+            parser.parse("1.*   "));
+
+        assertEquals(
+            WildcardVersion.of(1, 2),
+            parser.parse(" 1.2.*"));
+
+        assertEquals(
+            WildcardVersion.of(1, 2, 3),
+            parser.parse("  1.2.3.* "));
     }
 }

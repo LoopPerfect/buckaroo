@@ -7,19 +7,14 @@ import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.sources.GitProviderRecipeSource;
 import com.loopperfect.buckaroo.sources.RecipeFetchException;
-import com.loopperfect.buckaroo.tasks.InitTasks;
-import com.loopperfect.buckaroo.tasks.InstallTasks;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import org.junit.Test;
 
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -133,7 +128,7 @@ public final class GitHubGitProviderTest {
         final ImmutableList<Dependency> dependencies = ImmutableList.of(
             Dependency.of(
                 RecipeIdentifier.of("github", "njlr", "test-lib-d"),
-                AnySemanticVersion.of()));
+                WildcardVersion.of()));
 
         final ResolvedDependencies result = AsyncDependencyResolver.resolve(recipeSource, dependencies)
             .result()
@@ -155,7 +150,7 @@ public final class GitHubGitProviderTest {
         final ImmutableList<Dependency> dependencies = ImmutableList.of(
             Dependency.of(
                 RecipeIdentifier.of("github", "njlr", "test-lib-e"),
-                AnySemanticVersion.of()));
+                WildcardVersion.of()));
 
         final ResolvedDependencies result = AsyncDependencyResolver.resolve(recipeSource, dependencies)
             .result()

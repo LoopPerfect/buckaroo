@@ -2,9 +2,9 @@ package com.loopperfect.buckaroo.serialization;
 
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.BoundedSemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -42,7 +42,7 @@ public final class DependencySerializerTest {
 
         serializeDeserialize(Dependency.of(
             RecipeIdentifier.of("bigco", "magic-libs"),
-            AnySemanticVersion.of()));
+            WildcardVersion.of()));
     }
 
     @Test

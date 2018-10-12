@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.crypto.Hash;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -30,7 +30,7 @@ public final class RecipeSerializerTest {
                     DependencyGroup.of(
                         ImmutableMap.of(
                             RecipeIdentifier.of("org", "awesome"),
-                            AnySemanticVersion.of())),
+                            WildcardVersion.of())),
                     Optional.empty()),
                 SemanticVersion.of(1, 1),
                 RecipeVersion.of(
@@ -61,7 +61,7 @@ public final class RecipeSerializerTest {
                     DependencyGroup.of(
                         ImmutableMap.of(
                             RecipeIdentifier.of("org", "awesome"),
-                            AnySemanticVersion.of())),
+                            WildcardVersion.of())),
                     Optional.of(RemoteFile.of(
                         new URI("https://github.com/magicco/1.0.0/magiclib.zip"),
                         Hash.sha256("Hello, world. ")))),
