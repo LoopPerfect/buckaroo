@@ -68,7 +68,8 @@ public final class VersioningParsers {
 
     public static final Parser<SemanticVersion> semanticVersionParser =
         Scanners.WHITESPACES.skipMany().next(
-            Scanners.stringCaseInsensitive("v").times(0, 1).next(
+            Scanners.among("rvRV").times(0, 1)
+            .next(
                 Parsers.longest(
                     semanticVersionParser1,
                     semanticVersionParser2,

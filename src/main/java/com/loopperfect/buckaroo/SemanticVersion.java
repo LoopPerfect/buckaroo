@@ -52,6 +52,7 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
         if (increment == 0) {
             return major + "." + minor + "." + patch;
         }
+
         return major + "." + minor + "." + patch + "." + increment;
     }
 
