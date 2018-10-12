@@ -6,6 +6,7 @@ import com.loopperfect.buckaroo.*;
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
 import org.jparsec.Scanners;
+import org.jparsec.pattern.CharPredicates;
 
 public final class VersioningParsers {
 
@@ -21,24 +22,26 @@ public final class VersioningParsers {
     static final Parser<SemanticVersion> semanticVersionParser1 =
         integerParser.map(SemanticVersion::of);
 
+    static final Parser<Void> semanticVersionSep = Scanners.among("._");
+
     static final Parser<SemanticVersion> semanticVersionParser2 =
         Parsers.sequence(
-            integerParser.followedBy(Scanners.isChar('.')),
+            integerParser.followedBy(semanticVersionSep),
             integerParser,
             SemanticVersion::of);
 
     static final Parser<SemanticVersion> semanticVersionParser3 =
         Parsers.sequence(
-            integerParser.followedBy(Scanners.isChar('.')),
-            integerParser.followedBy(Scanners.isChar('.')),
+            integerParser.followedBy(semanticVersionSep),
+            integerParser.followedBy(semanticVersionSep),
             integerParser,
             SemanticVersion::of);
 
     static final Parser<SemanticVersion> semanticVersionParser4 =
         Parsers.sequence(
-            integerParser.followedBy(Scanners.isChar('.')),
-            integerParser.followedBy(Scanners.isChar('.')),
-            integerParser.followedBy(Scanners.isChar('.')),
+            integerParser.followedBy(semanticVersionSep),
+            integerParser.followedBy(semanticVersionSep),
+            integerParser.followedBy(semanticVersionSep),
             integerParser,
             SemanticVersion::of);
 
@@ -66,16 +69,15 @@ public final class VersioningParsers {
     static final Parser<WildCardToken> wildCardTokenParser =
         Scanners.string("*").map(x -> WildCardToken.of());
 
-    public static final Parser<SemanticVersion> semanticVersionParser =
-        Scanners.WHITESPACES.skipMany().next(
-            Scanners.among("rvRV").times(0, 1)
-            .next(
-                Parsers.longest(
-                    semanticVersionParser1,
-                    semanticVersionParser2,
-                    semanticVersionParser3,
-                    semanticVersionParser4)))
-            .followedBy(Scanners.WHITESPACES.skipMany());
+    static final Parser<SemanticVersion> semanticVersionParserClean = Parsers.or(
+        semanticVersionParser4,
+        semanticVersionParser3,
+        semanticVersionParser2,
+        semanticVersionParser1);
+
+    public static final Parser<SemanticVersion> semanticVersionParser = Scanners.many(CharPredicates.IS_ALPHA_)
+        .next(semanticVersionParserClean)
+        .between(Scanners.WHITESPACES.skipMany(), Scanners.WHITESPACES.skipMany());
 
     public static final Parser<ImmutableList<Token>> versionRequirementTokenizer =
         Scanners.WHITESPACES.skipMany().next(

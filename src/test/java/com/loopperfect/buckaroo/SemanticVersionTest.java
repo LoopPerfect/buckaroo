@@ -45,14 +45,16 @@ public final class SemanticVersionTest {
         assertEquals(Optional.of(SemanticVersion.of(2, 6)), SemanticVersion.parse(" 2.6  "));
         assertEquals(Optional.of(SemanticVersion.of(1, 2)), SemanticVersion.parse(" v1.2  "));
         assertEquals(Optional.of(SemanticVersion.of(1, 2, 3)), SemanticVersion.parse("V1.2.3"));
-        assertEquals(Optional.of(SemanticVersion.of(1, 2, 3)), SemanticVersion.parse("V1.2.3"));
         assertEquals(Optional.of(SemanticVersion.of(1, 2, 3, 4)), SemanticVersion.parse(" 1.2.3.4"));
         assertEquals(Optional.of(SemanticVersion.of(0, 9, 8, 4)), SemanticVersion.parse("v0.9.8.4"));
+        assertEquals(Optional.of(SemanticVersion.of(4, 5, 6, 7)), SemanticVersion.parse("4_5_6_7"));
+        assertEquals(Optional.of(SemanticVersion.of(5, 6, 4)), SemanticVersion.parse("CRYPTOPP_5_6_4"));
+        assertEquals(Optional.of(SemanticVersion.of(3, 2)), SemanticVersion.parse("FOO_3_2"));
+        assertEquals(Optional.of(SemanticVersion.of(7)), SemanticVersion.parse("RELEASE7"));
         assertEquals(Optional.of(SemanticVersion.of(3, 1, 2)), SemanticVersion.parse("r3.1.2"));
 
         assertEquals(Optional.empty(), SemanticVersion.parse(" asdadg"));
         assertEquals(Optional.empty(), SemanticVersion.parse(" 1."));
-        assertEquals(Optional.empty(), SemanticVersion.parse("rv1.2.3"));
         assertEquals(Optional.empty(), SemanticVersion.parse(" 1,212"));
         assertEquals(Optional.empty(), SemanticVersion.parse(" 1.-5.3"));
         assertEquals(Optional.empty(), SemanticVersion.parse(" 1.2.3."));
