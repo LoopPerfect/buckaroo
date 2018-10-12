@@ -5,7 +5,7 @@ import com.google.common.jimfs.Jimfs;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.resolver.AsyncDependencyResolver;
 import com.loopperfect.buckaroo.sources.GitProviderRecipeSource;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import io.reactivex.Single;
 import org.junit.Test;
 
@@ -29,7 +29,7 @@ public final class AsyncDependencyResolverTest {
             recipeSource,
             ImmutableList.of(Dependency.of(
                 RecipeIdentifier.of("github", "njlr", "test-lib-a"),
-                AnySemanticVersion.of())))
+                WildcardVersion.of())))
             .result();
 
         final ResolvedDependencies resolved =
@@ -53,7 +53,7 @@ public final class AsyncDependencyResolverTest {
             recipeSource,
             ImmutableList.of(Dependency.of(
                 RecipeIdentifier.of("github", "njlr", "test-lib-e"),
-                AnySemanticVersion.of())))
+                WildcardVersion.of())))
             .result();
 
         final ResolvedDependencies resolved =

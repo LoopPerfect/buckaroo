@@ -3,8 +3,8 @@ package com.loopperfect.buckaroo.serialization;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 
 import java.util.Optional;
 
@@ -28,7 +28,7 @@ public final class ProjectSerializerTest {
                     SemanticVersion.of(4, 1),
                     SemanticVersion.of(4, 2)),
                 RecipeIdentifier.of("org", "awesome-lib"),
-                AnySemanticVersion.of())));
+                WildcardVersion.of())));
 
         final String serializedProject = Serializers.serialize(project);
 

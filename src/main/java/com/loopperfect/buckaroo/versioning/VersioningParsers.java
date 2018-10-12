@@ -94,8 +94,22 @@ public final class VersioningParsers {
                 .sepEndBy(Scanners.WHITESPACES.skipMany()))
             .map(ImmutableList::copyOf);
 
-    static final Parser<AnySemanticVersion> anySemanticVersionParser =
-        wildCardTokenParser.between(ignoreParser, ignoreParser).map(x -> AnySemanticVersion.of());
+    static final Parser<WildcardVersion> wildcardSemanticVersionParser =
+        Parsers.or(
+            // 1.2.3.*
+            Parsers.sequence(
+                integerParser.followedBy(Scanners.isChar('.')),
+                integerParser.followedBy(Scanners.isChar('.')),
+                integerParser.followedBy(Scanners.isChar('.')), WildcardVersion::of).followedBy(wildCardTokenParser),
+            // 1.2.*
+            Parsers.sequence(
+                integerParser.followedBy(Scanners.isChar('.')),
+                integerParser.followedBy(Scanners.isChar('.')), WildcardVersion::of).followedBy(wildCardTokenParser),
+            // 1.*
+            integerParser.followedBy(Scanners.isChar('.')).followedBy(wildCardTokenParser).map(WildcardVersion::of),
+            // *
+            wildCardTokenParser.map(x -> WildcardVersion.of()))
+            .between(ignoreParser, ignoreParser);
 
     public static final Parser<ImmutableList<SemanticVersion>> semanticVersionListParser =
         openListTokenParser.between(ignoreParser, ignoreParser).next(
@@ -133,7 +147,7 @@ public final class VersioningParsers {
 
     public static final Parser<SemanticVersionRequirement> semanticVersionRequirementParser =
         Parsers.longest(
-            anySemanticVersionParser,
+            wildcardSemanticVersionParser,
             exactSemanticVersionParser,
             atLeastSemanticVersionParser,
             atMostSemanticVersionParser,

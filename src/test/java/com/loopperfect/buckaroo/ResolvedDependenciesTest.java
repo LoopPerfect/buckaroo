@@ -1,7 +1,7 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableMap;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import org.javatuples.Pair;
 import org.junit.Test;
 
@@ -22,7 +22,7 @@ public final class ResolvedDependenciesTest {
                     Either.left(GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5")),
                     Optional.of("my-magic-lib"),
                     DependencyGroup.of(ImmutableMap.of(
-                        RecipeIdentifier.of("megacorp", "json"), AnySemanticVersion.of())),
+                        RecipeIdentifier.of("megacorp", "json"), WildcardVersion.of())),
                     Optional.empty()))));
 
         final ResolvedDependencies b = ResolvedDependencies.of(ImmutableMap.of(
@@ -33,7 +33,7 @@ public final class ResolvedDependenciesTest {
                     Either.left(GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5")),
                     Optional.of("my-magic-lib"),
                     DependencyGroup.of(ImmutableMap.of(
-                        RecipeIdentifier.of("megacorp", "json"), AnySemanticVersion.of())),
+                        RecipeIdentifier.of("megacorp", "json"), WildcardVersion.of())),
                     Optional.empty()))));
 
         assertEquals(a, b);
@@ -66,7 +66,7 @@ public final class ResolvedDependenciesTest {
                     Either.left(GitCommit.of("https://github.com/magicco/magiclib/commit", "b0215d5")),
                     Optional.of("my-magic-lib"),
                     DependencyGroup.of(ImmutableMap.of(
-                        RecipeIdentifier.of("megacorp", "json"), AnySemanticVersion.of())),
+                        RecipeIdentifier.of("megacorp", "json"), WildcardVersion.of())),
                     Optional.empty()))));
 
         assertFalse(a.isComplete());

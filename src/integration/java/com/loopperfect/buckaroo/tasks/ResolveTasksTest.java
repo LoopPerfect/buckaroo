@@ -7,7 +7,7 @@ import com.google.common.jimfs.Jimfs;
 import com.google.gson.JsonParseException;
 import com.loopperfect.buckaroo.*;
 import com.loopperfect.buckaroo.serialization.Serializers;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 import io.reactivex.Observable;
 import org.junit.Test;
 
@@ -68,7 +68,7 @@ public final class ResolveTasksTest {
         final Project project = Project.of(
             "Example",
             DependencyGroup.of(ImmutableMap.of(
-                RecipeIdentifier.of("org", "example"), AnySemanticVersion.of())));
+                RecipeIdentifier.of("org", "example"), WildcardVersion.of())));
 
         EvenMoreFiles.writeFile(
             fs.getPath("buckaroo.json"),
@@ -112,7 +112,7 @@ public final class ResolveTasksTest {
         final Project project = Project.of(
             "Example",
             DependencyGroup.of(ImmutableMap.of(
-                RecipeIdentifier.of("org", "example"), AnySemanticVersion.of())));
+                RecipeIdentifier.of("org", "example"), WildcardVersion.of())));
 
         EvenMoreFiles.writeFile(
             fs.getPath("buckaroo.json"),

@@ -11,15 +11,15 @@ A C++ package manager that will take you to your happy place 🏝️
 
 The Buckaroo workflow looks like this:
 
-```
+```bash=
 # Create your project file
-buckaroo init
+$ buckaroo init
 
 # Install dependencies
-buckaroo install boost/thread
+$ buckaroo install boost/thread
 
 # Run your code
-buck run :my-app
+$ buck run :my-app
 ```
 
 

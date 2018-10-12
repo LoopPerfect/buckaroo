@@ -1,9 +1,9 @@
 package com.loopperfect.buckaroo;
 
 import com.google.common.collect.ImmutableSet;
-import com.loopperfect.buckaroo.versioning.AnySemanticVersion;
 import com.loopperfect.buckaroo.versioning.ExactSemanticVersion;
 import com.loopperfect.buckaroo.versioning.SemanticVersionRange;
+import com.loopperfect.buckaroo.versioning.WildcardVersion;
 
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ public final class SemanticVersionsTest {
 
         ImmutableSet<SemanticVersionRequirement> requirements =
             ImmutableSet.of(
-                AnySemanticVersion.of(),
+                WildcardVersion.of(),
                 SemanticVersionRange.of(SemanticVersion.of(3), SemanticVersion.of(7)));
 
         Optional<SemanticVersion> suggested = SemanticVersions.resolve(availableVersions, requirements);

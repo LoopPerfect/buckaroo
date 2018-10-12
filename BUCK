@@ -244,12 +244,28 @@ java_test(
   ],
 )
 
-remote_file(
+http_archive(
   name = 'openjdk-macosx',
-  out = 'openjdk.zip',
-  url = 'https://github.com/njlr/ojdk/releases/download/v0.1.0/jdk1.8.0_92.jdk.zip',
-  sha1 = '99743710eb642589fc9275bf34c60438608b46a9',
+  out = 'out',
+  type = 'zip', 
+  urls = [
+    'https://github.com/njlr/ojdk/releases/download/v0.1.0/jdk1.8.0_92.jdk.zip',
+  ], 
+  sha256 = '9e72370dcf78da120187c47cbec671dafb045441e0dfdf5f2b7b89451d1333e7',
+  # strip_prefix = 'jdk1.8.0_92.jdk', # Packr expects this subfolder
 )
+
+# TODO: Migrate to AdoptOpenJDK
+# http_archive(
+#   name = 'openjdk-macosx',
+#   out = 'out',
+#   urls = [
+#     'https://github.com/AdoptOpenJDK/openjdk8-releases/releases/download/jdk8u172-b11/OpenJDK8_x64_Mac_jdk8u172-b11.tar.gz'
+#   ],
+#   type = 'tar.gz', 
+#   sha256 = 'c271c5aeebfec5cd6f41c24092472a66fc55f893e3118e63f4c1ab1cb4446157', 
+#   strip_prefix = 'jdk8u172-b11', 
+# )
 
 http_archive(
   name = 'openjdk-linux',
