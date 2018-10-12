@@ -13,6 +13,7 @@ import io.reactivex.Single;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
+import java.util.Optional;
 
 public final class QuickstartTasks {
 
@@ -40,6 +41,9 @@ public final class QuickstartTasks {
         final FileSystem fs = projectDirectory.getFileSystem();
         final Identifier projectIdentifier = project.name.map(StringUtils::escapeStringGitHubStyle)
             .flatMap(Identifier::parse)
+            // The project name "buck" interferes with the BUCK file
+            .flatMap(x -> x.name.equalsIgnoreCase("buck") ?
+                Optional.empty() : Optional.of(x))
             .orElseGet(() -> Identifier.of("my-project"));
 
         return Observable.concat(ImmutableList.of(
