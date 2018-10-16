@@ -35,28 +35,28 @@ public final class InstallExistingTasks {
             .resolve(identifier.recipe.name);
     }
 
-    private static ImmutableMap<String, ImmutableMap<String, String>> generateBuckConfig(final Path projectDirectory, final ImmutableList<RecipeIdentifier> dependencies) {
-        Preconditions.checkNotNull(projectDirectory);
+    private static ImmutableMap<String, ImmutableMap<String, String>> generateBuckConfig(final Path projectDirectory, final Path cellDirectory, final ImmutableList<RecipeIdentifier> dependencies) {
+        Preconditions.checkNotNull(cellDirectory);
         Preconditions.checkNotNull(dependencies);
 
         final ImmutableMap<String, String> repositories = dependencies.stream()
             .collect(ImmutableMap.toImmutableMap(CommonTasks::toFolderName, x -> {
                     final Path dependencyFolder = dependencyFolder(buckarooDirectory(projectDirectory), x);
 
-                    return projectDirectory.toAbsolutePath().relativize(dependencyFolder.toAbsolutePath()).toString();
+                    return cellDirectory.toAbsolutePath().relativize(dependencyFolder.toAbsolutePath()).toString();
                 }));
 
         return ImmutableMap.of("repositories", repositories);
     }
 
-    public static Single<WriteFileEvent> touchAndPatchBuckConfig(final Path projectDirectory, final ImmutableList<RecipeIdentifier> dependencies) {
-        final Path buckConfigPath = projectDirectory.resolve(".buckconfig").toAbsolutePath();
+    public static Single<WriteFileEvent> touchAndPatchBuckConfig(final Path projectDirectory, final Path cellDirectory, final ImmutableList<RecipeIdentifier> dependencies) {
+        final Path buckConfigPath = cellDirectory.resolve(".buckconfig").toAbsolutePath();
 
         return CommonTasks.touchFile(buckConfigPath).flatMap(touch -> CommonTasks.readFile(buckConfigPath).flatMap(content -> {
             try {
                 final ImmutableMap<String, ImmutableMap<String, String>> config = BuckConfig.parse(content);
                 final ImmutableMap<String, ImmutableMap<String, String>> generatedConfig =
-                        generateBuckConfig(projectDirectory, dependencies);
+                        generateBuckConfig(projectDirectory, cellDirectory, dependencies);
 
                 final ImmutableMap<String, ImmutableMap<String, String>> mergedConfig =
                         BuckConfig.override(
@@ -126,7 +126,7 @@ public final class InstallExistingTasks {
             downloadResolvedDependency(projectDirectory.getFileSystem(), lock.origin, dependencyDirectory),
 
             // Patch the .buckconfig
-            touchAndPatchBuckConfig(projectDirectory, dependencies).toObservable(),
+            touchAndPatchBuckConfig(projectDirectory, dependencyDirectory, dependencies).toObservable(),
 
             // Mark the installation as complete
             Observable.just(DependencyInstalledEvent.of(lock))
@@ -156,14 +156,14 @@ public final class InstallExistingTasks {
 
             // Read the lock file
             CommonTasks.readLockFile(projectDirectory.resolve("buckaroo.lock.json").toAbsolutePath())
-                    .map(ReadLockFileEvent::of).flatMapObservable(
+                .map(ReadLockFileEvent::of)
+                .flatMapObservable((ReadLockFileEvent event) -> {
 
-                (ReadLockFileEvent event) -> {
                     final Observable<DependencyInstallationEvent> installs = Observable.merge(
                         event.locks
                             .entries()
                             .stream()
-                            .map(i-> installDependencyLock(projectDirectory, i)
+                            .map(i -> installDependencyLock(projectDirectory, i)
                                 .map(x->Pair.with(i, x))
                                 .map(DependencyInstallationEvent::of))
                             .collect(toImmutableList())
@@ -182,7 +182,7 @@ public final class InstallExistingTasks {
                         installs,
 
                         // Patch the .buckconfig
-                        touchAndPatchBuckConfig(projectDirectory, dependencies).toObservable(),
+                        touchAndPatchBuckConfig(projectDirectory, projectDirectory, dependencies).toObservable(),
 
                         CommonTasks.readProjectFile(projectDirectory.resolve("buckaroo.json"))
                             .result()
@@ -209,6 +209,7 @@ public final class InstallExistingTasks {
 
     public static Observable<Event> installExistingDependenciesInWorkingDirectory(final FileSystem fs) {
         Preconditions.checkNotNull(fs);
+
         return installExistingDependencies(fs.getPath(""));
     }
 }
