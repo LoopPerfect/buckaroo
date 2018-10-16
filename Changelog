@@ -1,3 +1,9 @@
+buckaroo (1.4.1) stable; urgency=low
+  [Nick La Rooy <nick@loopperfect.com>]
+  * Minor bug fixes
+
+ -- Gaetano Checinski <gaetano@loopperfect.com>  Thu, 16 Oct 2018 17:43:00 +0100
+
 buckaroo (1.4.0) stable; urgency=low
   [Nick La Rooy <nick@loopperfect.com>]
   * Buckaroo now supports the latest Buck
