@@ -3,6 +3,7 @@ module Tests
 open System
 open Xunit
 
+open Target
 open Constraint
 open Dependency
 open Manifest
@@ -96,10 +97,37 @@ let ``Constraint.agreesWith works correctly`` () =
   Assert.False(Constraint.agreesWith c x)
 
 [<Fact>]
+let ``Target.parse works correctly`` () = 
+  let input = "//path/to/some:target"
+  let expected = Result.Ok { Folders = [ "path"; "to"; "some" ]; Name = "target" }
+  Assert.Equal(expected, Target.parse input)
+  
+  let input = "//:foo"
+  let expected = Result.Ok { Folders = []; Name = "foo" }
+  Assert.Equal(expected, Target.parse input)
+  
+  let input = "//foo"
+  let expected = Result.Ok { Folders = [ "foo" ]; Name = "foo" }
+  Assert.Equal(expected, Target.parse input)
+  
+  let input = "//foo/bar"
+  let expected = Result.Ok { Folders = [ "foo"; "bar" ]; Name = "bar" }
+  Assert.Equal(expected, Target.parse input)
+  
+  let input = "//abc/def"
+  let expected = Result.Ok { Folders = [ "abc"; "def" ]; Name = "def" }
+  Assert.Equal(expected, Target.parse input)
+
+  let input = ":bar"
+  let expected = Result.Ok { Folders = []; Name = "bar" }
+  Assert.Equal(expected, Target.parse input)
+
+[<Fact>]
 let ``Dependency.parse works correctly`` () =
   let p = Project.GitHub { Owner = "abc"; Project = "def" }
   let cases = [
-    ("github.com/abc/def@*", Some({ Project = p; Constraint = Constraint.wildcard }))
+    ("github.com/abc/def@*", Some({ Project = p; Constraint = Constraint.wildcard; Target = None }))
+    ("github.com/abc/def@*//:foo", Some({ Project = p; Constraint = Constraint.wildcard; Target = Some { Folders = []; Name = "foo" } }))
     ("", None); 
   ]
   for (input, expected) in cases do
@@ -131,15 +159,18 @@ let ``Project.parse works correctly`` () =
 let ``Manifest.parse works correctly`` () =
   let a = { 
     Project = Project.GitHub { Owner = "abc"; Project = "def" }; 
-    Constraint = Constraint.wildcard 
+    Constraint = Constraint.wildcard; 
+    Target = None
   } 
   let b = { 
     Project = Project.GitHub { Owner = "ijk"; Project = "xyz" }; 
-    Constraint = Constraint.wildcard 
+    Constraint = Constraint.wildcard; 
+    Target = Some { Folders = []; Name = "foo" }
   } 
   let cases = [
     ("", Ok { Manifest.zero with Dependencies = set [] });
     ("[[dependency]]\nname = \"github.com/abc/def\"\nversion = \"*\"", Ok { Manifest.zero with Dependencies = set [ a ] });
+    ("[[dependency]]\nname = \"github.com/ijk/xyz\"\nversion = \"*\"\ntarget = \"//:foo\"", Ok { Manifest.zero with Dependencies = set [ b ] });
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Manifest.parse input)

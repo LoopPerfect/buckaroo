@@ -39,7 +39,11 @@ let tomlTableToDependency (x : Nett.TomlTable) : Result<Dependency, string> = re
     |> optionToResult "version must be specified for every dependency"
   let! p = Project.parse name 
   let! c = Constraint.parse version
-  return { Project = p; Constraint = c }
+  let! t = 
+    match x |> Toml.get "target" |> Option.bind Toml.asString with 
+    | Some y -> y |> Target.parse |> Result.map Some
+    | None -> Ok None
+  return { Project = p; Constraint = c; Target = t }
 }
 
 let parse (content : string) : Result<Manifest, string> = result {

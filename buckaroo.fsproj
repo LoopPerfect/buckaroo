@@ -15,6 +15,7 @@
     <Compile Include="Constraint.fs" />
     <Compile Include="Project.fs" />
     <Compile Include="Atom.fs" />
+    <Compile Include="Target.fs" />
     <Compile Include="Dependency.fs" />
     <Compile Include="SourceLocation.fs" />
     <Compile Include="Manifest.fs" />
