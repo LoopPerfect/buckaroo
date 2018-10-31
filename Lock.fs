@@ -1,6 +1,7 @@
 namespace Buckaroo
 
 type Lock = {
+  ManifestHash : string; 
   Dependencies : Set<TargetIdentifier>; 
   Packages : Map<PackageIdentifier, PackageLocation>; 
 }
@@ -14,8 +15,20 @@ type Lock = {
 module Lock = 
 
   open ResultBuilder
+  open System.Security.Cryptography
+
+  let bytesToHex bytes = 
+    bytes 
+    |> Array.map (fun (x : byte) -> System.String.Format("{0:x2}", x))
+    |> String.concat System.String.Empty
 
   let fromManifestAndSolution (manifest : Manifest) (solution : Solution) : Lock = 
+    let manifestHash = 
+      manifest
+      |> Manifest.toToml
+      |> System.Text.Encoding.UTF8.GetBytes 
+      |> (new SHA256Managed()).ComputeHash 
+      |> bytesToHex
     let dependencies = 
       manifest.Dependencies
       |> Seq.map (fun x -> x.Package)
@@ -32,9 +45,12 @@ module Lock =
     let packages = 
       solution
       |> Map.map (fun _ v -> v.Location)
-    { Dependencies = dependencies; Packages = packages }
+    { ManifestHash = manifestHash; Dependencies = dependencies; Packages = packages }
 
   let toToml (lock : Lock) = 
+    (
+       "manifest = \"" + lock.ManifestHash + "\"\n\n"
+    ) + 
     (
       lock.Dependencies
       |> Seq.map(fun x -> 
@@ -105,6 +121,11 @@ module Lock =
 
   let parse (content : string) : Result<Lock, string> = result {
     let! table = Toml.parse content |> Result.mapError (fun e -> e.Message)
+    let! manifestHash = 
+      table 
+      |> Toml.get "manifest"
+      |> Option.bind Toml.asString 
+      |> optionToResult "manifest hash must be specified"
     let! lockedPackages = 
       table.Rows
       |> Seq.filter (fun x -> x.Key = "lock")
@@ -123,5 +144,9 @@ module Lock =
       |> Seq.collect (fun x -> x.Items)
       |> Seq.map tomlTableToTargetIdentifier
       |> ResultBuilder.all
-    return { Dependencies = set dependencies; Packages = packages }
+    return { 
+      ManifestHash = manifestHash; 
+      Dependencies = set dependencies; 
+      Packages = packages; 
+    }
   }

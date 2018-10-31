@@ -9,6 +9,14 @@ type Resolution =
 
 module Solver = 
 
+  let oneAtATime xs = async {
+    let ys = 
+      xs 
+      |> Seq.map Async.RunSynchronously
+      |> Seq.toList
+    return ys
+  }
+
   let show resolution = 
     match resolution with
     | Conflict xs -> "Conflict! " + (xs |> Seq.map Dependency.show |> String.concat " ")
@@ -61,17 +69,26 @@ module Solver =
               return!
                 locations
                 |> Seq.map (fun location -> async {
-                  let! manifest = sourceManager.FetchManifest location
-                  return { 
-                    Version = version; 
-                    Location = location; 
-                    Manifest = manifest; 
-                  }
+                  try
+                    let! manifest = sourceManager.FetchManifest location
+                    return Some { 
+                      Version = version; 
+                      Location = location; 
+                      Manifest = manifest; 
+                    }
+                  with _ -> 
+                    return None
                 })
-                |> Async.Parallel
+                // |> Async.Parallel
+                |> oneAtATime
             })
-            |> Async.Parallel
-          return resolvedVersions |> Seq.collect id |> Seq.toList
+            // |> Async.Parallel
+            |> oneAtATime
+          return 
+            resolvedVersions 
+            |> Seq.collect id 
+            |> Seq.choose id 
+            |> Seq.toList
         }
 
         let! availableVersions = availableVersionsTask

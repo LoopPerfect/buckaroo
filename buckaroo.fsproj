@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="ResultBuilder.fs" />
+    <Compile Include="Concurrency.fs" />
     <Compile Include="Constants.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
@@ -27,6 +28,7 @@
     <Compile Include="ResolvedVersion.fs" />
     <Compile Include="ResolvedPackage.fs" />
     <Compile Include="SourceManager.fs" />
+    <Compile Include="DefaultSourceManager.fs" />
     <Compile Include="Solver.fs" />
     <Compile Include="Lock.fs" />
     <Compile Include="Command.fs" />

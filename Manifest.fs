@@ -28,9 +28,9 @@ module Manifest =
   let tomlTableToDependency (x : Nett.TomlTable) : Result<Dependency, string> = result {
     let! name = 
       x 
-      |> Toml.get "name" 
+      |> Toml.get "package" 
       |> Option.bind Toml.asString 
-      |> optionToResult "name must be specified for every dependency"
+      |> optionToResult "package must be specified for every dependency"
     let! version = 
       x 
       |> Toml.get "version" 
@@ -47,6 +47,14 @@ module Manifest =
 
   let parse (content : string) : Result<Manifest, string> = result {
     let! table = Toml.parse content |> Result.mapError (fun e -> e.Message)
+    let tags : Set<string> = 
+      table 
+      |> Toml.get "tags" 
+      |> Option.bind Toml.asArray 
+      |> Option.map Toml.items
+      |> Option.defaultValue []
+      |> Seq.choose Toml.asString // TODO: Throw an error for invalid targets? 
+      |> set 
     let targets : Set<string> = 
       table 
       |> Toml.get "target" 
@@ -61,7 +69,11 @@ module Manifest =
       |> Seq.collect (fun x -> x.Items)
       |> Seq.map tomlTableToDependency
       |> all
-    return { Targets = targets; Tags = set []; Dependencies = dependencies |> Set.ofSeq }
+    return { 
+      Targets = targets; 
+      Tags = tags; 
+      Dependencies = dependencies |> Set.ofSeq; 
+    }
   }
 
   let show (x : Manifest) : string = 
@@ -69,3 +81,43 @@ module Manifest =
     |> Seq.map Dependency.show 
     |> Seq.sort
     |> String.concat "\n"
+
+  let toToml (x : Manifest) : string = 
+    (
+      match x.Tags |> Seq.exists (fun _ -> true) with 
+      | true -> 
+        "tags = [ " + (
+          x.Tags 
+          |> Seq.distinct 
+          |> Seq.sort 
+          |> Seq.map (fun x -> "\"" + x + "\"")
+          |> String.concat ", "
+        ) + " ]\n\n"
+      | false -> "" 
+    ) + 
+    (
+      match x.Targets |> Seq.exists (fun _ -> true) with 
+      | true -> 
+        "targets = [ " + (
+          x.Targets 
+          |> Seq.distinct 
+          |> Seq.sort 
+          |> Seq.map (fun x -> "\"" + x + "\"")
+          |> String.concat ", "
+        ) + " ]\n\n"
+      | false -> ""
+    ) + 
+    (
+      x.Dependencies
+      |> Seq.map (fun x -> 
+        "[[dependency]]\n" + 
+        "package = \"" + PackageIdentifier.show x.Package + "\"\n" + 
+        "version = \"" + Constraint.show x.Constraint + "\"\n" + 
+        (
+          match x.Target with
+          | Some t -> "target = \"" + Target.show t + "\"\n"
+          | None -> ""
+        )
+      )
+      |> String.concat "\n"
+    )

@@ -94,7 +94,8 @@ module Command =
   }
 
   let writeManifest (manifest : Manifest) = async {
-    let content = Manifest.show manifest
+    // let content = Manifest.show manifest
+    let content = Manifest.toToml manifest
     return! writeFile ManifestFileName content
   }
 
@@ -133,7 +134,7 @@ module Command =
     if manifest = newManifest 
     then return ()
     else 
-      let sourceManager = new SourceManager.DefaultSourceManager()
+      let sourceManager = new DefaultSourceManager()
       let! resolution = Solver.solve sourceManager newManifest
       do! writeManifest newManifest
       // TODO: Write lock file! 
@@ -141,7 +142,7 @@ module Command =
   }
 
   let resolve = async {
-    let sourceManager = new SourceManager.DefaultSourceManager()
+    let sourceManager = new DefaultSourceManager()
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
     let! resolution = Solver.solve sourceManager manifest
@@ -161,7 +162,7 @@ module Command =
   }
 
   let showVersions (package : PackageIdentifier) = async {
-    let sourceManager : ISourceManager = new SourceManager.DefaultSourceManager() :> ISourceManager
+    let sourceManager = new DefaultSourceManager() :> ISourceManager
     let! versions = sourceManager.FetchVersions package
     for v in versions do
       Version.show v |> Console.WriteLine
@@ -196,7 +197,7 @@ module Command =
     match location with 
     | GitHub gitHub -> 
       let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-      let! gitPath = SourceManager.ensureClone gitUrl
+      let! gitPath = Git.ensureClone gitUrl
       use repo = new Repository(gitPath)
       Commands.Checkout(repo, gitHub.Revision) |> ignore
       let installPath = Path.Combine(".", "buckaroo", owner, project)
@@ -209,7 +210,7 @@ module Command =
   }
 
   let install = async {
-    let sourceManager = new SourceManager.DefaultSourceManager()
+    let sourceManager = new DefaultSourceManager()
     let! lock = readLock
     for kv in lock.Packages do
       let project = kv.Key

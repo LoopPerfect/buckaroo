@@ -14,7 +14,7 @@ module PackageIdentifier =
 
   let show (id : PackageIdentifier) = 
     match id with
-    | GitHub x -> x.Owner + "/" + x.Project
+    | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
   let gitHubIdentifierParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|-(?=[a-zA-Z.\d])){0,38}"
