@@ -8,8 +8,12 @@
   <ItemGroup>
     <Compile Include="ResultBuilder.fs" />
     <Compile Include="Constants.fs" />
+    <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
     <Compile Include="Files.fs" />
+    <Compile Include="PackageIdentifier.fs" />
+    <Compile Include="TargetIdentifier.fs" />
+    <Compile Include="Git.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
     <Compile Include="Constraint.fs" />
@@ -17,7 +21,8 @@
     <Compile Include="Atom.fs" />
     <Compile Include="Target.fs" />
     <Compile Include="Dependency.fs" />
-    <Compile Include="SourceLocation.fs" />
+    <Compile Include="PackageLocation.fs" />
+    <Compile Include="FloatingPackageLocation.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
     <Compile Include="ResolvedPackage.fs" />

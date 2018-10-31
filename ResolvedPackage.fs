@@ -1,8 +1,7 @@
-module ResolvedPackage
+module Buckaroo.ResolvedPackage
 
-open Project
-open Version
-
-type Revision = string
-
-type ResolvedPackage = { Project : Project; Revision : Revision; Version : Version }
+type ResolvedPackage = { 
+  Package : PackageIdentifier; 
+  Revision : Revision; 
+  Version : Version; 
+}

@@ -1,49 +1,29 @@
-module Project
+module Buckaroo.Project
 
-open System.IO
-open FParsec
+// open System.IO
+// open FParsec
 
-type GitHubProject = { Owner : string; Project : string }
 
-type Project = 
-| GitHub of GitHubProject
+// type GitHubProject = { Owner : string; Project : string }
 
-let defaultTarget (project : Project) = 
-  match project with
-  | GitHub x -> "//:" + x.Project
+// type HttpProject = { Url : string; StripPrefix : string; Type : ArchiveType }
 
-let cellName (project : Project) = 
-  match project with
-  | GitHub x -> 
-    [ "github"; x.Owner.ToLower(); x.Project.ToLower() ] 
-    |> String.concat "-"
+// type ProjectSource = 
+// | GitHub of GitHubProject
+// | Http of HttpProject
 
-let sourceLocation (p : Project) = 
-  match p with
-  // | GitHub x -> "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"
-  | GitHub x -> "https://github.com/" + x.Owner + "/" + x.Project + ".git"
+// type Package = { Identifier : PackageIdentifier; Source : ProjectSource }
 
-let installSubPath (p : Project) = 
-  match p with
-  | GitHub x -> Path.Combine("github", x.Owner.ToLower(), x.Project.ToLower())
+// let defaultTargets (project : Package) = 
+//   [ "//:" + project.Identifier.Project ]
 
-let gitHubIdentifierParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|-(?=[a-zA-Z.\d])){0,38}"
+// let cellName (project : Package) = 
+//   let identifier = project.Identifier
+//   [ identifier.Owner.ToLower(); identifier.Project.ToLower() ] 
+//   |> String.concat "-"
 
-let gitHubProjectParser = parse {
-  do! CharParsers.skipString "github.com/" <|> CharParsers.skipString "github+"
-  let! owner = gitHubIdentifierParser
-  do! CharParsers.skipString "/"
-  let! project = gitHubIdentifierParser
-  return GitHub { Owner = owner; Project = project }
-}
-
-let parser = gitHubProjectParser
-
-let parse (x : string) : Result<Project, string> = 
-  match run (parser .>> CharParsers.eof) x with
-  | Success(result, _, _) -> Result.Ok result
-  | Failure(error, _, _) -> Result.Error error
-
-let show (p : Project) : string = 
-  match p with
-  | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
+// let show (p : Package) : string = 
+//   p.Identifier.Owner + "/" + p.Identifier.Project + "@" + 
+//   match p.Source with
+//   | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
+//   | Http x -> x.Url

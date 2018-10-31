@@ -1,6 +1,6 @@
-module Atom
+module Buckaroo.Atom
 
-type Atom = { Project : Project.Project; Version : Version.Version }
+type Atom = { Package : PackageIdentifier; Version : Version }
 
 let show (a : Atom) : string = 
-  Project.show a.Project + "@" + Version.show a.Version
+  PackageIdentifier.show a.Package + "@" + Version.show a.Version

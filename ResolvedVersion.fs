@@ -1,11 +1,15 @@
-module ResolvedVersion
+namespace Buckaroo
 
-type Revision = string
+type ResolvedVersion = { 
+  Version : Version; 
+  Location : PackageLocation; 
+  Manifest : Manifest; 
+}
 
-type ResolvedVersion = { Version : Version.Version; Revision : Revision }
+module ResolvedVersion = 
 
-let isCompatible (x : ResolvedVersion) (y : ResolvedVersion) : bool = 
-  x.Revision = y.Revision || x.Version = y.Version
+  let isCompatible (x : ResolvedVersion) (y : ResolvedVersion) : bool = 
+    x.Location = y.Location || x.Version = y.Version
 
-let show x = 
-  Version.show x.Version + "(" + x.Revision + ")"
+  let show x = 
+    Version.show x.Version + "(" + PackageLocation.show x.Location + ")"

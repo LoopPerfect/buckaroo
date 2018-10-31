@@ -1,113 +1,127 @@
-module Lock
-
-open ResultBuilder
-
-type Project = Project.Project
-type ResolvedPackage = ResolvedPackage.ResolvedPackage
-type Manifest = Manifest.Manifest
-type Revision = string
-type Location = string
-type Solution = Solver.Solution
-
-// TODO: Give this a better name
-type ExactLocation = {
-  Location : Location; 
-  Revision : Revision;
-}
+namespace Buckaroo
 
 type Lock = {
-  Dependencies : Set<Project>;
-  Packages : Map<Project, ExactLocation>; 
+  Dependencies : Set<TargetIdentifier>; 
+  Packages : Map<PackageIdentifier, PackageLocation>; 
 }
 
-let show (x : Lock) : string = 
-  x.Packages 
-  |> Seq.map (fun p -> Project.show p.Key + "=" + p.Value.Location + "@" + p.Value.Revision)
-  |> Seq.sort
-  |> String.concat "\n"
+// let show (x : Lock) : string = 
+//   x.Packages 
+//   |> Seq.map (fun p -> PackageIdentifier.show p.Key + "=" + p.Value.Location + "@" + p.Value.Revision)
+//   |> Seq.sort
+//   |> String.concat "\n"
 
-let fromManifestAndSolution (manifest : Manifest) (solution : Solution) : Lock = 
-  let dependencies = 
-    manifest.Dependencies
-    |> Seq.map (fun x -> x.Project)
-    |> Set.ofSeq
-  let packages = 
-    solution
-    |> Map.map (fun k v -> { Location = Project.sourceLocation k; Revision = v.Revision })
-  { Dependencies = dependencies; Packages = packages }
+module Lock = 
 
-let toToml (lock : Lock) = 
-  "dependencies = [ " + 
-    (lock.Dependencies 
-      |> Seq.map (fun x -> "\"" + (Project.show x) + "\"")
-      |> String.concat ", ") + 
-    " ]\n\n" + 
+  open ResultBuilder
+
+  let fromManifestAndSolution (manifest : Manifest) (solution : Solution) : Lock = 
+    let dependencies = 
+      manifest.Dependencies
+      |> Seq.map (fun x -> x.Package)
+      |> Seq.collect (fun p -> 
+        solution 
+        |> Map.tryFind p 
+        |> Option.map (fun x -> 
+          x.Manifest.Targets 
+          |> Seq.map (fun t -> { Package = p; Target = t})
+        )
+        |> Option.defaultValue Seq.empty
+      )
+      |> Set.ofSeq
+    let packages = 
+      solution
+      |> Map.map (fun _ v -> v.Location)
+    { Dependencies = dependencies; Packages = packages }
+
+  let toToml (lock : Lock) = 
+    (
+      lock.Dependencies
+      |> Seq.map(fun x -> 
+        "[[dependency]]\n" + 
+        "package = \"" + (PackageIdentifier.show x.Package) + "\"\n" + 
+        "target = \"" + x.Target + "\"\n" 
+      )
+      |> String.concat "\n"
+    ) + 
     (
       lock.Packages
       |> Seq.map(fun x -> 
-        let project = x.Key
+        let package = x.Key
         let exactLocation = x.Value
         "[[lock]]\n" + 
-        "name = \"" + (Project.show project) + "\"\n" + 
-        "location = \"" + exactLocation.Location + "\"\n" + 
-        "revision = \"" + exactLocation.Revision + "\"\n"
-        )
+        "name = \"" + (PackageIdentifier.show package) + "\"\n" + 
+        match exactLocation with 
+        | Git git -> 
+          "url = \"" + git.Url + "\"\n" + 
+          "revision = \"" + git.Revision + "\"\n"
+        | Http http -> 
+          "url = \"" + http.Url + "\"\n" + 
+          "type = \"" + (ArchiveType.show http.Type) + "\"\n" + 
+          "strip_refix = \"" + http.StripPrefix + "\"\n"
+        | GitHub gitHub -> 
+          "service = \"github\"\n" + 
+          "owner = \"" + gitHub.Package.Owner + "\"\n" + 
+          "project = \"" + gitHub.Package.Project + "\"\n" + 
+          "revision = \"" + gitHub.Revision + "\"\n"
+      )
       |> String.concat "\n"
     )
 
-let tomlTableToLockedPackage (x : Nett.TomlTable) : Result<(Project * ExactLocation), string> = result {
-  let! name = 
-    x 
-    |> Toml.get "name" 
-    |> Option.bind Toml.asString 
-    |> optionToResult "name must be specified for every dependency"
-  let! location = 
-    x 
-    |> Toml.get "location" 
-    |> Option.bind Toml.asString 
-    |> optionToResult "location must be specified for every dependency"
-  let! revision = 
-    x 
-    |> Toml.get "revision" 
-    |> Option.bind Toml.asString 
-    |> optionToResult "revision must be specified for every dependency"
-  let! project = Project.parse name 
-  return (project, { Location = location; Revision = revision })
-}
+  let tomlTableToLockedPackage (x : Nett.TomlTable) : Result<(PackageIdentifier * PackageLocation), string> = result {
+    let! name = 
+      x 
+      |> Toml.get "name" 
+      |> Option.bind Toml.asString 
+      |> optionToResult "name must be specified for every dependency"
+    let! url = 
+      x 
+      |> Toml.get "url" 
+      |> Option.bind Toml.asString 
+      |> optionToResult "location must be specified for every dependency"
+    let! revision = 
+      x 
+      |> Toml.get "revision" 
+      |> Option.bind Toml.asString 
+      |> optionToResult "revision must be specified for every dependency"
+    let! packageIdentifier = PackageIdentifier.parse name 
+    return (packageIdentifier, Git { Url = url; Revision = revision })
+  }
 
-let parse (content : string) : Result<Lock, string> = result {
-  let! table = Toml.parse content |> Result.mapError (fun e -> e.Message)
-  let! lockedPackages = 
-    table.Rows
-    |> Seq.filter (fun x -> x.Key = "lock")
-    |> Seq.choose (fun x -> Toml.asTableArray x.Value)
-    |> Seq.collect (fun x -> x.Items)
-    |> Seq.map tomlTableToLockedPackage
-    |> ResultBuilder.all
-  // TODO: If a project has more than one revision or location throw an error
-  let packages = 
-    lockedPackages
-    |> Map.ofSeq
-  let! dependenciesElement = 
-    table 
-    |> Toml.get "dependencies"
-    |> optionToResult "dependencies element not found"
-  let! dependenciesArray = 
-    dependenciesElement
-    |> Toml.asArray
-    |> optionToResult "dependencies must be an array"
-  let! dependenciesStrings = 
-    dependenciesArray.Items
-    |> Seq.map (
-      Toml.asString 
-      >> optionToResult "every dependency element must be a string")
-    |> all
-  let! dependenciesProjects = 
-    dependenciesStrings
-    |> Seq.map Project.parse
-    |> all
-  let dependencies = 
-    dependenciesProjects
-    |> Set.ofList
-  return { Dependencies = dependencies; Packages = packages }
-}
+  let tomlTableToTargetIdentifier (x : Nett.TomlTable) : Result<TargetIdentifier, string> = result {
+    let! package = 
+      x 
+      |> Toml.get "package" 
+      |> Option.bind Toml.asString 
+      |> optionToResult "package must be specified for every dependency"
+      |> Result.bind PackageIdentifier.parse
+    let! target = 
+      x 
+      |> Toml.get "target" 
+      |> Option.bind Toml.asString 
+      |> optionToResult "target must be specified for every dependency"
+    return { Package = package; Target = target }
+  }
+
+  let parse (content : string) : Result<Lock, string> = result {
+    let! table = Toml.parse content |> Result.mapError (fun e -> e.Message)
+    let! lockedPackages = 
+      table.Rows
+      |> Seq.filter (fun x -> x.Key = "lock")
+      |> Seq.choose (fun x -> Toml.asTableArray x.Value)
+      |> Seq.collect (fun x -> x.Items)
+      |> Seq.map tomlTableToLockedPackage
+      |> ResultBuilder.all
+    // TODO: If a project has more than one revision or location throw an error
+    let packages = 
+      lockedPackages
+      |> Map.ofSeq
+    let! dependencies = 
+      table.Rows
+      |> Seq.filter (fun x -> x.Key = "dependency")
+      |> Seq.choose (fun x -> Toml.asTableArray x.Value)
+      |> Seq.collect (fun x -> x.Items)
+      |> Seq.map tomlTableToTargetIdentifier
+      |> ResultBuilder.all
+    return { Dependencies = set dependencies; Packages = packages }
+  }
