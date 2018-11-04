@@ -19,6 +19,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.io.PrintStream;
 
 import static com.loopperfect.buckaroo.ErrorHandler.handleErrors;
 
@@ -30,9 +31,16 @@ public final class Main {
 
     public static void main(final String[] args) {
 
+        PrintStream p = System.out;
+
         if (args.length == 0) {
-            System.out.println("Buck, Buck, Buckaroo! \uD83E\uDD20");
-            System.out.println("https://buckaroo.readthedocs.io/");
+            p.println("   ___           __                             ");
+            p.println("  / _ )__ ______/ /_____ ________  ___          ");
+            p.println(" / _  / // / __/  '_/ _ `/ __/ _ \\/ _ \\       ");
+            p.println("/____/\\_,_/\\__/_/\\_\\\\_,_/_/  \\___/\\___/\n");
+
+            p.println("Buck, Buck, Buckaroo! \uD83E\uDD20");
+            p.println("https://buckaroo.readthedocs.io/");
             return;
         }
 
@@ -152,9 +160,9 @@ public final class Main {
             }
 
         } catch (final Throwable e) {
-            System.out.println("Uh oh!");
-            System.out.println(e.getMessage());
-            System.out.println("Visit https://github.com/LoopPerfect/buckaroo/issues for help");
+            p.println("Uh oh!");
+            p.println(e.getMessage());
+            p.println("Visit https://github.com/LoopPerfect/buckaroo/issues for help");
         }
     }
 }
