@@ -25,8 +25,33 @@ public final class HelpCommand implements CLICommand {
 
     @Override
     public Function<FileSystem, Observable<Event>> routine() {
-        return fs -> Observable.just(Notification.of("Read the docs at: \n" +
-            "https://buckaroo.readthedocs.io/en/latest/cli.html"));
+        return fs -> Observable.just(Notification.of("\n"
+                        + "    The C++ package manager that will take you to your happy place\n\n"
+                        + "    Usage\n\n"
+                        + "      $ buckaroo <options...>\n\n"
+                        + "    Options\n\n"
+                        + "      init         Init is used to generate a project file in the current\n"
+                        + "                   directory\n"
+                        + "      quckstart    Similar to init but also generates the necessary\n"
+                        + "                   boiler-plate for a new C++ project\n"
+                        + "      resolve      Reads the project file in the working directory and runs\n"
+                        + "                   the dependency resolution algorithm, storing the results\n"
+                        + "                   in the lock file\n"
+                        + "      install      Adds and installs dependencies to your project\n"
+                        + "      uninstall    Remove a dependency from your project\n"
+                        + "      upgrade      Upgrades the installed dependencies to the latest compatible\n"
+                        + "                   version\n"
+                        + "      update       Updates the cook-books installed on your system\n"
+                        + "      version      Outputs the version of Buckaroo that is installed\n"
+                        + "      help         Outputs this help message\n\n"
+                        + "    Examples\n\n"
+                        + "      $ buckaroo install google/gtest\n      ...\n"
+                        + "      $ buckaroo install github+loopperfect/neither\n      ...\n\n"
+                        + "    For more information read the docs at:\n"
+                        + "    https://buckaroo.readthedocs.io/en/latest/cli.html\n"
+
+                )
+        );
     }
 
     public static HelpCommand of() {
