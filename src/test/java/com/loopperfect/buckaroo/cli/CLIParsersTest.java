@@ -153,10 +153,20 @@ public final class CLIParsersTest {
             CLIParsers.commandParser.parse(" install   org/awesome  "));
 
         assertEquals(
+                InstallCommand.of(PartialDependency.of(Identifier.of("org"), Identifier.of("awesome"))),
+                CLIParsers.commandParser.parse(" i   org/awesome  "));
+
+        assertEquals(
             InstallCommand.of(ImmutableList.of(
                 PartialDependency.of(Identifier.of("org"), Identifier.of("awesome")),
                 PartialDependency.of(Identifier.of("somelib")))),
             CLIParsers.commandParser.parse(" install   org/awesome  somelib  "));
+
+        assertEquals(
+                InstallCommand.of(ImmutableList.of(
+                        PartialDependency.of(Identifier.of("org"), Identifier.of("awesome")),
+                        PartialDependency.of(Identifier.of("somelib")))),
+                CLIParsers.commandParser.parse(" i  org/awesome  somelib  "));
 
         assertEquals(
             InstallCommand.of(PartialDependency.of(Identifier.of("3hren"), Identifier.of("blackhole"))),
@@ -182,11 +192,19 @@ public final class CLIParsersTest {
             UninstallCommand.of(RecipeIdentifier.of("org", "some_lib")),
             CLIParsers.commandParser.parse(" uninstall   org/some_lib "));
 
+        assertEquals(
+                UninstallCommand.of(RecipeIdentifier.of("org", "some_lib")),
+                CLIParsers.commandParser.parse(" u   org/some_lib "));
 
         assertEquals(
             UninstallCommand.of(PartialRecipeIdentifier.of(
                 Identifier.of("github"), Identifier.of("org"), Identifier.of("some_lib"))),
             CLIParsers.commandParser.parse(" uninstall   github+org/some_lib "));
+
+        assertEquals(
+                UninstallCommand.of(PartialRecipeIdentifier.of(
+                        Identifier.of("github"), Identifier.of("org"), Identifier.of("some_lib"))),
+                CLIParsers.commandParser.parse(" u  github+org/some_lib "));
 
         assertEquals(
             UpdateCommand.of(),
@@ -207,6 +225,14 @@ public final class CLIParsersTest {
                 Identifier.of("blackhole"),
                 Optional.empty())),
             CLIParsers.commandParser.parse(" install  blackhole  "));
+
+        assertEquals(
+                InstallCommand.of(PartialDependency.of(
+                        Optional.empty(),
+                        Optional.empty(),
+                        Identifier.of("blackhole"),
+                        Optional.empty())),
+                CLIParsers.commandParser.parse(" i  blackhole  "));
 
 
         try {

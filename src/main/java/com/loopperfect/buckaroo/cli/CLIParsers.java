@@ -17,7 +17,7 @@ public final class CLIParsers {
     }
 
     static final Parser<Void> ignoreParser =
-        Scanners.WHITESPACES.skipMany();
+            Scanners.WHITESPACES.skipMany();
 
     public static final Parser<Identifier> identifierParser =
             Scanners.isChar(CharPredicates.IS_ALPHA_NUMERIC).times(1).followedBy(
@@ -28,30 +28,30 @@ public final class CLIParsers {
                     .map(Identifier::of);
 
     public static final Parser<RecipeIdentifier> recipeIdentifierParser =
-        Parsers.sequence(
-            identifierParser.followedBy(Scanners.isChar('/')),
-            identifierParser,
-            RecipeIdentifier::of);
+            Parsers.sequence(
+                    identifierParser.followedBy(Scanners.isChar('/')),
+                    identifierParser,
+                    RecipeIdentifier::of);
 
     public static final Parser<PartialDependency> partialDependencyParser =
-        Parsers.sequence(
-            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
-                .between(ignoreParser, ignoreParser).asOptional(),
-            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
-                .between(ignoreParser, ignoreParser).asOptional(),
-            identifierParser.between(ignoreParser, ignoreParser),
-            VersioningParsers.semanticVersionRequirementParser
-                .between(ignoreParser, ignoreParser).asOptional(),
-            PartialDependency::of);
+            Parsers.sequence(
+                    identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
+                            .between(ignoreParser, ignoreParser).asOptional(),
+                    identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
+                            .between(ignoreParser, ignoreParser).asOptional(),
+                    identifierParser.between(ignoreParser, ignoreParser),
+                    VersioningParsers.semanticVersionRequirementParser
+                            .between(ignoreParser, ignoreParser).asOptional(),
+                    PartialDependency::of);
 
     public static final Parser<PartialRecipeIdentifier> partialRecipeIdentifierParser =
-        Parsers.sequence(
-            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
-                .between(ignoreParser, ignoreParser).asOptional(),
-            identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
-                .between(ignoreParser, ignoreParser).asOptional(),
-            identifierParser.between(ignoreParser, ignoreParser),
-            PartialRecipeIdentifier::of);
+            Parsers.sequence(
+                    identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("+")))
+                            .between(ignoreParser, ignoreParser).asOptional(),
+                    identifierParser.between(ignoreParser, ignoreParser).followedBy(Scanners.isChar(CharPredicates.among("/")))
+                            .between(ignoreParser, ignoreParser).asOptional(),
+                    identifierParser.between(ignoreParser, ignoreParser),
+                    PartialRecipeIdentifier::of);
 
     static final Parser<Void> initTokenParser =
             Scanners.stringCaseInsensitive("init");
@@ -62,8 +62,14 @@ public final class CLIParsers {
     static final Parser<Void> installTokenParser =
             Scanners.stringCaseInsensitive("install");
 
+    static final Parser<Void> iTokenParser =
+            Scanners.stringCaseInsensitive("i");
+
     static final Parser<Void> uninstallTokenParser =
             Scanners.stringCaseInsensitive("uninstall");
+
+    static final Parser<Void> uTokenParser =
+            Scanners.stringCaseInsensitive("u");
 
     static final Parser<Void> updateTokenParser =
             Scanners.stringCaseInsensitive("update");
@@ -81,30 +87,42 @@ public final class CLIParsers {
             Scanners.stringCaseInsensitive("quickstart");
 
     static final Parser<Void> helpTokenParser =
-        Scanners.stringCaseInsensitive("help");
+            Scanners.stringCaseInsensitive("help");
 
     static final Parser<Void> resolveTokenParser =
-        Scanners.stringCaseInsensitive("resolve");
+            Scanners.stringCaseInsensitive("resolve");
 
     static final Parser<InstallExistingCommand> installExistingCommandParser =
-        installTokenParser
-            .between(ignoreParser, ignoreParser)
-            .map(x -> InstallExistingCommand.of());
+            installTokenParser
+                    .between(ignoreParser, ignoreParser)
+                    .map(x -> InstallExistingCommand.of());
 
     static final Parser<InstallCommand> installCommandParser =
-        installTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
-            .next(partialDependencyParser.atLeast(1))
-            .between(ignoreParser, ignoreParser)
-            .map(InstallCommand::of);
+            installTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+                    .next(partialDependencyParser.atLeast(1))
+                    .between(ignoreParser, ignoreParser)
+                    .map(InstallCommand::of);
+
+    static final Parser<InstallCommand> iCommandParser =
+            iTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+                    .next(partialDependencyParser.atLeast(1))
+                    .between(ignoreParser, ignoreParser)
+                    .map(InstallCommand::of);
 
     static final Parser<UninstallCommand> uninstallCommandParser =
-        uninstallTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
-            .next(partialRecipeIdentifierParser)
-            .between(ignoreParser, ignoreParser)
-            .map(UninstallCommand::of);
+            uninstallTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+                    .next(partialRecipeIdentifierParser)
+                    .between(ignoreParser, ignoreParser)
+                    .map(UninstallCommand::of);
+
+    static final Parser<UninstallCommand> uCommandParser =
+            uTokenParser.followedBy(Scanners.WHITESPACES.atLeast(1))
+                    .next(partialRecipeIdentifierParser)
+                    .between(ignoreParser, ignoreParser)
+                    .map(UninstallCommand::of);
 
     static final Parser<UpdateCommand> updateCommandParser =
-        updateTokenParser.between(ignoreParser, ignoreParser).map(ignored -> UpdateCommand.of());
+            updateTokenParser.between(ignoreParser, ignoreParser).map(ignored -> UpdateCommand.of());
 
     static final Parser<InitCommand> initCommandParser =
             initTokenParser.between(ignoreParser, ignoreParser)
@@ -123,23 +141,25 @@ public final class CLIParsers {
                     .map(x -> QuickstartCommand.of());
 
     static final Parser<HelpCommand> helpCommandParser =
-        helpTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> HelpCommand.of());
+            helpTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> HelpCommand.of());
 
     static final Parser<ResolveCommand> resolveCommandParser =
-        resolveTokenParser.between(ignoreParser, ignoreParser)
-            .map(x -> ResolveCommand.of());
+            resolveTokenParser.between(ignoreParser, ignoreParser)
+                    .map(x -> ResolveCommand.of());
 
     public static final Parser<CLICommand> commandParser =
-        Parsers.longest(
-            initCommandParser,
-            upgradeCommandParser,
-            installExistingCommandParser,
-            installCommandParser,
-            uninstallCommandParser,
-            updateCommandParser,
-            versionCommandParser,
-            quickstartCommandParser,
-            helpCommandParser,
-            resolveCommandParser);
+            Parsers.longest(
+                    initCommandParser,
+                    upgradeCommandParser,
+                    installExistingCommandParser,
+                    installCommandParser,
+                    iCommandParser,
+                    uninstallCommandParser,
+                    uCommandParser,
+                    updateCommandParser,
+                    versionCommandParser,
+                    quickstartCommandParser,
+                    helpCommandParser,
+                    resolveCommandParser);
 }
