@@ -188,25 +188,29 @@ module Command =
       "\n]\n"
   }
 
+  let packageInstallPath (package : PackageIdentifier) = 
+    let (prefix, owner, project) = 
+      match package with 
+        | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
+        | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
+    Path.Combine(".", "buckaroo", prefix, owner, project)
+
   let installLockedPackage (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
     let ( package, location ) = lockedPackage
-    let ( owner, project ) = 
-      match package with 
-      | PackageIdentifier.GitHub x -> (x.Owner, x.Project)
-      | PackageIdentifier.Adhoc x -> (x.Owner, x.Project)
+    let installPath = packageInstallPath package
     match location with 
     | GitHub gitHub -> 
       let gitUrl = PackageLocation.gitHubUrl gitHub.Package
       let! gitPath = Git.ensureClone gitUrl
       use repo = new Repository(gitPath)
       Commands.Checkout(repo, gitHub.Revision) |> ignore
-      let installPath = Path.Combine(".", "buckaroo", owner, project)
       let! deletedExistingInstall = Files.deleteDirectoryIfExists installPath
       if deletedExistingInstall
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
       let destination = installPath
       return! Files.copyDirectory gitPath destination
-    | _ -> new Exception("Unsupported location type") |> raise
+    | _ -> 
+      new Exception("Unsupported location type") |> raise
   }
 
   let install = async {

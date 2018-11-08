@@ -3,7 +3,8 @@
 Experiments implementing Buckaroo in F#
 
 ```bash=
-dotnet restore
-dotnet build
-dotnet test
+dotnet restore ./buckaroo
+dotnet build ./buckaroo
+dotnet run --project ./buckaroo
+dotnet test ./buckaroo-tests
 ```

@@ -10,7 +10,7 @@ module Manifest =
 
   open ResultBuilder
 
-  let zero = {
+  let zero : Manifest = {
     Targets = set [];
     Tags = set [];
     Dependencies = Set []

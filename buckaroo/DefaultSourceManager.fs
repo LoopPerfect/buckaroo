@@ -8,6 +8,8 @@ open LibGit2Sharp
 
 type DefaultSourceManager() = 
 
+  let concurrencyManager = new ConcurrencyManager<string>()
+
   let sourceLocation x = 
     // "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"
     "https://github.com/" + x.Owner + "/" + x.Project + ".git"
@@ -71,12 +73,14 @@ type DefaultSourceManager() =
     return path
   }
 
+  let cloneCachePath (url) : string = 
+    url
+    |> cloneFolderName 
+    |> (fun x -> Path.Combine(".", "cache", x))
+
   let ensureClone (url : string) = 
     async {
-      let target = 
-        url
-        |> cloneFolderName 
-        |> (fun x -> Path.Combine("./test", x))
+      let target = cloneCachePath url
       if Directory.Exists target 
       then
         if Repository.IsValid(target) 
@@ -89,14 +93,18 @@ type DefaultSourceManager() =
         return! clone url target
     }
 
-  // TODO: Support non-GitHub sources
-  // Not every source-type will be Git-based
   let gitUrl (package : PackageIdentifier) : Async<string> = async {
     return 
       match package with 
       | PackageIdentifier.GitHub x -> PackageLocation.gitHubUrl x
-      | _ -> new Exception("Only GitHub projects are currently supported") |> raise
+      | _ -> 
+        // TODO
+        new Exception("Only GitHub projects are currently supported") |> raise
   }
+
+  interface IDisposable with 
+    member this.Dispose () = 
+      (concurrencyManager :> System.IDisposable).Dispose()
 
   interface ISourceManager with 
     member this.FetchVersions package = async {
@@ -184,22 +192,31 @@ type DefaultSourceManager() =
         return new Exception("Only GitHub packages are supported") |> raise
     }
 
-    member this.FetchManifest location = async {
+    member this.FetchManifest location = 
       match location with 
       | PackageLocation.GitHub g -> 
         let url = PackageLocation.gitHubUrl g.Package
-        let! gitPath = ensureClone url 
-        use repo = new Repository(gitPath)
-        Commands.Checkout(repo, g.Revision) |> ignore
-        return 
-          match repo.Head.Tip.[Constants.ManifestFileName] with 
-          | null -> raise (new Exception(PackageLocation.show location + " does not contain a " + Constants.ManifestFileName + " file. "))
-          | x -> 
-            let blob = x.Target :?> Blob;
-            let content : string = blob.GetContentText()
+        let cacheKey = (cloneCachePath url).GetHashCode()
+        // Cloning + checking out the revision needs 
+        // to be done inside the ConcurrencyManager to 
+        // prevent conflicts 
+        async {
+          let url = PackageLocation.gitHubUrl g.Package
+          let! gitPath = ensureClone url 
+          use repo = new Repository(gitPath)
+          Commands.Checkout(repo, g.Revision) |> ignore
+          let content =  
+            match repo.Head.Tip.[Constants.ManifestFileName] with 
+            | null -> raise (new Exception(PackageLocation.show location + " does not contain a " + Constants.ManifestFileName + " file. "))
+            | x -> 
+              let blob = x.Target :?> Blob;
+              blob.GetContentText()
+          return 
             match Manifest.parse content with
             | Result.Ok manifest -> manifest
             | Result.Error errorMessage -> raise (new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage))
+        }
       | _ -> 
-        return new Exception("Only GitHub packages are supported") |> raise
-    }
+        async {
+          return new Exception("Only GitHub packages are supported") |> raise
+        }

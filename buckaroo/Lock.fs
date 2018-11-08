@@ -90,18 +90,20 @@ module Lock =
       |> Toml.get "name" 
       |> Option.bind Toml.asString 
       |> optionToResult "name must be specified for every dependency"
-    let! url = 
-      x 
-      |> Toml.get "url" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "location must be specified for every dependency"
-    let! revision = 
-      x 
-      |> Toml.get "revision" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "revision must be specified for every dependency"
     let! packageIdentifier = PackageIdentifier.parse name 
-    return (packageIdentifier, Git { Url = url; Revision = revision })
+    let! packageLocation = result {
+      match packageIdentifier with 
+      | PackageIdentifier.GitHub gitHub -> 
+        let! revision = 
+          x 
+          |> Toml.get "revision" 
+          |> Option.bind Toml.asString 
+          |> optionToResult "revision must be specified for every dependency"
+        return PackageLocation.GitHub { Package = gitHub; Revision = revision }
+      | PackageIdentifier.Adhoc adhoc -> 
+        return! Result.Error "Only GitHub package locations are supported"
+    }
+    return (packageIdentifier, packageLocation)
   }
 
   let tomlTableToTargetIdentifier (x : Nett.TomlTable) : Result<TargetIdentifier, string> = result {
