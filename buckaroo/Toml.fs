@@ -17,6 +17,9 @@ let asString (x : Nett.TomlObject) : Option<string> =
     (x :?> Nett.TomlString).Value |> Some
   with | _ -> None
 
+let items (x : Nett.TomlArray) = 
+  x.Items |> Seq.toList
+
 let asTableArray (x : Nett.TomlObject) : Option<Nett.TomlTableArray> = 
   try 
     x :?> Nett.TomlTableArray |> Some

@@ -1,4 +1,5 @@
 open System
+open Buckaroo
 
 [<EntryPoint>]
 let main argv =

@@ -1,7 +1,11 @@
-module Files
+module Buckaroo.Files
 
 open System.IO
 
+let readFile (path : string) = async {
+  use sr = new StreamReader(path)
+  return! sr.ReadToEndAsync() |> Async.AwaitTask
+}
 let deleteDirectoryIfExists (path : string) = async {
   try 
     Directory.Delete(path, true) 

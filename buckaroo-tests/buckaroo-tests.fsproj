@@ -6,31 +6,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="ResultBuilder.fs" />
-    <Compile Include="Constants.fs" />
-    <Compile Include="Toml.fs" />
-    <Compile Include="Files.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
     <Compile Include="Constraint.fs" />
-    <Compile Include="Project.fs" />
-    <Compile Include="Atom.fs" />
     <Compile Include="Target.fs" />
     <Compile Include="Dependency.fs" />
-    <Compile Include="SourceLocation.fs" />
+    <Compile Include="PackageIdentifier.fs" />
     <Compile Include="Manifest.fs" />
-    <Compile Include="ResolvedVersion.fs" />
-    <Compile Include="ResolvedPackage.fs" />
-    <Compile Include="SourceManager.fs" />
-    <Compile Include="Solver.fs" />
-    <Compile Include="Lock.fs" />
-    <Compile Include="Command.fs" />
-    <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
     <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FSharp.Data" Version="3.0.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
     <PackageReference Include="Nett" Version="0.9.0" />

@@ -1,4 +1,4 @@
-module Constants
+module Buckaroo.Constants
 
 [<Literal>]
 let ManifestFileName = "buckaroo.toml"
