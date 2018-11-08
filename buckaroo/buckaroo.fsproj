@@ -13,13 +13,13 @@
     <Compile Include="Toml.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="PackageIdentifier.fs" />
+    <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />
     <Compile Include="Git.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
     <Compile Include="Constraint.fs" />
     <Compile Include="Atom.fs" />
-    <Compile Include="Target.fs" />
     <Compile Include="Dependency.fs" />
     <Compile Include="PackageLocation.fs" />
     <Compile Include="FloatingPackageLocation.fs" />
@@ -28,6 +28,7 @@
     <Compile Include="ResolvedPackage.fs" />
     <Compile Include="SourceManager.fs" />
     <Compile Include="DefaultSourceManager.fs" />
+    <Compile Include="CachedSourceManager.fs" />
     <Compile Include="Solver.fs" />
     <Compile Include="Lock.fs" />
     <Compile Include="Command.fs" />

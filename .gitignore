@@ -4,6 +4,8 @@
 /buckaroo.lock.toml
 /BUCKAROO_DEPS
 
+/buckaroo-packages
+
 /test/
 /cache/
 

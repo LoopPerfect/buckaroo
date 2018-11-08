@@ -56,7 +56,7 @@ module Lock =
       |> Seq.map(fun x -> 
         "[[dependency]]\n" + 
         "package = \"" + (PackageIdentifier.show x.Package) + "\"\n" + 
-        "target = \"" + x.Target + "\"\n" 
+        "target = \"" + (Target.show x.Target) + "\"\n" 
       )
       |> String.concat "\n"
     ) + 
@@ -76,9 +76,6 @@ module Lock =
           "type = \"" + (ArchiveType.show http.Type) + "\"\n" + 
           "strip_refix = \"" + http.StripPrefix + "\"\n"
         | GitHub gitHub -> 
-          "service = \"github\"\n" + 
-          "owner = \"" + gitHub.Package.Owner + "\"\n" + 
-          "project = \"" + gitHub.Package.Project + "\"\n" + 
           "revision = \"" + gitHub.Revision + "\"\n"
       )
       |> String.concat "\n"
@@ -118,6 +115,7 @@ module Lock =
       |> Toml.get "target" 
       |> Option.bind Toml.asString 
       |> optionToResult "target must be specified for every dependency"
+      |> Result.bind Target.parse
     return { Package = package; Target = target }
   }
 

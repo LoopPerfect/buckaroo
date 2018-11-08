@@ -73,19 +73,9 @@ module Command =
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
 
-  let readFile (path : string) = async {
-    use sr = new IO.StreamReader(path)
-    return! sr.ReadToEndAsync() |> Async.AwaitTask
-  }
-
-  let writeFile (path : string) (content : string) = async {
-    use sw = new IO.StreamWriter(path)
-    return! sw.WriteAsync(content) |> Async.AwaitTask
-  }
-
   let readManifest = async {
     try 
-      let! content = readFile ManifestFileName
+      let! content = Files.readFile ManifestFileName
       return 
         match Manifest.parse content with 
         | Result.Ok manifest -> manifest
@@ -96,11 +86,11 @@ module Command =
   let writeManifest (manifest : Manifest) = async {
     // let content = Manifest.show manifest
     let content = Manifest.toToml manifest
-    return! writeFile ManifestFileName content
+    return! Files.writeFile ManifestFileName content
   }
 
   let readLock = async {
-    let! content = readFile LockFileName
+    let! content = Files.readFile LockFileName
     match Lock.parse content with
     | Result.Ok lock -> return lock
     | Result.Error error -> 
@@ -109,7 +99,7 @@ module Command =
 
   let writeLock (lock : Lock) = async {
     let content = Lock.toToml lock
-    return! writeFile LockFileName content
+    return! Files.writeFile LockFileName content
   }
 
   let listDependencies = async {
@@ -169,33 +159,61 @@ module Command =
     return ()
   }
 
-  let buckarooDeps (sourceManager : ISourceManager) (lock : Lock) = async {
+  let buckarooDeps (dependencies : seq<TargetIdentifier>) = 
     let cellName package = 
-      let (owner, project) = 
+      let (prefix, owner, project) = 
         match package with 
-        | PackageIdentifier.GitHub x -> (x.Owner, x.Project)
-        | PackageIdentifier.Adhoc x -> (x.Owner, x.Project)
-      "buckaroo." + owner + "." + project
+        | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
+        | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
+      "buckaroo." + prefix + "." + owner + "." + project
     let requiredPackages = 
-      lock.Dependencies 
-      |> Seq.map (fun d -> (cellName d.Package) + (Manifest.normalizeTarget d.Target))
+      dependencies 
+      |> Seq.map (fun d -> (cellName d.Package) + (Target.show d.Target))
       |> Seq.sort
       |> Seq.distinct
       |> Seq.toList
-    return 
-      "BUCKAROO_DEPS = [\n" + 
-      (requiredPackages |> Seq.map (fun x -> "  \"" + x + "\"") |> String.concat ", \n") + 
-      "\n]\n"
-  }
+    "BUCKAROO_DEPS = [\n" + 
+    (requiredPackages |> Seq.map (fun x -> "  \"" + x + "\"") |> String.concat ", \n") + 
+    "\n]\n"
 
   let packageInstallPath (package : PackageIdentifier) = 
     let (prefix, owner, project) = 
       match package with 
         | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
         | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
-    Path.Combine(".", "buckaroo", prefix, owner, project)
+    Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
 
-  let installLockedPackage (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
+  let fetchManifestFromLock (lock : Lock) (sourceManager : ISourceManager) (package : PackageIdentifier) = async {
+    let location =  
+      match lock.Packages |> Map.tryFind package with 
+      | Some location -> location
+      | None -> 
+        new Exception("Lock file does not contain " + (PackageIdentifier.show package))
+        |> raise
+    return! sourceManager.FetchManifest location
+  }
+
+  let fetchBuckarooDepsContent (lock : Lock) (sourceManager : ISourceManager) (package : PackageIdentifier) = async {
+    let! manifest = fetchManifestFromLock lock sourceManager package
+    let! targets =  
+      manifest.Dependencies
+      |> Seq.map (fun d -> async {
+        match d.Target with 
+        | Some target -> 
+          return [ { Package = d.Package; Target = target } ] |> List.toSeq
+        | None -> 
+          let! manifest = fetchManifestFromLock lock sourceManager d.Package
+          return 
+            manifest.Targets 
+            |> Seq.map (fun target -> { Package = d.Package; Target = target })
+      })
+      |> Async.Parallel
+    return targets
+      |> Seq.collect id
+      |> buckarooDeps
+  }
+
+  let installLockedPackage (lock : Lock) (sourceManager : ISourceManager) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
     let ( package, location ) = lockedPackage
     let installPath = packageInstallPath package
     match location with 
@@ -208,7 +226,10 @@ module Command =
       if deletedExistingInstall
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
       let destination = installPath
-      return! Files.copyDirectory gitPath destination
+      do! Files.copyDirectory gitPath destination
+      let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
+      let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager package
+      do! Files.writeFile buckarooDepsPath buckarooDepsContent
     | _ -> 
       new Exception("Unsupported location type") |> raise
   }
@@ -220,9 +241,9 @@ module Command =
       let project = kv.Key
       let exactLocation = kv.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-      do! installLockedPackage (project, exactLocation)
-    let! buckarooDepsContent = buckarooDeps sourceManager lock 
-    do! writeFile BuckarooDepsFileName buckarooDepsContent
+      do! installLockedPackage lock sourceManager (project, exactLocation)
+    let buckarooDepsContent = buckarooDeps (lock.Dependencies |> Set.toSeq) 
+    do! Files.writeFile BuckarooDepsFileName buckarooDepsContent
     return ()
   }
 

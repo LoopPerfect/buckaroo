@@ -2,6 +2,10 @@ module Buckaroo.Files
 
 open System.IO
 
+let writeFile (path : string) (content : string) = async {
+  use sw = new System.IO.StreamWriter(path)
+  return! sw.WriteAsync(content) |> Async.AwaitTask
+}
 let readFile (path : string) = async {
   use sr = new StreamReader(path)
   return! sr.ReadToEndAsync() |> Async.AwaitTask

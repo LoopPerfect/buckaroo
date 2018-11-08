@@ -1,7 +1,7 @@
 namespace Buckaroo
 
 type Manifest = { 
-  Targets : Set<string>; 
+  Targets : Set<Target>; 
   Tags : Set<string>; 
   Dependencies : Set<Dependency>; 
 }
@@ -55,14 +55,15 @@ module Manifest =
       |> Option.defaultValue []
       |> Seq.choose Toml.asString // TODO: Throw an error for invalid targets? 
       |> set 
-    let targets : Set<string> = 
+    let! targets = 
       table 
-      |> Toml.get "target" 
+      |> Toml.get "targets" 
       |> Option.bind Toml.asArray 
       |> Option.map Toml.items
       |> Option.defaultValue []
       |> Seq.choose Toml.asString // TODO: Throw an error for invalid targets? 
-      |> set 
+      |> Seq.map Target.parse
+      |> all
     let! dependencies = 
       table.Values
       |> Seq.choose Toml.asTableArray
@@ -70,7 +71,7 @@ module Manifest =
       |> Seq.map tomlTableToDependency
       |> all
     return { 
-      Targets = targets; 
+      Targets = targets |> set; 
       Tags = tags; 
       Dependencies = dependencies |> Set.ofSeq; 
     }
@@ -102,7 +103,7 @@ module Manifest =
           x.Targets 
           |> Seq.distinct 
           |> Seq.sort 
-          |> Seq.map (fun x -> "\"" + x + "\"")
+          |> Seq.map (fun x -> "\"" + (Target.show x) + "\"")
           |> String.concat ", "
         ) + " ]\n\n"
       | false -> ""
