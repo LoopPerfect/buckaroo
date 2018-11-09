@@ -25,6 +25,7 @@ $ buck run :my-app
 
 ## Getting Started
 
+Installation instructions can be found in [the docs](https://buckaroo.readthedocs.io/en/latest/installation.html). 
 
 ## As a User
 If you would like to use Buckaroo (as opposed to develop Buckaroo), the best place to start is [the documentation](http://buckaroo.readthedocs.io/).
