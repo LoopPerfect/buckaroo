@@ -2,6 +2,10 @@ module Buckaroo.Files
 
 open System.IO
 
+let exists (path : string) = async {
+  return File.Exists(path)
+}
+
 let writeFile (path : string) (content : string) = async {
   use sw = new System.IO.StreamWriter(path)
   return! sw.WriteAsync(content) |> Async.AwaitTask

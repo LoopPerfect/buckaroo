@@ -6,14 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="SemVer.fs" />
-    <Compile Include="Version.fs" />
-    <Compile Include="Constraint.fs" />
-    <Compile Include="Target.fs" />
-    <Compile Include="Dependency.fs" />
-    <Compile Include="PackageIdentifier.fs" />
-    <Compile Include="Manifest.fs" />
-    <Compile Include="BuckConfig.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -27,7 +19,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="xunit" Version="2.3.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
   </ItemGroup>
 
 </Project>

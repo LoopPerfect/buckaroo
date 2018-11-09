@@ -227,6 +227,22 @@ module Command =
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
       let destination = installPath
       do! Files.copyDirectory gitPath destination
+      // Write (or patch) .buckconfig
+      let buckconfigPath = Path.Combine(installPath, ".buckconfig")
+      let! buckconfig = async {
+        let buckconfigPath = Path.Combine(installPath, ".buckconfig")
+        if File.Exists buckconfigPath 
+        then 
+          let! content = Files.readFile buckconfigPath
+          return
+            match FS.INIReader.INIParser.read2opt content with 
+            | Some config -> config
+            | None -> new Exception("Invalid .buckconfig") |> raise
+        else 
+          return Map.empty
+      }
+      do! Files.writeFile buckconfigPath (buckconfig |> BuckConfig.render)
+      // Write BUCKAROO_DEPS
       let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
       let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager package
       do! Files.writeFile buckarooDepsPath buckarooDepsContent
