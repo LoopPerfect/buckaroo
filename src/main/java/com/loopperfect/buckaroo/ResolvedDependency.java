@@ -84,16 +84,4 @@ public final class ResolvedDependency {
     public static ResolvedDependency of(final Either<GitCommit, RemoteArchive> source) {
         return new ResolvedDependency(source, Optional.empty(), Optional.empty(), ImmutableList.of());
     }
-
-//    public static ResolvedDependency from(final RecipeVersion recipeVersion) {
-//        Preconditions.checkNotNull(recipeVersion);
-//        return of(
-//            recipeVersion.source,
-//            recipeVersion.target,
-//            recipeVersion.buckResource,
-//            recipeVersion.dependencies.orElse(DependencyGroup.of()).entries()
-//                .stream()
-//                .map(x -> x.project)
-//                .collect(ImmutableList.toImmutableList()));
-//    }
 }
