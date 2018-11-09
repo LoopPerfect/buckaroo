@@ -16,10 +16,24 @@ public final class ResolvedDependencyReference {
     }
 
     public String encode() {
-        return identifier.source.map(x -> x.name + ".").orElse("") +
+        final String cellName = identifier.source.map(x -> x.name + ".").orElse("") +
             identifier.organization.name + "." +
-            identifier.recipe.name + "//:" +
-            target.orElse(identifier.recipe.name);
+            identifier.recipe.name;
+
+        final String targetName = target.orElse(identifier.recipe.name);
+
+        // "//foo:bar"
+        if (targetName.contains("//") && targetName.contains(":")) {
+            return cellName + targetName;
+        }
+
+        // "foo:bar"
+        if (!targetName.contains("//") && targetName.contains(":")) {
+            return cellName + "//" + targetName;
+        }
+
+        // "bar"
+        return cellName + "//:" + targetName;
     }
 
     public boolean equals(final ResolvedDependencyReference other) {
