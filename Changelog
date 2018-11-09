@@ -1,3 +1,10 @@
+buckaroo (1.5.0) stable; urgency=low
+  [Nick La Rooy <nick@loopperfect.com>]
+  * Bugfix for some BUCKAROO_DEPS target names
+  * Various CLI usability improvements
+
+-- Gaetano Checinski <gaetano@loopperfect.com>  Thu, 9 Nov 2018 14:45:00 +0100
+
 buckaroo (1.4.1) stable; urgency=low
   [Nick La Rooy <nick@loopperfect.com>]
   * Minor bug fixes
