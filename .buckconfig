@@ -1,0 +1,4 @@
+[repositories]
+  buckaroo.github.njlr.test-lib-a = ./buckaroo-packages/github/njlr/test-lib-a
+  buckaroo.github.njlr.test-lib-b = ./buckaroo-packages/github/njlr/test-lib-b
+  buckaroo.github.njlr.test-lib-c = ./buckaroo-packages/github/njlr/test-lib-c

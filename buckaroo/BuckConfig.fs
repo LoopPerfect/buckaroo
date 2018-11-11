@@ -15,20 +15,33 @@ let removeBuckarooEntries (config : INIAst.INIData) : INIAst.INIData =
     config |> Map.add "repositories" repositoriesWithoutBuckarooCells
   | None -> config
 
-let addCells cells (config : INIAst.INIData) : INIAst.INIData = 
+let addCells (cells : seq<string * string>) (config : INIAst.INIData) : INIAst.INIData = 
   let repositories = 
     config 
     |> Map.tryFind "repositories" 
     |> Option.defaultValue Map.empty
   let folder state next = 
     let (name, path) = next
-    state |> Map.add name path
+    state 
+    |> Map.add name (INIAst.INIValue.INIString path)
   let repositoriesWithCells = 
     cells
     |> Seq.fold folder repositories
   config |> Map.add "repositories" repositoriesWithCells
 
+let rec renderValue (value : INIAst.INIValue) : string = 
+  match value with 
+  | INIAst.INIString s -> s
+  | INIAst.INITuple xs -> xs |> Seq.map renderValue  |> String.concat ", "
+  | INIAst.INIList xs -> xs |> Seq.map renderValue  |> String.concat ", "
+  | INIAst.INIEmpty -> ""
+
+let renderSection (section : Map<INIAst.INIKey, INIAst.INIValue>) : string = 
+  section
+  |> Seq.map (fun kvp -> "  " + kvp.Key + " = " + renderValue kvp.Value)
+  |> String.concat "\n"
+
 let render (config : INIAst.INIData) : string = 
   config 
-  |> Seq.map (fun kvp -> "[" + kvp.Key + "]")
+  |> Seq.map (fun kvp -> "[" + kvp.Key + "]" + "\n" + (renderSection kvp.Value))
   |> String.concat "\n\n"

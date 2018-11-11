@@ -43,7 +43,7 @@ module Git =
       let target = 
         url
         |> cloneFolderName 
-        |> (fun x -> Path.Combine("./test", x))
+        |> (fun x -> Path.Combine("./cache", x))
       if Directory.Exists target 
       then
         if Repository.IsValid(target) 

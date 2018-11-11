@@ -90,11 +90,16 @@ module Command =
   }
 
   let readLock = async {
-    let! content = Files.readFile LockFileName
-    match Lock.parse content with
-    | Result.Ok lock -> return lock
-    | Result.Error error -> 
-      return new Exception("Error reading lock file. " + error) |> raise
+    if File.Exists LockFileName
+    then 
+      let! content = Files.readFile LockFileName
+      return
+        match Lock.parse content with
+        | Result.Ok lock -> lock
+        | Result.Error error -> 
+          new Exception("Error reading lock file. " + error) |> raise
+    else 
+      return new Exception("No lock file was found. Perhaps you need to run 'buckaroo resolve'?") |> raise
   }
 
   let writeLock (lock : Lock) = async {
@@ -193,8 +198,7 @@ module Command =
     return! sourceManager.FetchManifest location
   }
 
-  let fetchBuckarooDepsContent (lock : Lock) (sourceManager : ISourceManager) (package : PackageIdentifier) = async {
-    let! manifest = fetchManifestFromLock lock sourceManager package
+  let fetchBuckarooDepsContent (lock : Lock) (sourceManager : ISourceManager) (manifest : Manifest) = async {
     let! targets =  
       manifest.Dependencies
       |> Seq.map (fun d -> async {
@@ -213,6 +217,16 @@ module Command =
       |> buckarooDeps
   }
 
+  let computeCellIdentifier (x : PackageIdentifier) = 
+    (
+      match x with 
+      | PackageIdentifier.GitHub gitHub -> 
+        [ "buckaroo"; "github"; gitHub.Owner; gitHub.Project ] 
+      | PackageIdentifier.Adhoc adhoc -> 
+        [ "buckaroo"; "adhoc"; adhoc.Owner; adhoc.Project ]
+    )
+    |> String.concat "."
+
   let installLockedPackage (lock : Lock) (sourceManager : ISourceManager) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
     let ( package, location ) = lockedPackage
     let installPath = packageInstallPath package
@@ -227,24 +241,15 @@ module Command =
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
       let destination = installPath
       do! Files.copyDirectory gitPath destination
-      // Write (or patch) .buckconfig
-      let buckconfigPath = Path.Combine(installPath, ".buckconfig")
-      let! buckconfig = async {
-        let buckconfigPath = Path.Combine(installPath, ".buckconfig")
-        if File.Exists buckconfigPath 
-        then 
-          let! content = Files.readFile buckconfigPath
-          return
-            match FS.INIReader.INIParser.read2opt content with 
-            | Some config -> config
-            | None -> new Exception("Invalid .buckconfig") |> raise
-        else 
-          return Map.empty
-      }
-      do! Files.writeFile buckconfigPath (buckconfig |> BuckConfig.render)
+      let! manifest = fetchManifestFromLock lock sourceManager package
+      // Touch .buckconfig
+      let buckConfigPath = Path.Combine(installPath, ".buckconfig")
+      if File.Exists buckConfigPath |> not
+      then 
+        do! Files.writeFile buckConfigPath ""
       // Write BUCKAROO_DEPS
       let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
-      let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager package
+      let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager manifest
       do! Files.writeFile buckarooDepsPath buckarooDepsContent
     | _ -> 
       new Exception("Unsupported location type") |> raise
@@ -258,6 +263,28 @@ module Command =
       let exactLocation = kv.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
       do! installLockedPackage lock sourceManager (project, exactLocation)
+    // Write .buckconfig
+    let buckConfigPath = ".buckconfig"
+    let! buckConfig = async {
+      if File.Exists buckConfigPath 
+      then 
+        let! content = Files.readFile buckConfigPath
+        return 
+          match FS.INIReader.INIParser.read2res content with 
+          | ParserResult.Success (config, _, _) -> config
+          | ParserResult.Failure (error, _, _) -> new Exception(error) |> raise
+      else 
+        return Map.empty
+    }
+    let buckarooCells = 
+      lock.Packages 
+      |> Seq.map (fun kvp -> (computeCellIdentifier kvp.Key, packageInstallPath kvp.Key))
+    let patchedBuckConfig = 
+      buckConfig
+      |> BuckConfig.removeBuckarooEntries
+      |> BuckConfig.addCells buckarooCells
+    do! Files.writeFile buckConfigPath (patchedBuckConfig |> BuckConfig.render)
+    // Write BUCKAROO_DEPS
     let buckarooDepsContent = buckarooDeps (lock.Dependencies |> Set.toSeq) 
     do! Files.writeFile BuckarooDepsFileName buckarooDepsContent
     return ()
