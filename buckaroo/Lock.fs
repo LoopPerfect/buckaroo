@@ -56,9 +56,9 @@ module Lock =
       |> Seq.map(fun x -> 
         "[[dependency]]\n" + 
         "package = \"" + (PackageIdentifier.show x.Package) + "\"\n" + 
-        "target = \"" + (Target.show x.Target) + "\"\n" 
+        "target = \"" + (Target.show x.Target) + "\"\n\n" 
       )
-      |> String.concat "\n"
+      |> String.concat ""
     ) + 
     (
       lock.Packages

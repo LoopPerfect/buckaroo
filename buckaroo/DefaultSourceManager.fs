@@ -5,8 +5,9 @@ open System.IO
 open System.Security.Cryptography
 open System.Text.RegularExpressions
 open LibGit2Sharp
+open Buckaroo.Git
 
-type DefaultSourceManager() = 
+type DefaultSourceManager (gitManager : GitManager) = 
 
   let concurrencyManager = new ConcurrencyManager<string>()
 
@@ -78,21 +79,6 @@ type DefaultSourceManager() =
     |> cloneFolderName 
     |> (fun x -> Path.Combine(".", "cache", x))
 
-  let ensureClone (url : string) = 
-    async {
-      let target = cloneCachePath url
-      if Directory.Exists target 
-      then
-        if Repository.IsValid(target) 
-        then return target
-        else 
-          target + " is not a valid Git repository. Deleting... " |> Console.WriteLine
-          Directory.Delete(target)
-          return! clone url target
-      else 
-        return! clone url target
-    }
-
   let gitUrl (package : PackageIdentifier) : Async<string> = async {
     return 
       match package with 
@@ -109,7 +95,7 @@ type DefaultSourceManager() =
   interface ISourceManager with 
     member this.FetchVersions package = async {
       let! url = gitUrl package
-      let! gitPath = ensureClone url 
+      let! gitPath = gitManager.Clone url 
       use repo = new Repository(gitPath)
       
       for remote in repo.Network.Remotes do
@@ -130,7 +116,7 @@ type DefaultSourceManager() =
             repo.Commits.QueryBy(cf)
               |> Seq.map (fun x -> x.Sha)
               |> Seq.distinct
-              |> Seq.map Revision
+              |> Seq.map Buckaroo.Version.Revision
               |> Seq.append [ branch |> Version.Branch ]
               |> Seq.toList
           | (false, true) -> 
@@ -151,11 +137,11 @@ type DefaultSourceManager() =
       match package with 
       | PackageIdentifier.GitHub g -> 
         let url = PackageLocation.gitHubUrl g
-        let! gitPath = ensureClone url
+        let! gitPath = gitManager.Clone url
         use repo = new Repository(gitPath)
         return 
           match version with 
-          | SemVerVersion semVer -> 
+          | Buckaroo.SemVerVersion semVer -> 
             repo.Tags 
             |> Seq.filter (fun t -> SemVer.parse t.FriendlyName = Result.Ok semVer)
             |> Seq.map (fun t -> t.Target.Sha)
@@ -164,10 +150,11 @@ type DefaultSourceManager() =
             |> Seq.toList
           | Buckaroo.Version.Branch b -> 
             repo.Branches
-            |> Seq.filter (fun x -> x.FriendlyName = b)
+            |> Seq.filter (fun x -> x.FriendlyName = "origin/" + b)
             |> Seq.collect (fun branch -> 
               Commands.Checkout(repo, branch) |> ignore
               branch.Commits
+              |> Seq.sortByDescending (fun c -> c.Committer.When)
               |> Seq.map (fun c -> c.Sha)
               |> Seq.distinct
               |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
@@ -196,25 +183,15 @@ type DefaultSourceManager() =
       match location with 
       | PackageLocation.GitHub g -> 
         let url = PackageLocation.gitHubUrl g.Package
-        let cacheKey = (cloneCachePath url).GetHashCode()
-        // Cloning + checking out the revision needs 
-        // to be done inside the ConcurrencyManager to 
-        // prevent conflicts 
         async {
           let url = PackageLocation.gitHubUrl g.Package
-          let! gitPath = ensureClone url 
-          use repo = new Repository(gitPath)
-          Commands.Checkout(repo, g.Revision) |> ignore
-          let content =  
-            match repo.Head.Tip.[Constants.ManifestFileName] with 
-            | null -> raise (new Exception(PackageLocation.show location + " does not contain a " + Constants.ManifestFileName + " file. "))
-            | x -> 
-              let blob = x.Target :?> Blob;
-              blob.GetContentText()
+          let! content = gitManager.FetchFile url g.Revision "buckaroo.toml"
           return 
             match Manifest.parse content with
             | Result.Ok manifest -> manifest
-            | Result.Error errorMessage -> raise (new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage))
+            | Result.Error errorMessage -> 
+              new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage)
+              |> raise
         }
       | _ -> 
         async {

@@ -1,5 +1,7 @@
 namespace Buckaroo
 
+open Buckaroo.Git
+
 type Version = 
 | SemVerVersion of SemVer
 | Branch of Branch

@@ -1,5 +1,7 @@
 namespace Buckaroo
 
+open Buckaroo.Git
+
 type HttpLocation = {
   Url : string; 
   StripPrefix : string; 

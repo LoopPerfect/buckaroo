@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="1.0.0-alpha-*" />
+    <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
   </ItemGroup>
 

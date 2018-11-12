@@ -49,6 +49,42 @@ module Solver =
     | head :: tail -> Some (head, Set.ofSeq tail)
     | [] -> None
 
+  let fetchAvailableVersions (sourceManager : ISourceManager) (next : Dependency) : Async<ResolvedVersion list> = async {
+    let! versions = sourceManager.FetchVersions next.Package
+    let satisfactoryVersions = 
+      versions
+      |> Seq.filter (Constraint.satisfies next.Constraint)
+      |> Seq.toList
+    let! resolvedVersions = 
+      satisfactoryVersions 
+      |> Seq.map (fun version -> async {
+        let! locations = sourceManager.FetchLocations next.Package version
+        return!
+          locations
+          |> Seq.map (fun location -> async {
+            try
+              let! manifest = sourceManager.FetchManifest location
+              return Some { 
+                Version = version; 
+                Location = location; 
+                Manifest = manifest; 
+              }
+            with _ -> 
+              // System.Console.WriteLine(error)
+              return None
+          })
+          |> Async.Parallel
+          // |> oneAtATime
+      })
+      // |> Async.Parallel
+      |> oneAtATime
+    return 
+      resolvedVersions 
+      |> Seq.collect id 
+      |> Seq.choose id 
+      |> Seq.toList
+  }
+
   let rec step (sourceManager : ISourceManager) 
                (selected : Map<PackageIdentifier, ResolvedVersion>, 
                 pending : Set<Dependency>, 
@@ -56,50 +92,18 @@ module Solver =
     async {
       match selectNextOpen pending with
       | Some (next, stillPending) -> 
-        let availableVersionsTask : Async<ResolvedVersion list> = async {
-          let! versions = sourceManager.FetchVersions next.Package
-          let satisfactoryVersions = 
-            versions
-            |> Seq.filter (Constraint.satisfies next.Constraint)
-            |> Seq.toList
-          let! resolvedVersions = 
-            satisfactoryVersions 
-            |> Seq.map (fun version -> async {
-              let! locations = sourceManager.FetchLocations next.Package version
-              return!
-                locations
-                |> Seq.map (fun location -> async {
-                  try
-                    let! manifest = sourceManager.FetchManifest location
-                    return Some { 
-                      Version = version; 
-                      Location = location; 
-                      Manifest = manifest; 
-                    }
-                  with _ -> 
-                    return None
-                })
-                // |> Async.Parallel
-                |> oneAtATime
-            })
-            // |> Async.Parallel
-            |> oneAtATime
-          return 
-            resolvedVersions 
-            |> Seq.collect id 
-            |> Seq.choose id 
-            |> Seq.toList
-        }
+        System.Console.WriteLine("Processing " + (Dependency.show next) + "... ")
 
-        let! availableVersions = availableVersionsTask
+        let! availableVersions = fetchAvailableVersions sourceManager next
 
         let compatibleVersions = 
           availableVersions
           |> Seq.filter (fun v -> 
-            match Map.tryFind next.Package selected with 
+            match selected |> Map.tryFind next.Package with 
             | Some p -> ResolvedVersion.isCompatible p v && Version.harmonious p.Version v.Version
             | None -> true
           )
+          |> Seq.distinct
           |> Seq.toList
         
         let rank (v : Version) = 

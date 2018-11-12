@@ -15,6 +15,7 @@ module Command =
   open FParsec
   open LibGit2Sharp
   open Buckaroo.Constants
+  open Buckaroo.Git
 
   let initParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
@@ -129,7 +130,8 @@ module Command =
     if manifest = newManifest 
     then return ()
     else 
-      let sourceManager = new DefaultSourceManager()
+      let gitManager = new GitManager("cache")
+      let sourceManager = new DefaultSourceManager(gitManager)
       let! resolution = Solver.solve sourceManager newManifest
       do! writeManifest newManifest
       // TODO: Write lock file! 
@@ -137,7 +139,8 @@ module Command =
   }
 
   let resolve = async {
-    let sourceManager = new DefaultSourceManager()
+    let gitManager = new GitManager("cache")
+    let sourceManager = new DefaultSourceManager(gitManager)
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
     let! resolution = Solver.solve sourceManager manifest
@@ -157,7 +160,8 @@ module Command =
   }
 
   let showVersions (package : PackageIdentifier) = async {
-    let sourceManager = new DefaultSourceManager() :> ISourceManager
+    let gitManager = new GitManager("cache")
+    let sourceManager = new DefaultSourceManager(gitManager) :> ISourceManager
     let! versions = sourceManager.FetchVersions package
     for v in versions do
       Version.show v |> Console.WriteLine
@@ -227,13 +231,13 @@ module Command =
     )
     |> String.concat "."
 
-  let installLockedPackage (lock : Lock) (sourceManager : ISourceManager) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
+  let installLockedPackage (lock : Lock) (gitManager : GitManager) (sourceManager : ISourceManager) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
     let ( package, location ) = lockedPackage
     let installPath = packageInstallPath package
     match location with 
     | GitHub gitHub -> 
       let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-      let! gitPath = Git.ensureClone gitUrl
+      let! gitPath = gitManager.Clone gitUrl
       use repo = new Repository(gitPath)
       Commands.Checkout(repo, gitHub.Revision) |> ignore
       let! deletedExistingInstall = Files.deleteDirectoryIfExists installPath
@@ -256,13 +260,14 @@ module Command =
   }
 
   let install = async {
-    let sourceManager = new DefaultSourceManager()
+    let gitManager = new GitManager("cache")
+    let sourceManager = new DefaultSourceManager(gitManager)
     let! lock = readLock
     for kv in lock.Packages do
       let project = kv.Key
       let exactLocation = kv.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-      do! installLockedPackage lock sourceManager (project, exactLocation)
+      do! installLockedPackage lock gitManager sourceManager (project, exactLocation)
     // Write .buckconfig
     let buckConfigPath = ".buckconfig"
     let! buckConfig = async {
