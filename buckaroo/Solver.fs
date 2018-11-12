@@ -9,14 +9,6 @@ type Resolution =
 
 module Solver = 
 
-  let oneAtATime xs = async {
-    let ys = 
-      xs 
-      |> Seq.map Async.RunSynchronously
-      |> Seq.toList
-    return ys
-  }
-
   let show resolution = 
     match resolution with
     | Conflict xs -> "Conflict! " + (xs |> Seq.map Dependency.show |> String.concat " ")
@@ -46,7 +38,8 @@ module Solver =
       |> Seq.toList
       |> List.sortBy cost
     match pendingSorted with 
-    | head :: tail -> Some (head, Set.ofSeq tail)
+    | head :: tail -> 
+      Some (head, tail |> Seq.filter (fun x -> x <> head) |> Set.ofSeq)
     | [] -> None
 
   let fetchAvailableVersions (sourceManager : ISourceManager) (next : Dependency) : Async<ResolvedVersion list> = async {
@@ -74,10 +67,8 @@ module Solver =
               return None
           })
           |> Async.Parallel
-          // |> oneAtATime
       })
-      // |> Async.Parallel
-      |> oneAtATime
+      |> Async.Parallel
     return 
       resolvedVersions 
       |> Seq.collect id 
@@ -118,9 +109,10 @@ module Solver =
           compatibleVersions
           |> List.sortBy (fun x -> rank x.Version)
 
-        let resolutions = 
+        let! resolutions = 
           sortedVersions
-          |> Seq.map (fun v -> Async.RunSynchronously (async {
+          |> Seq.distinct
+          |> Seq.map (fun v -> async {
             try
               let! manifest = sourceManager.FetchManifest v.Location
               let nextSelected = 
@@ -133,8 +125,8 @@ module Solver =
               return! step sourceManager (nextSelected, nextPending, nextClosed)
             with error -> 
               return Resolution.Error error
-          }))
-          |> Seq.toList
+          })
+          |> Async.Parallel
 
         let okResolution = 
           resolutions

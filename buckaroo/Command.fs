@@ -252,7 +252,7 @@ module Command =
         if File.Exists buckConfigPath
         then 
           let! content = Files.readFile buckConfigPath
-          let parse = content |> FS.INIReader.INIParser.read2res
+          let parse = (content.Trim()) |> FS.INIReader.INIParser.read2res
           match parse with 
           | ParserResult.Success (config, _, _) -> 
             return config
