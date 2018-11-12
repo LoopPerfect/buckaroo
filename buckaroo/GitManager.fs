@@ -7,9 +7,10 @@ open System.Text.RegularExpressions
 open LibGit2Sharp
 open Buckaroo
 
-type GitManager (cacheDirectory : string) = 
+type CloneRequest = 
+  | CloneRequest of string * AsyncReplyChannel<Async<string>>
 
-  let mutable cloneCache : Map<string, Async<string>> = Map.empty
+type GitManager (cacheDirectory : string) = 
 
   let bytesToHex bytes = 
     bytes 
@@ -38,30 +39,40 @@ type GitManager (cacheDirectory : string) =
     return path
   }
 
-  member this.Clone (url : string) : Async<string> = async {
-    match cloneCache |> Map.tryFind url with
-    | Some task -> return! task
-    | None -> 
-      let target = Path.Combine(cacheDirectory, cloneFolderName url)
-      let! task = 
-        (
-          if Directory.Exists target 
-          then
-            if Repository.IsValid(target) 
-            then 
-              async {
-                return target
-              }
+  let mailboxProcessor = MailboxProcessor.Start(fun inbox -> async {
+    let mutable cloneCache : Map<string, Async<string>> = Map.empty
+    while true do
+      let! message = inbox.Receive()
+      let (CloneRequest(url, repl)) = message
+      match cloneCache |> Map.tryFind url with
+      | Some task -> 
+        repl.Reply(task)
+      | None -> 
+        let target = Path.Combine(cacheDirectory, cloneFolderName url)
+        let! task = 
+          (
+            if Directory.Exists target 
+            then
+              if Repository.IsValid(target) 
+              then 
+                async {
+                  return target
+                }
+              else 
+                target + " is not a valid Git repository. Deleting... " |> Console.WriteLine
+                Directory.Delete(target)
+                clone url target
             else 
-              target + " is not a valid Git repository. Deleting... " |> Console.WriteLine
-              Directory.Delete(target)
               clone url target
-          else 
-            clone url target
-        )
-        |> Async.StartChild
-      cloneCache <- cloneCache |> Map.add url task
-      return! task
+          )
+          |> Async.StartChild
+        cloneCache <- cloneCache |> Map.add url task
+        repl.Reply(task) 
+  })
+
+  member this.Clone (url : string) : Async<string> = async {
+    let! res = mailboxProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
+    return! res 
   }
 
   member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> = async {
