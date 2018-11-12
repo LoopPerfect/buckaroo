@@ -248,9 +248,35 @@ module Command =
       let! manifest = fetchManifestFromLock lock sourceManager package
       // Touch .buckconfig
       let buckConfigPath = Path.Combine(installPath, ".buckconfig")
-      if File.Exists buckConfigPath |> not
-      then 
-        do! Files.writeFile buckConfigPath ""
+      let! buckConfig = async {
+        if File.Exists buckConfigPath
+        then 
+          let! content = Files.readFile buckConfigPath
+          let parse = content |> FS.INIReader.INIParser.read2res
+          match parse with 
+          | ParserResult.Success (config, _, _) -> 
+            return config
+          | ParserResult.Failure (error, _, _) -> 
+            return!
+              new Exception("Invalid .buckconfig for " + (PackageIdentifier.show package) + "\n" + error)
+              |> raise
+        else
+          return Map.empty
+      }
+      let buckarooCells = 
+        manifest.Dependencies
+        |> Seq.map (fun d -> 
+          let cell = computeCellIdentifier d.Package
+          // TODO: Make this more robust using relative path computation 
+          let path = Path.Combine("..", "..", "..", "..", (packageInstallPath d.Package))
+          (cell, path)
+        )
+        |> Seq.toList
+      let patchedBuckConfig = 
+        buckConfig 
+        |> BuckConfig.removeBuckarooEntries
+        |> BuckConfig.addCells buckarooCells
+      do! Files.writeFile buckConfigPath (patchedBuckConfig |> BuckConfig.render)
       // Write BUCKAROO_DEPS
       let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
       let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager manifest
