@@ -51,7 +51,7 @@ module Constraint =
       "any(" + 
       (xs 
         |> Seq.map (fun x -> show x) 
-        |> String.concat ", ") + 
+        |> String.concat " ") + 
       ")"
     | All xs -> 
       if Seq.isEmpty xs 
@@ -60,7 +60,7 @@ module Constraint =
         "all(" + 
         (xs 
           |> Seq.map (fun x -> show x) 
-          |> String.concat ", ") + 
+          |> String.concat " ") + 
         ")"
 
   let wildcardParser = parse {
