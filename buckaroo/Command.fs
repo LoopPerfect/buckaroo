@@ -140,7 +140,7 @@ module Command =
 
   let resolve = async {
     let gitManager = new GitManager("cache")
-    let sourceManager = new DefaultSourceManager(gitManager)
+    let sourceManager = new CachedSourceManager(new DefaultSourceManager(gitManager))
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
     let! resolution = Solver.solve sourceManager manifest

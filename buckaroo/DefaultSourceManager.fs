@@ -9,8 +9,6 @@ open Buckaroo.Git
 
 type DefaultSourceManager (gitManager : GitManager) = 
 
-  let concurrencyManager = new ConcurrencyManager<string>()
-
   let sourceLocation x = 
     // "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"
     "https://github.com/" + x.Owner + "/" + x.Project + ".git"
@@ -46,10 +44,6 @@ type DefaultSourceManager (gitManager : GitManager) =
         // TODO
         new Exception("Only GitHub projects are currently supported") |> raise
   }
-
-  interface IDisposable with 
-    member this.Dispose () = 
-      (concurrencyManager :> System.IDisposable).Dispose()
 
   interface ISourceManager with 
     member this.FetchVersions package = async {

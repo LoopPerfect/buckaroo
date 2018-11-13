@@ -7,7 +7,10 @@ type Resolution =
 | Error of System.Exception
 | Ok of Solution
 
+
 module Solver = 
+
+  let throttle : int = 16
 
   let show resolution = 
     match resolution with
@@ -126,7 +129,8 @@ module Solver =
             with error -> 
               return Resolution.Error error
           })
-          |> Async.Parallel
+          |> FSharpx.Control.Async.ParallelWithThrottle throttle
+          // |> Async.Parallel
 
         let okResolution = 
           resolutions
