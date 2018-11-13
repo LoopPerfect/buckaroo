@@ -182,7 +182,7 @@ module Command =
       |> Seq.distinct
       |> Seq.toList
     "BUCKAROO_DEPS = [\n" + 
-    (requiredPackages |> Seq.map (fun x -> "  \"" + x + "\"") |> String.concat ", \n") + 
+    (requiredPackages |> Seq.map (fun x -> "  '" + x + "'") |> String.concat ", \n") + 
     "\n]\n"
 
   let packageInstallPath (package : PackageIdentifier) = 
