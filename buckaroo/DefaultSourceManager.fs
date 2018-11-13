@@ -20,13 +20,6 @@ type DefaultSourceManager (gitManager : GitManager) =
     |> Array.map (fun (x : byte) -> System.String.Format("{0:x2}", x))
     |> String.concat System.String.Empty
 
-  let requestText = async {
-    return! async {
-      let line = Console.ReadLine()
-      return line
-    } |> Async.StartChild
-  }
-
   let sanitizeFilename (x : string) = 
     let regexSearch = 
       new string(Path.GetInvalidFileNameChars()) + 
@@ -39,40 +32,6 @@ type DefaultSourceManager (gitManager : GitManager) =
     let bytes = System.Text.Encoding.UTF8.GetBytes url
     let hash = bytes |> (new SHA256Managed()).ComputeHash |> bytesToHex
     hash.Substring(0, 16) + "-" + (sanitizeFilename(url)).ToLower()
-
-  let clone (url : string) (target : string) = async {
-    "Cloning " + url + " into " + target |> Console.WriteLine
-    // let cloneOptions = new CloneOptions()
-    // // cloneOptions.IsBare <- true
-    // // cloneOptions.Checkout <- false
-    // cloneOptions.RecurseSubmodules <- false
-    // cloneOptions.CredentialsProvider <- new Handlers.CredentialsHandler(
-    //   fun url user cred -> 
-    //     // let credentials = new DefaultCredentials() :> Credentials
-    //     let credentials = 
-    //       if cred.HasFlag SupportedCredentialTypes.UsernamePassword 
-    //       then 
-    //         // TODO
-    //         // "Please enter your credentials for " + url |> Console.WriteLine
-    //         // "Username: " |> Console.WriteLine
-    //         // let username = Console.ReadLine()
-    //         // "Password: " |> Console.WriteLine
-    //         // let password = Console.ReadLine()
-    //         let username = ""
-    //         let password = ""
-    //         let upc = new UsernamePasswordCredentials() 
-    //         upc.Username <- username
-    //         upc.Password <- password
-    //         upc :> Credentials
-    //       else new DefaultCredentials() :> Credentials
-    //     credentials)
-    // cloneOptions.OnProgress <- new Handlers.ProgressHandler(fun x -> 
-    //   x |> Console.WriteLine
-    //   true)
-    // let path = Repository.Clone(url, target, cloneOptions)
-    let path = Repository.Clone(url, target)
-    return path
-  }
 
   let cloneCachePath (url) : string = 
     url
@@ -102,6 +61,7 @@ type DefaultSourceManager (gitManager : GitManager) =
         let refSpecs = 
           remote.FetchRefSpecs 
           |> Seq.map (fun x -> x.Specification)
+        // TODO: Credentials! 
         Commands.Fetch(repo, remote.Name, refSpecs, null, "log")
 
       let references = repo.Network.ListReferences(url)

@@ -33,9 +33,71 @@ type GitManager (cacheDirectory : string) =
       |> bytesToHex
     hash.Substring(0, 16) + "-" + (sanitizeFilename(url)).ToLower()
 
+  let requestString = async {
+    return System.Console.ReadLine()
+  }
+
+  let requestPassword = async {
+    let mutable password = ""
+    let mutable keepGoing = true
+    while keepGoing do
+      let key = Console.ReadKey(true);
+      if key.Key <> ConsoleKey.Backspace && key.Key <> ConsoleKey.Enter
+      then
+        password <- password + (string key.KeyChar);
+        System.Console.Write("*");
+      else
+        if key.Key = ConsoleKey.Backspace && password.Length > 0
+        then
+          password <- password.Substring(0, (password.Length - 1));
+          System.Console.Write("\b \b");
+        else 
+          keepGoing <- key.Key <> ConsoleKey.Enter
+    System.Console.Write("\n")
+    return password
+  }
+
   let clone (url : string) (target : string) = async {
     "Cloning " + url + " into " + target |> Console.WriteLine
-    let path = Repository.Clone(url, target)
+    let options = new CloneOptions()
+    let handler = Handlers.CredentialsHandler(fun url usernameFromUrl types -> 
+      async {
+        try
+          System.Console.WriteLine("Git credentials are required for " + url + ". ")
+          // Request a username
+          let! username = async {
+            if usernameFromUrl <> null && usernameFromUrl.Length > 0 
+            then
+              return usernameFromUrl
+            else
+              System.Console.WriteLine("Please enter your username: ")
+              let mutable username = ""
+              while username.Length < 1 do
+                let! nextUsername = requestString
+                username <- nextUsername.Trim()
+              return username
+          }
+          // Request a password
+          let mutable password = ""
+          while password.Length < 1 do
+            System.Console.WriteLine("Please enter a password or access-token for " + username + ": ")
+            let! nextPassword = requestPassword
+            password <- nextPassword.Trim()
+          System.Console.WriteLine("Cheers! ")
+          // Return the credentials
+          let credentials = new UsernamePasswordCredentials()
+          credentials.Username <- username
+          credentials.Password <- password
+          return credentials :> Credentials
+        with error -> 
+          System.Console.WriteLine(error)
+          let credentials = new DefaultCredentials()
+          return credentials :> Credentials
+      }
+      |> Async.RunSynchronously
+    )
+    options.CredentialsProvider <- handler
+    let path = Repository.Clone(url, target, options)
     return path
   }
 

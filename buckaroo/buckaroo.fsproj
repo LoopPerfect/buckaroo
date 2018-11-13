@@ -35,7 +35,6 @@
     <Compile Include="Solver.fs" />
     <Compile Include="Lock.fs" />
     <Compile Include="Command.fs" />
-    <!-- <Compile Include="Program.fs" /> -->
   </ItemGroup>
 
   <ItemGroup>
