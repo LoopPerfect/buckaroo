@@ -17,7 +17,7 @@ module PackageIdentifier =
     | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
-  let gitHubIdentifierParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|-(?=[a-zA-Z.\d])){0,38}"
+  let gitHubIdentifierParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z_.\d]|-(?=[a-zA-Z_.\d])){0,38}"
 
   let gitHubPackageIdentifierParser = parse {
     do! CharParsers.skipString "github.com/" <|> CharParsers.skipString "github+"

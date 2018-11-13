@@ -16,6 +16,7 @@ let ``PackageIdentifier.parse works correctly`` () =
     ("github.com/abc/def", PackageIdentifier.GitHub { Owner = "abc"; Project = "def" } |> Some);
     ("github.com/abc/def.ghi", PackageIdentifier.GitHub { Owner = "abc"; Project = "def.ghi" } |> Some);
     ("github+abc/def", PackageIdentifier.GitHub { Owner = "abc"; Project = "def" } |> Some);
+    ("github+abc/def_ghi", PackageIdentifier.GitHub { Owner = "abc"; Project = "def_ghi" } |> Some);
     ("", None)
   ]
   for (input, expected) in cases do
