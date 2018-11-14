@@ -22,6 +22,6 @@ To create a release for macOS:
 
 ```bash=
 dotnet publish ./buckaroo-cli/ -c Release -r osx-x64 
-./warp-packer --arch macos-x64 --exec native/buckaroo-cli --input_dir ./buckaroo-cli/bin/Release/netcoreapp2.1/osx-x64/ --output buckaroo-macos
+./warp-packer --arch macos-x64 --exec buckaroo-cli --input_dir ./buckaroo-cli/bin/Release/netcoreapp2.1/osx-x64 --output buckaroo-macos
 ./buckaroo-macos
 ```

@@ -41,6 +41,7 @@
     <PackageReference Include="FSharp.Data" Version="3.0.0" />
     <PackageReference Include="FSharpx.Async" Version="1.13.2" />
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
+    <PackageReference Include="LibGit2Sharp.NativeBinaries" Version="1.0.217" />
     <PackageReference Include="Nett" Version="0.9.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
