@@ -31,7 +31,7 @@ type GitManager (cacheDirectory : string) =
       bytes 
       |> (new SHA256Managed()).ComputeHash 
       |> bytesToHex
-    hash.Substring(0, 16) + "-" + (sanitizeFilename(url)).ToLower()
+    (sanitizeFilename(url)).ToLower() + "-" + hash.Substring(0, 16)
 
   let requestString = async {
     return System.Console.ReadLine()
@@ -118,6 +118,13 @@ type GitManager (cacheDirectory : string) =
               if Repository.IsValid(target) 
               then 
                 async {
+                  use repository = new Repository(target)
+                  let remote = repository.Network.Remotes.["origin"]
+                  let refSpecs = 
+                    remote.FetchRefSpecs 
+                    |> Seq.map (fun x -> x.Specification)
+                  let options = new FetchOptions()
+                  do Commands.Fetch(repository, remote.Name, refSpecs, options, "")
                   return target
                 }
               else 

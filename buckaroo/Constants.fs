@@ -1,7 +1,7 @@
 module Buckaroo.Constants
 
 [<Literal>]
-let PackagesDirectory = "buckaroo-packages"
+let PackagesDirectory = "buckaroo"
 
 [<Literal>]
 let ManifestFileName = "buckaroo.toml"

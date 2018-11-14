@@ -17,6 +17,13 @@ module Command =
   open Buckaroo.Constants
   open Buckaroo.Git
 
+  let getCachePath () = 
+    match System.Environment.GetEnvironmentVariable("BUCKAROO_CACHE_PATH") with 
+    | null -> 
+      let personalDirectory = 
+        System.Environment.GetFolderPath Environment.SpecialFolder.Personal
+      Path.Combine(personalDirectory, ".buckaroo", "cache")
+    | path -> path
   let initParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "init"
@@ -130,7 +137,8 @@ module Command =
     if manifest = newManifest 
     then return ()
     else 
-      let gitManager = new GitManager("cache")
+      let cachePath = getCachePath ()
+      let gitManager = new GitManager(cachePath)
       let sourceManager = new DefaultSourceManager(gitManager)
       let! resolution = Solver.solve sourceManager newManifest
       do! writeManifest newManifest
@@ -139,7 +147,8 @@ module Command =
   }
 
   let resolve = async {
-    let gitManager = new GitManager("cache")
+    let cachePath = getCachePath ()
+    let gitManager = new GitManager(cachePath)
     let sourceManager = new CachedSourceManager(new DefaultSourceManager(gitManager))
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
@@ -160,7 +169,8 @@ module Command =
   }
 
   let showVersions (package : PackageIdentifier) = async {
-    let gitManager = new GitManager("cache")
+    let cachePath = getCachePath ()
+    let gitManager = new GitManager(cachePath)
     let sourceManager = new DefaultSourceManager(gitManager) :> ISourceManager
     let! versions = sourceManager.FetchVersions package
     for v in versions do
@@ -286,7 +296,8 @@ module Command =
   }
 
   let install = async {
-    let gitManager = new GitManager("cache")
+    let cachePath = getCachePath ()
+    let gitManager = new GitManager(cachePath)
     let sourceManager = new DefaultSourceManager(gitManager)
     let! lock = readLock
     for kv in lock.Packages do
