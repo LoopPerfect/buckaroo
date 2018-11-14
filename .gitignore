@@ -283,3 +283,6 @@ __pycache__/
 # tools/
 
 /cache
+
+warp-packer
+buckaroo-macos
