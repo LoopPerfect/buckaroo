@@ -97,8 +97,8 @@ type GitManager (cacheDirectory : string) =
       |> Async.RunSynchronously
     )
     options.CredentialsProvider <- handler
-    let path = Repository.Clone(url, target, options)
-    return path
+    Repository.Clone(url, target, options) |> ignore
+    return target
   }
 
   let mailboxProcessor = MailboxProcessor.Start(fun inbox -> async {
@@ -119,12 +119,12 @@ type GitManager (cacheDirectory : string) =
               then 
                 async {
                   use repository = new Repository(target)
-                  let remote = repository.Network.Remotes.["origin"]
-                  let refSpecs = 
-                    remote.FetchRefSpecs 
-                    |> Seq.map (fun x -> x.Specification)
-                  let options = new FetchOptions()
-                  do Commands.Fetch(repository, remote.Name, refSpecs, options, "")
+                  for remote in repository.Network.Remotes do 
+                    let refSpecs = 
+                      remote.FetchRefSpecs 
+                      |> Seq.map (fun x -> x.Specification)
+                    let options = new FetchOptions()
+                    do Commands.Fetch(repository, remote.Name, refSpecs, options, "")
                   return target
                 }
               else 
