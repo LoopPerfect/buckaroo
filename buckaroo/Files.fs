@@ -6,6 +6,13 @@ let exists (path : string) = async {
   return File.Exists(path)
 }
 
+let mkdirp (path : string) = async {
+  if Directory.Exists(path) |> not
+  then
+    Directory.CreateDirectory(path) |> ignore
+  return ()
+}
+
 let writeFile (path : string) (content : string) = async {
   use sw = new System.IO.StreamWriter(path)
   return! sw.WriteAsync(content) |> Async.AwaitTask

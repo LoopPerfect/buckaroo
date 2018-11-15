@@ -16,6 +16,7 @@ module Command =
   open LibGit2Sharp
   open Buckaroo.Constants
   open Buckaroo.Git
+  open Buckaroo.BuckConfig
 
   let getCachePath () = 
     match System.Environment.GetEnvironmentVariable("BUCKAROO_CACHE_PATH") with 
@@ -258,35 +259,26 @@ module Command =
       let! manifest = fetchManifestFromLock lock sourceManager package
       // Touch .buckconfig
       let buckConfigPath = Path.Combine(installPath, ".buckconfig")
-      let! buckConfig = async {
-        if File.Exists buckConfigPath
-        then 
-          let! content = Files.readFile buckConfigPath
-          let parse = (content.Trim()) |> FS.INIReader.INIParser.read2res
-          match parse with 
-          | ParserResult.Success (config, _, _) -> 
-            return config
-          | ParserResult.Failure (error, _, _) -> 
-            return!
-              new Exception("Invalid .buckconfig for " + (PackageIdentifier.show package) + "\n" + error)
-              |> raise
-        else
-          return Map.empty
-      }
+      if File.Exists buckConfigPath |> not 
+      then 
+        do! Files.writeFile buckConfigPath ""
+      // Write .buckconfig.d/.buckconfig.buckaroo
+      let buckarooBuckConfigPath = 
+        Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
       let buckarooCells = 
         manifest.Dependencies
         |> Seq.map (fun d -> 
           let cell = computeCellIdentifier d.Package
           // TODO: Make this more robust using relative path computation 
           let path = Path.Combine("..", "..", "..", "..", (packageInstallPath d.Package))
-          (cell, path)
+          (cell, INIString path)
         )
         |> Seq.toList
-      let patchedBuckConfig = 
-        buckConfig 
-        |> BuckConfig.removeBuckarooEntries
-        |> BuckConfig.addCells buckarooCells
-      do! Files.writeFile buckConfigPath (patchedBuckConfig |> BuckConfig.render)
+      let buckarooConfig : INIData = 
+        Map.empty
+        |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
+      do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
+      do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
       // Write BUCKAROO_DEPS
       let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
       let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager manifest
@@ -305,30 +297,28 @@ module Command =
       let exactLocation = kv.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
       do! installLockedPackage lock gitManager sourceManager (project, exactLocation)
-    // Write .buckconfig
+    // Touch .buckconfig
     let buckConfigPath = ".buckconfig"
-    let! buckConfig = async {
-      if File.Exists buckConfigPath 
-      then 
-        let! content = Files.readFile buckConfigPath
-        return 
-          match FS.INIReader.INIParser.read2res content with 
-          | ParserResult.Success (config, _, _) -> config
-          | ParserResult.Failure (error, _, _) -> new Exception(error) |> raise
-      else 
-        return Map.empty
-    }
+    if File.Exists buckConfigPath |> not 
+    then 
+      do! Files.writeFile buckConfigPath ""
+    // Write .buckconfig.d/.buckconfig.buckaroo
+    let buckarooBuckConfigPath = 
+      Path.Combine(".buckconfig.d", ".buckconfig.buckaroo")
     let buckarooCells = 
-      lock.Packages 
-      |> Seq.map (fun kvp -> (computeCellIdentifier kvp.Key, packageInstallPath kvp.Key))
-    let patchedBuckConfig = 
-      buckConfig
-      |> BuckConfig.removeBuckarooEntries
-      |> BuckConfig.addCells buckarooCells
-    do! Files.writeFile buckConfigPath (patchedBuckConfig |> BuckConfig.render)
+      lock.Dependencies
+      |> Seq.map (fun t -> t.Package)
+      |> Seq.distinct
+      |> Seq.map (fun t -> (computeCellIdentifier t, packageInstallPath t |> INIString))
+    let buckarooConfig : INIData = 
+      Map.empty
+      |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
+    do! Files.mkdirp ".buckconfig.d"
+    do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
     // Write BUCKAROO_DEPS
-    let buckarooDepsContent = buckarooDeps (lock.Dependencies |> Set.toSeq) 
-    do! Files.writeFile BuckarooDepsFileName buckarooDepsContent
+    let buckarooDepsPath = Path.Combine(BuckarooDepsFileName)
+    let buckarooDepsContent = buckarooDeps lock.Dependencies
+    do! Files.writeFile buckarooDepsPath buckarooDepsContent
     return ()
   }
 
