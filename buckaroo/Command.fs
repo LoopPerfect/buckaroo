@@ -306,9 +306,8 @@ module Command =
     let buckarooBuckConfigPath = 
       Path.Combine(".buckconfig.d", ".buckconfig.buckaroo")
     let buckarooCells = 
-      lock.Dependencies
-      |> Seq.map (fun t -> t.Package)
-      |> Seq.distinct
+      lock.Packages
+      |> Seq.map (fun kvp -> kvp.Key)
       |> Seq.map (fun t -> (computeCellIdentifier t, packageInstallPath t |> INIString))
     let buckarooConfig : INIData = 
       Map.empty
