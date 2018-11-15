@@ -24,7 +24,6 @@
     <Compile Include="Atom.fs" />
     <Compile Include="Dependency.fs" />
     <Compile Include="PackageLocation.fs" />
-    <Compile Include="FloatingPackageLocation.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
     <Compile Include="SourceManager.fs" />
