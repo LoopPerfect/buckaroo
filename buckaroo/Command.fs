@@ -292,11 +292,16 @@ module Command =
     let gitManager = new GitManager(cachePath)
     let sourceManager = new DefaultSourceManager(gitManager)
     let! lock = readLock
-    for kv in lock.Packages do
-      let project = kv.Key
-      let exactLocation = kv.Value
-      "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-      do! installLockedPackage lock gitManager sourceManager (project, exactLocation)
+    do! 
+      lock.Packages
+      |> Seq.map (fun kvp -> async {
+        let project = kvp.Key
+        let exactLocation = kvp.Value
+        "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
+        do! installLockedPackage lock gitManager sourceManager (project, exactLocation)
+      })
+      |> Async.Parallel
+      |> Async.Ignore
     // Touch .buckconfig
     let buckConfigPath = ".buckconfig"
     if File.Exists buckConfigPath |> not 
