@@ -151,7 +151,7 @@ type GitManager (cacheDirectory : string) =
     return 
       match commit.[Constants.ManifestFileName] with 
       | null -> 
-        new Exception(url + "#" + revision + " does not contain" + file + ". ") 
+        new Exception(url + "#" + revision + " does not contain " + file + ". ") 
         |> raise
       | x -> 
         let blob = x.Target :?> Blob

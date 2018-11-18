@@ -9,6 +9,26 @@ type Resolution =
 
 module Solver = 
 
+  let versionSearchCost (v : Version) : int = 
+    match v with 
+    | Version.Revision _ -> 0
+    | Version.Latest -> 1
+    | Version.Tag _ -> 2
+    | Version.SemVerVersion _ -> 3
+    | Version.Branch branch -> 
+      match branch with 
+      | "master" -> 4
+      | _ -> 5
+
+  let rec constraintSearchCost (c : Constraint) : int = 
+    match c with 
+    | Constraint.Exactly v -> versionSearchCost v
+    | Constraint.Any xs -> 
+      xs |> Seq.map constraintSearchCost |> Seq.append [ 9 ] |> Seq.min
+    | Constraint.All xs -> 
+      xs |> Seq.map constraintSearchCost |> Seq.append [ 0 ] |> Seq.max
+    | Constraint.Complement _ -> 6
+
   let show resolution = 
     match resolution with
     | Conflict xs -> "Conflict! " + (xs |> Seq.map Dependency.show |> String.concat " ")
@@ -30,12 +50,13 @@ module Solver =
     )
     |> List.ofSeq
 
-  type SolverState = (Solution * Set<Dependency> * Set<ResolvedVersion>)
+  type SolverState = (Solution * Set<Dependency> * Set<PackageLocation>)
 
   let rec step (sourceManager : ISourceManager) (state : SolverState) = async {
     let (solution, dependencies, visited) = state
-    let pending = unsatisfied solution dependencies
-    // TODO: Prioritise pending list
+    let pending = 
+      unsatisfied solution dependencies
+      |> List.sortBy (fun x -> constraintSearchCost x.Constraint)
     match pending with
     | head :: _ -> 
       System.Console.WriteLine("Processing " + (Dependency.show head) + "... ")
@@ -49,11 +70,19 @@ module Solver =
           |> not
         )
         |> Seq.distinct
-      let! resolvedVersions = 
+      let resolvedVersions = 
         compatibleVersions
+        |> Seq.sortBy (fun x -> x |> versionSearchCost)
         |> Seq.map (fun version -> async {
           let! locations = sourceManager.FetchLocations head.Package version
-          let! resolvedVersions = 
+          let newLocations =
+            locations
+            |> Seq.filter (fun x -> visited |> Set.contains x |> not)
+          return (version, newLocations)
+        })
+        |> Async.Parallel
+        |> Async.RunSynchronously
+        |> Seq.collect (fun (version, locations) -> 
             locations
             |> Seq.map (fun location -> async {
               try 
@@ -63,22 +92,15 @@ module Solver =
                   Location = location; 
                   Manifest = manifest;
                 } |> Some
-              with _ -> 
+              with error -> 
+                System.Console.WriteLine(error)
                 return None
             })
-            |> Async.Parallel
-          return 
-            resolvedVersions 
-            |> Seq.choose id 
-            |> Seq.filter (fun x -> visited |> Set.contains x |> not)
-        })
-        |> Async.Parallel
-        |> (fun x -> async {
-          let! y = x
-          return y |> Seq.collect id |> Seq.toList
-        })
+        )
+
       let solutions = 
         resolvedVersions
+        |> Seq.choose Async.RunSynchronously
         |> Seq.map (fun x -> 
           let nextSolution = 
             solution 
@@ -86,10 +108,15 @@ module Solver =
           let nextDependencies = 
             dependencies 
             |> Set.union x.Manifest.Dependencies
-          let nextVisited = visited |> Set.add x
+          let nextVisited = visited |> Set.add x.Location
           step sourceManager (nextSolution, nextDependencies, nextVisited)
         )
+        // |> Seq.chunkBySize 8
+        // |> Seq.map Async.Parallel
+        // |> Seq.map Async.RunSynchronously
+        // |> Seq.collect id
         |> Seq.map Async.RunSynchronously
+
       return
         solutions 
         // TODO: Take many solutions and pick the best

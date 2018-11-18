@@ -68,6 +68,7 @@ type DefaultSourceManager (gitManager : GitManager) =
             let cf = new CommitFilter()
             cf.IncludeReachableFrom <- "origin/" + branch
             repo.Commits.QueryBy(cf)
+              |> Seq.sortByDescending (fun c -> c.Committer.When)
               |> Seq.map (fun x -> x.Sha)
               |> Seq.distinct
               |> Seq.map Buckaroo.Version.Revision
