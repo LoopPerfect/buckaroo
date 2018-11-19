@@ -166,7 +166,16 @@ module Command =
     | Resolution.Ok solution -> 
       "Success! " |> Console.WriteLine
       let lock = Lock.fromManifestAndSolution manifest solution
-      return! writeLock lock
+      do! async {
+        try
+          let! previousLock = readLock
+          let diff = Lock.showDiff previousLock lock 
+          System.Console.WriteLine(diff)
+        with _ -> 
+          ()
+      }
+      do! writeLock lock
+      return ()
   }
 
   let showVersions (package : PackageIdentifier) = async {

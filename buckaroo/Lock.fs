@@ -17,6 +17,58 @@ module Lock =
   open ResultBuilder
   open System.Security.Cryptography
 
+  let showDiff (before : Lock) (after : Lock) : string = 
+    let additions = 
+      after.Packages
+      |> Seq.filter (fun x -> before.Packages |> Map.containsKey x.Key |> not)
+      |> Seq.distinct
+    let removals = 
+      before.Packages
+      |> Seq.filter (fun x -> after.Packages |> Map.containsKey x.Key |> not)
+      |> Seq.distinct
+    let changes = 
+      before.Packages
+      |> Seq.choose (fun x -> 
+        after.Packages 
+        |> Map.tryFind x.Key 
+        |> Option.bind (fun y -> 
+          if y <> x.Value
+          then Some (x.Key, y, x.Value)
+          else None
+        )
+      )
+    [
+      "Added: "; 
+      (
+        additions 
+        |> Seq.map (fun x -> 
+          "  " + (PackageIdentifier.show x.Key) + 
+          " -> " + (PackageLocation.show x.Value)
+        )
+        |> String.concat "\n"
+      );
+      "Removed: "; 
+      (
+        removals 
+        |> Seq.map (fun x -> 
+          "  " + (PackageIdentifier.show x.Key) + 
+          " -> " + (PackageLocation.show x.Value)
+        )
+        |> String.concat "\n"
+      );
+      "Changed: "; 
+      (
+        changes 
+        |> Seq.map (fun (p, before, after) -> 
+          "  " + (PackageIdentifier.show p) + 
+          " " + (PackageLocation.show before) + 
+          " -> " + (PackageLocation.show after)
+        )
+        |> String.concat "\n"
+      );
+    ]
+    |> String.concat "\n"
+
   let bytesToHex bytes = 
     bytes 
     |> Array.map (fun (x : byte) -> System.String.Format("{0:x2}", x))
