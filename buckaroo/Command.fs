@@ -193,7 +193,7 @@ module Command =
       "def buckaroo_cell(package): "; 
       "  cell = read_config('buckaroo', package, '')";
       "  if cell == '': "; 
-      "    raise Exception('Buckaroo does not have \"' + package + '\" installed. ')"; 
+      "    fail('Buckaroo does not have \"' + package + '\" installed. ')"; 
       "  return cell"; 
       ""; 
       "def buckaroo_deps(): ";

@@ -99,11 +99,11 @@ type GitManager (cacheDirectory : string) =
     options.CredentialsProvider <- handler
     Repository.Clone(url, target, options) |> ignore
     // Submodules
-    use repo = new Repository(target)
-    for submodule in repo.Submodules do
-      System.Console.WriteLine("Fetching submodule " + submodule.Path + "... ")
-      let subrepoPath = Path.Combine(repo.Info.WorkingDirectory, submodule.Path)
-      Repository.Clone(submodule.Url, subrepoPath, options) |> ignore
+    // use repo = new Repository(target)
+    // for submodule in repo.Submodules do
+    //   System.Console.WriteLine("Fetching submodule " + submodule.Path + "... ")
+    //   let subrepoPath = Path.Combine(repo.Info.WorkingDirectory, submodule.Path)
+    //   Repository.Clone(submodule.Url, subrepoPath, options) |> ignore
     return target
   }
 
