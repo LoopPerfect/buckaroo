@@ -13,4 +13,7 @@ let LegacyManifestFileName = "buckaroo.json"
 let LockFileName = "buckaroo.lock.toml"
 
 [<Literal>]
+let BuckarooMacrosFileName = "buckaroo_macros.bzl"
+
+[<Literal>]
 let BuckarooDepsFileName = "BUCKAROO_DEPS"

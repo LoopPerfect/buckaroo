@@ -188,6 +188,25 @@ module Command =
     return ()
   }
 
+  let buckarooMacros = 
+    [
+      "def buckaroo_cell(package): "; 
+      "  cell = read_config('buckaroo', package, '')";
+      "  if cell == '': "; 
+      "    raise Exception('Buckaroo does not have \"' + package + '\" installed. ')"; 
+      "  return cell"; 
+      ""; 
+      "def buckaroo_deps(): ";
+      "  return read_config('buckaroo', 'dependencies', '').split()"; 
+      ""; 
+      "def buckaroo_deps_from_package(package): "; 
+      "  cell = buckaroo_cell(package)"; 
+      "  all_deps = buckaroo_deps()"; 
+      "  return [ x for x in all_deps if x.startswith(cell) ]"; 
+      ""; 
+    ]
+    |> String.concat "\n"
+
   let buckarooDeps (dependencies : seq<TargetIdentifier>) = 
     let cellName package = 
       let (prefix, owner, project) = 
@@ -201,6 +220,7 @@ module Command =
       |> Seq.sort
       |> Seq.distinct
       |> Seq.toList
+    "print 'BUCKAROO_DEPS is deprecated; please use buckaroo_macros.bzl' \n\n" + 
     "BUCKAROO_DEPS = [\n" + 
     (requiredPackages |> Seq.map (fun x -> "  '" + x + "'") |> String.concat ", \n") + 
     "\n]\n"
@@ -222,7 +242,7 @@ module Command =
     return! sourceManager.FetchManifest location
   }
 
-  let fetchBuckarooDepsContent (lock : Lock) (sourceManager : ISourceManager) (manifest : Manifest) = async {
+  let fetchDependencyTargets (lock : Lock) (sourceManager : ISourceManager) (manifest : Manifest) = async {
     let! targets =  
       manifest.Dependencies
       |> Seq.map (fun d -> async {
@@ -236,8 +256,15 @@ module Command =
             |> Seq.map (fun target -> { Package = d.Package; Target = target })
       })
       |> Async.Parallel
-    return targets
+    return 
+      targets 
       |> Seq.collect id
+      |> List.ofSeq
+  }
+
+  let fetchBuckarooDepsContent (lock : Lock) (sourceManager : ISourceManager) (manifest : Manifest) = async {
+    let! targets =  fetchDependencyTargets lock sourceManager manifest
+    return targets
       |> buckarooDeps
   }
 
@@ -271,6 +298,7 @@ module Command =
       if File.Exists buckConfigPath |> not 
       then 
         do! Files.writeFile buckConfigPath ""
+      let! targets = fetchDependencyTargets lock sourceManager manifest
       // Write .buckconfig.d/.buckconfig.buckaroo
       let buckarooBuckConfigPath = 
         Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
@@ -283,15 +311,29 @@ module Command =
           (cell, INIString path)
         )
         |> Seq.toList
+      let buckarooSectionEntries = 
+        manifest.Dependencies
+        |> Seq.map (fun d -> 
+          let cell = computeCellIdentifier d.Package
+          (PackageIdentifier.show d.Package, INIString cell)
+        )
+        |> Seq.distinct
+        |> Seq.toList
+        |> List.append 
+          [ ("dependencies", targets |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
       let buckarooConfig : INIData = 
         Map.empty
         |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
+        |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
       do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
       do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
       // Write BUCKAROO_DEPS
       let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
       let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager manifest
       do! Files.writeFile buckarooDepsPath buckarooDepsContent
+      // Write Buckaroo macros
+      let buckarooMacrosPath = Path.Combine(installPath, BuckarooMacrosFileName)
+      do! Files.writeFile buckarooMacrosPath buckarooMacros
     | _ -> 
       new Exception("Unsupported location type") |> raise
   }
@@ -319,19 +361,30 @@ module Command =
     // Write .buckconfig.d/.buckconfig.buckaroo
     let buckarooBuckConfigPath = 
       Path.Combine(".buckconfig.d", ".buckconfig.buckaroo")
-    let buckarooCells = 
+    let buckarooRepositoriesCells = 
       lock.Packages
       |> Seq.map (fun kvp -> kvp.Key)
       |> Seq.map (fun t -> (computeCellIdentifier t, packageInstallPath t |> INIString))
+    let buckarooSectionEntries = 
+      lock.Dependencies
+      |> Seq.map (fun d -> (PackageIdentifier.show d.Package, computeCellIdentifier d.Package |> INIString))
+      |> Seq.distinct
+      |> Seq.toList
+      |> List.append 
+        [ ("dependencies", lock.Dependencies |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
     let buckarooConfig : INIData = 
       Map.empty
-      |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
+      |> Map.add "repositories" (buckarooRepositoriesCells |> Map.ofSeq)
+      |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
     do! Files.mkdirp ".buckconfig.d"
     do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
     // Write BUCKAROO_DEPS
     let buckarooDepsPath = Path.Combine(BuckarooDepsFileName)
     let buckarooDepsContent = buckarooDeps lock.Dependencies
     do! Files.writeFile buckarooDepsPath buckarooDepsContent
+    // Write Buckaroo macros
+    let buckarooMacrosPath = BuckarooMacrosFileName
+    do! Files.writeFile buckarooMacrosPath buckarooMacros
     return ()
   }
 
