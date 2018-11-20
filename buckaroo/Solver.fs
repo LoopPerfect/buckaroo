@@ -58,7 +58,7 @@ module Solver =
       unsatisfied solution dependencies
       |> List.sortBy (fun x -> constraintSearchCost x.Constraint)
     match pending with
-    | head :: _ -> 
+    | head :: tail -> 
       System.Console.WriteLine("Processing " + (Dependency.show head) + "... ")
       let! versions = sourceManager.FetchVersions head.Package
       let compatibleVersions = 
@@ -66,6 +66,7 @@ module Solver =
         |> Seq.filter (fun x -> x |> Constraint.satisfies head.Constraint)
         |> Seq.filter (fun x -> 
           dependencies 
+          |> Seq.filter (fun y -> y.Package = head.Package)
           |> Seq.exists (fun y -> x |> Constraint.agreesWith y.Constraint |> not) 
           |> not
         )
@@ -106,7 +107,9 @@ module Solver =
             solution 
             |> Map.add head.Package x
           let nextDependencies = 
-            dependencies 
+            // dependencies
+            tail
+            |> Set.ofSeq 
             |> Set.union x.Manifest.Dependencies
           let nextVisited = visited |> Set.add x.Location
           step sourceManager (nextSolution, nextDependencies, nextVisited)
