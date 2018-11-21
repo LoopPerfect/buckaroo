@@ -76,16 +76,16 @@ module Solver =
         |> Seq.sortBy (fun x -> x |> versionSearchCost)
         |> Seq.map (fun version -> async {
           let! locations = sourceManager.FetchLocations head.Package version
-          let newLocations =
+          return 
             locations
             |> Seq.filter (fun x -> visited |> Set.contains x |> not)
-          return (version, newLocations)
+            |> Seq.map (fun x -> (version, x))
+            |> Seq.toList
         })
-        |> Async.Parallel
-        |> Async.RunSynchronously
-        |> Seq.collect (fun (version, locations) -> 
-            locations
-            |> Seq.map (fun location -> async {
+        |> Seq.map Async.RunSynchronously
+        |> Seq.collect (fun xs -> 
+            xs
+            |> Seq.map (fun (version, location) -> async {
               try 
                 let! manifest = sourceManager.FetchManifest location
                 return {
@@ -97,17 +97,17 @@ module Solver =
                 System.Console.WriteLine(error)
                 return None
             })
+            |> Seq.map Async.RunSynchronously
         )
+        |> Seq.choose id
 
       let solutions = 
         resolvedVersions
-        |> Seq.choose Async.RunSynchronously
         |> Seq.map (fun x -> 
           let nextSolution = 
             solution 
             |> Map.add head.Package x
           let nextDependencies = 
-            // dependencies
             tail
             |> Set.ofSeq 
             |> Set.union x.Manifest.Dependencies
