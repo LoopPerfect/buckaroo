@@ -51,12 +51,12 @@ type DefaultSourceManager (gitManager : GitManager) =
       let! gitPath = gitManager.Clone url 
       use repo = new Repository(gitPath)
       
-      for remote in repo.Network.Remotes do
-        let refSpecs = 
-          remote.FetchRefSpecs 
-          |> Seq.map (fun x -> x.Specification)
-        // TODO: Credentials! 
-        Commands.Fetch(repo, remote.Name, refSpecs, null, "log")
+      // for remote in repo.Network.Remotes do
+      //   let refSpecs = 
+      //     remote.FetchRefSpecs 
+      //     |> Seq.map (fun x -> x.Specification)
+      //   // TODO: Credentials! 
+      //   Commands.Fetch(repo, remote.Name, refSpecs, null, "log")
 
       let references = repo.Network.ListReferences(url)
       let versions = 

@@ -1,17 +1,11 @@
 namespace Buckaroo
 
-type Solution = Map<PackageIdentifier, ResolvedVersion>
-
-type Resolution = 
-| Conflict of Set<Dependency>
-| Error of System.Exception
-| Ok of Solution
-
 module Solver = 
 
-  let versionSearchCost (v : Version) : int = 
+  open FSharp.Control
+
+  let versionPriority (v : Version) : int = 
     match v with 
-    | Version.Revision _ -> 0
     | Version.Latest -> 1
     | Version.Tag _ -> 2
     | Version.SemVerVersion _ -> 3
@@ -19,6 +13,15 @@ module Solver =
       match branch with 
       | "master" -> 4
       | _ -> 5
+    | Version.Revision _ -> 6
+
+  let versionSearchCost (v : Version) : int = 
+    match v with 
+    | Version.Revision _ -> 0
+    | Version.Latest -> 1
+    | Version.Tag _ -> 2
+    | Version.SemVerVersion _ -> 3
+    | Version.Branch _ -> 4
 
   let rec constraintSearchCost (c : Constraint) : int = 
     match c with 
@@ -28,18 +31,7 @@ module Solver =
     | Constraint.All xs -> 
       xs |> Seq.map constraintSearchCost |> Seq.append [ 0 ] |> Seq.max
     | Constraint.Complement _ -> 6
-
-  let show resolution = 
-    match resolution with
-    | Conflict xs -> "Conflict! " + (xs |> Seq.map Dependency.show |> String.concat " ")
-    | Error e -> "Error! " + e.Message
-    | Ok xs -> 
-      "Success! " + (
-        xs 
-        |> Seq.map (fun x -> PackageIdentifier.show x.Key + "@" + ResolvedVersion.show x.Value) 
-        |> String.concat " "
-      )
-
+  
   let unsatisfied (solution : Solution) (dependencies : Set<Dependency>) = 
     dependencies
     |> Seq.distinct
@@ -52,86 +44,97 @@ module Solver =
 
   type SolverState = (Solution * Set<Dependency> * Set<PackageLocation>)
 
-  let rec step (sourceManager : ISourceManager) (state : SolverState) = async {
+  let rec step (sourceManager : ISourceManager) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
     let (solution, dependencies, visited) = state
+
+    // Sort the pending dependencies by cost
     let pending = 
       unsatisfied solution dependencies
       |> List.sortBy (fun x -> constraintSearchCost x.Constraint)
+
+    // Anything left to process? 
     match pending with
     | head :: tail -> 
+      // TODO: Better notification system
       System.Console.WriteLine("Processing " + (Dependency.show head) + "... ")
-      let! versions = sourceManager.FetchVersions head.Package
-      let compatibleVersions = 
-        versions
-        |> Seq.filter (fun x -> x |> Constraint.satisfies head.Constraint)
-        |> Seq.filter (fun x -> 
-          dependencies 
-          |> Seq.filter (fun y -> y.Package = head.Package)
-          |> Seq.exists (fun y -> x |> Constraint.agreesWith y.Constraint |> not) 
-          |> not
-        )
-        |> Seq.distinct
-      let resolvedVersions = 
-        compatibleVersions
-        |> Seq.sortBy (fun x -> x |> versionSearchCost)
-        |> Seq.map (fun version -> async {
+
+      match solution |> Map.tryFind head.Package with 
+      | Some existingSelection -> 
+        System.Console.WriteLine("Already have " + (Dependency.show head) + " as " + (ResolvedVersion.show existingSelection) + "! ")
+        if existingSelection.Version |> Constraint.agreesWith head.Constraint
+        then
+          let nextState = 
+            (
+              solution, 
+              tail
+              |> Set.ofSeq, 
+              visited
+            )
+          yield! step sourceManager nextState
+        else
+          yield Resolution.Conflict (set [ head ])
+      | None -> 
+        // Unpack available (and compatible) versions 
+        let! versions = sourceManager.FetchVersions head.Package
+
+        let compatibleVersions = 
+          versions
+          |> Seq.filter (fun x -> x |> Constraint.satisfies head.Constraint)
+          |> Seq.filter (fun x -> 
+            dependencies 
+            |> Seq.filter (fun y -> y.Package = head.Package)
+            |> Seq.exists (fun y -> x |> Constraint.agreesWith y.Constraint |> not) 
+            |> not
+          )
+          |> Seq.distinct
+          |> Seq.sortBy (fun x -> x |> versionPriority)
+
+        for version in compatibleVersions do
           let! locations = sourceManager.FetchLocations head.Package version
-          return 
+          let freshLocations = 
             locations
             |> Seq.filter (fun x -> visited |> Set.contains x |> not)
-            |> Seq.map (fun x -> (version, x))
-            |> Seq.toList
-        })
-        |> Seq.map Async.RunSynchronously
-        |> Seq.collect (fun xs -> 
-            xs
-            |> Seq.map (fun (version, location) -> async {
-              try 
-                let! manifest = sourceManager.FetchManifest location
-                return {
+          
+          for location in freshLocations do 
+            try 
+              let! manifest = sourceManager.FetchManifest location
+              let resolvedVersion =
+                {
                   Version = version; 
                   Location = location; 
-                  Manifest = manifest;
-                } |> Some
-              with error -> 
-                System.Console.WriteLine(error)
-                return None
-            })
-            |> Seq.map Async.RunSynchronously
-        )
-        |> Seq.choose id
-
-      let solutions = 
-        resolvedVersions
-        |> Seq.map (fun x -> 
-          let nextSolution = 
-            solution 
-            |> Map.add head.Package x
-          let nextDependencies = 
-            tail
-            |> Set.ofSeq 
-            |> Set.union x.Manifest.Dependencies
-          let nextVisited = visited |> Set.add x.Location
-          step sourceManager (nextSolution, nextDependencies, nextVisited)
-        )
-        // |> Seq.chunkBySize 8
-        // |> Seq.map Async.Parallel
-        // |> Seq.map Async.RunSynchronously
-        // |> Seq.collect id
-        |> Seq.map Async.RunSynchronously
-
-      return
-        solutions 
-        // TODO: Take many solutions and pick the best
-        |> Seq.tryFind (fun x -> 
-          match x with 
-          | Resolution.Ok _ -> true
-          | _ -> false
-        )
-        |> Option.defaultValue (pending |> Set.ofSeq |> Resolution.Conflict)
+                  Manifest = manifest; 
+                }
+              let nextState = 
+                (
+                  solution 
+                  |> Map.add head.Package resolvedVersion, 
+                  tail
+                  |> Set.ofSeq
+                  |> Set.union resolvedVersion.Manifest.Dependencies, 
+                  visited |> Set.add location
+                )
+              yield! step sourceManager nextState
+            with error -> 
+              System.Console.WriteLine(error)
+              yield Resolution.Error error
     | [] -> 
-      return Resolution.Ok solution
+      yield Resolution.Ok solution
   }
 
-  let solve (sourceManager : ISourceManager) (manifest : Manifest) = 
-    step sourceManager (Map.empty, manifest.Dependencies |> Set.ofSeq, Set.empty)
+  let solve (sourceManager : ISourceManager) (manifest : Manifest) = async {
+    let resolutions = 
+      step sourceManager (Map.empty, manifest.Dependencies |> Set.ofSeq, Set.empty)
+    return
+      resolutions
+      // |> AsyncSeq.take 128
+      |> AsyncSeq.filter (fun x -> 
+        match x with
+        | Ok _ -> true
+        | _ -> false
+      )
+      |> AsyncSeq.take 1
+      |> AsyncSeq.toListAsync
+      |> Async.RunSynchronously
+      |> List.tryHead
+      |> Option.defaultValue (manifest.Dependencies |> Set.ofSeq |> Resolution.Conflict)
+  }

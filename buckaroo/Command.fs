@@ -150,7 +150,7 @@ module Command =
   let resolve = async {
     let cachePath = getCachePath ()
     let gitManager = new GitManager(cachePath)
-    let sourceManager = new CachedSourceManager(new DefaultSourceManager(gitManager))
+    let sourceManager = new LoggingSourceManager(new CachedSourceManager(new DefaultSourceManager(gitManager)))
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
     let! resolution = Solver.solve sourceManager manifest
@@ -191,13 +191,14 @@ module Command =
   let buckarooMacros = 
     [
       "def buckaroo_cell(package): "; 
-      "  cell = read_config('buckaroo', package, '')";
+      "  cell = native.read_config('buckaroo', package, '').strip()";
       "  if cell == '': "; 
       "    fail('Buckaroo does not have \"' + package + '\" installed. ')"; 
       "  return cell"; 
       ""; 
       "def buckaroo_deps(): ";
-      "  return read_config('buckaroo', 'dependencies', '').split()"; 
+      "  raw = native.read_config('buckaroo', 'dependencies', '').split(' ')";
+      "  return [ x.strip() for x in raw if len(x.strip()) > 0 ]"; 
       ""; 
       "def buckaroo_deps_from_package(package): "; 
       "  cell = buckaroo_cell(package)"; 

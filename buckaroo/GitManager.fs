@@ -111,38 +111,38 @@ type GitManager (cacheDirectory : string) =
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
     while true do
       let! message = inbox.Receive()
-      let (CloneRequest(url, repl)) = message
+      let (CloneRequest(url, replyChannel)) = message
       match cloneCache |> Map.tryFind url with
       | Some task -> 
-        repl.Reply(task)
+        replyChannel.Reply(task)
       | None -> 
         let target = Path.Combine(cacheDirectory, cloneFolderName url)
-        let! task = 
-          (
+        let task = 
+          async {
             if Directory.Exists target 
             then
               if Repository.IsValid(target) 
               then 
-                async {
-                  use repository = new Repository(target)
-                  for remote in repository.Network.Remotes do 
-                    let refSpecs = 
-                      remote.FetchRefSpecs 
-                      |> Seq.map (fun x -> x.Specification)
-                    let options = new FetchOptions()
-                    do Commands.Fetch(repository, remote.Name, refSpecs, options, "")
-                  return target
-                }
+                System.Console.WriteLine("Fetching remotes for " + target + "... ")
+                use repository = new Repository(target)
+                for remote in repository.Network.Remotes do 
+                  let refSpecs = 
+                    remote.FetchRefSpecs 
+                    |> Seq.map (fun x -> x.Specification)
+                  let options = new FetchOptions()
+                  System.Console.WriteLine("Fetching " + remote.Name + " in " + target + "... ")
+                  do Commands.Fetch(repository, remote.Name, refSpecs, options, "")
+                return target
               else 
-                target + " is not a valid Git repository. Deleting... " |> Console.WriteLine
+                target + " is not a valid Git repository. Deleting... " |> System.Console.WriteLine
                 Directory.Delete(target)
-                clone url target
+                return! clone url target
             else 
-              clone url target
-          )
-          |> Async.StartChild
+              return! clone url target
+          }
+          // |> Async.StartChild
         cloneCache <- cloneCache |> Map.add url task
-        repl.Reply(task) 
+        replyChannel.Reply(task) 
   })
 
   member this.Clone (url : string) : Async<string> = async {

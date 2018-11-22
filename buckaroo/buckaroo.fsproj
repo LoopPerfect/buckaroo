@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="ResultBuilder.fs" />
     <Compile Include="Constants.fs" />
@@ -28,11 +25,12 @@
     <Compile Include="SourceManager.fs" />
     <Compile Include="DefaultSourceManager.fs" />
     <Compile Include="CachedSourceManager.fs" />
+    <Compile Include="LoggingSourceManager.fs" />
+    <Compile Include="Resolution.fs" />
     <Compile Include="Solver.fs" />
     <Compile Include="Lock.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.3" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="2.0.21" />
@@ -43,5 +41,4 @@
     <PackageReference Include="Nett" Version="0.9.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
-
 </Project>
