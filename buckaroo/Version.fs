@@ -35,7 +35,7 @@ module Version =
 
   let tagVersionParser = parse {
     do! CharParsers.skipString "tag="
-    let! tag = CharParsers.regex @"[a-zA-Z\d\\\.\-_]{2,64}"
+    let! tag = CharParsers.regex @"[a-zA-Z\d\\\.\-_/]{2,64}"
     return Tag tag
   }
 
