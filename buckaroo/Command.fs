@@ -141,8 +141,8 @@ module Command =
     else 
       let cachePath = getCachePath ()
       let gitManager = new GitManager(cachePath)
-      let sourceManager = new DefaultSourceManager(gitManager)
-      let! resolution = Solver.solve sourceManager newManifest
+      let sourceExplorer = new DefaultSourceExplorer(gitManager)
+      let! resolution = Solver.solve sourceExplorer newManifest
       do! writeManifest newManifest
       // TODO: Write lock file! 
       return ()
@@ -151,10 +151,10 @@ module Command =
   let resolve = async {
     let cachePath = getCachePath ()
     let gitManager = new GitManager(cachePath)
-    let sourceManager = new LoggingSourceManager(new CachedSourceManager(new DefaultSourceManager(gitManager)))
+    let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager)))
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
-    let! resolution = Solver.solve sourceManager manifest
+    let! resolution = Solver.solve sourceExplorer manifest
     match resolution with
     | Resolution.Conflict x -> 
       "Conflict! " |> Console.WriteLine
@@ -182,9 +182,9 @@ module Command =
   let showVersions (package : PackageIdentifier) = async {
     let cachePath = getCachePath ()
     let gitManager = new GitManager(cachePath)
-    let sourceManager = new DefaultSourceManager(gitManager) :> ISourceManager
+    let sourceExplorer = new DefaultSourceExplorer(gitManager) :> ISourceExplorer
     let! versions = 
-      sourceManager.FetchVersions package
+      sourceExplorer.FetchVersions package
       |> AsyncSeq.toListAsync
     for v in versions do
       Version.show v |> Console.WriteLine
@@ -236,17 +236,17 @@ module Command =
         | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
     Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
 
-  let fetchManifestFromLock (lock : Lock) (sourceManager : ISourceManager) (package : PackageIdentifier) = async {
+  let fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
     let location =  
       match lock.Packages |> Map.tryFind package with 
       | Some location -> location
       | None -> 
         new Exception("Lock file does not contain " + (PackageIdentifier.show package))
         |> raise
-    return! sourceManager.FetchManifest location
+    return! sourceExplorer.FetchManifest location
   }
 
-  let fetchDependencyTargets (lock : Lock) (sourceManager : ISourceManager) (manifest : Manifest) = async {
+  let fetchDependencyTargets (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
     let! targets =  
       manifest.Dependencies
       |> Seq.map (fun d -> async {
@@ -254,7 +254,7 @@ module Command =
         | Some target -> 
           return [ { Package = d.Package; Target = target } ] |> List.toSeq
         | None -> 
-          let! manifest = fetchManifestFromLock lock sourceManager d.Package
+          let! manifest = fetchManifestFromLock lock sourceExplorer d.Package
           return 
             manifest.Targets 
             |> Seq.map (fun target -> { Package = d.Package; Target = target })
@@ -266,8 +266,8 @@ module Command =
       |> List.ofSeq
   }
 
-  let fetchBuckarooDepsContent (lock : Lock) (sourceManager : ISourceManager) (manifest : Manifest) = async {
-    let! targets =  fetchDependencyTargets lock sourceManager manifest
+  let fetchBuckarooDepsContent (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
+    let! targets =  fetchDependencyTargets lock sourceExplorer manifest
     return targets
       |> buckarooDeps
   }
@@ -282,7 +282,7 @@ module Command =
     )
     |> String.concat "."
 
-  let installLockedPackage (lock : Lock) (gitManager : GitManager) (sourceManager : ISourceManager) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
+  let installLockedPackage (lock : Lock) (gitManager : GitManager) (sourceExplorer : ISourceExplorer) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
     let ( package, location ) = lockedPackage
     let installPath = packageInstallPath package
     match location with 
@@ -296,13 +296,13 @@ module Command =
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
       let destination = installPath
       do! Files.copyDirectory gitPath destination
-      let! manifest = fetchManifestFromLock lock sourceManager package
+      let! manifest = fetchManifestFromLock lock sourceExplorer package
       // Touch .buckconfig
       let buckConfigPath = Path.Combine(installPath, ".buckconfig")
       if File.Exists buckConfigPath |> not 
       then 
         do! Files.writeFile buckConfigPath ""
-      let! targets = fetchDependencyTargets lock sourceManager manifest
+      let! targets = fetchDependencyTargets lock sourceExplorer manifest
       // Write .buckconfig.d/.buckconfig.buckaroo
       let buckarooBuckConfigPath = 
         Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
@@ -333,7 +333,7 @@ module Command =
       do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
       // Write BUCKAROO_DEPS
       let buckarooDepsPath = Path.Combine(installPath, BuckarooDepsFileName)
-      let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceManager manifest
+      let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceExplorer manifest
       do! Files.writeFile buckarooDepsPath buckarooDepsContent
       // Write Buckaroo macros
       let buckarooMacrosPath = Path.Combine(installPath, BuckarooMacrosFileName)
@@ -345,7 +345,7 @@ module Command =
   let install = async {
     let cachePath = getCachePath ()
     let gitManager = new GitManager(cachePath)
-    let sourceManager = new DefaultSourceManager(gitManager)
+    let sourceExplorer = new DefaultSourceExplorer(gitManager)
     let! lock = readLock
     do! 
       lock.Packages
@@ -353,7 +353,7 @@ module Command =
         let project = kvp.Key
         let exactLocation = kvp.Value
         "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-        do! installLockedPackage lock gitManager sourceManager (project, exactLocation)
+        do! installLockedPackage lock gitManager sourceExplorer (project, exactLocation)
       })
       |> Async.Parallel
       |> Async.Ignore

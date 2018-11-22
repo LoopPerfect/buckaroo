@@ -35,8 +35,6 @@ let deleteDirectoryIfExists (path : string) =
         then false
         else raise ex
   }
-  |> Async.StartAsTask
-  |> Async.AwaitTask
 
 let rec copyDirectory srcPath dstPath = 
   async {
@@ -59,6 +57,4 @@ let rec copyDirectory srcPath dstPath =
       do! copyDirectory subdir.FullName dstSubDir 
 
     ()
-  } 
-  |> Async.StartAsTask
-  |> Async.AwaitTask
+  }

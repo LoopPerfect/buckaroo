@@ -3,16 +3,16 @@ namespace Buckaroo
 open System.Collections.Concurrent
 open FSharp.Control
 
-type CachedSourceManager (sourceManager : ISourceManager) = 
+type CachedSourceExplorer (sourceExplorer : ISourceExplorer) = 
 
   let locationsCache = new ConcurrentDictionary<PackageIdentifier * Version, AsyncSeq<PackageLocation>>()
   let versionsCache = new ConcurrentDictionary<PackageIdentifier, AsyncSeq<Buckaroo.Version>>()
   let manifestCache = new ConcurrentDictionary<PackageLocation, Buckaroo.Manifest>()
 
-  interface ISourceManager with 
+  interface ISourceExplorer with 
 
-    member this.Prepare package = async {
-      do! sourceManager.Prepare package  
+    member this.Prepare dependency = async {
+      do! sourceExplorer.Prepare dependency  
     }
 
     member this.FetchLocations package version = asyncSeq {
@@ -22,7 +22,7 @@ type CachedSourceManager (sourceManager : ISourceManager) =
         return locations
       | (false, _) -> 
         let locations = 
-          sourceManager.FetchLocations package version 
+          sourceExplorer.FetchLocations package version 
           |> AsyncSeq.cache
         locationsCache.TryAdd(key, locations) |> ignore
         yield! locations
@@ -33,7 +33,7 @@ type CachedSourceManager (sourceManager : ISourceManager) =
       | (true, manifest) -> 
         return manifest
       | (false, _) -> 
-        let! manifest = sourceManager.FetchManifest location
+        let! manifest = sourceExplorer.FetchManifest location
         manifestCache.TryAdd(location, manifest) |> ignore
         return manifest
     }
@@ -44,7 +44,7 @@ type CachedSourceManager (sourceManager : ISourceManager) =
         return x
       | (false, _) -> 
         let versions = 
-          sourceManager.FetchVersions package
+          sourceExplorer.FetchVersions package
           |> AsyncSeq.cache
         versionsCache.TryAdd(package, versions) |> ignore
         yield! versions

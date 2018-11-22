@@ -8,7 +8,7 @@ open FSharp.Control
 open LibGit2Sharp
 open Buckaroo.Git
 
-type DefaultSourceManager (gitManager : GitManager) = 
+type DefaultSourceExplorer (gitManager : GitManager) = 
 
   let gitUrl (package : PackageIdentifier) : Async<string> = async {
     return 
@@ -25,17 +25,33 @@ type DefaultSourceManager (gitManager : GitManager) =
     | "develop" -> 1
     | _ -> 2
 
-  interface ISourceManager with 
+  interface ISourceExplorer with 
 
-    member this.Prepare package = async {
-      let! url = gitUrl package
-      let! gitPath = gitManager.Clone url
-      return ()
-    }
+    member this.Prepare (dependency : Dependency) = 
+      let rec prepare dependency = 
+        async {
+          match dependency.Constraint with 
+          | Constraint.Exactly version -> 
+            let! url = gitUrl dependency.Package
+            let! gitPath = 
+              gitManager.Clone url
+            match version with 
+            | Version.Branch branch -> 
+              do! gitManager.Fetch url branch
+              return ()
+            | _ -> return ()
+          | _ -> 
+            let! url = gitUrl dependency.Package
+            let! gitPath = 
+              gitManager.Clone url
+            return ()
+        }
+      prepare dependency
 
     member this.FetchVersions package = asyncSeq {
       let! url = gitUrl package
-      let! gitPath = gitManager.Clone url 
+      let! gitPath = 
+        gitManager.Clone url 
       use repo = new Repository(gitPath)
 
       let references = repo.Network.ListReferences(url)
@@ -69,6 +85,7 @@ type DefaultSourceManager (gitManager : GitManager) =
 
       // Revisions
       for branch in branches do 
+        do! gitManager.Fetch url branch
         let cf = new CommitFilter()
         cf.IncludeReachableFrom <- "origin/" + branch
         yield! 
@@ -84,7 +101,8 @@ type DefaultSourceManager (gitManager : GitManager) =
       match package with 
       | PackageIdentifier.GitHub g -> 
         let url = PackageLocation.gitHubUrl g
-        let! gitPath = gitManager.Clone url
+        let! gitPath = 
+          gitManager.Clone url
         use repo = new Repository(gitPath)
         match version with 
         | Buckaroo.SemVerVersion semVer -> 
@@ -134,7 +152,8 @@ type DefaultSourceManager (gitManager : GitManager) =
         let url = PackageLocation.gitHubUrl g.Package
         async {
           let url = PackageLocation.gitHubUrl g.Package
-          let! content = gitManager.FetchFile url g.Revision "buckaroo.toml"
+          let! content = 
+            gitManager.FetchFile url g.Revision "buckaroo.toml"
           return 
             match Manifest.parse content with
             | Result.Ok manifest -> manifest

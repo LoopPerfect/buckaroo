@@ -4,14 +4,18 @@ open System
 open System.IO
 open System.Security.Cryptography
 open System.Text.RegularExpressions
+open System.Collections.Generic
 open FSharpx.Control
 open LibGit2Sharp
 open Buckaroo
+open System.Collections.Concurrent
 
 type CloneRequest = 
   | CloneRequest of string * AsyncReplyChannel<Async<string>>
 
 type GitManager (cacheDirectory : string) = 
+
+  let fetchCache = new ConcurrentDictionary<string * string, Unit>()
 
   let bytesToHex bytes = 
     bytes 
@@ -108,8 +112,6 @@ type GitManager (cacheDirectory : string) =
       //   Repository.Clone(submodule.Url, subrepoPath, options) |> ignore
       return target
     }
-    |> Async.StartAsTask
-    |> Async.AwaitTask
 
   let mailboxProcessor = MailboxProcessor.Start(fun inbox -> async {
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
@@ -127,17 +129,6 @@ type GitManager (cacheDirectory : string) =
             then
               if Repository.IsValid(target) 
               then 
-                System.Console.WriteLine("Fetching remotes for " + target + "... ")
-                use repository = new Repository(target)
-                for remote in repository.Network.Remotes do 
-                  let refSpecs = 
-                    remote.FetchRefSpecs 
-                    |> Seq.map (fun x -> x.Specification)
-                  let options = new FetchOptions()
-                  System.Console.WriteLine("Fetching " + remote.Name + " in " + target + "... ")
-                  do! 
-                    Commands.Fetch(repository, remote.Name, refSpecs, options, "")
-                    |> Async.SwitchToThreadPool
                 return target
               else 
                 target + " is not a valid Git repository. Deleting... " |> System.Console.WriteLine
@@ -156,6 +147,22 @@ type GitManager (cacheDirectory : string) =
     return! res 
   }
 
+  member this.Fetch (url : string) (branch : string) : Async<Unit> = 
+    async {
+      let key = (url, branch)
+      match fetchCache.TryGetValue(key) with 
+      | (true, _) -> 
+        return ()
+      | (false, _) -> 
+        let! target = this.Clone(url)
+        System.Console.WriteLine("Fetching " + branch + " in " + target + "... ")
+        use repo = new Repository(target)
+        Commands.Fetch(repo, "origin", [ "refs/heads/" + branch + ":refs/remotes/origin/" + branch ], null, null)
+        fetchCache.TryAdd(key, ()) |> ignore
+        return ()
+    }
+    |> Async.Cache
+
   member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> = 
     async {
       let! cloneCachePath = this.Clone url
@@ -170,5 +177,3 @@ type GitManager (cacheDirectory : string) =
           let blob = x.Target :?> Blob
           blob.GetContentText()
     }
-    |> Async.StartAsTask
-    |> Async.AwaitTask
