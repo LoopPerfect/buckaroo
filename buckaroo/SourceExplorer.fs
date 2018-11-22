@@ -7,3 +7,4 @@ type ISourceExplorer =
   abstract member FetchVersions : PackageIdentifier -> AsyncSeq<Buckaroo.Version>
   abstract member FetchLocations : PackageIdentifier -> Buckaroo.Version -> AsyncSeq<PackageLocation>
   abstract member FetchManifest : PackageLocation -> Async<Manifest>
+  abstract member FetchLock : PackageLocation -> Async<Lock>

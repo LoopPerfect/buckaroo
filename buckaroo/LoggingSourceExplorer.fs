@@ -23,6 +23,11 @@ type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
       return! sourceExplorer.FetchManifest location
     }
 
+    member this.FetchLock location = async {
+      log("Fetching lock for " + (PackageLocation.show location) + "... ")
+      return! sourceExplorer.FetchLock location
+    }
+
     member this.FetchVersions package = asyncSeq {
       log("Fetching versions for " + (PackageIdentifier.show package) + "... ")
       yield! sourceExplorer.FetchVersions package

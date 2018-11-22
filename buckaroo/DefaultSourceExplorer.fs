@@ -153,12 +153,33 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         async {
           let url = PackageLocation.gitHubUrl g.Package
           let! content = 
-            gitManager.FetchFile url g.Revision "buckaroo.toml"
+            gitManager.FetchFile url g.Revision Constants.ManifestFileName
           return 
             match Manifest.parse content with
             | Result.Ok manifest -> manifest
             | Result.Error errorMessage -> 
               new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage)
+              |> raise
+        }
+      | _ -> 
+        async {
+          return new Exception("Only GitHub packages are supported") |> raise
+        }
+
+
+    member this.FetchLock location = 
+      match location with 
+      | PackageLocation.GitHub g -> 
+        let url = PackageLocation.gitHubUrl g.Package
+        async {
+          let url = PackageLocation.gitHubUrl g.Package
+          let! content = 
+            gitManager.FetchFile url g.Revision Constants.LockFileName 
+          return 
+            match Lock.parse content with
+            | Result.Ok manifest -> manifest
+            | Result.Error errorMessage -> 
+              new Exception("Invalid " + Constants.LockFileName + " file. \n" + errorMessage)
               |> raise
         }
       | _ -> 

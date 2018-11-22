@@ -151,7 +151,8 @@ module Command =
   let resolve = async {
     let cachePath = getCachePath ()
     let gitManager = new GitManager(cachePath)
-    let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager)))
+    // let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager)))
+    let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
     let! resolution = Solver.solve sourceExplorer manifest

@@ -22,13 +22,13 @@
     <Compile Include="PackageLocation.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
+    <Compile Include="Resolution.fs" />
+    <Compile Include="Lock.fs" />
     <Compile Include="SourceExplorer.fs" />
     <Compile Include="DefaultSourceExplorer.fs" />
     <Compile Include="CachedSourceExplorer.fs" />
     <Compile Include="LoggingSourceExplorer.fs" />
-    <Compile Include="Resolution.fs" />
     <Compile Include="Solver.fs" />
-    <Compile Include="Lock.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>

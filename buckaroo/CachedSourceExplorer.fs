@@ -8,6 +8,7 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
   let locationsCache = new ConcurrentDictionary<PackageIdentifier * Version, AsyncSeq<PackageLocation>>()
   let versionsCache = new ConcurrentDictionary<PackageIdentifier, AsyncSeq<Buckaroo.Version>>()
   let manifestCache = new ConcurrentDictionary<PackageLocation, Buckaroo.Manifest>()
+  let lockCache = new ConcurrentDictionary<PackageLocation, Buckaroo.Lock>()
 
   interface ISourceExplorer with 
 
@@ -36,6 +37,16 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
         let! manifest = sourceExplorer.FetchManifest location
         manifestCache.TryAdd(location, manifest) |> ignore
         return manifest
+    }
+
+    member this.FetchLock location = async {
+      match lockCache.TryGetValue(location) with
+      | (true, lock) -> 
+        return lock
+      | (false, _) -> 
+        let! lock = sourceExplorer.FetchLock location
+        lockCache.TryAdd(location, lock) |> ignore
+        return lock
     }
 
     member this.FetchVersions package = asyncSeq {
