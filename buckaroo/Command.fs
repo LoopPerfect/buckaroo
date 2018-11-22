@@ -14,6 +14,7 @@ module Command =
   open System.IO
   open FParsec
   open LibGit2Sharp
+  open FSharp.Control
   open Buckaroo.Constants
   open Buckaroo.Git
   open Buckaroo.BuckConfig
@@ -182,7 +183,9 @@ module Command =
     let cachePath = getCachePath ()
     let gitManager = new GitManager(cachePath)
     let sourceManager = new DefaultSourceManager(gitManager) :> ISourceManager
-    let! versions = sourceManager.FetchVersions package
+    let! versions = 
+      sourceManager.FetchVersions package
+      |> AsyncSeq.toListAsync
     for v in versions do
       Version.show v |> Console.WriteLine
     return ()

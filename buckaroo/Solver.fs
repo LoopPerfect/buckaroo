@@ -42,60 +42,65 @@ module Solver =
     )
     |> List.ofSeq
 
-  type SolverState = (Solution * Set<Dependency> * Set<PackageLocation>)
+  type SolverState = (Solution * Set<Dependency> * Set<PackageLocation> * int)
 
   let rec step (sourceManager : ISourceManager) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
-    let (solution, dependencies, visited) = state
+    let (solution, dependencies, visited, depth) = state
+
+    let log (x : string) = 
+      "[" + (string depth) + "] " + x
+      |> System.Console.WriteLine
 
     // Sort the pending dependencies by cost
     let pending = 
       unsatisfied solution dependencies
       |> List.sortBy (fun x -> constraintSearchCost x.Constraint)
 
+    // Prefetch all dependencies mentioned
+    for dependency in pending do
+      sourceManager.Prepare dependency.Package
+      |> Async.Catch
+      |> Async.Ignore
+      |> Async.Start
+
     // Anything left to process? 
     match pending with
     | head :: tail -> 
       // TODO: Better notification system
-      System.Console.WriteLine("Processing " + (Dependency.show head) + "... ")
+      log("Processing " + (Dependency.show head) + "... ")
 
-      match solution |> Map.tryFind head.Package with 
-      | Some existingSelection -> 
-        System.Console.WriteLine("Already have " + (Dependency.show head) + " as " + (ResolvedVersion.show existingSelection) + "! ")
-        if existingSelection.Version |> Constraint.agreesWith head.Constraint
-        then
-          let nextState = 
-            (
-              solution, 
-              tail
-              |> Set.ofSeq, 
-              visited
-            )
-          yield! step sourceManager nextState
-        else
-          yield Resolution.Conflict (set [ head ])
-      | None -> 
-        // Unpack available (and compatible) versions 
-        let! versions = sourceManager.FetchVersions head.Package
+      // Unpack available (and compatible) versions 
+      let! versions = 
+        sourceManager.FetchVersions head.Package
+        |> AsyncSeq.filter (fun x -> x |> Constraint.satisfies head.Constraint)
+        |> AsyncSeq.filter (fun x -> 
+          dependencies 
+          |> Seq.filter (fun y -> y.Package = head.Package)
+          |> Seq.exists (fun y -> x |> Constraint.agreesWith y.Constraint |> not) 
+          |> not
+        )
+        |> AsyncSeq.toListAsync
 
-        let compatibleVersions = 
+      if versions = List.empty
+      then 
+        log("No versions of " + (PackageIdentifier.show head.Package) + " are compatible. ")
+        yield Resolution.Conflict (set [ head ])
+      else 
+        let prioritizedVersions = 
           versions
-          |> Seq.filter (fun x -> x |> Constraint.satisfies head.Constraint)
-          |> Seq.filter (fun x -> 
-            dependencies 
-            |> Seq.filter (fun y -> y.Package = head.Package)
-            |> Seq.exists (fun y -> x |> Constraint.agreesWith y.Constraint |> not) 
-            |> not
-          )
           |> Seq.distinct
           |> Seq.sortBy (fun x -> x |> versionPriority)
 
-        for version in compatibleVersions do
-          let! locations = sourceManager.FetchLocations head.Package version
+        log("Found versions of " + (PackageIdentifier.show head.Package) + ": [ " + (prioritizedVersions |> Seq.map Version.show |> String.concat " ") + " ]")
+
+        for version in prioritizedVersions do
+          log("Exploring " + (PackageIdentifier.show head.Package) + "@" + (Version.show version) + "... ")
+
           let freshLocations = 
-            locations
-            |> Seq.filter (fun x -> visited |> Set.contains x |> not)
-          
-          for location in freshLocations do 
+            sourceManager.FetchLocations head.Package version
+            |> AsyncSeq.filter (fun x -> visited |> Set.contains x |> not)
+
+          for location in freshLocations do
             try 
               let! manifest = sourceManager.FetchManifest location
               let resolvedVersion =
@@ -108,10 +113,11 @@ module Solver =
                 (
                   solution 
                   |> Map.add head.Package resolvedVersion, 
-                  tail
+                  dependencies
                   |> Set.ofSeq
                   |> Set.union resolvedVersion.Manifest.Dependencies, 
-                  visited |> Set.add location
+                  visited |> Set.add location, 
+                  depth + 1
                 )
               yield! step sourceManager nextState
             with error -> 
@@ -123,7 +129,7 @@ module Solver =
 
   let solve (sourceManager : ISourceManager) (manifest : Manifest) = async {
     let resolutions = 
-      step sourceManager (Map.empty, manifest.Dependencies |> Set.ofSeq, Set.empty)
+      step sourceManager (Map.empty, manifest.Dependencies |> Set.ofSeq, Set.empty, 0)
     return
       resolutions
       // |> AsyncSeq.take 128

@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Security.Cryptography
 open System.Text.RegularExpressions
+open FSharpx.Control
 open LibGit2Sharp
 open Buckaroo
 
@@ -57,55 +58,58 @@ type GitManager (cacheDirectory : string) =
     return password
   }
 
-  let clone (url : string) (target : string) = async {
-    "Cloning " + url + " into " + target |> Console.WriteLine
-    let options = new CloneOptions()
-    let handler = Handlers.CredentialsHandler(fun url usernameFromUrl types -> 
-      async {
-        try
-          System.Console.WriteLine("Git credentials are required for " + url + ". ")
-          // Request a username
-          let! username = async {
-            if usernameFromUrl <> null && usernameFromUrl.Length > 0 
-            then
-              return usernameFromUrl
-            else
-              System.Console.WriteLine("Please enter your username: ")
-              let mutable username = ""
-              while username.Length < 1 do
-                let! nextUsername = requestString
-                username <- nextUsername.Trim()
-              return username
-          }
-          // Request a password
-          let mutable password = ""
-          while password.Length < 1 do
-            System.Console.WriteLine("Please enter a password or access-token for " + username + ": ")
-            let! nextPassword = requestPassword
-            password <- nextPassword.Trim()
-          System.Console.WriteLine("Cheers! ")
-          // Return the credentials
-          let credentials = new UsernamePasswordCredentials()
-          credentials.Username <- username
-          credentials.Password <- password
-          return credentials :> Credentials
-        with error -> 
-          System.Console.WriteLine(error)
-          let credentials = new DefaultCredentials()
-          return credentials :> Credentials
-      }
-      |> Async.RunSynchronously
-    )
-    options.CredentialsProvider <- handler
-    Repository.Clone(url, target, options) |> ignore
-    // Submodules
-    // use repo = new Repository(target)
-    // for submodule in repo.Submodules do
-    //   System.Console.WriteLine("Fetching submodule " + submodule.Path + "... ")
-    //   let subrepoPath = Path.Combine(repo.Info.WorkingDirectory, submodule.Path)
-    //   Repository.Clone(submodule.Url, subrepoPath, options) |> ignore
-    return target
-  }
+  let clone (url : string) (target : string) = 
+    async {
+      "Cloning " + url + " into " + target |> Console.WriteLine
+      let options = new CloneOptions()
+      let handler = Handlers.CredentialsHandler(fun url usernameFromUrl types -> 
+        async {
+          try
+            System.Console.WriteLine("Git credentials are required for " + url + ". ")
+            // Request a username
+            let! username = async {
+              if usernameFromUrl <> null && usernameFromUrl.Length > 0 
+              then
+                return usernameFromUrl
+              else
+                System.Console.WriteLine("Please enter your username: ")
+                let mutable username = ""
+                while username.Length < 1 do
+                  let! nextUsername = requestString
+                  username <- nextUsername.Trim()
+                return username
+            }
+            // Request a password
+            let mutable password = ""
+            while password.Length < 1 do
+              System.Console.WriteLine("Please enter a password or access-token for " + username + ": ")
+              let! nextPassword = requestPassword
+              password <- nextPassword.Trim()
+            System.Console.WriteLine("Cheers! ")
+            // Return the credentials
+            let credentials = new UsernamePasswordCredentials()
+            credentials.Username <- username
+            credentials.Password <- password
+            return credentials :> Credentials
+          with error -> 
+            System.Console.WriteLine(error)
+            let credentials = new DefaultCredentials()
+            return credentials :> Credentials
+        }
+        |> Async.RunSynchronously
+      )
+      options.CredentialsProvider <- handler
+      Repository.Clone(url, target, options) |> ignore
+      // Submodules
+      // use repo = new Repository(target)
+      // for submodule in repo.Submodules do
+      //   System.Console.WriteLine("Fetching submodule " + submodule.Path + "... ")
+      //   let subrepoPath = Path.Combine(repo.Info.WorkingDirectory, submodule.Path)
+      //   Repository.Clone(submodule.Url, subrepoPath, options) |> ignore
+      return target
+    }
+    |> Async.StartAsTask
+    |> Async.AwaitTask
 
   let mailboxProcessor = MailboxProcessor.Start(fun inbox -> async {
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
@@ -131,7 +135,9 @@ type GitManager (cacheDirectory : string) =
                     |> Seq.map (fun x -> x.Specification)
                   let options = new FetchOptions()
                   System.Console.WriteLine("Fetching " + remote.Name + " in " + target + "... ")
-                  do Commands.Fetch(repository, remote.Name, refSpecs, options, "")
+                  do! 
+                    Commands.Fetch(repository, remote.Name, refSpecs, options, "")
+                    |> Async.SwitchToThreadPool
                 return target
               else 
                 target + " is not a valid Git repository. Deleting... " |> System.Console.WriteLine
@@ -140,7 +146,7 @@ type GitManager (cacheDirectory : string) =
             else 
               return! clone url target
           }
-          // |> Async.StartChild
+          |> Async.Cache
         cloneCache <- cloneCache |> Map.add url task
         replyChannel.Reply(task) 
   })
@@ -150,16 +156,19 @@ type GitManager (cacheDirectory : string) =
     return! res 
   }
 
-  member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> = async {
-    let! cloneCachePath = this.Clone url
-    use repo = new Repository(cloneCachePath)
-    let commit = repo.Lookup<Commit>(revision)
-    return 
-      match commit.[Constants.ManifestFileName] with 
-      | null -> 
-        new Exception(url + "#" + revision + " does not contain " + file + ". ") 
-        |> raise
-      | x -> 
-        let blob = x.Target :?> Blob
-        blob.GetContentText()
-  }
+  member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> = 
+    async {
+      let! cloneCachePath = this.Clone url
+      use repo = new Repository(cloneCachePath)
+      let commit = repo.Lookup<Commit>(revision)
+      return 
+        match commit.[Constants.ManifestFileName] with 
+        | null -> 
+          new Exception(url + "#" + revision + " does not contain " + file + ". ") 
+          |> raise
+        | x -> 
+          let blob = x.Target :?> Blob
+          blob.GetContentText()
+    }
+    |> Async.StartAsTask
+    |> Async.AwaitTask
