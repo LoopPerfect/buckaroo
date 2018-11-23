@@ -56,12 +56,6 @@ type GitCli () =
   member this.Init (directory : string) = 
     runBash ("git init " + directory)
 
-  member this.ShallowClone (url : String) (directory : string) = async {
-    do! 
-      runBash ("git clone --depth=1 " + url + " " + directory)
-      |> Async.Ignore
-  }
-
   member this.LocalTags (repository : String) = async {
     let gitDir = Path.Combine(repository, "./.git")
     let command =
@@ -106,6 +100,12 @@ type GitCli () =
     member this.Clone (url : string) (directory : string) = async {
       do! 
         runBash ("git clone " + url + " " + directory)
+        |> Async.Ignore
+    }
+
+    member this.ShallowClone (url : String) (directory : string) = async {
+      do! 
+        runBash ("git clone --depth=1 " + url + " " + directory)
         |> Async.Ignore
     }
 

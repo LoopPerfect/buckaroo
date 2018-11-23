@@ -26,6 +26,10 @@ type DefaultSourceExplorer (gitManager : GitManager) =
     member this.FetchVersions package = asyncSeq {
       let! url = gitUrl package
 
+      let! branchesTask = 
+        gitManager.FetchBranches url
+        |> Async.StartChild
+
       // Tags and sem-vers
       let! tags = gitManager.FetchTags url
 
@@ -50,7 +54,7 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         )
         |> AsyncSeq.ofSeq
 
-      let! branches = gitManager.FetchBranches url
+      let! branches = branchesTask
 
       // Branches
       yield! 

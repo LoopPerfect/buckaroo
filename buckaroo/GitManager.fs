@@ -50,7 +50,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
           async {
             if Directory.Exists targetDirectory |> not
             then 
-              do! git.Clone url targetDirectory
+              do! git.ShallowClone url targetDirectory
             return targetDirectory
           }
           |> Async.Cache

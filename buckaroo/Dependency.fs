@@ -10,6 +10,9 @@ module Dependency =
 
   open FParsec
 
+  let satisfies (dependency : Dependency) (atom : Atom) = 
+    atom.Package = dependency.Package && atom.Version |> Constraint.satisfies dependency.Constraint
+
   let show (x : Dependency) = 
     (PackageIdentifier.show x.Package) + "@" + Constraint.show x.Constraint + 
       (x.Target |> Option.map Target.show |> Option.defaultValue "")

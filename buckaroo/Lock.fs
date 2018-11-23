@@ -3,7 +3,7 @@ namespace Buckaroo
 type Lock = {
   ManifestHash : string; 
   Dependencies : Set<TargetIdentifier>; 
-  Packages : Map<PackageIdentifier, PackageLocation>; 
+  Packages : Map<PackageIdentifier, Version * PackageLocation>; 
 }
 
 // let show (x : Lock) : string = 
@@ -43,7 +43,7 @@ module Lock =
         additions 
         |> Seq.map (fun x -> 
           "  " + (PackageIdentifier.show x.Key) + 
-          " -> " + (PackageLocation.show x.Value)
+          " -> " + (PackageLocation.show (snd x.Value))
         )
         |> String.concat "\n"
       );
@@ -52,7 +52,7 @@ module Lock =
         removals 
         |> Seq.map (fun x -> 
           "  " + (PackageIdentifier.show x.Key) + 
-          " -> " + (PackageLocation.show x.Value)
+          " -> " + (PackageLocation.show (snd x.Value))
         )
         |> String.concat "\n"
       );
@@ -61,8 +61,8 @@ module Lock =
         changes 
         |> Seq.map (fun (p, before, after) -> 
           "  " + (PackageIdentifier.show p) + 
-          " " + (PackageLocation.show before) + 
-          " -> " + (PackageLocation.show after)
+          " " + (PackageLocation.show (snd before)) + 
+          " -> " + (PackageLocation.show (snd after))
         )
         |> String.concat "\n"
       );
@@ -96,7 +96,7 @@ module Lock =
       |> Set.ofSeq
     let packages = 
       solution
-      |> Map.map (fun _ v -> v.Location)
+      |> Map.map (fun _ v -> (v.Version, v.Location))
     { ManifestHash = manifestHash; Dependencies = dependencies; Packages = packages }
 
   let toToml (lock : Lock) = 
@@ -116,9 +116,10 @@ module Lock =
       lock.Packages
       |> Seq.map(fun x -> 
         let package = x.Key
-        let exactLocation = x.Value
+        let (version, exactLocation) = x.Value
         "[[lock]]\n" + 
         "name = \"" + (PackageIdentifier.show package) + "\"\n" + 
+        "version = \"" + (Version.show version) + "\"\n" + 
         match exactLocation with 
         | Git git -> 
           "url = \"" + git.Url + "\"\n" + 
@@ -133,13 +134,19 @@ module Lock =
       |> String.concat "\n"
     )
 
-  let tomlTableToLockedPackage (x : Nett.TomlTable) : Result<(PackageIdentifier * PackageLocation), string> = result {
+  let tomlTableToLockedPackage (x : Nett.TomlTable) : Result<(PackageIdentifier * (Version * PackageLocation)), string> = result {
     let! name = 
       x 
       |> Toml.get "name" 
       |> Option.bind Toml.asString 
       |> optionToResult "name must be specified for every dependency"
+    let! version = 
+      x 
+      |> Toml.get "version" 
+      |> Option.bind Toml.asString 
+      |> optionToResult "version must be specified for every dependency"
     let! packageIdentifier = PackageIdentifier.parse name 
+    let! version = Version.parse version 
     let! packageLocation = result {
       match packageIdentifier with 
       | PackageIdentifier.GitHub gitHub -> 
@@ -152,7 +159,7 @@ module Lock =
       | PackageIdentifier.Adhoc adhoc -> 
         return! Result.Error "Only GitHub package locations are supported"
     }
-    return (packageIdentifier, packageLocation)
+    return (packageIdentifier, (version, packageLocation))
   }
 
   let tomlTableToTargetIdentifier (x : Nett.TomlTable) : Result<TargetIdentifier, string> = result {

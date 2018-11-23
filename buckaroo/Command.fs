@@ -139,11 +139,19 @@ module Command =
     if manifest = newManifest 
     then return ()
     else 
+      let! maybeLock = async {
+        if File.Exists(Constants.LockFileName)
+        then
+          let! lock = readLock
+          return Some lock
+        else
+          return None
+      }
       let git = new GitCli()
       let cachePath = getCachePath ()
       let gitManager = new GitManager(git, cachePath)
       let sourceExplorer = new DefaultSourceExplorer(gitManager)
-      let! resolution = Solver.solve sourceExplorer newManifest
+      let! resolution = Solver.solve sourceExplorer newManifest maybeLock
       do! writeManifest newManifest
       // TODO: Write lock file! 
       return ()
@@ -153,11 +161,30 @@ module Command =
     let git = new GitCli()
     let cachePath = getCachePath ()
     let gitManager = new GitManager(git, cachePath)
-    let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager)))
+    let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))) :> ISourceExplorer
     // let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
+
+    let! maybeLock = async {
+      if File.Exists(Constants.LockFileName)
+      then
+        let! lock = readLock
+        return Some lock
+      else
+        return None
+    }
+
+    let resolveStart = DateTime.Now
+    "Resolve start: " + (string resolveStart) |> Console.WriteLine
+
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
-    let! resolution = Solver.solve sourceExplorer manifest
+    let! resolution = Solver.solve sourceExplorer manifest maybeLock
+
+    let resolveEnd = DateTime.Now
+    "Resolve end: " + (string resolveEnd) |> Console.WriteLine
+
+    "Resolve time: " + (string (resolveEnd - resolveStart)) |> Console.WriteLine
+
     match resolution with
     | Resolution.Conflict x -> 
       "Conflict! " |> Console.WriteLine
@@ -241,7 +268,7 @@ module Command =
     Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
 
   let fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
-    let location =  
+    let (version, location) =  
       match lock.Packages |> Map.tryFind package with 
       | Some location -> location
       | None -> 
@@ -356,7 +383,7 @@ module Command =
       lock.Packages
       |> Seq.map (fun kvp -> async {
         let project = kvp.Key
-        let exactLocation = kvp.Value
+        let (_, exactLocation) = kvp.Value
         "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
         do! installLockedPackage lock gitManager sourceExplorer (project, exactLocation)
       })
