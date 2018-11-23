@@ -13,6 +13,7 @@
     <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />
     <Compile Include="Git.fs" />
+    <Compile Include="GitCli.fs" />
     <Compile Include="GitManager.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />

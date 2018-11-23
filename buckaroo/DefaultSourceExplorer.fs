@@ -1,11 +1,7 @@
 namespace Buckaroo
 
 open System
-open System.IO
-open System.Security.Cryptography
-open System.Text.RegularExpressions
 open FSharp.Control
-open LibGit2Sharp
 open Buckaroo.Git
 
 type DefaultSourceExplorer (gitManager : GitManager) = 
@@ -27,73 +23,68 @@ type DefaultSourceExplorer (gitManager : GitManager) =
 
   interface ISourceExplorer with 
 
-    member this.Prepare (dependency : Dependency) = 
-      let rec prepare dependency = 
-        async {
-          match dependency.Constraint with 
-          | Constraint.Exactly version -> 
-            let! url = gitUrl dependency.Package
-            let! gitPath = 
-              gitManager.Clone url
-            match version with 
-            | Version.Branch branch -> 
-              do! gitManager.Fetch url branch
-              return ()
-            | _ -> return ()
-          | _ -> 
-            let! url = gitUrl dependency.Package
-            let! gitPath = 
-              gitManager.Clone url
-            return ()
-        }
-      prepare dependency
-
     member this.FetchVersions package = asyncSeq {
       let! url = gitUrl package
-      let! gitPath = 
-        gitManager.Clone url 
-      use repo = new Repository(gitPath)
-
-      let references = repo.Network.ListReferences(url)
 
       // Tags and sem-vers
-      for reference in references do 
-        if reference.IsTag
-        then
-          let tag = reference.CanonicalName.Substring("refs/tags/".Length)
-          match SemVer.parse tag with
+      let! tags = gitManager.FetchTags url
+
+      yield! 
+        tags 
+        |> Seq.collect (fun tag -> seq {
+          match SemVer.parse tag.Name with
           | Result.Ok semVer -> 
             yield semVer |> Version.SemVerVersion
-            yield tag |> Version.Tag
+            ()
           | Result.Error _ -> 
-            yield tag |> Version.Tag
-        else ()
+            ()
+          yield tag.Name |> Version.Tag
+        })
+        |> Seq.sortWith (fun x y -> 
+          match (x, y) with 
+          | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
+          | (SemVerVersion _, Version.Tag _) -> -1
+          | (Version.Tag _, SemVerVersion _) -> 1
+          | (Version.Tag i, Version.Tag j) -> String.Compare(i, j)
+          | _ -> 0
+        )
+        |> AsyncSeq.ofSeq
 
-      let branches = 
-        references
-        |> Seq.filter (fun x -> x.IsLocalBranch && not x.IsTag)
-        |> Seq.map (fun x -> x.CanonicalName.Substring("refs/heads/".Length))
-        |> Seq.distinct
-        |> Seq.sortBy branchPriority
-        |> Seq.toList
+      let! branches = gitManager.FetchBranches url
 
       // Branches
       yield! 
         branches 
+        |> Seq.map (fun x -> x.Name)
+        |> Seq.sortBy branchPriority
         |> Seq.map Version.Branch
         |> AsyncSeq.ofSeq
 
-      // Revisions
+      // Tag Revisions
+      yield!
+        tags
+        |> Seq.map (fun x -> Buckaroo.Version.Revision x.Commit)
+        |> AsyncSeq.ofSeq
+
+      // Branch Revisions
+      yield!
+        branches
+        |> Seq.map (fun x -> Buckaroo.Version.Revision x.Head)
+        |> AsyncSeq.ofSeq
+
+      let alreadyYielded = 
+        branches 
+        |> Seq.map (fun x -> x.Head)
+        |> Seq.append (tags |> Seq.map (fun x -> x.Commit))
+        |> Set.ofSeq
+
+      // All Revisions
       for branch in branches do 
-        do! gitManager.Fetch url branch
-        let cf = new CommitFilter()
-        cf.IncludeReachableFrom <- "origin/" + branch
+        let! commits = gitManager.FetchCommits url branch.Name
         yield! 
-          repo.Commits.QueryBy(cf)
-          |> Seq.sortByDescending (fun c -> c.Committer.When)
-          |> Seq.map (fun x -> x.Sha)
-          |> Seq.distinct
-          |> Seq.map Buckaroo.Version.Revision
+          commits
+          |> Seq.except alreadyYielded
+          |> Seq.map (fun x -> Buckaroo.Version.Revision x)
           |> AsyncSeq.ofSeq
     }
 
@@ -101,43 +92,40 @@ type DefaultSourceExplorer (gitManager : GitManager) =
       match package with 
       | PackageIdentifier.GitHub g -> 
         let url = PackageLocation.gitHubUrl g
-        let! gitPath = 
-          gitManager.Clone url
-        use repo = new Repository(gitPath)
         match version with 
         | Buckaroo.SemVerVersion semVer -> 
+          let! tags = gitManager.FetchTags url
           yield! 
-            repo.Tags 
-            |> Seq.filter (fun t -> SemVer.parse t.FriendlyName = Result.Ok semVer)
-            |> Seq.map (fun t -> t.Target.Sha)
+            tags 
+            |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
+            |> Seq.map (fun t -> t.Commit)
             |> Seq.distinct
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Branch b -> 
+          let! branches = gitManager.FetchBranches url
+
           yield! 
-            repo.Branches
-            |> Seq.filter (fun x -> x.FriendlyName = "origin/" + b)
-            |> Seq.collect (fun branch -> 
-              branch.Commits
-              |> Seq.sortByDescending (fun c -> c.Committer.When)
-              |> Seq.map (fun c -> c.Sha)
-              |> Seq.distinct
+            branches
+            |> Seq.filter (fun x -> x.Name = b)
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x.Head })
+            |> AsyncSeq.ofSeq
+
+          for branch in branches |> Seq.map (fun x -> x.Name) do
+            let! commits = gitManager.FetchCommits url branch
+            yield!
+              commits
               |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
-            )
-            |> AsyncSeq.ofSeq
+              |> AsyncSeq.ofSeq
+
         | Buckaroo.Version.Revision r -> 
-          yield! 
-            repo.Commits
-            |> Seq.map (fun c -> c.Sha)
-            |> Seq.filter (fun c -> c = r)
-            |> Seq.truncate 1 
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
-            |> AsyncSeq.ofSeq
+          yield PackageLocation.GitHub { Package = g; Revision = r }
         | Buckaroo.Version.Tag tag -> 
+          let! tags = gitManager.FetchTags url
           yield! 
-            repo.Tags 
-            |> Seq.filter (fun t -> t.FriendlyName = tag)
-            |> Seq.map (fun t -> t.Target.Sha)
+            tags 
+            |> Seq.filter (fun t -> t.Name = tag)
+            |> Seq.map (fun t -> t.Commit)
             |> Seq.distinct
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
             |> AsyncSeq.ofSeq
@@ -151,7 +139,6 @@ type DefaultSourceExplorer (gitManager : GitManager) =
       | PackageLocation.GitHub g -> 
         let url = PackageLocation.gitHubUrl g.Package
         async {
-          let url = PackageLocation.gitHubUrl g.Package
           let! content = 
             gitManager.FetchFile url g.Revision Constants.ManifestFileName
           return 
@@ -166,6 +153,24 @@ type DefaultSourceExplorer (gitManager : GitManager) =
           return new Exception("Only GitHub packages are supported") |> raise
         }
 
+    member this.Prepare (location : PackageLocation) = async {
+      match location with 
+      | PackageLocation.GitHub g -> 
+        let url = PackageLocation.gitHubUrl g.Package
+        do! 
+          gitManager.Clone url
+          |> Async.Ignore
+        do! 
+          gitManager.Fetch url "master"
+          |> Async.Ignore
+        do! 
+          gitManager.FetchTags url 
+          |> Async.Ignore
+        do! 
+          gitManager.FetchBranches url 
+          |> Async.Ignore
+      | _ -> return ()
+    }
 
     member this.FetchLock location = 
       match location with 

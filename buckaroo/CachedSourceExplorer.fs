@@ -12,8 +12,8 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
 
   interface ISourceExplorer with 
 
-    member this.Prepare dependency = async {
-      do! sourceExplorer.Prepare dependency  
+    member this.Prepare location = async {
+      return! sourceExplorer.Prepare location
     }
 
     member this.FetchLocations package version = asyncSeq {
@@ -24,8 +24,8 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
       | (false, _) -> 
         let locations = 
           sourceExplorer.FetchLocations package version 
-          |> AsyncSeq.cache
-        locationsCache.TryAdd(key, locations) |> ignore
+          // |> AsyncSeq.cache
+        // locationsCache.TryAdd(key, locations) |> ignore
         yield! locations
     }
 
@@ -56,7 +56,7 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
       | (false, _) -> 
         let versions = 
           sourceExplorer.FetchVersions package
-          |> AsyncSeq.cache
-        versionsCache.TryAdd(package, versions) |> ignore
+          // |> AsyncSeq.cache
+        // versionsCache.TryAdd(package, versions) |> ignore
         yield! versions
     }

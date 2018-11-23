@@ -139,8 +139,9 @@ module Command =
     if manifest = newManifest 
     then return ()
     else 
+      let git = new GitCli()
       let cachePath = getCachePath ()
-      let gitManager = new GitManager(cachePath)
+      let gitManager = new GitManager(git, cachePath)
       let sourceExplorer = new DefaultSourceExplorer(gitManager)
       let! resolution = Solver.solve sourceExplorer newManifest
       do! writeManifest newManifest
@@ -149,10 +150,11 @@ module Command =
   }
 
   let resolve = async {
+    let git = new GitCli()
     let cachePath = getCachePath ()
-    let gitManager = new GitManager(cachePath)
-    // let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager)))
-    let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
+    let gitManager = new GitManager(git, cachePath)
+    let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager)))
+    // let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
     let! resolution = Solver.solve sourceExplorer manifest
@@ -181,8 +183,9 @@ module Command =
   }
 
   let showVersions (package : PackageIdentifier) = async {
+    let git = new GitCli()
     let cachePath = getCachePath ()
-    let gitManager = new GitManager(cachePath)
+    let gitManager = new GitManager(git, cachePath)
     let sourceExplorer = new DefaultSourceExplorer(gitManager) :> ISourceExplorer
     let! versions = 
       sourceExplorer.FetchVersions package
@@ -344,8 +347,9 @@ module Command =
   }
 
   let install = async {
+    let git = new GitCli()
     let cachePath = getCachePath ()
-    let gitManager = new GitManager(cachePath)
+    let gitManager = new GitManager(git, cachePath)
     let sourceExplorer = new DefaultSourceExplorer(gitManager)
     let! lock = readLock
     do! 

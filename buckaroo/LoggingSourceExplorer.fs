@@ -8,9 +8,9 @@ type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
 
   interface ISourceExplorer with 
 
-    member this.Prepare dependency = async {
-      log("Preparing " + (Dependency.show dependency) + "... ")
-      do! sourceExplorer.Prepare dependency  
+    member this.Prepare location = async {
+      log("Preparing " + (PackageLocation.show location) + "... ")
+      do! sourceExplorer.Prepare location  
     }
 
     member this.FetchLocations package version = asyncSeq {

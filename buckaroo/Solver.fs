@@ -56,18 +56,11 @@ module Solver =
       unsatisfied solution dependencies
       |> List.sortBy (fun x -> constraintSearchCost x.Constraint)
 
-    // Prefetch all dependencies mentioned
-    for dependency in pending do
-      sourceExplorer.Prepare dependency
-      |> Async.Catch
-      |> Async.Ignore
-      |> Async.Start
-
     // Anything left to process? 
     match pending with
     | head :: tail -> 
       // TODO: Better notification system
-      log("Processing " + (Dependency.show head) + "... ")
+      // log("Processing " + (Dependency.show head) + "... ")
 
       // Unpack available (and compatible) versions 
       let versions = 
@@ -92,25 +85,21 @@ module Solver =
             let! manifest = sourceExplorer.FetchManifest location
 
             // We can grab the lock-file to pre-empt upcoming dependencies... 
-            async {
-              let! lock = sourceExplorer.FetchLock location
-              return!
-                lock.Packages 
-                |> Map.toSeq 
-                |> Seq.map snd
-                |> Seq.map (fun location -> async {
-                  let! manifest = sourceExplorer.FetchManifest location
-                  return 
-                    manifest.Dependencies
-                    |> Seq.map sourceExplorer.Prepare
-                    |> Async.Parallel
-                })
-                |> Seq.map Async.Catch
-                |> Async.Parallel
-            }
-            |> Async.Catch
-            |> Async.Ignore
-            |> Async.Start
+            // do! 
+            //   async {
+            //     let! lock = sourceExplorer.FetchLock location
+            //     return!
+            //       lock.Packages 
+            //       |> Map.toSeq 
+            //       |> Seq.map snd
+            //       |> Seq.map sourceExplorer.Prepare
+            //       |> Seq.map Async.Catch
+            //       |> Async.Parallel
+            //   }
+            //   |> Async.Catch
+            //   |> Async.Ignore
+            //   |> Async.StartChild
+            //   |> Async.Ignore
 
             let resolvedVersion =
               {
