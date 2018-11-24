@@ -12,10 +12,6 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
 
   interface ISourceExplorer with 
 
-    member this.Prepare location = async {
-      return! sourceExplorer.Prepare location
-    }
-
     member this.FetchLocations package version = asyncSeq {
       let key = (package, version)
       match locationsCache.TryGetValue(key) with 

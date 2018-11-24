@@ -10,6 +10,8 @@ type GitCli () =
   let nl = System.Environment.NewLine
 
   let runBash (command : String) = async {
+    let timeout = 3 * 60 * 1000
+    
     let! task = 
       async {
         if command.Contains("\"") || command.Contains("$") 
@@ -27,6 +29,7 @@ type GitCli () =
           startInfo.Arguments <- "-c \"" + command + "\""
           startInfo.RedirectStandardOutput <- true
           startInfo.RedirectStandardError <- true
+          startInfo.RedirectStandardInput <- true
           startInfo.WindowStyle <- ProcessWindowStyle.Hidden
 
           let p = new Process()
@@ -49,7 +52,7 @@ type GitCli () =
         with error -> 
           return raise error
       }
-      |> Async.StartChild
+      |> (fun t -> Async.StartChild (t, timeout))
     return! task
   }
 
@@ -83,19 +86,6 @@ type GitCli () =
       |> Seq.toList
   }
 
-  member this.CommitsOnRemote (repository : String) (branch : Branch)  = async {
-    let gitDir = Path.Combine(repository, "./.git")
-    let command =
-      "git --git-dir=" + gitDir + 
-      " --work-tree=" + repository + 
-      " rev-list HEAD...origin/" + branch
-    let! output = runBash(command)
-    return 
-      output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
-      |> Seq.map (fun x -> x.Trim())
-      |> Seq.toList
-  }
-
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
       do! 
@@ -110,25 +100,23 @@ type GitCli () =
     }
 
     member this.FetchBranch (repository : String) (branch : Branch) = async {
-      let! commitsOnRemote = this.CommitsOnRemote repository branch
-      if commitsOnRemote |> Seq.isEmpty |> not
-      then
-        let gitDir = Path.Combine(repository, "./.git")
-        let command =
-          "git --git-dir=" + gitDir + 
-          " --work-tree=" + repository + 
-          " fetch origin " + branch
-        do! 
-          runBash(command)
-          |> Async.Ignore
+      let gitDir = Path.Combine(repository, "./.git")
+      let command =
+        "git --git-dir=" + gitDir + 
+        " --work-tree=" + repository + 
+        " fetch origin " + branch
+      do! 
+        runBash(command)
+        |> Async.Ignore
     }
 
     member this.FetchCommits (repository : String) (branch : Branch) : Async<Git.Revision list> = async {
+      do! (this :> IGit).FetchBranch repository branch
       let gitDir = Path.Combine(repository, "./.git")
       let command = 
         "git --git-dir=" + gitDir + 
         " --work-tree=" + repository + 
-        " log origin/" + branch + " --pretty=format:'%h'"
+        " log origin/" + branch + " --pretty=format:'%H'"
       let! output = runBash(command)
       return 
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
@@ -144,9 +132,13 @@ type GitCli () =
           let parts = System.Text.RegularExpressions.Regex.Split(x, @"\s+")
           match (parts) with 
           | [| commit; name |] -> 
+            let cleanedName = name.Trim().Substring("refs/tags/".Length)
             {
               Commit = commit.Trim(); 
-              Name = name.Substring("refs/tags/".Length).Trim();
+              Name = 
+                if cleanedName.EndsWith("^{}")
+                then cleanedName.Substring(0, cleanedName.Length - "^{}".Length)
+                else cleanedName;
             }
             |> Some
           | _ -> None

@@ -4,16 +4,11 @@ module Solver =
 
   open FSharp.Control
 
-  // let versionPriority (v : Version) : int = 
-  //   match v with 
-  //   | Version.Latest -> 1
-  //   | Version.Tag _ -> 2
-  //   | Version.SemVerVersion _ -> 3
-  //   | Version.Branch branch -> 
-  //     match branch with 
-  //     | "master" -> 4
-  //     | _ -> 5
-  //   | Version.Revision _ -> 6
+  let private withTimeout timeout action =
+    async {
+      let! child = Async.StartChild (action, timeout)
+      return! child
+    }
 
   let versionSearchCost (v : Version) : int = 
     match v with 
@@ -41,27 +36,6 @@ module Solver =
       | None -> true
     )
     |> List.ofSeq
-
-  // let solutionFromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Solution> = async {
-  //   let! resolvedVersions = 
-  //     lock.Packages
-  //     |> Map.toSeq
-  //     |> Seq.map (fun (identifier, v) -> async {
-  //       let version = fst v
-  //       let location = snd v 
-  //       let! manifest = sourceExplorer.FetchManifest location
-  //       let resolvedVersion = {
-  //         Version = version; 
-  //         Location = location; 
-  //         Manifest = manifest; 
-  //       }
-  //       return (identifier, resolvedVersion)
-  //     })
-  //     |> Async.Parallel
-  //   return 
-  //     resolvedVersions 
-  //     |> Map.ofSeq
-  // }
 
   type LocatedAtom = Atom * PackageLocation
 
@@ -132,13 +106,18 @@ module Solver =
         |> AsyncSeq.filter (fun (_, location) -> visited |> Set.contains location |> not)
 
       for (version, location) in locations do
+        log("Exploring " + (PackageIdentifier.show head.Package) + "@" + (Version.show version) + " -> " + (PackageLocation.show location) + "...")
+
         try 
           let! freshHintsTask = 
             async {
               try
-                let! lock = sourceExplorer.FetchLock location
+                let! lock = 
+                  sourceExplorer.FetchLock location
+                  |> withTimeout (3 * 1000)
                 return lockToHints lock
-              with _ ->
+              with error ->
+                System.Console.WriteLine error
                 return []
             }
             |> Async.StartChild
@@ -173,6 +152,9 @@ module Solver =
         with error -> 
           System.Console.WriteLine(error)
           yield Resolution.Error error
+
+      // We've run out of versions to try
+      yield Resolution.Conflict <| set [ head ]
     | [] -> 
       yield Resolution.Ok solution
   }
@@ -186,7 +168,7 @@ module Solver =
       step sourceExplorer (Map.empty, manifest.Dependencies |> Set.ofSeq, Set.empty, 0, hints)
     return
       resolutions
-      // |> AsyncSeq.take 128
+      |> AsyncSeq.take 1024
       |> AsyncSeq.filter (fun x -> 
         match x with
         | Ok _ -> true

@@ -25,6 +25,7 @@
     <Compile Include="ResolvedVersion.fs" />
     <Compile Include="Resolution.fs" />
     <Compile Include="Lock.fs" />
+    <Compile Include="GitHubApi.fs" />
     <Compile Include="SourceExplorer.fs" />
     <Compile Include="DefaultSourceExplorer.fs" />
     <Compile Include="CachedSourceExplorer.fs" />
@@ -40,6 +41,5 @@
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="LibGit2Sharp.NativeBinaries" Version="1.0.217" />
     <PackageReference Include="Nett" Version="0.9.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
 </Project>

@@ -6,91 +6,101 @@ open Buckaroo.Git
 
 type DefaultSourceExplorer (gitManager : GitManager) = 
 
-  let gitUrl (package : PackageIdentifier) : Async<string> = async {
-    return 
-      match package with 
-      | PackageIdentifier.GitHub x -> PackageLocation.gitHubUrl x
-      | _ -> 
-        // TODO
-        new Exception("Only GitHub projects are currently supported") |> raise
-  }
-
   let branchPriority branch = 
     match branch with 
     | "master" -> 0
     | "develop" -> 1
     | _ -> 2
 
+  let fetchVersionsFromGit (url : String) = asyncSeq {
+    let! branchesTask = 
+      gitManager.FetchBranches url
+      |> Async.StartChild
+
+    // Tags and sem-vers
+    let! tags = gitManager.FetchTags url
+
+    yield! 
+      tags 
+      |> Seq.collect (fun tag -> seq {
+        match SemVer.parse tag.Name with
+        | Result.Ok semVer -> 
+          yield semVer |> Version.SemVerVersion
+          ()
+        | Result.Error _ -> 
+          ()
+        yield tag.Name |> Version.Tag
+      })
+      |> Seq.sortWith (fun x y -> 
+        match (x, y) with 
+        | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
+        | (SemVerVersion _, Version.Tag _) -> -1
+        | (Version.Tag _, SemVerVersion _) -> 1
+        | (Version.Tag i, Version.Tag j) -> String.Compare(i, j)
+        | _ -> 0
+      )
+      |> AsyncSeq.ofSeq
+
+    let! branches = branchesTask
+
+    // Branches
+    yield! 
+      branches 
+      |> Seq.map (fun x -> x.Name)
+      |> Seq.sortBy branchPriority
+      |> Seq.map Version.Branch
+      |> AsyncSeq.ofSeq
+
+    // Tag Revisions
+    yield!
+      tags
+      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Commit)
+      |> AsyncSeq.ofSeq
+
+    // Branch Revisions
+    yield!
+      branches
+      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Head)
+      |> AsyncSeq.ofSeq
+
+    let alreadyYielded = 
+      branches 
+      |> Seq.map (fun x -> x.Head)
+      |> Seq.append (tags |> Seq.map (fun x -> x.Commit))
+      |> Set.ofSeq
+
+    // All Revisions
+    for branch in branches do 
+      let! commits = gitManager.FetchCommits url branch.Name
+      yield! 
+        commits
+        |> Seq.except alreadyYielded
+        |> Seq.map (fun x -> Buckaroo.Version.Revision x)
+        |> AsyncSeq.ofSeq
+  }
+
+  let fetchFile location path = 
+    match location with 
+    | PackageLocation.GitHub g -> 
+      GitHubApi.fetchFile g.Package g.Revision path
+    | PackageLocation.Git g -> 
+      gitManager.FetchFile g.Url g.Revision path
+    | _ -> 
+      async {
+        return new Exception("Only Git and GitHub packages are supported") |> raise
+      }
+
   interface ISourceExplorer with 
 
-    member this.FetchVersions package = asyncSeq {
-      let! url = gitUrl package
-
-      let! branchesTask = 
-        gitManager.FetchBranches url
-        |> Async.StartChild
-
-      // Tags and sem-vers
-      let! tags = gitManager.FetchTags url
-
-      yield! 
-        tags 
-        |> Seq.collect (fun tag -> seq {
-          match SemVer.parse tag.Name with
-          | Result.Ok semVer -> 
-            yield semVer |> Version.SemVerVersion
-            ()
-          | Result.Error _ -> 
-            ()
-          yield tag.Name |> Version.Tag
-        })
-        |> Seq.sortWith (fun x y -> 
-          match (x, y) with 
-          | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
-          | (SemVerVersion _, Version.Tag _) -> -1
-          | (Version.Tag _, SemVerVersion _) -> 1
-          | (Version.Tag i, Version.Tag j) -> String.Compare(i, j)
-          | _ -> 0
-        )
-        |> AsyncSeq.ofSeq
-
-      let! branches = branchesTask
-
-      // Branches
-      yield! 
-        branches 
-        |> Seq.map (fun x -> x.Name)
-        |> Seq.sortBy branchPriority
-        |> Seq.map Version.Branch
-        |> AsyncSeq.ofSeq
-
-      // Tag Revisions
-      yield!
-        tags
-        |> Seq.map (fun x -> Buckaroo.Version.Revision x.Commit)
-        |> AsyncSeq.ofSeq
-
-      // Branch Revisions
-      yield!
-        branches
-        |> Seq.map (fun x -> Buckaroo.Version.Revision x.Head)
-        |> AsyncSeq.ofSeq
-
-      let alreadyYielded = 
-        branches 
-        |> Seq.map (fun x -> x.Head)
-        |> Seq.append (tags |> Seq.map (fun x -> x.Commit))
-        |> Set.ofSeq
-
-      // All Revisions
-      for branch in branches do 
-        let! commits = gitManager.FetchCommits url branch.Name
-        yield! 
-          commits
-          |> Seq.except alreadyYielded
-          |> Seq.map (fun x -> Buckaroo.Version.Revision x)
-          |> AsyncSeq.ofSeq
-    }
+    member this.FetchVersions package = 
+      match package with 
+      | PackageIdentifier.GitHub gitHub -> 
+        let url = PackageLocation.gitHubUrl gitHub
+        fetchVersionsFromGit url
+      | _ -> 
+        asyncSeq {
+          return raise <| new Exception("Only GitHub packages are supported")
+        }
 
     member this.FetchLocations package version = asyncSeq {
       match package with 
@@ -139,59 +149,23 @@ type DefaultSourceExplorer (gitManager : GitManager) =
     }
 
     member this.FetchManifest location = 
-      match location with 
-      | PackageLocation.GitHub g -> 
-        let url = PackageLocation.gitHubUrl g.Package
-        async {
-          let! content = 
-            gitManager.FetchFile url g.Revision Constants.ManifestFileName
-          return 
-            match Manifest.parse content with
-            | Result.Ok manifest -> manifest
-            | Result.Error errorMessage -> 
-              new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage)
-              |> raise
-        }
-      | _ -> 
-        async {
-          return new Exception("Only GitHub packages are supported") |> raise
-        }
-
-    member this.Prepare (location : PackageLocation) = async {
-      match location with 
-      | PackageLocation.GitHub g -> 
-        let url = PackageLocation.gitHubUrl g.Package
-        do! 
-          gitManager.Clone url
-          |> Async.Ignore
-        do! 
-          gitManager.Fetch url "master"
-          |> Async.Ignore
-        do! 
-          gitManager.FetchTags url 
-          |> Async.Ignore
-        do! 
-          gitManager.FetchBranches url 
-          |> Async.Ignore
-      | _ -> return ()
-    }
+      async {
+        let! content = fetchFile location Constants.ManifestFileName
+        return 
+          match Manifest.parse content with
+          | Result.Ok manifest -> manifest
+          | Result.Error errorMessage -> 
+            new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage)
+            |> raise
+      }
 
     member this.FetchLock location = 
-      match location with 
-      | PackageLocation.GitHub g -> 
-        let url = PackageLocation.gitHubUrl g.Package
-        async {
-          let url = PackageLocation.gitHubUrl g.Package
-          let! content = 
-            gitManager.FetchFile url g.Revision Constants.LockFileName 
-          return 
-            match Lock.parse content with
-            | Result.Ok manifest -> manifest
-            | Result.Error errorMessage -> 
-              new Exception("Invalid " + Constants.LockFileName + " file. \n" + errorMessage)
-              |> raise
-        }
-      | _ -> 
-        async {
-          return new Exception("Only GitHub packages are supported") |> raise
-        }
+      async {
+        let! content = fetchFile location Constants.LockFileName
+        return 
+          match Lock.parse content with
+          | Result.Ok manifest -> manifest
+          | Result.Error errorMessage -> 
+            new Exception("Invalid " + Constants.LockFileName + " file. \n" + errorMessage)
+            |> raise
+      }
