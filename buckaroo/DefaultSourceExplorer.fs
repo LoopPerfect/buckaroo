@@ -116,21 +116,22 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> Seq.distinct
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
             |> AsyncSeq.ofSeq
-        | Buckaroo.Version.Branch b -> 
+        | Buckaroo.Version.Branch branch -> 
           let! branches = gitManager.FetchBranches url
 
           yield! 
             branches
-            |> Seq.filter (fun x -> x.Name = b)
+            |> Seq.filter (fun x -> x.Name = branch)
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x.Head })
             |> AsyncSeq.ofSeq
 
-          for branch in branches |> Seq.map (fun x -> x.Name) do
-            let! commits = gitManager.FetchCommits url branch
-            yield!
-              commits
-              |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
-              |> AsyncSeq.ofSeq
+          do! gitManager.Fetch url branch
+          let! commits = gitManager.FetchCommits url branch
+          yield!
+            commits
+            |> Seq.except (branches |> Seq.map (fun x -> x.Head))
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> AsyncSeq.ofSeq
 
         | Buckaroo.Version.Revision r -> 
           yield PackageLocation.GitHub { Package = g; Revision = r }

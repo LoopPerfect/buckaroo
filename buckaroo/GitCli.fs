@@ -19,7 +19,7 @@ type GitCli () =
           return 
             raise <| new Exception("Malicious bash? " + command)
         try 
-          System.Console.WriteLine("  " + command)
+          // System.Console.WriteLine("  " + command)
 
           let startInfo = new ProcessStartInfo()
 

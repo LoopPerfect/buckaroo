@@ -5,6 +5,7 @@ type Command =
 | ListDependencies
 | Resolve
 | Install
+| Upgrade
 | AddDependencies of List<Dependency>
 | ShowVersions of PackageIdentifier
 
@@ -12,9 +13,8 @@ module Command =
 
   open System
   open System.IO
-  open FParsec
-  open LibGit2Sharp
   open FSharp.Control
+  open FParsec
   open Buckaroo.Constants
   open Buckaroo.Git
   open Buckaroo.BuckConfig
@@ -26,6 +26,7 @@ module Command =
         System.Environment.GetFolderPath Environment.SpecialFolder.Personal
       Path.Combine(personalDirectory, ".buckaroo", "cache")
     | path -> path
+  
   let initParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "init"
@@ -45,6 +46,13 @@ module Command =
     do! CharParsers.skipString "resolve"
     do! CharParsers.spaces
     return Resolve
+  }
+
+  let upgradeParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "upgrade"
+    do! CharParsers.spaces
+    return Upgrade
   }
 
   let installParser = parse {
@@ -73,6 +81,7 @@ module Command =
   let parser = 
     listDependenciesParser 
     <|> resolveParser
+    <|> upgradeParser
     <|> addDependenciesParser
     <|> installParser
     <|> showVersionsParser
@@ -127,42 +136,12 @@ module Command =
     return ()
   }
 
-  let add dependencies = async {
-    let! manifest = readManifest
-    let newManifest = { 
-      manifest with 
-        Dependencies = 
-          manifest.Dependencies 
-          |> Seq.append dependencies 
-          |> Set.ofSeq;
-    }
-    if manifest = newManifest 
-    then return ()
-    else 
-      let! maybeLock = async {
-        if File.Exists(Constants.LockFileName)
-        then
-          let! lock = readLock
-          return Some lock
-        else
-          return None
-      }
-      let git = new GitCli()
-      let cachePath = getCachePath ()
-      let gitManager = new GitManager(git, cachePath)
-      let sourceExplorer = new DefaultSourceExplorer(gitManager)
-      let! resolution = Solver.solve sourceExplorer newManifest maybeLock
-      do! writeManifest newManifest
-      // TODO: Write lock file! 
-      return ()
-  }
-
-  let resolve = async {
+  let resolve resolutionStyle = async {
     let git = new GitCli()
     let cachePath = getCachePath ()
     let gitManager = new GitManager(git, cachePath)
-    let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))) :> ISourceExplorer
-    // let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
+    // let sourceExplorer = new LoggingSourceExplorer(new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))) :> ISourceExplorer
+    let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
 
     let! maybeLock = async {
       if File.Exists(Constants.LockFileName)
@@ -178,7 +157,7 @@ module Command =
 
     let! manifest = readManifest
     "Resolving dependencies... " |> Console.WriteLine
-    let! resolution = Solver.solve sourceExplorer manifest maybeLock
+    let! resolution = Solver.solve sourceExplorer manifest resolutionStyle maybeLock 
 
     let resolveEnd = DateTime.Now
     "Resolve end: " + (string resolveEnd) |> Console.WriteLine
@@ -298,7 +277,7 @@ module Command =
   }
 
   let fetchBuckarooDepsContent (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
-    let! targets =  fetchDependencyTargets lock sourceExplorer manifest
+    let! targets = fetchDependencyTargets lock sourceExplorer manifest
     return targets
       |> buckarooDeps
   }
@@ -320,8 +299,7 @@ module Command =
     | GitHub gitHub -> 
       let gitUrl = PackageLocation.gitHubUrl gitHub.Package
       let! gitPath = gitManager.Clone gitUrl
-      use repo = new Repository(gitPath)
-      Commands.Checkout(repo, gitHub.Revision) |> ignore
+      do! gitManager.Fetch gitUrl gitHub.Revision
       let! deletedExistingInstall = Files.deleteDirectoryIfExists installPath
       if deletedExistingInstall
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
@@ -424,6 +402,45 @@ module Command =
     return ()
   }
 
+  let add dependencies = async {
+    let! manifest = readManifest
+    let newManifest = { 
+      manifest with 
+        Dependencies = 
+          manifest.Dependencies 
+          |> Seq.append dependencies 
+          |> Set.ofSeq;
+    }
+    if manifest = newManifest 
+    then return ()
+    else 
+      let! maybeLock = async {
+        if File.Exists(Constants.LockFileName)
+        then
+          let! lock = readLock
+          return Some lock
+        else
+          return None
+      }
+      let git = new GitCli()
+      let cachePath = getCachePath ()
+      let gitManager = new GitManager(git, cachePath)
+      let sourceExplorer = new DefaultSourceExplorer(gitManager)
+      let! resolution = Solver.solve sourceExplorer newManifest ResolutionStyle.Quick maybeLock 
+      match resolution with
+      | Resolution.Ok solution -> 
+        do! writeManifest newManifest
+        do! writeLock (Lock.fromManifestAndSolution newManifest solution)
+        do! install
+      | _ -> ()
+      return ()
+  }
+
+  let upgrade = async {
+    do! resolve ResolutionStyle.Upgrading
+    do! install
+  }
+
   let init = async {
     let path = ManifestFileName
     if File.Exists(path) |> not
@@ -439,7 +456,8 @@ module Command =
     match command with
     | Init -> init
     | ListDependencies -> listDependencies
-    | Resolve -> resolve
+    | Resolve -> resolve ResolutionStyle.Quick
+    | Upgrade -> upgrade
     | Install -> install
     | AddDependencies dependencies -> add dependencies
     | ShowVersions project -> showVersions project

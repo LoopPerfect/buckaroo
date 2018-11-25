@@ -43,6 +43,28 @@ module Constraint =
     | Any xs -> xs |> Seq.exists(fun c -> agreesWith c v)
     | All xs -> xs |> Seq.forall(fun c -> agreesWith c v)
 
+  let rec compare (x : Constraint) (y : Constraint) : int = 
+    match (x, y) with 
+    | (Exactly u, Exactly v) -> Version.compareSpecificity u v
+    | (Any xs, y) -> 
+      xs 
+      |> Seq.map (fun x -> compare x y) 
+      |> Seq.append [ -1 ]
+      |> Seq.max
+    | (y, Any xs) -> 
+      (compare (Any xs) y) * -1
+    | (All xs, y) -> 
+      xs 
+      |> Seq.map (fun x -> compare x y) 
+      |> Seq.append [ 1 ]
+      |> Seq.min
+    | (y, All xs) -> 
+      (compare (All xs) y) * -1
+    | (Complement c, y) -> 
+      compare y c
+    | (y, Complement c) -> 
+      compare c y
+
   let rec show ( c : Constraint) : string = 
     match c with
     | Exactly v -> Version.show v

@@ -17,17 +17,24 @@ let ``Version.parse works correctly`` () =
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Version.parse input)
- 
+
 [<Fact>]
-let ``Version.harmonious works correctly`` () =
-  let cases = [
-    (Version.Revision "aabbccddee", Version.Tag "aabbccddee", true);
-    (Version.Tag "abc", Version.Tag "abc", true);
-    (Version.Branch "master", Version.Branch "master", true);
-    (Version.SemVerVersion SemVer.zero, Version.SemVerVersion SemVer.zero, true);
-    (Version.SemVerVersion SemVer.zero, Version.Revision "aabbccddee", true);
-    (Version.SemVerVersion SemVer.zero, Version.Tag "abc", true);
-    (Version.Branch "master", Version.Branch "develop", false);
+let ``Version.compare works correctly`` () =
+  Assert.Equal(-1, Version.compare (Version.Branch "master") (Version.Branch "develop"))
+  Assert.Equal(1, Version.compare (Version.Branch "develop") (Version.Branch "master"))
+  Assert.Equal(0, Version.compare (Version.Branch "master") (Version.Branch "master"))
+
+  let input = [ 
+    (Version.Branch "master"); 
+    (Version.Tag "v1.0.0"); 
+    (Version.Branch "develop"); 
+    (Version.Revision "aabbccddee"); 
   ]
-  for (v, u, expected) in cases do
-    Assert.Equal(expected, Version.harmonious v u)
+  let expected = [ 
+    (Version.Tag "v1.0.0"); 
+    (Version.Branch "master"); 
+    (Version.Branch "develop"); 
+    (Version.Revision "aabbccddee"); 
+  ]
+  let actual = input |> List.sortWith Version.compare
+  Assert.Equal<List<Version>>(expected, actual)

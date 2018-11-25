@@ -41,3 +41,20 @@ let ``Constraint.agreesWith works correctly`` () =
   Assert.True(Constraint.agreesWith c v)
   Assert.True(Constraint.agreesWith c w)
   Assert.False(Constraint.agreesWith c x)
+
+[<Fact>]
+let ``Constraint.compare works correctly`` () =
+  let input = [ 
+    (Constraint.Exactly <| Version.Branch "master"); 
+    (Constraint.Exactly <| Version.Tag "v1.0.0"); 
+    (Constraint.wildcard); 
+    (Constraint.Exactly <| Version.Revision "aabbccddee"); 
+  ]
+  let expected = [ 
+    (Constraint.Exactly <| Version.Revision "aabbccddee"); 
+    (Constraint.Exactly <| Version.Tag "v1.0.0"); 
+    (Constraint.Exactly <| Version.Branch "master"); 
+    (Constraint.wildcard); 
+  ]
+  let actual = input |> List.sortWith Constraint.compare
+  Assert.Equal<List<Constraint>>(expected, actual)

@@ -13,13 +13,51 @@ module Version =
 
   open FParsec
 
-  let harmonious (v : Version) (u : Version) = 
-    match (v, u) with 
-    | (Version.SemVerVersion x, Version.SemVerVersion y) -> x = y
-    | (Version.Branch x, Version.Branch y) -> x = y
-    | (Version.Revision x, Version.Revision y) -> x = y
-    | (Version.Tag x, Version.Tag y) -> x = y
-    | _ -> true
+  let compare (x : Version) (y : Version) = 
+    let score v = 
+      match v with
+      | SemVerVersion _ -> 0
+      | Tag _ -> 1
+      | Branch _ -> 2
+      | Revision _ -> 3
+      | Latest _ -> 4
+
+    match (x, y) with 
+    | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j 
+    | (Tag i, Tag j) -> System.String.Compare(i, j)
+    | (Branch i, Branch j) -> 
+      match (i, j) with 
+      | ("master", "master") -> 0
+      | ("master", _) -> -1
+      | (_, "master") -> 1
+      | ("develop", "develop") -> 0
+      | ("develop", _) -> -1
+      | (_, "develop") -> 1
+      | (p, q) -> System.String.Compare(p, q)
+    | _ -> (score x).CompareTo(score y) |> System.Math.Sign
+
+  let compareSpecificity (x : Version) (y : Version) = 
+    let score v = 
+      match v with
+      | Latest _ -> 0
+      | Revision _ -> 1
+      | Tag _ -> 2
+      | SemVerVersion _ -> 3
+      | Branch _ -> 4
+    
+    match (x, y) with 
+    | (Tag i, Tag j) -> System.String.Compare(i, j)
+    | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
+    | (Branch i, Branch j) -> 
+      match (i, j) with 
+      | ("master", "master") -> 0
+      | ("master", _) -> -1
+      | (_, "master") -> 1
+      | ("develop", "develop") -> 0
+      | ("develop", _) -> -1
+      | (_, "develop") -> 1
+      | (p, q) -> System.String.Compare(p, q)
+    | _ -> (score x).CompareTo(score y) |> System.Math.Sign
 
   let show (v : Version) : string = 
     match v with
