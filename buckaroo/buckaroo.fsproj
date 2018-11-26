@@ -32,7 +32,12 @@
     <Compile Include="CachedSourceExplorer.fs" />
     <Compile Include="LoggingSourceExplorer.fs" />
     <Compile Include="Solver.fs" />
+    <Compile Include="Tasks.fs" />
     <Compile Include="StartCommand.fs" />
+    <Compile Include="HelpCommand.fs" />
+    <Compile Include="InstallCommand.fs" />
+    <Compile Include="ResolveCommand.fs" />
+    <Compile Include="RemoveCommand.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>
