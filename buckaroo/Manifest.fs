@@ -8,7 +8,6 @@ type Manifest = {
 
 module Manifest = 
 
-  open OptionBuilder
   open ResultBuilder
 
   let zero : Manifest = {
@@ -16,6 +15,14 @@ module Manifest =
     Tags = set [];
     Dependencies = Set []
   }
+
+  let remove (manifest : Manifest) (package : PackageIdentifier) = 
+    {
+      manifest with 
+        Dependencies = 
+          manifest.Dependencies
+          |> Set.filter (fun d -> d.Package <> package); 
+    }
 
   let normalizeTarget (target : string) = 
     let trimmed = target.Trim()
