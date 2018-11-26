@@ -8,6 +8,7 @@ type Manifest = {
 
 module Manifest = 
 
+  open OptionBuilder
   open ResultBuilder
 
   let zero : Manifest = {
@@ -38,11 +39,33 @@ module Manifest =
       |> optionToResult "version must be specified for every dependency"
     let! p = PackageIdentifier.parse name 
     let! c = Constraint.parse version
-    let! t = 
-      match x |> Toml.get "target" |> Option.bind Toml.asString with 
-      | Some y -> y |> Target.parse |> Result.map Some
-      | None -> Ok None
-    return { Package = p; Constraint = c; Target = t }
+    let! ts = result {
+      match x |> Toml.get "targets" with 
+      | Some xs -> 
+        let! array = 
+          xs
+          |> Toml.asArray
+          |> optionToResult "targets must be an array"
+        let! targets = 
+          array.Items 
+          |> Seq.map (fun item -> result {
+            let! s = 
+              item
+              |> Toml.asString 
+              |> optionToResult "targets must be an array of strings"
+            return! 
+              s 
+              |> Target.parse
+          })
+          |> ResultBuilder.all
+        return 
+          targets 
+          |> Seq.toList
+          |> Some
+      | None -> 
+        return None
+    }
+    return { Package = p; Constraint = c; Targets = ts }
   }
 
   let parse (content : string) : Result<Manifest, string> = result {
@@ -115,8 +138,11 @@ module Manifest =
         "package = \"" + PackageIdentifier.show x.Package + "\"\n" + 
         "version = \"" + Constraint.show x.Constraint + "\"\n" + 
         (
-          match x.Target with
-          | Some t -> "target = \"" + Target.show t + "\"\n"
+          match x.Targets with
+          | Some ts -> 
+            "targets = [ " + 
+            (ts |> Seq.map (fun t -> "\"" + Target.show t + "\"") |> String.concat ", ") + 
+            " ]\n"
           | None -> ""
         )
       )

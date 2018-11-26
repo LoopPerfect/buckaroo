@@ -3,6 +3,7 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="OptionBuilder.fs" />
     <Compile Include="ResultBuilder.fs" />
     <Compile Include="Constants.fs" />
     <Compile Include="ArchiveType.fs" />

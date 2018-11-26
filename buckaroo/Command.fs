@@ -264,29 +264,34 @@ module Command =
   }
 
   let fetchDependencyTargets (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
-    let! targets =  
+    let! targetIdentifiers = 
       manifest.Dependencies
       |> Seq.map (fun d -> async {
-        match d.Target with 
-        | Some target -> 
-          return [ { Package = d.Package; Target = target } ] |> List.toSeq
-        | None -> 
-          let! manifest = fetchManifestFromLock lock sourceExplorer d.Package
-          return 
-            manifest.Targets 
-            |> Seq.map (fun target -> { Package = d.Package; Target = target })
+        let! targets = 
+          match d.Targets with 
+          | Some targets -> async {
+              return targets |> List.toSeq
+            }
+          | None -> async {
+              let! manifest = fetchManifestFromLock lock sourceExplorer d.Package
+              return manifest.Targets |> Set.toSeq
+            }
+        return
+          targets
+          |> Seq.map (fun target -> 
+            { Package = d.Package; Target = target }
+          )
       })
       |> Async.Parallel
     return 
-      targets 
-      |> Seq.collect id
-      |> List.ofSeq
+      targetIdentifiers
+      |> Seq.collect id 
+      |> Seq.toList
   }
 
   let fetchBuckarooDepsContent (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
     let! targets = fetchDependencyTargets lock sourceExplorer manifest
-    return targets
-      |> buckarooDeps
+    return targets |> buckarooDeps
   }
 
   let computeCellIdentifier (x : PackageIdentifier) = 
@@ -318,7 +323,8 @@ module Command =
       if File.Exists buckConfigPath |> not 
       then 
         do! Files.writeFile buckConfigPath ""
-      let! targets = fetchDependencyTargets lock sourceExplorer manifest
+      let! targets = 
+        fetchDependencyTargets lock sourceExplorer manifest
       // Write .buckconfig.d/.buckconfig.buckaroo
       let buckarooBuckConfigPath = 
         Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")

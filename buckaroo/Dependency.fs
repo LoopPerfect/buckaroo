@@ -3,7 +3,7 @@ namespace Buckaroo
 type Dependency = { 
   Package : PackageIdentifier; 
   Constraint : Constraint; 
-  Target : Target option
+  Targets : Target list option
 }
 
 module Dependency = 
@@ -15,15 +15,18 @@ module Dependency =
 
   let show (x : Dependency) = 
     (PackageIdentifier.show x.Package) + "@" + Constraint.show x.Constraint + 
-      (x.Target |> Option.map Target.show |> Option.defaultValue "")
+      (
+        x.Targets 
+        |> Option.map (fun xs -> "[ " + (xs |> Seq.map Target.show |> String.concat " ") + " ]") 
+        |> Option.defaultValue ""
+      )
 
   let parser = parse {
     let! p = PackageIdentifier.parser
     do! CharParsers.skipString "@"
     let! c = Constraint.parser
-    let! t = Target.parser |> Primitives.opt
     return 
-      { Package = p; Constraint = c; Target = t }
+      { Package = p; Constraint = c; Targets = None }
   }
 
   let parse (x : string) : Result<Dependency, string> = 
