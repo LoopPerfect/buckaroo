@@ -33,6 +33,7 @@
     <Compile Include="LoggingSourceExplorer.fs" />
     <Compile Include="Solver.fs" />
     <Compile Include="StartCommand.fs" />
+    <Compile Include="HelpCommand.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>
