@@ -2,6 +2,7 @@ namespace Buckaroo
 
 type Command = 
 | Start
+| Help
 | Init
 | ListDependencies
 | Resolve
@@ -27,7 +28,7 @@ module Command =
         System.Environment.GetFolderPath Environment.SpecialFolder.Personal
       Path.Combine(personalDirectory, ".buckaroo", "cache")
     | path -> path
-  
+
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     return Start
@@ -38,6 +39,13 @@ module Command =
     do! CharParsers.skipString "init"
     do! CharParsers.spaces
     return Init
+  }
+
+  let helpParser : Parser<Command, Unit> = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "help"
+    do! CharParsers.spaces
+    return Help
   }
 
   let listDependenciesParser : Parser<Command, Unit> = parse {
@@ -92,6 +100,7 @@ module Command =
     <|> installParser
     <|> showVersionsParser
     <|> initParser
+    <|> helpParser
     <|> startParser
 
   let parse (x : string) : Result<Command, string> = 
@@ -469,6 +478,7 @@ module Command =
     match command with
     | Start -> StartCommand.task
     | Init -> init
+    | Help -> HelpCommand.task
     | ListDependencies -> listDependencies
     | Resolve -> resolve ResolutionStyle.Quick
     | Upgrade -> upgrade
