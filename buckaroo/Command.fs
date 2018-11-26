@@ -1,6 +1,7 @@
 namespace Buckaroo
 
 type Command = 
+| Start
 | Init
 | ListDependencies
 | Resolve
@@ -27,6 +28,11 @@ module Command =
       Path.Combine(personalDirectory, ".buckaroo", "cache")
     | path -> path
   
+  let startParser : Parser<Command, Unit> = parse {
+    do! CharParsers.spaces
+    return Start
+  }
+
   let initParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "init"
@@ -86,6 +92,7 @@ module Command =
     <|> installParser
     <|> showVersionsParser
     <|> initParser
+    <|> startParser
 
   let parse (x : string) : Result<Command, string> = 
     match run (parser .>> CharParsers.eof) x with
@@ -454,6 +461,7 @@ module Command =
 
   let runCommand command = 
     match command with
+    | Start -> StartCommand.task
     | Init -> init
     | ListDependencies -> listDependencies
     | Resolve -> resolve ResolutionStyle.Quick

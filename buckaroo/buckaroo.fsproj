@@ -31,6 +31,7 @@
     <Compile Include="CachedSourceExplorer.fs" />
     <Compile Include="LoggingSourceExplorer.fs" />
     <Compile Include="Solver.fs" />
+    <Compile Include="StartCommand.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -38,6 +39,8 @@
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="2.0.21" />
     <PackageReference Include="FSharp.Data" Version="3.0.0" />
     <PackageReference Include="FSharpx.Async" Version="1.13.2" />
+    <PackageReference Include="FSharpx.Collections" Version="1.17.0" />
+    <PackageReference Include="FSharpx.Extras" Version="2.2.1" />
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="LibGit2Sharp.NativeBinaries" Version="1.0.217" />
     <PackageReference Include="Nett" Version="0.9.0" />
