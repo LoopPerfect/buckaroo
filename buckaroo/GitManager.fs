@@ -63,6 +63,11 @@ type GitManager (git : IGit, cacheDirectory : string) =
     return! res 
   }
 
+
+  member this.CopyFromCache  (gitPath : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
+    return! git.CopyFromCache gitPath revision installPath
+  }
+
   member this.Fetch (url : string) (branch : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
     return! 

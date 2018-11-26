@@ -60,10 +60,10 @@ type GitCli () =
     runBash ("git init " + directory)
 
   member this.LocalTags (repository : String) = async {
-    let gitDir = Path.Combine(repository, "./.git")
+    let gitDir = repository //Path.Combine(repository, "./.git")
     let command =
-      "git --git-dir=" + gitDir + 
-      " --work-tree=" + repository + 
+      "git --no-pager --git-dir=" + gitDir + 
+     // " --work-tree=" + repository + 
       " tag"
     let! output = runBash(command)
     return
@@ -73,10 +73,10 @@ type GitCli () =
   }
 
   member this.LocalBranches (repository : String) = async {
-    let gitDir = Path.Combine(repository, "./.git")
+    let gitDir = repository//Path.Combine(repository, "./.git")
     let command =
-      "git --git-dir=" + gitDir + 
-      " --work-tree=" + repository + 
+      "git --no-pager --git-dir=" + gitDir + 
+      //" --work-tree=" + repository + 
       " branch"
     let! output = runBash(command)
     return
@@ -89,21 +89,31 @@ type GitCli () =
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
       do! 
-        runBash ("git clone " + url + " " + directory)
+        runBash ("git clone --bare " + url + " " + directory)
+        |> Async.Ignore
+    }
+
+    member this.CopyFromCache (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
+      do! Files.mkdirp installPath
+      do! 
+        runBash ("git -C " + installPath + " init" + 
+          " && git -C " + installPath + " remote add local " + gitPath +
+          " && git -C " + installPath + " fetch local " +  revision +
+          " && git -C " + installPath + " checkout local " + revision)
         |> Async.Ignore
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
       do! 
-        runBash ("git clone --depth=1 " + url + " " + directory)
+        runBash ("git clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore
     }
 
     member this.FetchBranch (repository : String) (branch : Branch) = async {
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository//Path.Combine(repository, "./.git")
       let command =
         "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
+        //" --work-tree=" + repository + 
         " fetch origin " + branch
       do! 
         runBash(command)
@@ -112,9 +122,9 @@ type GitCli () =
 
     member this.FetchCommits (repository : String) (branch : Branch) : Async<Git.Revision list> = async {
       do! (this :> IGit).FetchBranch repository branch
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository//Path.Combine(repository, "./.git")
       let command = 
-        "git --git-dir=" + gitDir + 
+        "git --no-pager --git-dir=" + gitDir + 
         " --work-tree=" + repository + 
         " log origin/" + branch + " --pretty=format:'%H'"
       let! output = runBash(command)
@@ -147,10 +157,10 @@ type GitCli () =
     }
 
     member this.FetchCommit (repository : String) (commit : Revision) = async {
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository//Path.Combine(repository, "./.git")
       let command =
         "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
+        //" --work-tree=" + repository + 
         " fetch origin " + commit
       do! 
         runBash(command)
@@ -158,10 +168,10 @@ type GitCli () =
     }
 
     member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository//Path.Combine(repository, "./.git")
       let command =
         "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
+        //" --work-tree=" + repository + 
         " show " + commit + ":" + path
       return! runBash(command)
     }

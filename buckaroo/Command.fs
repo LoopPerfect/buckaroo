@@ -312,6 +312,7 @@ module Command =
       let gitUrl = PackageLocation.gitHubUrl gitHub.Package
       let! gitPath = gitManager.Clone gitUrl
       do! gitManager.Fetch gitUrl gitHub.Revision
+      do! gitManager.CopyFromCache gitPath gitHub.Revision installPath
       let! deletedExistingInstall = Files.deleteDirectoryIfExists installPath
       if deletedExistingInstall
       then "Deleted the existing folder at " + installPath |> Console.WriteLine
