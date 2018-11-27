@@ -19,7 +19,6 @@ type GitCli () =
           return 
             raise <| new Exception("Malicious bash? " + command)
         try 
-          // System.Console.WriteLine("  " + command)
 
           let startInfo = new ProcessStartInfo()
 
@@ -35,20 +34,24 @@ type GitCli () =
           let p = new Process()
 
           p.StartInfo <- startInfo
-
+          p.EnableRaisingEvents <- true
           p.Start() |> ignore
+
+          System.Console.WriteLine command
+
+          use reader = p.StandardOutput
+          let stdout = reader.ReadToEnd();
+          
+          use errorReader = p.StandardError
+          let stderr = errorReader.ReadToEnd();
+
           p.WaitForExit()
-
-          let standardOutput = p.StandardOutput.ReadToEnd()
-
           if p.ExitCode > 0
           then 
-            let standardError = p.StandardError.ReadToEnd()
-
             return 
-              raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n" + standardError)
+              raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n")
 
-          return standardOutput
+          return stdout
         with error -> 
           return raise error
       }
@@ -60,12 +63,12 @@ type GitCli () =
     runBash ("git init " + directory)
 
   member this.LocalTags (repository : String) = async {
-    let gitDir = Path.Combine(repository, "./.git")
+    let gitDir = repository
     let command =
-      "git --git-dir=" + gitDir + 
-      " --work-tree=" + repository + 
+      "--no-pager --git-dir=" + gitDir + 
       " tag"
     let! output = runBash(command)
+
     return
       output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
       |> Seq.map (fun x -> x.Trim())
@@ -73,12 +76,12 @@ type GitCli () =
   }
 
   member this.LocalBranches (repository : String) = async {
-    let gitDir = Path.Combine(repository, "./.git")
+    let gitDir = repository
     let command =
-      "git --git-dir=" + gitDir + 
-      " --work-tree=" + repository + 
+      "git --no-pager --git-dir=" + gitDir + 
       " branch"
     let! output = runBash(command)
+
     return
       output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
       |> Seq.map (fun x -> x.Trim())
@@ -89,22 +92,21 @@ type GitCli () =
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
       do! 
-        runBash ("git clone " + url + " " + directory)
+        runBash ("git clone --bare " + url + " " + directory)
         |> Async.Ignore
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
       do! 
-        runBash ("git clone --depth=1 " + url + " " + directory)
+        runBash ("git clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore
     }
 
     member this.FetchBranch (repository : String) (branch : Branch) = async {
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository
       let command =
-        "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
-        " fetch origin " + branch
+        "git --no-pager --git-dir=" + gitDir + 
+        " fetch origin " + branch + ":" + branch
       do! 
         runBash(command)
         |> Async.Ignore
@@ -112,11 +114,10 @@ type GitCli () =
 
     member this.FetchCommits (repository : String) (branch : Branch) : Async<Git.Revision list> = async {
       do! (this :> IGit).FetchBranch repository branch
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository
       let command = 
-        "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
-        " log origin/" + branch + " --pretty=format:'%H'"
+        "git --no-pager --git-dir=" + gitDir + 
+        " log " + branch + " --pretty=format:'%H'"
       let! output = runBash(command)
       return 
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
@@ -125,7 +126,7 @@ type GitCli () =
     }
 
     member this.RemoteTags (url : String) = async {
-      let! output = runBash("git ls-remote --tags " + url)
+      let! output = runBash("git --no-pager ls-remote --tags " + url)
       return
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
         |> Seq.choose (fun x -> 
@@ -147,10 +148,9 @@ type GitCli () =
     }
 
     member this.FetchCommit (repository : String) (commit : Revision) = async {
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository
       let command =
         "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
         " fetch origin " + commit
       do! 
         runBash(command)
@@ -158,16 +158,15 @@ type GitCli () =
     }
 
     member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
-      let gitDir = Path.Combine(repository, "./.git")
+      let gitDir = repository
       let command =
         "git --git-dir=" + gitDir + 
-        " --work-tree=" + repository + 
         " show " + commit + ":" + path
       return! runBash(command)
     }
 
     member this.RemoteHeads (url : String) = async {
-      let! output = runBash("git ls-remote --heads " + url)
+      let! output = runBash("git --no-pager ls-remote --heads " + url)
       return
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
         |> Seq.choose (fun x -> 

@@ -179,7 +179,7 @@ module Solver =
             yield! step sourceExplorer strategy nextState
           with error -> 
             log("Error exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
-            // System.Console.WriteLine(error)
+            System.Console.WriteLine(error)
             yield Resolution.Error error
 
         // We've run out of versions to try
