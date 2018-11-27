@@ -5,10 +5,11 @@ open System.Text.RegularExpressions
 
 let private defaultBuck (libraryName : string) = 
   [
-    "load('//:buckaroo_deps.bzl', 'buckaroo_deps')"; 
+    "load('//:buckaroo_macros.bzl', 'buckaroo_deps')"; 
+    ""; 
     "cxx_library("; 
     "  name = '" + libraryName + "', "; 
-    "  header_namespace = '" + libraryName + "'"; 
+    "  header_namespace = '" + libraryName + "', "; 
     "  exported_headers = subdir_glob(["; 
     "    ('include', '**/*.hpp'), "; 
     "    ('include', '**/*.h'), "; 
@@ -27,7 +28,7 @@ let private defaultBuck (libraryName : string) =
     ")"; 
     ""; 
     "cxx_binary("; 
-    "  name = 'app'"; 
+    "  name = 'app', "; 
     "  srcs = ["; 
     "    'main.cpp', "; 
     "  ], "; 
@@ -64,7 +65,7 @@ let private defaultMain =
   |> String.concat "\n"
 
 let isValidProjectName (candidate : string) = 
-  (new Regex(@"[A-Za-z0-9\-\_]{2,32}")).IsMatch(candidate)
+  (new Regex(@"^[A-Za-z0-9\-_]{2,32}$")).IsMatch(candidate)
 
 let requestProjectName = async {
   let mutable candidate = ""
@@ -79,6 +80,8 @@ let requestProjectName = async {
 let task (context : Tasks.TaskContext) = async {
   let! projectName = requestProjectName
 
+  Console.WriteLine("Writing project files... ")
+
   do! Tasks.writeManifest Manifest.zero
   do! Files.mkdirp "src"
   do! Files.mkdirp "include"
@@ -86,6 +89,9 @@ let task (context : Tasks.TaskContext) = async {
   do! Files.writeFile ".buckconfig" defaultBuckconfig
   do! Files.writeFile "BUCK" (defaultBuck projectName)
   do! Files.writeFile "main.cpp" defaultMain
+  
+  do! ResolveCommand.task context ResolutionStyle.Quick
+  do! InstallCommand.task context
 
   Console.WriteLine("To start your app: ")
   Console.WriteLine("$ buck run :app")

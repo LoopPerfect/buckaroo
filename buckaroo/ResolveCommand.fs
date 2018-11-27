@@ -36,9 +36,9 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
         let! previousLock = Tasks.readLock
         let diff = Lock.showDiff previousLock lock 
         Console.WriteLine(diff)
-        do! Tasks.writeLock lock
       with _ -> 
         ()
     }
+    do! Tasks.writeLock lock
     return ()
 }
