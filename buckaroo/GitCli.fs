@@ -2,8 +2,6 @@ namespace Buckaroo
 
 open System
 open System.IO
-open FSharp.Control
-open FSharpx
 open System.Diagnostics
 open Buckaroo.Git
 
