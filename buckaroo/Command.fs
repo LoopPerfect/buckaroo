@@ -8,6 +8,7 @@ type Command =
 | Resolve
 | Install
 | Upgrade
+| Quickstart
 | AddDependencies of List<Dependency>
 | RemoveDependencies of List<PackageIdentifier>
 | ShowVersions of PackageIdentifier
@@ -19,7 +20,6 @@ module Command =
   open FSharp.Control
   open FParsec
   open Buckaroo.Constants
-  open Buckaroo.Git
 
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
@@ -68,6 +68,13 @@ module Command =
     return Install
   }
 
+  let quickstartParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "quickstart"
+    do! CharParsers.spaces
+    return Quickstart
+  }
+
   let addDependenciesParser = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "add"
@@ -99,6 +106,7 @@ module Command =
     <|> addDependenciesParser
     <|> removeDependenciesParser
     <|> installParser
+    <|> quickstartParser
     <|> showVersionsParser
     <|> initParser
     <|> helpParser
@@ -188,6 +196,7 @@ module Command =
       | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
       | Upgrade -> upgrade context
       | Install -> InstallCommand.task context
+      | Quickstart -> QuickstartCommand.task context
       | AddDependencies dependencies -> add context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
       | ShowVersions project -> showVersions context project
