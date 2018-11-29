@@ -9,72 +9,52 @@ type BashEvent =
 | Error of string
 | Exit of int
 
-let runBash (command : string) = asyncSeq {
+let runBash (command : String) = async {
+    let timeout = 3 * 60 * 1000
+    
+    let! task = 
+      async {
+        if command.Contains("\"") || command.Contains("$") 
+        then 
+          return 
+            raise <| new Exception("Malicious bash? " + command)
+        try 
 
-  if command.Contains("\"") || command.Contains("$") 
-  then 
-    return 
-      raise <| new Exception("Malicious bash? " + command)
+          let startInfo = new ProcessStartInfo()
 
-  let startInfo = new ProcessStartInfo()
+          startInfo.CreateNoWindow <- true
+          startInfo.UseShellExecute <- false
+          startInfo.FileName <- "/bin/bash"
+          startInfo.Arguments <- "-c \"" + command + "\""
+          startInfo.RedirectStandardOutput <- true
+          startInfo.RedirectStandardError <- true
+          startInfo.RedirectStandardInput <- true
+          startInfo.WindowStyle <- ProcessWindowStyle.Hidden
 
-  startInfo.CreateNoWindow <- true
-  startInfo.UseShellExecute <- false
-  startInfo.FileName <- "/bin/bash"
-  startInfo.Arguments <- "-c \"" + command + "\""
-  startInfo.RedirectStandardOutput <- true
-  startInfo.RedirectStandardError <- true
-  startInfo.RedirectStandardInput <- true
-  startInfo.WindowStyle <- ProcessWindowStyle.Hidden
+          let p = new Process()
 
-  let p = new Process()
+          p.StartInfo <- startInfo
+          p.EnableRaisingEvents <- true
+          p.Start() |> ignore
 
-  p.StartInfo <- startInfo
-  p.EnableRaisingEvents <- true
+          System.Console.WriteLine command
 
-  let! exitSignal = 
-    p.Exited
-    |> Async.AwaitEvent
-    |> Async.Ignore 
-    |> Async.StartChild
+          use reader = p.StandardOutput
+          let stdout = reader.ReadToEnd();
+          
+          use errorReader = p.StandardError
+          let stderr = errorReader.ReadToEnd();
 
-  let mutable buffer = List.empty
+          p.WaitForExit()
+          if p.ExitCode > 0
+          then 
+            return 
+              raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n" + stderr + "\n command:\n" + command )
 
-  p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
-    if event.Data <> null
-    then
-      buffer <- buffer @ [ Output event.Data ]
-  ))
-
-  p.ErrorDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
-    if event.Data <> null
-    then
-      buffer <- buffer @ [ Error event.Data ]
-  ))
-
-  p.Start() |> ignore
-
-  use! cancelHandler = 
-    Async.OnCancel (fun () -> 
-    (
-      p.Kill()
-      buffer <- List.empty
-    ))
-
-  p.BeginOutputReadLine()
-  p.BeginErrorReadLine()
-
-  let flush = asyncSeq {
-    for event in buffer do
-      yield event
-    buffer <- List.empty
+          return stdout
+        with error -> 
+          return raise error
+      }
+      |> (fun t -> Async.StartChild (t, timeout))
+    return! task
   }
-
-  while not p.HasExited do
-    yield! flush
-  
-  do! exitSignal
-  yield! flush
-
-  yield Exit p.ExitCode
-}
