@@ -14,7 +14,7 @@ type Lock = {
 
 module Lock = 
 
-  open ResultBuilder
+  open Buckaroo.Result
   open System.Security.Cryptography
 
   let showDiff (before : Lock) (after : Lock) : string = 
@@ -191,7 +191,7 @@ module Lock =
       |> Seq.choose (fun x -> Toml.asTableArray x.Value)
       |> Seq.collect (fun x -> x.Items)
       |> Seq.map tomlTableToLockedPackage
-      |> ResultBuilder.all
+      |> Result.all
     // TODO: If a project has more than one revision or location throw an error
     let packages = 
       lockedPackages
@@ -202,7 +202,7 @@ module Lock =
       |> Seq.choose (fun x -> Toml.asTableArray x.Value)
       |> Seq.collect (fun x -> x.Items)
       |> Seq.map tomlTableToTargetIdentifier
-      |> ResultBuilder.all
+      |> Result.all
     return { 
       ManifestHash = manifestHash; 
       Dependencies = set dependencies; 

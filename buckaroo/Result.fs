@@ -1,4 +1,4 @@
-module Buckaroo.ResultBuilder
+module Buckaroo.Result
 
 type ResultBuilder () = 
   member this.Bind(x, f) = 

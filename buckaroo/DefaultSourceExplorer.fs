@@ -155,8 +155,11 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         return 
           match Manifest.parse content with
           | Result.Ok manifest -> manifest
-          | Result.Error errorMessage -> 
-            new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage)
+          | Result.Error error -> 
+            let errorMessage = 
+              "Invalid " + Constants.ManifestFileName + " file. \n" + 
+              (Manifest.ManifestParseError.show error)
+            new Exception(errorMessage)
             |> raise
       }
 

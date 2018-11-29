@@ -29,8 +29,13 @@ let readManifest = async {
     return 
       match Manifest.parse content with 
       | Result.Ok manifest -> manifest
-      | Result.Error error -> new Exception("Error parsing manifest:\n" + error) |> raise
-  with error -> return new Exception("Could not read project manifest. Are you sure you are in the right directory? ", error) |> raise
+      | Result.Error error -> 
+        new Exception("Error parsing manifest:\n" + (Manifest.ManifestParseError.show error)) 
+        |> raise
+  with error -> 
+    return 
+      new Exception("Could not read project manifest. Are you sure you are in the right directory? ", error) 
+      |> raise
 }
 
 let writeManifest (manifest : Manifest) = async {

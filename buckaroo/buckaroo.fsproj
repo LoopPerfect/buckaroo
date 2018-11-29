@@ -3,8 +3,8 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="OptionBuilder.fs" />
-    <Compile Include="ResultBuilder.fs" />
+    <Compile Include="Option.fs" />
+    <Compile Include="Result.fs" />
     <Compile Include="Constants.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
@@ -22,6 +22,7 @@
     <Compile Include="Constraint.fs" />
     <Compile Include="Atom.fs" />
     <Compile Include="Dependency.fs" />
+    <Compile Include="PackageSource.fs" />
     <Compile Include="PackageLocation.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
