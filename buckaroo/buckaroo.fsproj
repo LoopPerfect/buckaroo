@@ -13,6 +13,7 @@
     <Compile Include="PackageIdentifier.fs" />
     <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />
+    <Compile Include="Bash.fs" />
     <Compile Include="Git.fs" />
     <Compile Include="GitCli.fs" />
     <Compile Include="GitManager.fs" />
@@ -38,11 +39,13 @@
     <Compile Include="InstallCommand.fs" />
     <Compile Include="ResolveCommand.fs" />
     <Compile Include="RemoveCommand.fs" />
+    <Compile Include="QuickstartCommand.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.3" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="2.0.21" />
+    <PackageReference Include="FSharp.Control.Reactive" Version="4.1.0" />
     <PackageReference Include="FSharp.Data" Version="3.0.0" />
     <PackageReference Include="FSharpx.Async" Version="1.13.2" />
     <PackageReference Include="FSharpx.Collections" Version="1.17.0" />

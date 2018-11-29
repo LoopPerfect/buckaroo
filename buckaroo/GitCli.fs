@@ -4,10 +4,40 @@ open System
 open System.IO
 open System.Diagnostics
 open Buckaroo.Git
+open Buckaroo.Bash
+open FSharp.Control
 
 type GitCli () = 
 
   let nl = System.Environment.NewLine
+  
+  let runBash command = async {
+    let! events = 
+      Bash.runBash command
+      |> AsyncSeq.toListAsync
+
+    let stdout = 
+      events
+      |> Seq.choose (fun event -> 
+        match event with
+        | BashEvent.Output output -> Some output
+        | _ -> None
+      )
+      |> String.concat ""
+
+    let exitCode = 
+      events
+      |> Seq.tryPick (fun event ->
+        match event with
+        | BashEvent.Exit exitCode -> Some exitCode
+        | _ -> None
+      )
+      |> Option.defaultValue 0
+
+    if exitCode > 0
+    then 
+      return 
+        raise <| new Exception("Exit code was " + (string exitCode) + "\n")
 
   let runBash (command : String) = async {
     let timeout = 3 * 60 * 1000
