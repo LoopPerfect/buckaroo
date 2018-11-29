@@ -130,7 +130,7 @@ module Command =
   let showVersions (context : Tasks.TaskContext) (package : PackageIdentifier) = async {
     let (_, sourceExplorer) = context
     let! versions = 
-      sourceExplorer.FetchVersions package
+      sourceExplorer.FetchVersions Map.empty package
       |> AsyncSeq.toListAsync
     for v in versions do
       Version.show v |> Console.WriteLine

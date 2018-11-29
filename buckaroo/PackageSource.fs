@@ -3,6 +3,7 @@ namespace Buckaroo
 type HttpPackageSource = {
   Url : string; 
   StripPrefix : string option; 
+  Type : ArchiveType option; 
 }
 
 type PackageSource = 

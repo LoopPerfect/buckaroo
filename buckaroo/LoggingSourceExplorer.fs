@@ -8,9 +8,9 @@ type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
 
   interface ISourceExplorer with 
 
-    member this.FetchLocations package version = asyncSeq {
+    member this.FetchLocations locations package version = asyncSeq {
       log("Fetching locations for " + (PackageIdentifier.show package) + "@" + (Version.show version) + "... ")
-      yield! sourceExplorer.FetchLocations package version 
+      yield! sourceExplorer.FetchLocations locations package version 
     }
 
     member this.FetchManifest location = async {
@@ -23,7 +23,7 @@ type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
       return! sourceExplorer.FetchLock location
     }
 
-    member this.FetchVersions package = asyncSeq {
+    member this.FetchVersions locations package = asyncSeq {
       log("Fetching versions for " + (PackageIdentifier.show package) + "... ")
-      yield! sourceExplorer.FetchVersions package
+      yield! sourceExplorer.FetchVersions locations package
     }

@@ -1,6 +1,10 @@
 module Buckaroo.Files
 
 open System.IO
+open Buckaroo.Hashing
+
+[<Literal>]
+let private DefaultBufferSize = 4096
 
 let exists (path : string) = async {
   return File.Exists(path)
@@ -21,6 +25,21 @@ let writeFile (path : string) (content : string) = async {
 let readFile (path : string) = async {
   use sr = new StreamReader(path)
   return! sr.ReadToEndAsync() |> Async.AwaitTask
+}
+
+let copy (source : string) (destination : string) = async {
+  System.Console.WriteLine("Copying " + source + " to " + destination + "... ")
+  use sourceFile = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, DefaultBufferSize, true)
+  use destFile = new FileStream(destination, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None, DefaultBufferSize, true)
+  do! 
+    sourceFile.CopyToAsync(destFile) 
+    |> Async.AwaitTask
+  System.Console.WriteLine "Done"
+}
+
+let sha256 (path : string) = async {
+  let! content = readFile path
+  return sha256 content
 }
 
 let deleteDirectoryIfExists (path : string) = 

@@ -126,8 +126,9 @@ module Lock =
           "revision = \"" + git.Revision + "\"\n"
         | Http http -> 
           "url = \"" + http.Url + "\"\n" + 
-          "type = \"" + (ArchiveType.show http.Type) + "\"\n" + 
-          "strip_refix = \"" + http.StripPrefix + "\"\n"
+          "sha256 = \"" + (http.Sha256) + "\"\n" + 
+          (http.Type |> Option.map (fun x -> "type = \"" + (ArchiveType.show x) + "\"\n") |> Option.defaultValue "") + 
+          (http.StripPrefix |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n") |> Option.defaultValue "")
         | GitHub gitHub -> 
           "revision = \"" + gitHub.Revision + "\"\n"
       )
@@ -203,6 +204,7 @@ module Lock =
       |> Seq.collect (fun x -> x.Items)
       |> Seq.map tomlTableToTargetIdentifier
       |> Result.all
+    
     return { 
       ManifestHash = manifestHash; 
       Dependencies = set dependencies; 

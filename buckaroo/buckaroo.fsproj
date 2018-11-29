@@ -5,6 +5,7 @@
   <ItemGroup>
     <Compile Include="Option.fs" />
     <Compile Include="Result.fs" />
+    <Compile Include="Hashing.fs" />
     <Compile Include="Constants.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
@@ -14,6 +15,7 @@
     <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />
     <Compile Include="Bash.fs" />
+    <Compile Include="DownloadManager.fs" />
     <Compile Include="Git.fs" />
     <Compile Include="GitCli.fs" />
     <Compile Include="GitManager.fs" />
@@ -42,6 +44,7 @@
     <Compile Include="RemoveCommand.fs" />
     <Compile Include="QuickstartCommand.fs" />
     <Compile Include="Command.fs" />
+    <Compile Include="DownloadManager.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.3" />

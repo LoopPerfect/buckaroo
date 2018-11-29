@@ -1,5 +1,7 @@
 namespace Buckaroo
 
+// open FSharpx.Task
+
 type Manifest = { 
   Targets : Set<Target>; 
   Tags : Set<string>; 
@@ -22,6 +24,8 @@ type LocationParseError =
 | InvalidVersion of string
 | InvalidStripPrefix
 | UrlNotSpecified
+| InvalidArchiveType
+| ArchiveTypeParseError of ArchiveType.ParseError
 
 type ManifestParseError = 
 | InvalidToml of string
@@ -57,6 +61,8 @@ module Manifest =
       | InvalidVersion e -> "Invalid version: " + e
       | InvalidStripPrefix -> "Strip-prefix must be a string"
       | UrlNotSpecified -> "URL must be specified for all locations"
+      | InvalidArchiveType -> "Archive type must be a string"
+      | ArchiveTypeParseError s -> "Archive type parse error: " + (string s)
 
   module ManifestParseError = 
     let show (x : ManifestParseError) = 
@@ -172,8 +178,22 @@ module Manifest =
       |> Result.map (Option.map Toml.asString)
       |> Result.bind (optionToResult LocationParseError.InvalidStripPrefix)
 
+    let! archiveType =
+      x 
+      |> Toml.get "type" 
+      |> Option.map (Toml.asString >> optionToResult LocationParseError.InvalidArchiveType >> Result.map Some)
+      |> Option.defaultValue (Result.Ok Option.None)
+      |> Result.bind (fun y -> 
+        match y with 
+        | Some y -> 
+          y 
+          |> (ArchiveType.parse >> Result.mapError LocationParseError.ArchiveTypeParseError)
+          |> Result.map Some
+        | None -> Result.Ok None
+      )
+
     let packageSource = 
-      PackageSource.Http { Url = url; StripPrefix = stripPrefix }
+      PackageSource.Http { Url = url; StripPrefix = stripPrefix; Type = archiveType }
 
     return ((package, version), packageSource)
   }

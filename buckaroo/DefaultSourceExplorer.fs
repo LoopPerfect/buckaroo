@@ -4,13 +4,28 @@ open System
 open FSharp.Control
 open Buckaroo.Git
 
-type DefaultSourceExplorer (gitManager : GitManager) = 
+type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) = 
 
   let branchPriority branch = 
     match branch with 
     | "master" -> 0
     | "develop" -> 1
     | _ -> 2
+
+  let fetchLocationsFromPackageSource (source : PackageSource) = asyncSeq {
+    match source with 
+    | PackageSource.Http http -> 
+      let! path = downloadManager.DonwloadToCache http.Url
+      let! hash = Files.sha256 path
+      yield 
+        PackageLocation.Http
+        {
+          Url = http.Url; 
+          StripPrefix = http.StripPrefix; 
+          Type = http.Type;
+          Sha256 = hash; 
+        }
+  }
 
   let fetchVersionsFromGit (url : String) = asyncSeq {
     let! branchesTask = 
@@ -79,30 +94,37 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         |> AsyncSeq.ofSeq
   }
 
-  let fetchFile location path = 
+  let fetchFile location path = async {
+    System.Console.WriteLine("fetchFile " + (string location) + "/" + path)
     match location with 
     | PackageLocation.GitHub g -> 
-      GitHubApi.fetchFile g.Package g.Revision path
+      return! GitHubApi.fetchFile g.Package g.Revision path
     | PackageLocation.Git g -> 
-      gitManager.FetchFile g.Url g.Revision path
-    | _ -> 
-      async {
-        return new Exception("Only Git and GitHub packages are supported") |> raise
-      }
+      return! gitManager.FetchFile g.Url g.Revision path
+    | PackageLocation.Http http -> 
+      System.Console.WriteLine(string location)
+
+      return (raise <| new Exception("Only Git and GitHub packages are supported"))
+  }
 
   interface ISourceExplorer with 
 
-    member this.FetchVersions package = 
+    member this.FetchVersions locations package = 
       match package with 
       | PackageIdentifier.GitHub gitHub -> 
         let url = PackageLocation.gitHubUrl gitHub
         fetchVersionsFromGit url
-      | _ -> 
-        asyncSeq {
-          return raise <| new Exception("Only GitHub packages are supported")
-        }
+      | PackageIdentifier.Adhoc adhoc -> 
+        let xs = 
+          locations 
+          |> Map.toSeq
+          |> Seq.filter (fun ((p, _), _) -> p = adhoc)
+          |> Seq.map (fst >> snd)
+          |> Seq.toList
+        xs
+        |> AsyncSeq.ofSeq
 
-    member this.FetchLocations package version = asyncSeq {
+    member this.FetchLocations locations package version = asyncSeq {
       match package with 
       | PackageIdentifier.GitHub g -> 
         let url = PackageLocation.gitHubUrl g
@@ -145,8 +167,12 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Latest -> ()
-      | _ -> 
-        return new Exception("Only GitHub packages are supported") |> raise
+      | PackageIdentifier.Adhoc adhoc -> 
+        match locations |> Map.tryFind (adhoc, version) with 
+        | Some source -> 
+          yield! fetchLocationsFromPackageSource source
+        | None -> 
+          return new Exception("No location specified for " + (PackageIdentifier.show package) + "@" + (Version.show version)) |> raise
     }
 
     member this.FetchManifest location = 
