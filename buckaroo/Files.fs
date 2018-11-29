@@ -6,6 +6,11 @@ let exists (path : string) = async {
   return File.Exists(path)
 }
 
+
+let directoryExists (path : string) = async {
+  return Directory.Exists(path)
+}
+
 let mkdirp (path : string) = async {
   if Directory.Exists(path) |> not
   then

@@ -92,7 +92,7 @@ type GitCli () =
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
       do! 
-        runBash ("git clone --bare " + url + " " + directory + " -c uploadpack.allowReachableSHA1InWant=true")
+        runBash ("git clone --bare " + url + " " + directory)
         |> Async.Ignore
     }
 
@@ -113,9 +113,15 @@ type GitCli () =
         |> Async.Ignore
     }
 
+    member this.Checkout (gitDir : string) (revision : string) = async {
+      do! 
+        runBash ("git -C " + gitDir + " checkout " + revision + " .")
+        |> Async.Ignore
+    }
+
     member this.ShallowClone (url : String) (directory : string) = async {
       do! 
-        runBash ("git clone --bare --depth=1 " + url + " " + directory + " -c uploadpack.allowReachableSHA1InWant=true")
+        runBash ("git clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore
     }
 

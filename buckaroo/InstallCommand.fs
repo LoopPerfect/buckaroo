@@ -113,11 +113,10 @@ let private installLockedPackage (lock : Lock) (gitManager : Git.GitManager) (so
   let installPath = packageInstallPath package
   match location with 
   | GitHub gitHub -> 
-    let! _ = Files.deleteDirectoryIfExists installPath
     let gitUrl = PackageLocation.gitHubUrl gitHub.Package
     do! gitManager.FetchCommit gitUrl gitHub.Revision branchHint
     do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
-    //then "Deleted the existing folder at " + installPath |> Console.WriteLine
+    
     let! manifest = fetchManifestFromLock lock sourceExplorer package
     // Touch .buckconfig
     let buckConfigPath = Path.Combine(installPath, ".buckconfig")

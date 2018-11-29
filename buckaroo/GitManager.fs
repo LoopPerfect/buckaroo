@@ -66,7 +66,11 @@ type GitManager (git : IGit, cacheDirectory : string) =
 
 
   member this.CopyFromCache  (gitUrl : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
-    return! git.CopyFromCache (cloneFolderName gitUrl) revision installPath
+    let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git"))
+    if hasGit then
+      do! git.Checkout installPath revision
+    else
+      do! git.CopyFromCache (cloneFolderName gitUrl) revision installPath
   }
 
   member this.FetchCommit (url : string) (commit : string) (branchHint : string) : Async<Unit> = async {
@@ -121,3 +125,4 @@ type GitManager (git : IGit, cacheDirectory : string) =
       |> Async.Ignore
     return! git.FetchCommits targetDirectory branch
   }
+  
