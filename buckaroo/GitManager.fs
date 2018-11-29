@@ -34,7 +34,8 @@ type GitManager (git : IGit, cacheDirectory : string) =
       bytes 
       |> (new SHA256Managed()).ComputeHash 
       |> bytesToHex
-    (sanitizeFilename(url)).ToLower() + "-" + hash.Substring(0, 16)
+    let folder = sanitizeFilename(url).ToLower() + "-" + hash.Substring(0, 16)
+    Path.Combine(cacheDirectory, folder)
 
   let mailboxProcessor = MailboxProcessor.Start(fun inbox -> async {
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
@@ -45,7 +46,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
       | Some task -> 
         replyChannel.Reply(task)
       | None -> 
-        let targetDirectory = Path.Combine(cacheDirectory, cloneFolderName url)
+        let targetDirectory = cloneFolderName url
         let task = 
           async {
             if Directory.Exists targetDirectory |> not
@@ -64,11 +65,25 @@ type GitManager (git : IGit, cacheDirectory : string) =
   }
 
 
-  member this.CopyFromCache  (gitPath : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
-    return! git.CopyFromCache gitPath revision installPath
+  member this.CopyFromCache  (gitUrl : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
+    return! git.CopyFromCache (cloneFolderName gitUrl) revision installPath
   }
 
-  member this.Fetch (url : string) (branch : string) : Async<Unit> = async {
+  member this.FetchCommit (url : string) (commit : string) (branchHint : string) : Async<Unit> = async {
+    let! targetDirectory = this.Clone(url)
+    try 
+      do! git.FetchCommit targetDirectory commit
+    with _ -> 
+      try 
+        Console.WriteLine "trying branch"
+        do! git.FetchBranch url branchHint
+        do! git.FetchCommit targetDirectory commit
+      with _ ->
+        Console.WriteLine "unshallow repo"
+        do! git.Unshallow targetDirectory
+        do! git.FetchCommit targetDirectory commit
+  }
+  member this.FetchBranch (url : string) (branch : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
     return! 
       git.FetchBranch targetDirectory branch
@@ -92,14 +107,11 @@ type GitManager (git : IGit, cacheDirectory : string) =
       return heads
   }
 
-  member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> = 
+  member this.FetchFile (url : string) (revision : Revision) (file : string) (branchHint : Branch) : Async<string> = 
     async {
       let! targetDirectory = this.Clone(url)
-      try
-        return! git.FetchFile targetDirectory revision file
-      with _ -> 
-        do! git.FetchCommit targetDirectory revision
-        return! git.FetchFile targetDirectory revision file
+      do! this.FetchCommit url revision branchHint
+      return! git.FetchFile targetDirectory revision file
     }
 
   member this.FetchCommits (url : string) (branch : Branch) = async {

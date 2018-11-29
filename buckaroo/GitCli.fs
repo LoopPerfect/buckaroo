@@ -92,23 +92,30 @@ type GitCli () =
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
       do! 
-        runBash ("git clone --bare " + url + " " + directory)
+        runBash ("git clone --bare " + url + " " + directory + " -c uploadpack.allowReachableSHA1InWant=true")
         |> Async.Ignore
+    }
+
+    member this.DefaultBranch (gitPath : string) = async {
+      return! runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
     }
 
     member this.CopyFromCache (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
       do! Files.mkdirp installPath
       do! 
-        runBash ("git -C " + installPath + " init" + 
-          " && git -C " + installPath + " remote add local " + gitPath +
-          " && git -C " + installPath + " fetch local " +  revision +
-          " && git -C " + installPath + " checkout local " + revision)
+        runBash ("git clone -s -n " + gitPath + " " + installPath  + " && git -C " + installPath + " checkout " + revision)
+        |> Async.Ignore
+    }
+
+    member this.Unshallow (gitDir : string) = async {
+      do! 
+        runBash ("git --git-dir=" + gitDir + " fetch --unshallow || true; git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*'")
         |> Async.Ignore
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
       do! 
-        runBash ("git clone --bare --depth=1 " + url + " " + directory)
+        runBash ("git clone --bare --depth=1 " + url + " " + directory + " -c uploadpack.allowReachableSHA1InWant=true")
         |> Async.Ignore
     }
 
@@ -161,7 +168,7 @@ type GitCli () =
       let gitDir = repository
       let command =
         "git --git-dir=" + gitDir + 
-        " fetch origin " + commit
+        " fetch origin " + commit + ":"+commit
       do! 
         runBash(command)
         |> Async.Ignore

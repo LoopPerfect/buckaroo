@@ -24,6 +24,11 @@ module Solver =
       return! child
     }
 
+  let private getBranchHint version = 
+    match version with
+    | Branch b -> b
+    | _ -> "master"
+
   let versionSearchCost (v : Version) : int = 
     match v with 
     | Version.Revision _ -> 1
@@ -132,12 +137,14 @@ module Solver =
           try
             log("Exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
             
+            let branchHint = getBranchHint atom.Version
+
             // We pre-emptively grab the lock
             let! lockTask = 
-              sourceExplorer.FetchLock location
+              sourceExplorer.FetchLock location branchHint
               |> Async.StartChild
 
-            let! manifest = sourceExplorer.FetchManifest location
+            let! manifest = sourceExplorer.FetchManifest location branchHint
 
             let resolvedVersion = {
               Version = atom.Version;

@@ -79,12 +79,12 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         |> AsyncSeq.ofSeq
   }
 
-  let fetchFile location path = 
+  let fetchFile location path branchHint = 
     match location with 
     | PackageLocation.GitHub g -> 
       GitHubApi.fetchFile g.Package g.Revision path
     | PackageLocation.Git g -> 
-      gitManager.FetchFile g.Url g.Revision path
+      gitManager.FetchFile g.Url g.Revision path branchHint
     | _ -> 
       async {
         return new Exception("Only Git and GitHub packages are supported") |> raise
@@ -125,7 +125,7 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x.Head })
             |> AsyncSeq.ofSeq
 
-          do! gitManager.Fetch url branch
+          do! gitManager.FetchBranch url branch
           let! commits = gitManager.FetchCommits url branch
           yield!
             commits
@@ -149,9 +149,9 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         return new Exception("Only GitHub packages are supported") |> raise
     }
 
-    member this.FetchManifest location = 
+    member this.FetchManifest location branchHint = 
       async {
-        let! content = fetchFile location Constants.ManifestFileName
+        let! content = fetchFile location Constants.ManifestFileName branchHint
         return 
           match Manifest.parse content with
           | Result.Ok manifest -> manifest
@@ -160,9 +160,9 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> raise
       }
 
-    member this.FetchLock location = 
+    member this.FetchLock location branchHint = 
       async {
-        let! content = fetchFile location Constants.LockFileName
+        let! content = fetchFile location Constants.LockFileName branchHint
         return 
           match Lock.parse content with
           | Result.Ok manifest -> manifest

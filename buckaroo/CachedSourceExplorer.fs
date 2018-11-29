@@ -25,22 +25,22 @@ type CachedSourceExplorer (sourceExplorer : ISourceExplorer) =
         yield! locations
     }
 
-    member this.FetchManifest location = async {
+    member this.FetchManifest location branchHint = async {
       match manifestCache.TryGetValue(location) with
       | (true, manifest) -> 
         return manifest
       | (false, _) -> 
-        let! manifest = sourceExplorer.FetchManifest location
+        let! manifest = sourceExplorer.FetchManifest location branchHint
         manifestCache.TryAdd(location, manifest) |> ignore
         return manifest
     }
 
-    member this.FetchLock location = async {
+    member this.FetchLock location branchHint = async {
       match lockCache.TryGetValue(location) with
       | (true, lock) -> 
         return lock
       | (false, _) -> 
-        let! lock = sourceExplorer.FetchLock location
+        let! lock = sourceExplorer.FetchLock location branchHint
         lockCache.TryAdd(location, lock) |> ignore
         return lock
     }
