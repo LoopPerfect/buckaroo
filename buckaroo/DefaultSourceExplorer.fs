@@ -3,6 +3,7 @@ namespace Buckaroo
 open System
 open FSharp.Control
 open Buckaroo.Git
+open Buckaroo.PackageLocation
 
 type DefaultSourceExplorer (gitManager : GitManager) = 
 
@@ -79,12 +80,12 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         |> AsyncSeq.ofSeq
   }
 
-  let fetchFile location path branchHint = 
+  let fetchFile location path = 
     match location with 
     | PackageLocation.GitHub g -> 
       GitHubApi.fetchFile g.Package g.Revision path
     | PackageLocation.Git g -> 
-      gitManager.FetchFile g.Url g.Revision path branchHint
+      gitManager.FetchFile g.Url g.Revision path (HintToBranch g.Hint)
     | _ -> 
       async {
         return new Exception("Only Git and GitHub packages are supported") |> raise
@@ -114,7 +115,7 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
             |> Seq.map (fun t -> t.Commit)
             |> Seq.distinct
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Branch branch -> 
           let! branches = gitManager.FetchBranches url
@@ -122,7 +123,7 @@ type DefaultSourceExplorer (gitManager : GitManager) =
           yield! 
             branches
             |> Seq.filter (fun x -> x.Name = branch)
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x.Head })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Branch x.Name; Revision = x.Head })
             |> AsyncSeq.ofSeq
 
           do! gitManager.FetchBranch url branch
@@ -130,11 +131,11 @@ type DefaultSourceExplorer (gitManager : GitManager) =
           yield!
             commits
             |> Seq.except (branches |> Seq.map (fun x -> x.Head))
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Branch branch;  Revision = x })
             |> AsyncSeq.ofSeq
 
         | Buckaroo.Version.Revision r -> 
-          yield PackageLocation.GitHub { Package = g; Revision = r }
+          yield PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = r }
         | Buckaroo.Version.Tag tag -> 
           let! tags = gitManager.FetchTags url
           yield! 
@@ -142,16 +143,16 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> Seq.filter (fun t -> t.Name = tag)
             |> Seq.map (fun t -> t.Commit)
             |> Seq.distinct
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Latest -> ()
       | _ -> 
         return new Exception("Only GitHub packages are supported") |> raise
     }
 
-    member this.FetchManifest location branchHint = 
+    member this.FetchManifest location = 
       async {
-        let! content = fetchFile location Constants.ManifestFileName branchHint
+        let! content = fetchFile location Constants.ManifestFileName
         return 
           match Manifest.parse content with
           | Result.Ok manifest -> manifest
@@ -160,9 +161,9 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> raise
       }
 
-    member this.FetchLock location branchHint = 
+    member this.FetchLock location = 
       async {
-        let! content = fetchFile location Constants.LockFileName branchHint
+        let! content = fetchFile location Constants.LockFileName
         return 
           match Lock.parse content with
           | Result.Ok manifest -> manifest

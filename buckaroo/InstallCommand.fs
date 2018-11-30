@@ -3,12 +3,7 @@ module Buckaroo.InstallCommand
 open System
 open System.IO
 open Buckaroo.BuckConfig
-open LibGit2Sharp
-
-let private getBranchHint version = 
-  match version with
-  | Branch b -> b
-  | _ -> "master"
+open Buckaroo.PackageLocation
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let (version, location) =  
@@ -18,7 +13,7 @@ let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplore
       new Exception("Lock file does not contain " + (PackageIdentifier.show package))
       |> raise
   
-  return! sourceExplorer.FetchManifest location (getBranchHint version)
+  return! sourceExplorer.FetchManifest location
 }
 
 let packageInstallPath (package : PackageIdentifier) = 
@@ -107,14 +102,13 @@ let private computeCellIdentifier (x : PackageIdentifier) =
   )
   |> String.concat "."
 
-let private installLockedPackage (lock : Lock) (gitManager : Git.GitManager) (sourceExplorer : ISourceExplorer) (lockedPackage : (PackageIdentifier * Buckaroo.Version * PackageLocation)) = async {
-  let ( package, version, location ) = lockedPackage
-  let branchHint = getBranchHint version
+let private installLockedPackage (lock : Lock) (gitManager : Git.GitManager) (sourceExplorer : ISourceExplorer) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
+  let ( package, location ) = lockedPackage
   let installPath = packageInstallPath package
   match location with 
   | GitHub gitHub -> 
     let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-    do! gitManager.FetchCommit gitUrl gitHub.Revision branchHint
+    do! gitManager.FetchCommit gitUrl gitHub.Revision (HintToBranch gitHub.Hint)
     do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
     
     let! manifest = fetchManifestFromLock lock sourceExplorer package
@@ -173,7 +167,7 @@ let task (context : Tasks.TaskContext) = async {
       let project = kvp.Key
       let (version, exactLocation) = kvp.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-      do! installLockedPackage lock gitManager sourceExplorer (project, version, exactLocation)
+      do! installLockedPackage lock gitManager sourceExplorer (project, exactLocation)
     })
     |> Async.Parallel
     |> Async.Ignore

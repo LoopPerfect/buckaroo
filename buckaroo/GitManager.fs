@@ -7,6 +7,7 @@ open System.Text.RegularExpressions
 open FSharpx.Control
 open Buckaroo
 
+
 type CloneRequest = 
   | CloneRequest of string * AsyncReplyChannel<Async<string>>
 
@@ -59,6 +60,12 @@ type GitManager (git : IGit, cacheDirectory : string) =
         replyChannel.Reply(task) 
   })
 
+  member private this.getBranchHint (targetDirectory : string) (hint: Option<Branch>) = async { 
+    return!
+      match hint with
+      | None -> this.DefaultBranch targetDirectory
+      | Some b -> async { return b }
+  }
   member this.Clone (url : string) : Async<string> = async {
     let! res = mailboxProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
     return! res 
@@ -73,8 +80,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
       do! git.CopyFromCache (cloneFolderName gitUrl) revision installPath
   }
 
-  member this.FetchCommit (url : string) (commit : string) (branchHint : string) : Async<Unit> = async {
+  member this.FetchCommit (url : string) (commit : string) (hint : Option<Branch>) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
+    let! branchHint = this.getBranchHint targetDirectory hint
     try 
       do! git.FetchCommit targetDirectory commit
     with _ -> 
@@ -111,10 +119,10 @@ type GitManager (git : IGit, cacheDirectory : string) =
       return heads
   }
 
-  member this.FetchFile (url : string) (revision : Revision) (file : string) (branchHint : Branch) : Async<string> = 
+  member this.FetchFile (url : string) (revision : Revision) (file : string) (hint : Option<Branch>) : Async<string> = 
     async {
       let! targetDirectory = this.Clone(url)
-      do! this.FetchCommit url revision branchHint
+      do! this.FetchCommit url revision hint
       return! git.FetchFile targetDirectory revision file
     }
 
@@ -124,5 +132,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
       git.FetchBranch targetDirectory branch
       |> Async.Ignore
     return! git.FetchCommits targetDirectory branch
+  }
+
+  member this.DefaultBranch (path) = async {
+    return! git.DefaultBranch path
   }
   

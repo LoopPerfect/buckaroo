@@ -136,15 +136,13 @@ module Solver =
         for (atom, location) in atomsToExplore do
           try
             log("Exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
-            
-            let branchHint = getBranchHint atom.Version
 
             // We pre-emptively grab the lock
             let! lockTask = 
-              sourceExplorer.FetchLock location branchHint
+              sourceExplorer.FetchLock location
               |> Async.StartChild
 
-            let! manifest = sourceExplorer.FetchManifest location branchHint
+            let! manifest = sourceExplorer.FetchManifest location
 
             let resolvedVersion = {
               Version = atom.Version;

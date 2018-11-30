@@ -13,14 +13,14 @@ type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
       yield! sourceExplorer.FetchLocations package version 
     }
 
-    member this.FetchManifest location branchHint = async {
+    member this.FetchManifest location = async {
       log("Fetching manifest for " + (PackageLocation.show location) + "... ")
-      return! sourceExplorer.FetchManifest location branchHint
+      return! sourceExplorer.FetchManifest location
     }
 
-    member this.FetchLock location branchHint = async {
+    member this.FetchLock location = async {
       log("Fetching lock for " + (PackageLocation.show location) + "... ")
-      return! sourceExplorer.FetchLock location branchHint
+      return! sourceExplorer.FetchLock location
     }
 
     member this.FetchVersions package = asyncSeq {
