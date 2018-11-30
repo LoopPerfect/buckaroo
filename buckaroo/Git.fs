@@ -18,6 +18,9 @@ type RemoteBranch = {
 
 type IGit = 
   abstract member Clone : string -> string -> Async<Unit>
+  abstract member DefaultBranch : string -> Async<string>
+  abstract member Unshallow : string -> Async<Unit>
+  abstract member Checkout : string -> string -> Async<Unit>
   abstract member ShallowClone : string -> string -> Async<Unit>
   abstract member FetchBranch : string -> string -> Async<Unit>
   abstract member RemoteTags : string -> Async<RemoteTag list>
@@ -25,3 +28,4 @@ type IGit =
   abstract member FetchCommits : string -> Branch -> Async<Revision list>
   abstract member FetchCommit : string -> Revision -> Async<Unit>
   abstract member FetchFile : string -> Revision -> string -> Async<string>
+  abstract member CopyFromCache : string -> Revision -> string -> Async<Unit>
