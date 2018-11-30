@@ -85,7 +85,7 @@ type DefaultSourceExplorer (gitManager : GitManager) =
     | PackageLocation.GitHub g -> 
       GitHubApi.fetchFile g.Package g.Revision path
     | PackageLocation.Git g -> 
-      gitManager.FetchFile g.Url g.Revision path (HintToBranch g.Hint)
+      gitManager.FetchFile g.Url g.Revision path (hintToBranch g.Hint)
     | _ -> 
       async {
         return new Exception("Only Git and GitHub packages are supported") |> raise
