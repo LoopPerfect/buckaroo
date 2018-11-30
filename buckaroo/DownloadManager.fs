@@ -7,10 +7,11 @@ open FSharp.Data
 open FSharpx.Control
 open Buckaroo.Hashing
 
+type DownloadMessage = 
+| Download of string * AsyncReplyChannel<Async<string>>
+
 type DownloadManager (cacheDirectory : string) = 
   
-  let mutable cache = Map.empty
-
   let sanitizeFilename (x : string) = 
     let regexSearch = 
       new string(Path.GetInvalidFileNameChars()) + 
@@ -30,30 +31,30 @@ type DownloadManager (cacheDirectory : string) =
     do! 
       request.ResponseStream.CopyToAsync outputFile 
       |> Async.AwaitTask
+    return target
   }
 
+  let downloadCache = MailboxProcessor.Start(fun inbox -> async {
+    let cache = new System.Collections.Generic.Dictionary<_, _>()
+
+    while true do
+      let! (Download(url, repl)) = inbox.Receive()
+      if cache.ContainsKey url |> not then 
+        let target = cachePath url
+        let! proc = 
+          downloadFile url target 
+          |> Async.StartChild
+        cache.Add(url, proc)
+      repl.Reply(cache.[url]) 
+  })
+
   member this.DonwloadToCache (url : string) = 
-    match cache |> Map.tryFind url with 
-    | Some task -> task
-    | None -> 
-      let task = 
-        async {
-          let target = cachePath url
-          if File.Exists target |> not
-          then
-            do! Files.mkdirp (Path.GetDirectoryName target)
-            do! downloadFile url target
-          return target
-        }
-        |> Async.Cache
-      cache <- cache |> Map.add url task
-      task
+    async {
+      let! res = downloadCache.PostAndAsyncReply(fun ch -> Download(url, ch))
+      return! res 
+    }
 
   member this.Download (url : string) (path : string) = async {
     let! source = this.DonwloadToCache url
     do! Files.copy source path
-  }
-
-  member this.DownloadHash (hash : string) (urls : string list) = async {
-    
   }

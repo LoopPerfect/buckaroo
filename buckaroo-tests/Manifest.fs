@@ -28,7 +28,12 @@ let ``Manifest.parse works correctly`` () =
   }
 
   let locationC = 
-    PackageSource.Http { Url = "https://lmn/qrs.zip"; StripPrefix = Some "%"; }
+    PackageSource.Http 
+      { 
+        Url = "https://lmn/qrs.zip"; 
+        StripPrefix = Some "%"; 
+        Type = None;
+      }
 
   let cases = 
     [

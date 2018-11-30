@@ -20,7 +20,8 @@ let getContext = async {
   let downloadManager = new DownloadManager(cachePath)
   let git = new GitCli()
   let gitManager = new Git.GitManager(git, cachePath)
-  let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(downloadManager, gitManager))
+  // let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(downloadManager, gitManager))
+  let sourceExplorer = new DefaultSourceExplorer(downloadManager, gitManager)
   return (gitManager, sourceExplorer)
 }
 

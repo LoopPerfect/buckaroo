@@ -3,6 +3,7 @@ namespace Buckaroo
 open System
 open FSharp.Control
 open Buckaroo.Git
+open Microsoft.VisualBasic.CompilerServices
 
 type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) = 
 
@@ -25,6 +26,46 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
           Type = http.Type;
           Sha256 = hash; 
         }
+  }
+
+  let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
+    if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip 
+    then
+      return raise (new Exception("Only zip is currently supported"))
+    
+    let! pathToZip = downloadManager.DonwloadToCache source.Url
+    use file = System.IO.File.OpenRead pathToZip
+    use zip = new System.IO.Compression.ZipArchive(file, System.IO.Compression.ZipArchiveMode.Read)
+
+    let! root = async {
+      match source.StripPrefix with 
+      | Some stripPrefix -> 
+        let roots = 
+          zip.Entries
+          |> Seq.map (fun entry -> System.IO.Path.GetDirectoryName(entry.FullName))
+          |> Seq.distinct
+          |> Seq.filter (fun directory -> 
+            directory |> Glob.isLike stripPrefix
+          )
+          |> Seq.truncate 2
+          |> Seq.toList
+        match roots with 
+        | [ root ] -> return root
+        | [] -> 
+          return 
+            raise (new Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
+        | _ -> 
+          return 
+            raise (new Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
+      | None -> 
+        return ""
+    }
+
+    use stream = zip.GetEntry(System.IO.Path.Combine(root, filePath)).Open()
+    use streamReader = new System.IO.StreamReader(stream)
+
+    return! 
+      streamReader.ReadToEndAsync() |> Async.AwaitTask
   }
 
   let fetchVersionsFromGit (url : String) = asyncSeq {
@@ -94,18 +135,15 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         |> AsyncSeq.ofSeq
   }
 
-  let fetchFile location path = async {
-    System.Console.WriteLine("fetchFile " + (string location) + "/" + path)
+  let fetchFile location path = 
     match location with 
-    | PackageLocation.GitHub g -> 
-      return! GitHubApi.fetchFile g.Package g.Revision path
-    | PackageLocation.Git g -> 
-      return! gitManager.FetchFile g.Url g.Revision path
+    | PackageLocation.GitHub gitHub -> 
+      GitHubApi.fetchFile gitHub.Package gitHub.Revision path
+    | PackageLocation.Git git -> 
+      gitManager.FetchFile git.Url git.Revision path
     | PackageLocation.Http http -> 
-      System.Console.WriteLine(string location)
-
-      return (raise <| new Exception("Only Git and GitHub packages are supported"))
-  }
+      System.Console.WriteLine(string http)
+      extractFileFromHttp http path
 
   interface ISourceExplorer with 
 
