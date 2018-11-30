@@ -4,41 +4,15 @@ open System
 open System.IO
 open System.Diagnostics
 open Buckaroo.Git
-open Buckaroo.Bash
-open FSharp.Control
 
 type GitCli () = 
-
   let nl = System.Environment.NewLine
-  
+
   let runBash command = async {
-    let! events = 
-      Bash.runBash command
-      |> AsyncSeq.toListAsync
-
-    let stdout = 
-      events
-      |> Seq.choose (fun event -> 
-        match event with
-        | BashEvent.Output output -> Some output
-        | _ -> None
-      )
-      |> String.concat ""
-
-    let exitCode = 
-      events
-      |> Seq.tryPick (fun event ->
-        match event with
-        | BashEvent.Exit exitCode -> Some exitCode
-        | _ -> None
-      )
-      |> Option.defaultValue 0
-
-    if exitCode > 0
-    then 
-      return 
-        raise <| new Exception("Exit code was " + (string exitCode) + "\n")
-
+    let mutable stdout = ""
+    do!
+      Bash.runBash command (fun x -> stdout <- stdout + x) ignore
+      |> Async.Ignore
     return stdout
   }
 
@@ -76,6 +50,29 @@ type GitCli () =
     member this.Clone (url : string) (directory : string) = async {
       do! 
         runBash ("git clone --bare " + url + " " + directory)
+        |> Async.Ignore
+    }
+
+    member this.DefaultBranch (gitPath : string) = async {
+      return! runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
+    }
+
+    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
+      do! Files.mkdirp installPath
+      do! 
+        runBash ("git clone -s -n " + gitPath + " " + installPath  + " && git -C " + installPath + " checkout " + revision)
+        |> Async.Ignore
+    }
+
+    member this.Unshallow (gitDir : string) = async {
+      do! 
+        runBash ("git --git-dir=" + gitDir + " fetch --unshallow || true; git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*'")
+        |> Async.Ignore
+    }
+
+    member this.Checkout (gitDir : string) (revision : string) = async {
+      do! 
+        runBash ("git -C " + gitDir + " checkout " + revision + " .")
         |> Async.Ignore
     }
 
@@ -134,7 +131,7 @@ type GitCli () =
       let gitDir = repository
       let command =
         "git --git-dir=" + gitDir + 
-        " fetch origin " + commit
+        " fetch origin " + commit + ":"+commit
       do! 
         runBash(command)
         |> Async.Ignore

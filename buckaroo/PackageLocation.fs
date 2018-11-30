@@ -9,14 +9,21 @@ type HttpLocation = {
   Sha256 : string; 
 }
 
+type Hint = 
+| Branch of string
+| Tag of string
+| Default
+
 type GitLocation = {
   Url : string; 
+  Hint : Hint; 
   Revision : Revision; 
 }
 
 // GitHub is different to Git because we can switch HTTPS & SSH easily
 type GitHubLocation = {
   Package : GitHubPackageIdentifier; 
+  Hint : Hint; 
   Revision : Revision; 
 }
 
@@ -26,6 +33,11 @@ type PackageLocation =
 | GitHub of GitHubLocation
 
 module PackageLocation = 
+
+  let hintToBranch (hint : Hint) = 
+    match hint with
+    | Branch b -> Option.Some b
+    | _ -> Option.None
 
   let gitHubUrl (x : GitHubPackageIdentifier) = 
     // "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"

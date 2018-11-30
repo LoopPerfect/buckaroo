@@ -131,7 +131,7 @@ module Solver =
         for (atom, location) in atomsToExplore do
           try
             log("Exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
-            
+
             // We pre-emptively grab the lock
             let! lockTask = 
               sourceExplorer.FetchLock location
