@@ -156,7 +156,12 @@ module Lock =
           |> Toml.get "revision" 
           |> Option.bind Toml.asString 
           |> optionToResult "revision must be specified for every dependency"
-        return PackageLocation.GitHub { Package = gitHub; Revision = revision }
+        let hint = 
+          match version with
+            | Version.Branch b -> Hint.Branch b
+            | Version.Tag  t -> Hint.Tag t
+            | _ -> Hint.Default
+        return PackageLocation.GitHub { Package = gitHub; Hint = hint; Revision = revision }
       | PackageIdentifier.Adhoc adhoc -> 
         return! Result.Error "Only GitHub package locations are supported"
     }

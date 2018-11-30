@@ -3,14 +3,16 @@ module Buckaroo.InstallCommand
 open System
 open System.IO
 open Buckaroo.BuckConfig
+open Buckaroo.PackageLocation
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
-  let (version, location) =  
+  let (_, location) =  
     match lock.Packages |> Map.tryFind package with 
     | Some location -> location
     | None -> 
       new Exception("Lock file does not contain " + (PackageIdentifier.show package))
       |> raise
+  
   return! sourceExplorer.FetchManifest location
 }
 
@@ -106,13 +108,9 @@ let private installLockedPackage (lock : Lock) (gitManager : Git.GitManager) (so
   match location with 
   | GitHub gitHub -> 
     let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-    let! gitPath = gitManager.Clone gitUrl
-    do! gitManager.Fetch gitUrl gitHub.Revision
-    let! deletedExistingInstall = Files.deleteDirectoryIfExists installPath
-    if deletedExistingInstall
-    then "Deleted the existing folder at " + installPath |> Console.WriteLine
-    let destination = installPath
-    do! Files.copyDirectory gitPath destination
+    do! gitManager.FetchCommit gitUrl gitHub.Revision (hintToBranch gitHub.Hint)
+    do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
+    
     let! manifest = fetchManifestFromLock lock sourceExplorer package
     // Touch .buckconfig
     let buckConfigPath = Path.Combine(installPath, ".buckconfig")
@@ -167,7 +165,7 @@ let task (context : Tasks.TaskContext) = async {
     lock.Packages
     |> Seq.map (fun kvp -> async {
       let project = kvp.Key
-      let (_, exactLocation) = kvp.Value
+      let (version, exactLocation) = kvp.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
       do! installLockedPackage lock gitManager sourceExplorer (project, exactLocation)
     })

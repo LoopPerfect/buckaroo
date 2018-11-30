@@ -3,7 +3,7 @@ namespace Buckaroo
 open System
 open FSharp.Control
 open Buckaroo.Git
-open Microsoft.VisualBasic.CompilerServices
+open Buckaroo.PackageLocation
 
 type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) = 
 
@@ -140,7 +140,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageLocation.GitHub gitHub -> 
       GitHubApi.fetchFile gitHub.Package gitHub.Revision path
     | PackageLocation.Git git -> 
-      gitManager.FetchFile git.Url git.Revision path
+      gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
     | PackageLocation.Http http -> 
       System.Console.WriteLine(string http)
       extractFileFromHttp http path
@@ -174,7 +174,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
             |> Seq.map (fun t -> t.Commit)
             |> Seq.distinct
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Branch branch -> 
           let! branches = gitManager.FetchBranches url
@@ -182,19 +182,19 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
           yield! 
             branches
             |> Seq.filter (fun x -> x.Name = branch)
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x.Head })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Branch x.Name; Revision = x.Head })
             |> AsyncSeq.ofSeq
 
-          do! gitManager.Fetch url branch
+          do! gitManager.FetchBranch url branch
           let! commits = gitManager.FetchCommits url branch
           yield!
             commits
             |> Seq.except (branches |> Seq.map (fun x -> x.Head))
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Branch branch;  Revision = x })
             |> AsyncSeq.ofSeq
 
         | Buckaroo.Version.Revision r -> 
-          yield PackageLocation.GitHub { Package = g; Revision = r }
+          yield PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = r }
         | Buckaroo.Version.Tag tag -> 
           let! tags = gitManager.FetchTags url
           yield! 
@@ -202,7 +202,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             |> Seq.filter (fun t -> t.Name = tag)
             |> Seq.map (fun t -> t.Commit)
             |> Seq.distinct
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Revision = x })
+            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Latest -> ()
       | PackageIdentifier.Adhoc adhoc -> 
