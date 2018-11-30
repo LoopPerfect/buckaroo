@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
@@ -13,11 +13,10 @@
     <Compile Include="Dependency.fs" />
     <Compile Include="PackageIdentifier.fs" />
     <Compile Include="Manifest.fs" />
+    <Compile Include="Bash.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
     <PackageReference Include="FParsec" Version="1.0.3" />
     <PackageReference Include="FSharp.Data" Version="3.0.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
@@ -28,5 +27,4 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
   </ItemGroup>
-
 </Project>

@@ -1,19 +1,18 @@
 namespace Buckaroo
 
 open System
-open System.IO
-open System.Diagnostics
+open System.Text
 open Buckaroo.Git
 
 type GitCli () = 
   let nl = System.Environment.NewLine
 
   let runBash command = async {
-    let mutable stdout = ""
+    let stdout = new StringBuilder()
     do!
-      Bash.runBash command (fun x -> stdout <- stdout + x) ignore
+      Bash.runBashSync command (stdout.Append >> ignore) ignore
       |> Async.Ignore
-    return stdout
+    return stdout.ToString()
   }
 
   member this.Init (directory : string) = 

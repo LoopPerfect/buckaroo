@@ -2,6 +2,9 @@ module Buckaroo.Bash
 
 open System
 open System.Diagnostics
+open System.Threading.Tasks
+
+type ProgressCallback = string -> Unit
 
 let escapeBash (command : string) = 
   if command.Contains("\"") || command.Contains("$") 
@@ -9,50 +12,61 @@ let escapeBash (command : string) =
     raise <| new Exception("Malicious bash? " + command)
   command
 
-let runBashSync (command : String) = async {
-  let timeout = 3 * 60 * 1000
-  
+let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHandler : ProgressCallback) = async {
+  let startInfo = new ProcessStartInfo()
+
+  startInfo.CreateNoWindow <- true
+  startInfo.UseShellExecute <- false
+  startInfo.FileName <- "/bin/bash"
+  startInfo.Arguments <- "-c \"" + (escapeBash command) + "\""
+  startInfo.RedirectStandardOutput <- true
+  startInfo.RedirectStandardError <- true
+  startInfo.RedirectStandardInput <- true
+  startInfo.WindowStyle <- ProcessWindowStyle.Hidden
+
+  use p = new Process()
+
+  p.StartInfo <- startInfo
+
   let! task = 
-    async {
-      let startInfo = new ProcessStartInfo()
-
-      startInfo.CreateNoWindow <- true
-      startInfo.UseShellExecute <- false
-      startInfo.FileName <- "/bin/bash"
-      startInfo.Arguments <- "-c \"" + (escapeBash command) + "\""
-      startInfo.RedirectStandardOutput <- true
-      startInfo.RedirectStandardError <- true
-      startInfo.RedirectStandardInput <- true
-      startInfo.WindowStyle <- ProcessWindowStyle.Hidden
-
-      let p = new Process()
-
-      p.StartInfo <- startInfo
-      p.EnableRaisingEvents <- true
-      p.Start() |> ignore
+    Task.Run(fun () -> 
 
       System.Console.WriteLine command
 
-      use reader = p.StandardOutput
-      let stdout = reader.ReadToEnd();
-      
-      use errorReader = p.StandardError
-      let stderr = errorReader.ReadToEnd();
+      p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
+        if event.Data <> null
+        then
+          stdoutHandler event.Data
+      ))
+
+      p.ErrorDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
+        if event.Data <> null
+        then
+          stderrHandler event.Data
+      ))
+
+      p.Start() |> ignore
+
+      p.BeginOutputReadLine()
+      p.BeginErrorReadLine()
 
       p.WaitForExit()
-      if p.ExitCode > 0
-      then 
-        return 
-          raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n" + stderr + "\n command:\n" + command )
 
-      return stdout
-    }
-    |> (fun t -> Async.StartChild (t, timeout))
-  
-  return! task
+      p.CancelOutputRead()
+      p.CancelErrorRead()
+    )
+    |> Async.AwaitTask
+    |> Async.StartChild
+
+  do! task
+
+  if p.ExitCode > 0
+  then 
+    return 
+      raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n" + "command:\n" + command )
+
+  return p.ExitCode
 }
-
-type ProgressCallback = string -> Unit
 
 let runBash (command : string) (stdoutHandler : ProgressCallback) (stderrHandler : ProgressCallback) = async {
   let startInfo = new ProcessStartInfo()
@@ -66,16 +80,10 @@ let runBash (command : string) (stdoutHandler : ProgressCallback) (stderrHandler
   startInfo.RedirectStandardInput <- true
   startInfo.WindowStyle <- ProcessWindowStyle.Hidden
 
-  let p = new Process()
+  use p = new Process()
 
   p.StartInfo <- startInfo
   p.EnableRaisingEvents <- true
-
-  let! exitSignal = 
-    p.Exited
-    |> Async.AwaitEvent
-    |> Async.Ignore 
-    |> Async.StartChild
 
   p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
     if event.Data <> null
@@ -93,13 +101,19 @@ let runBash (command : string) (stdoutHandler : ProgressCallback) (stderrHandler
 
   p.Start() |> ignore
 
-  use! cancelHandler = 
-    Async.OnCancel (fun () -> p.Kill())
-
   p.BeginOutputReadLine()
   p.BeginErrorReadLine()
 
-  do! exitSignal
+  let! task = 
+    p.Exited
+    |> Async.AwaitEvent
+    |> Async.Ignore 
+    |> Async.StartChild
+
+  do! task
+
+  p.CancelOutputRead()
+  p.CancelErrorRead()
 
   return p.ExitCode
 }
