@@ -24,11 +24,6 @@ module Solver =
       return! child
     }
 
-  let private getBranchHint version = 
-    match version with
-    | Branch b -> b
-    | _ -> "master"
-
   let versionSearchCost (v : Version) : int = 
     match v with 
     | Version.Revision _ -> 1

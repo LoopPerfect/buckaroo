@@ -34,7 +34,7 @@ type PackageLocation =
 
 module PackageLocation = 
 
-  let HintToBranch (hint : Hint) = 
+  let hintToBranch (hint : Hint) = 
     match hint with
     | Branch b -> Option.Some b
     | _ -> Option.None

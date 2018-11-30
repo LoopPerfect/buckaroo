@@ -108,7 +108,7 @@ let private installLockedPackage (lock : Lock) (gitManager : Git.GitManager) (so
   match location with 
   | GitHub gitHub -> 
     let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-    do! gitManager.FetchCommit gitUrl gitHub.Revision (HintToBranch gitHub.Hint)
+    do! gitManager.FetchCommit gitUrl gitHub.Revision (hintToBranch gitHub.Hint)
     do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
     
     let! manifest = fetchManifestFromLock lock sourceExplorer package
