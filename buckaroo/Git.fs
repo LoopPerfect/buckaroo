@@ -22,7 +22,7 @@ type IGit =
   abstract member Unshallow : string -> Async<Unit>
   abstract member Checkout : string -> string -> Async<Unit>
   abstract member ShallowClone : string -> string -> Async<Unit>
-  abstract member FetchBranch : string -> string -> Async<Unit>
+  abstract member FetchBranch : string -> Branch -> Async<Unit>
   abstract member RemoteTags : string -> Async<RemoteTag list>
   abstract member RemoteHeads : string -> Async<RemoteBranch list>
   abstract member FetchCommits : string -> Branch -> Async<Revision list>

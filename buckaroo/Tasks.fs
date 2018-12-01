@@ -17,7 +17,7 @@ let private getCachePath = async {
 
 let getContext = async {
   let! cachePath = getCachePath
-  let git = new GitCli()
+  let git = new GitLib()
   let gitManager = new Git.GitManager(git, cachePath)
   let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
   return (gitManager, sourceExplorer)

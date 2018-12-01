@@ -16,6 +16,7 @@
     <Compile Include="Bash.fs" />
     <Compile Include="Git.fs" />
     <Compile Include="GitCli.fs" />
+    <Compile Include="GitLib.fs" />
     <Compile Include="GitManager.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
