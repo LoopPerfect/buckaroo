@@ -8,6 +8,48 @@ open LibGit2Sharp
 open System
 open LibGit2Sharp
 
+module Helpers =
+  let CreateSharedGitConfig (path : string) =
+    "[core]\n" +
+    "  repositoryformatversion = 0\n" +
+    "  filemode = true\n" +
+    "  bare = false\n" +
+    "  logallrefupdates = true\n" +
+    "[remote \"origin\"]\n" +
+    "  url =" + path + "\n"+
+    "  fetch = +refs/heads/*:refs/remotes/origin/*\n"
+
+  let SharedGitClone (src : string) (destination : string) = async {
+    let gitPath = Path.Combine (destination, ".git")
+    do! Files.mkdirp gitPath
+    do! Files.mkdirp (Path.Combine (gitPath, "info"))
+    do! Files.mkdirp (Path.Combine (gitPath, "hooks"))
+    do! Files.mkdirp (Path.Combine (gitPath, "refs", "heads"))
+    do! Files.mkdirp (Path.Combine (gitPath, "refs", "tags"))
+    do! Files.mkdirp (Path.Combine (gitPath, "objects", "info"))
+    do! Files.mkdirp (Path.Combine (gitPath, "objects", "pack"))    
+    do! Files.writeFile (Path.Combine (gitPath, "description")) ""
+    do! Files.writeFile (Path.Combine (gitPath, "info/exclude")) ""
+    do! 
+      Files.copyFile 
+        (Path.Combine (src, "HEAD")) 
+        (Path.Combine (gitPath, "HEAD")) 
+            
+    do! 
+      Files.writeFile 
+        (Path.Combine (gitPath, "config")) 
+        (CreateSharedGitConfig src)
+
+    do! 
+      Files.writeFile 
+        (Path.Combine (gitPath, "objects", "info", "alternatives")) 
+        src
+
+    return ()
+  }
+
+  
+
 type GitLib () = 
   let nl = System.Environment.NewLine
   member this.Init (directory : string) = async {
@@ -39,18 +81,6 @@ type GitLib () =
       return repo.Head.CanonicalName
     }
 
-    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
-      do! Files.mkdirp installPath
-      let options = new RepositoryOptions()
-
-      options.IndexPath <- Path.Combine (installPath, ".git/index")
-      options.WorkingDirectoryPath <- gitPath
-      Repository.Init(installPath) |> ignore
-      let repo = new Repository(installPath)
-      Commands.Checkout( repo, revision , new CheckoutOptions()) |> ignore
-      return ()
-    }
-
     member this.Unshallow (gitDir : string) = async {
       let repo = new Repository (gitDir);
       let options = new FetchOptions();
@@ -60,6 +90,17 @@ type GitLib () =
     member this.Checkout (gitDir : string) (revision : string) = async {
       let repo = new Repository (gitDir);
       Commands.Checkout(repo, revision) |> ignore
+    }
+    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
+      do! Files.mkdirp installPath
+      do! Helpers.SharedGitClone gitPath installPath
+      let repo = new Repository (installPath);
+      let options = new FetchOptions();
+      Console.WriteLine ("checking out: " + installPath + " " + revision)
+      Commands.Fetch(repo, "origin", [], options, "")
+      Commands.Checkout(repo, revision) |> ignore
+
+      return ()
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {

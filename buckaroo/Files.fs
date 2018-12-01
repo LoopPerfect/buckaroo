@@ -6,7 +6,9 @@ let exists (path : string) = async {
   return File.Exists(path)
 }
 
-
+let copyFile (src : string) (dest : string) = async {
+  return File.Copy (src, dest)
+}
 let directoryExists (path : string) = async {
   return Directory.Exists(path)
 }
