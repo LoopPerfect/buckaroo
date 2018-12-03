@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Option.fs" />
+    <Compile Include="Result.fs" />
+    <Compile Include="Glob.fs" />
+    <Compile Include="Hashing.fs" />
+    <Compile Include="Constants.fs" />
+    <Compile Include="ArchiveType.fs" />
+    <Compile Include="Toml.fs" />
+    <Compile Include="BuckConfig.fs" />
+    <Compile Include="Files.fs" />
+    <Compile Include="Archive.fs" />
+    <Compile Include="PackageIdentifier.fs" />
+    <Compile Include="Target.fs" />
+    <Compile Include="TargetIdentifier.fs" />
+    <Compile Include="Bash.fs" />
+    <Compile Include="DownloadManager.fs" />
+    <Compile Include="Git.fs" />
+    <Compile Include="GitCli.fs" />
+    <Compile Include="GitManager.fs" />
+    <Compile Include="SemVer.fs" />
+    <Compile Include="Version.fs" />
+    <Compile Include="Constraint.fs" />
+    <Compile Include="Atom.fs" />
+    <Compile Include="Dependency.fs" />
+    <Compile Include="PackageSource.fs" />
+    <Compile Include="PackageLocation.fs" />
+    <Compile Include="Manifest.fs" />
+    <Compile Include="ResolvedVersion.fs" />
+    <Compile Include="Resolution.fs" />
+    <Compile Include="Lock.fs" />
+    <Compile Include="GitHubApi.fs" />
+    <Compile Include="SourceExplorer.fs" />
+    <Compile Include="DefaultSourceExplorer.fs" />
+    <Compile Include="CachedSourceExplorer.fs" />
+    <Compile Include="LoggingSourceExplorer.fs" />
+    <Compile Include="Solver.fs" />
+    <Compile Include="Tasks.fs" />
+    <Compile Include="StartCommand.fs" />
+    <Compile Include="HelpCommand.fs" />
+    <Compile Include="InstallCommand.fs" />
+    <Compile Include="ResolveCommand.fs" />
+    <Compile Include="RemoveCommand.fs" />
+    <Compile Include="QuickstartCommand.fs" />
+    <Compile Include="Command.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FSharp.Control.AsyncSeq" Version="2.0.21" />
+    <PackageReference Include="FSharp.Control.Reactive" Version="4.1.0" />
+    <PackageReference Include="FSharp.Data" Version="3.0.0" />
+    <PackageReference Include="FSharpx.Async" Version="1.13.2" />
+    <PackageReference Include="FSharpx.Collections" Version="1.17.0" />
+    <PackageReference Include="FSharpx.Extras" Version="2.2.1" />
+    <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
+    <PackageReference Include="LibGit2Sharp.NativeBinaries" Version="1.0.217" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="2.1.1" />
+    <PackageReference Include="Nett" Version="0.9.0" />
+    <PackageReference Include="sharpcompress" Version="0.22.0" />
+  </ItemGroup>
+</Project>
