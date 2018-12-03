@@ -1,8 +1,7 @@
 language: csharp
 solution: buckaroo.sln
 mono: none
-dotnet:
-  - 2.1.500 
+dotnet: latest
 script: 
   - dotnet build ./buckaroo
   - dotnet build ./buckaroo-cli
