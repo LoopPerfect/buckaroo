@@ -2,6 +2,10 @@ language: csharp
 solution: buckaroo.sln
 mono: none
 dotnet: 2.1
+addons:
+  apt:
+    packages:
+    - hello
 script: 
   - dotnet build ./buckaroo
   - dotnet build ./buckaroo-cli
