@@ -6,6 +6,12 @@ addons:
   apt:
     packages:
     - hello
+  homebrew:
+    packages:
+    - hello
+os:
+  - linux
+  - osx
 script: 
   - dotnet build ./buckaroo
   - dotnet build ./buckaroo-cli
