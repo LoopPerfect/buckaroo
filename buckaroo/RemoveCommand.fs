@@ -9,7 +9,7 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
     " ]... "
   )
 
-  let (_, sourceExplorer) = context
+  let sourceExplorer = context.SourceExplorer
 
   let! manifest = Tasks.readManifest
 

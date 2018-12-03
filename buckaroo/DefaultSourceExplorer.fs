@@ -16,7 +16,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
   let fetchLocationsFromPackageSource (source : PackageSource) = asyncSeq {
     match source with 
     | PackageSource.Http http -> 
-      let! path = downloadManager.DonwloadToCache http.Url
+      let! path = downloadManager.DownloadToCache http.Url
       let! hash = Files.sha256 path
       yield 
         PackageLocation.Http
@@ -33,7 +33,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     then
       return raise (new Exception("Only zip is currently supported"))
     
-    let! pathToZip = downloadManager.DonwloadToCache source.Url
+    let! pathToZip = downloadManager.DownloadToCache source.Url
     use file = System.IO.File.OpenRead pathToZip
     use zip = new System.IO.Compression.ZipArchive(file, System.IO.Compression.ZipArchiveMode.Read)
 
@@ -142,7 +142,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageLocation.Git git -> 
       gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
     | PackageLocation.Http http -> 
-      System.Console.WriteLine(string http)
       extractFileFromHttp http path
 
   interface ISourceExplorer with 

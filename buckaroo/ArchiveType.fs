@@ -7,6 +7,11 @@ module ArchiveType =
   type ParseError = 
   | InvalidType of string
 
+  module ParseError = 
+    let show (x : ParseError) = 
+      match x with 
+      | ParseError.InvalidType s -> s
+
   let parse (x : string) = 
     match x.Trim().ToLower() with 
     | "zip" -> Ok ArchiveType.Zip

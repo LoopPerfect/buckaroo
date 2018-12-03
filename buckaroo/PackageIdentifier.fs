@@ -41,6 +41,11 @@ module PackageIdentifier =
     return ({ Owner = owner; Project = project } : GitHubPackageIdentifier)
   }
 
+  let parseGitHubIdentifier (x : string) = 
+    match run (gitHubPackageIdentifierParser .>> CharParsers.eof) x with
+    | Success(result, _, _) -> Result.Ok result
+    | Failure(error, _, _) -> Result.Error error
+
   let parser =
     gitHubPackageIdentifierParser |>> PackageIdentifier.GitHub
     <|> (adhocPackageIdentifierParser |>> PackageIdentifier.Adhoc)

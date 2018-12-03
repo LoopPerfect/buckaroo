@@ -86,11 +86,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
       do! git.FetchCommit targetDirectory commit
     with _ -> 
       try 
-        Console.WriteLine "trying branch"
         do! git.FetchBranch url branchHint
         do! git.FetchCommit targetDirectory commit
       with _ ->
-        Console.WriteLine "unshallow repo"
         do! git.Unshallow targetDirectory
         do! git.FetchCommit targetDirectory commit
   }

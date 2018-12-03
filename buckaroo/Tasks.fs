@@ -3,7 +3,11 @@ module Buckaroo.Tasks
 open System
 open System.IO
 
-type TaskContext = Git.GitManager * ISourceExplorer
+type TaskContext = {
+  DownloadManager : DownloadManager; 
+  GitManager : Git.GitManager; 
+  SourceExplorer : ISourceExplorer;
+}
 
 let private getCachePath = async {
   return
@@ -22,7 +26,11 @@ let getContext = async {
   let gitManager = new Git.GitManager(git, cachePath)
   // let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(downloadManager, gitManager))
   let sourceExplorer = new DefaultSourceExplorer(downloadManager, gitManager)
-  return (gitManager, sourceExplorer)
+  return {
+    DownloadManager = downloadManager; 
+    GitManager = gitManager; 
+    SourceExplorer = sourceExplorer;
+  }
 }
 
 let readManifest = async {

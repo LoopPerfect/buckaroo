@@ -6,6 +6,7 @@
     <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Glob.fs" />
     <Compile Include="SemVer.fs" />
     <Compile Include="Version.fs" />
     <Compile Include="Constraint.fs" />
