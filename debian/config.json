@@ -1,9 +1,0 @@
-{
-  "classPath": [
-    "/usr/lib/buckaroo/buckaroo-cli.jar"
-  ],
-  "mainClass": "com.loopperfect.buckaroo.Main",
-  "vmArgs": [
-    "-XstartOnFirstThread"
-  ]
-}
