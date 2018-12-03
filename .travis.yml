@@ -1,7 +1,7 @@
 language: csharp
 solution: buckaroo.sln
 mono: none
-dotnet: 2.1
+dotnet: 2.1.500
 addons:
   apt:
     packages:
