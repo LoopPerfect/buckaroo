@@ -1,5 +1,6 @@
 language: csharp
 solution: buckaroo.sln
+mono: none
 dotnet:
   - 2.1.300 
 script: 
