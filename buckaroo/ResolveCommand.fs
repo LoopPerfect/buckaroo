@@ -3,8 +3,8 @@ module Buckaroo.ResolveCommand
 open System
 
 let task (context : Tasks.TaskContext) resolutionStyle = async {
-  let (_, sourceExplorer) = context
-
+  let sourceExplorer = context.SourceExplorer
+  
   let! maybeLock = Tasks.readLockIfPresent
 
   let resolveStart = DateTime.Now

@@ -1,4 +1,4 @@
-module Buckaroo.OptionBuilder
+module Buckaroo.Option
 
 type OptionBuilder () = 
   member this.Bind(x, f) = 

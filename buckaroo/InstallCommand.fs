@@ -6,7 +6,7 @@ open Buckaroo.BuckConfig
 open Buckaroo.PackageLocation
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
-  let (version, location) =  
+  let (_, location) =  
     match lock.Packages |> Map.tryFind package with 
     | Some location -> location
     | None -> 
@@ -102,64 +102,84 @@ let private computeCellIdentifier (x : PackageIdentifier) =
   )
   |> String.concat "."
 
-let private installLockedPackage (lock : Lock) (gitManager : Git.GitManager) (sourceExplorer : ISourceExplorer) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
-  let ( package, location ) = lockedPackage
-  let installPath = packageInstallPath package
+let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
+  let downloadManager = context.DownloadManager
+  let gitManager = context.GitManager
   match location with 
   | GitHub gitHub -> 
     let gitUrl = PackageLocation.gitHubUrl gitHub.Package
     do! gitManager.FetchCommit gitUrl gitHub.Revision (hintToBranch gitHub.Hint)
     do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
-    
-    let! manifest = fetchManifestFromLock lock sourceExplorer package
-    // Touch .buckconfig
-    let buckConfigPath = Path.Combine(installPath, ".buckconfig")
-    if File.Exists buckConfigPath |> not 
-    then 
-      do! Files.writeFile buckConfigPath ""
-    let! targets = 
-      fetchDependencyTargets lock sourceExplorer manifest
-    // Write .buckconfig.d/.buckconfig.buckaroo
-    let buckarooBuckConfigPath = 
-      Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
-    let buckarooCells = 
-      manifest.Dependencies
-      |> Seq.map (fun d -> 
-        let cell = computeCellIdentifier d.Package
-        // TODO: Make this more robust using relative path computation 
-        let path = Path.Combine("..", "..", "..", "..", (packageInstallPath d.Package))
-        (cell, INIString path)
-      )
-      |> Seq.toList
-    let buckarooSectionEntries = 
-      manifest.Dependencies
-      |> Seq.map (fun d -> 
-        let cell = computeCellIdentifier d.Package
-        (PackageIdentifier.show d.Package, INIString cell)
-      )
-      |> Seq.distinct
-      |> Seq.toList
-      |> List.append 
-        [ ("dependencies", targets |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
-    let buckarooConfig : INIData = 
-      Map.empty
-      |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
-      |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
-    do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
-    do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
-    // Write BUCKAROO_DEPS
-    let buckarooDepsPath = Path.Combine(installPath, Constants.BuckarooDepsFileName)
-    let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceExplorer manifest
-    do! Files.writeFile buckarooDepsPath buckarooDepsContent
-    // Write Buckaroo macros
-    let buckarooMacrosPath = Path.Combine(installPath, Constants.BuckarooMacrosFileName)
-    do! Files.writeFile buckarooMacrosPath buckarooMacros
+  | Http http -> 
+    let! pathToCache = downloadManager.DownloadToCache http.Url
+    let! discoveredHash = Files.sha256 pathToCache
+    if discoveredHash <> http.Sha256
+    then
+      return 
+        new Exception("Hash mismatch for " + http.Url + "! Expected " + http.Sha256 + "but found " + discoveredHash)
+        |> raise
+    do! Files.mkdirp installPath
+    do! Archive.extractTo pathToCache installPath http.StripPrefix
   | _ -> 
     new Exception("Unsupported location type") |> raise
 }
 
+let private installLockedPackage (context : Tasks.TaskContext) (lock : Lock) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
+  let gitManager = context.GitManager
+  let sourceExplorer = context.SourceExplorer
+
+  let ( package, location ) = lockedPackage
+  let installPath = packageInstallPath package
+
+  do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
+  do! installPackageSources context installPath location
+    
+  let! manifest = fetchManifestFromLock lock sourceExplorer package
+  // Touch .buckconfig
+  let buckConfigPath = Path.Combine(installPath, ".buckconfig")
+  if File.Exists buckConfigPath |> not 
+  then 
+    do! Files.writeFile buckConfigPath ""
+  let! targets = 
+    fetchDependencyTargets lock sourceExplorer manifest
+  // Write .buckconfig.d/.buckconfig.buckaroo
+  let buckarooBuckConfigPath = 
+    Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
+  let buckarooCells = 
+    manifest.Dependencies
+    |> Seq.map (fun d -> 
+      let cell = computeCellIdentifier d.Package
+      // TODO: Make this more robust using relative path computation 
+      let path = Path.Combine("..", "..", "..", "..", (packageInstallPath d.Package))
+      (cell, INIString path)
+    )
+    |> Seq.toList
+  let buckarooSectionEntries = 
+    manifest.Dependencies
+    |> Seq.map (fun d -> 
+      let cell = computeCellIdentifier d.Package
+      (PackageIdentifier.show d.Package, INIString cell)
+    )
+    |> Seq.distinct
+    |> Seq.toList
+    |> List.append 
+      [ ("dependencies", targets |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
+  let buckarooConfig : INIData = 
+    Map.empty
+    |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
+    |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
+  do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
+  do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
+  // Write BUCKAROO_DEPS
+  let buckarooDepsPath = Path.Combine(installPath, Constants.BuckarooDepsFileName)
+  let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceExplorer manifest
+  do! Files.writeFile buckarooDepsPath buckarooDepsContent
+  // Write Buckaroo macros
+  let buckarooMacrosPath = Path.Combine(installPath, Constants.BuckarooMacrosFileName)
+  do! Files.writeFile buckarooMacrosPath buckarooMacros
+}
+
 let task (context : Tasks.TaskContext) = async {
-  let (gitManager, sourceExplorer) = context
   let! lock = Tasks.readLock
   do! 
     lock.Packages
@@ -167,7 +187,7 @@ let task (context : Tasks.TaskContext) = async {
       let project = kvp.Key
       let (version, exactLocation) = kvp.Value
       "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-      do! installLockedPackage lock gitManager sourceExplorer (project, exactLocation)
+      do! installLockedPackage context lock (project, exactLocation)
     })
     |> Async.Parallel
     |> Async.Ignore

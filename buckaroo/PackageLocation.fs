@@ -1,11 +1,12 @@
 namespace Buckaroo
 
 open Buckaroo.Git
+open FSharpx
 
 type HttpLocation = {
   Url : string; 
-  StripPrefix : string; 
-  Type : ArchiveType;
+  StripPrefix : string option; 
+  Type : ArchiveType option;
   Sha256 : string; 
 }
 
@@ -45,6 +46,9 @@ module PackageLocation =
 
   let show (x : PackageLocation) = 
     match x with 
-    | Http y -> y.Url + "#" + y.StripPrefix + "#" + (ArchiveType.show y.Type)
+    | Http y -> 
+      y.Url + 
+      (y.StripPrefix |> Option.map ((+) "#") |> Option.defaultValue "") + 
+      (y.Type |> Option.map (fun x -> "#" + (ArchiveType.show x)) |> Option.defaultValue "") 
     | Git y -> y.Url + "#" + y.Revision
     | GitHub y -> (gitHubUrl y.Package) + "#" + y.Revision

@@ -1,12 +1,18 @@
-module Buckaroo.Program
-
 open System
-open Buckaroo
 
 [<EntryPoint>]
 let main argv =
-  let input = argv |> String.concat " "
-  match Command.parse input with 
-  | Result.Ok command -> command |> Command.runCommand |> Async.RunSynchronously
-  | Result.Error error -> Console.WriteLine error
-  0
+  try
+    let input = argv |> String.concat " "
+    match Buckaroo.Command.parse input with 
+    | Result.Ok command -> 
+      command 
+      |> Buckaroo.Command.runCommand 
+      |> Async.RunSynchronously
+      0
+    | Result.Error error -> 
+      Console.WriteLine error
+      1
+  with error -> 
+    Console.WriteLine error
+    1
