@@ -18,15 +18,15 @@ open System.Text
 let ``Bash.runBashSync works correctly`` () = 
   let stdout = new StringBuilder()
   let exitCode = 
-    Bash.runBashSync "hello" (stdout.Append >> ignore) ignore 
+    Bash.runBashSync "true" (stdout.Append >> ignore) ignore 
     |> Async.RunSynchronously
   Assert.Equal(0, exitCode)
-  Assert.Equal("Hello, world!", stdout.ToString())
+  Assert.Equal("", stdout.ToString().Trim())
 
 [<Fact>]
 let ``Stress test of Bash.runBashSync works correctly`` () = 
   let task = 
-    Bash.runBashSync "hello" ignore ignore
+    Bash.runBashSync "true" ignore ignore
 
   let exitCodes = 
     task 
