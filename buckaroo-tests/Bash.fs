@@ -21,7 +21,7 @@ let ``Bash.runBashSync works correctly`` () =
     Bash.runBashSync "hello" (stdout.Append >> ignore) ignore 
     |> Async.RunSynchronously
   Assert.Equal(0, exitCode)
-  Assert.Equal("Hello, world!", stdout.ToString())
+  Assert.Equal("Hello, world!", stdout.ToString().Trim())
 
 [<Fact>]
 let ``Stress test of Bash.runBashSync works correctly`` () = 

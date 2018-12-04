@@ -1,0 +1,18 @@
+language: csharp
+solution: buckaroo.sln
+mono: none
+dotnet: 2.1.500
+addons:
+  apt:
+    packages:
+    - hello
+  homebrew:
+    packages:
+    - hello
+os:
+  - linux
+  - osx
+script: 
+  - dotnet build ./buckaroo
+  - dotnet build ./buckaroo-cli
+  - dotnet test ./buckaroo-tests

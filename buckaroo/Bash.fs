@@ -35,13 +35,13 @@ let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHan
     p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
       if event.Data <> null
       then
-        stdoutHandler event.Data
+        stdoutHandler (event.Data + System.Environment.NewLine)
     ))
 
     p.ErrorDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
       if event.Data <> null
       then
-        stderrHandler event.Data
+        stderrHandler (event.Data + System.Environment.NewLine)
     ))
 
     p.Start() |> ignore
