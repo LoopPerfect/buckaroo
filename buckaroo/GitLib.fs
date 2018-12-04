@@ -67,6 +67,7 @@ type GitLib () =
     return repo.Branches
       |> Seq.toList
   }
+  
 
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
