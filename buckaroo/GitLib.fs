@@ -76,6 +76,23 @@ type GitLib () =
       Repository.Clone (url, directory, options) |> ignore
       return ();
     }
+   
+    member this.ShallowClone (url : String) (directory : string) = async {
+      let options = new CloneOptions()
+      options.IsBare <- true;
+
+      options.OnTransferProgress <- new LibGit2Sharp.Handlers.TransferProgressHandler(fun p -> 
+        System.Console.WriteLine ("Cloning " + url + 
+          " " + p.ReceivedObjects.ToString() + "(" + p.IndexedObjects.ToString() + ")" + " / " + p.TotalObjects.ToString()
+        )
+
+        true
+      )
+
+      Repository.Clone (url, directory, options) |> ignore
+      return ();
+    }
+
 
     member this.DefaultBranch (gitPath : string) = async {
       let repo = new Repository (gitPath)
@@ -102,12 +119,6 @@ type GitLib () =
       Commands.Checkout(repo, revision) |> ignore
 
       return ()
-    }
-
-    member this.ShallowClone (url : String) (directory : string) = async {
-      do! this.Init (directory)
-      let repo = new Repository (directory)
-      repo.Network.Remotes.Add("origin", url) |> ignore
     }
 
     member this.FetchBranch (repository : String) (branch : Git.Branch) = async {

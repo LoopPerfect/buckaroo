@@ -3,7 +3,11 @@ module Buckaroo.Tasks
 open System
 open System.IO
 
-type TaskContext = Git.GitManager * ISourceExplorer
+type TaskContext = {
+  DownloadManager : DownloadManager; 
+  GitManager : Git.GitManager; 
+  SourceExplorer : ISourceExplorer;
+}
 
 let private getCachePath = async {
   return
@@ -17,10 +21,18 @@ let private getCachePath = async {
 
 let getContext = async {
   let! cachePath = getCachePath
+  //let git = new GitLib()
+
+  let downloadManager = new DownloadManager(cachePath)
   let git = new GitLib()
   let gitManager = new Git.GitManager(git, cachePath)
-  let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(gitManager))
-  return (gitManager, sourceExplorer)
+  // let sourceExplorer = new CachedSourceExplorer(new DefaultSourceExplorer(downloadManager, gitManager))
+  let sourceExplorer = new DefaultSourceExplorer(downloadManager, gitManager)
+  return {
+    DownloadManager = downloadManager; 
+    GitManager = gitManager; 
+    SourceExplorer = sourceExplorer;
+  }
 }
 
 let readManifest = async {
@@ -29,8 +41,13 @@ let readManifest = async {
     return 
       match Manifest.parse content with 
       | Result.Ok manifest -> manifest
-      | Result.Error error -> new Exception("Error parsing manifest:\n" + error) |> raise
-  with error -> return new Exception("Could not read project manifest. Are you sure you are in the right directory? ", error) |> raise
+      | Result.Error error -> 
+        new Exception("Error parsing manifest:\n" + (Manifest.ManifestParseError.show error)) 
+        |> raise
+  with error -> 
+    return 
+      new Exception("Could not read project manifest. Are you sure you are in the right directory? ", error) 
+      |> raise
 }
 
 let writeManifest (manifest : Manifest) = async {

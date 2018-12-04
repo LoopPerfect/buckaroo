@@ -71,7 +71,6 @@ type GitManager (git : IGit, cacheDirectory : string) =
     return! res 
   }
 
-
   member this.CopyFromCache  (gitUrl : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
     let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git"))
     if hasGit then
@@ -87,11 +86,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
       do! git.FetchCommit targetDirectory commit
     with _ -> 
       try 
-        Console.WriteLine "trying branch"
         do! git.FetchBranch url branchHint
         do! git.FetchCommit targetDirectory commit
       with _ ->
-        Console.WriteLine "unshallow repo"
         do! git.Unshallow targetDirectory
         do! git.FetchCommit targetDirectory commit
   }

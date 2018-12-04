@@ -2,6 +2,7 @@ module Buckaroo.Bash
 
 open System
 open System.Diagnostics
+open System.Threading
 open System.Threading.Tasks
 
 type ProgressCallback = string -> Unit
@@ -28,37 +29,37 @@ let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHan
 
   p.StartInfo <- startInfo
 
-  let! task = 
-    Task.Run(fun () -> 
+  let startProcess () = 
+    System.Console.WriteLine command
 
-      System.Console.WriteLine command
+    p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
+      if event.Data <> null
+      then
+        stdoutHandler event.Data
+    ))
 
-      p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
-        if event.Data <> null
-        then
-          stdoutHandler event.Data
-      ))
+    p.ErrorDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
+      if event.Data <> null
+      then
+        stderrHandler event.Data
+    ))
 
-      p.ErrorDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event -> 
-        if event.Data <> null
-        then
-          stderrHandler event.Data
-      ))
+    p.Start() |> ignore
 
-      p.Start() |> ignore
+    p.BeginOutputReadLine()
+    p.BeginErrorReadLine()
 
-      p.BeginOutputReadLine()
-      p.BeginErrorReadLine()
+    p.WaitForExit()
 
-      p.WaitForExit()
+    p.CancelOutputRead()
+    p.CancelErrorRead()
 
-      p.CancelOutputRead()
-      p.CancelErrorRead()
-    )
+  let! exitSignal = 
+    Task.Factory.StartNew(startProcess)
     |> Async.AwaitTask
     |> Async.StartChild
 
-  do! task
+  do! exitSignal
 
   if p.ExitCode > 0
   then 

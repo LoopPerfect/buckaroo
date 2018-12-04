@@ -5,13 +5,68 @@ open FSharp.Control
 open Buckaroo.Git
 open Buckaroo.PackageLocation
 
-type DefaultSourceExplorer (gitManager : GitManager) = 
+type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) = 
 
   let branchPriority branch = 
     match branch with 
     | "master" -> 0
     | "develop" -> 1
     | _ -> 2
+
+  let fetchLocationsFromPackageSource (source : PackageSource) = asyncSeq {
+    match source with 
+    | PackageSource.Http http -> 
+      let! path = downloadManager.DownloadToCache http.Url
+      let! hash = Files.sha256 path
+      yield 
+        PackageLocation.Http
+        {
+          Url = http.Url; 
+          StripPrefix = http.StripPrefix; 
+          Type = http.Type;
+          Sha256 = hash; 
+        }
+  }
+
+  let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
+    if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip 
+    then
+      return raise (new Exception("Only zip is currently supported"))
+    
+    let! pathToZip = downloadManager.DownloadToCache source.Url
+    use file = System.IO.File.OpenRead pathToZip
+    use zip = new System.IO.Compression.ZipArchive(file, System.IO.Compression.ZipArchiveMode.Read)
+
+    let! root = async {
+      match source.StripPrefix with 
+      | Some stripPrefix -> 
+        let roots = 
+          zip.Entries
+          |> Seq.map (fun entry -> System.IO.Path.GetDirectoryName(entry.FullName))
+          |> Seq.distinct
+          |> Seq.filter (fun directory -> 
+            directory |> Glob.isLike stripPrefix
+          )
+          |> Seq.truncate 2
+          |> Seq.toList
+        match roots with 
+        | [ root ] -> return root
+        | [] -> 
+          return 
+            raise (new Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
+        | _ -> 
+          return 
+            raise (new Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
+      | None -> 
+        return ""
+    }
+
+    use stream = zip.GetEntry(System.IO.Path.Combine(root, filePath)).Open()
+    use streamReader = new System.IO.StreamReader(stream)
+
+    return! 
+      streamReader.ReadToEndAsync() |> Async.AwaitTask
+  }
 
   let fetchVersionsFromGit (url : String) = asyncSeq {
     let! branchesTask = 
@@ -82,28 +137,31 @@ type DefaultSourceExplorer (gitManager : GitManager) =
 
   let fetchFile location path = 
     match location with 
-    | PackageLocation.GitHub g -> 
-      GitHubApi.fetchFile g.Package g.Revision path
-    | PackageLocation.Git g -> 
-      gitManager.FetchFile g.Url g.Revision path (hintToBranch g.Hint)
-    | _ -> 
-      async {
-        return new Exception("Only Git and GitHub packages are supported") |> raise
-      }
+    | PackageLocation.GitHub gitHub -> 
+      GitHubApi.fetchFile gitHub.Package gitHub.Revision path
+    | PackageLocation.Git git -> 
+      gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
+    | PackageLocation.Http http -> 
+      extractFileFromHttp http path
 
   interface ISourceExplorer with 
 
-    member this.FetchVersions package = 
+    member this.FetchVersions locations package = 
       match package with 
       | PackageIdentifier.GitHub gitHub -> 
         let url = PackageLocation.gitHubUrl gitHub
         fetchVersionsFromGit url
-      | _ -> 
-        asyncSeq {
-          return raise <| new Exception("Only GitHub packages are supported")
-        }
+      | PackageIdentifier.Adhoc adhoc -> 
+        let xs = 
+          locations 
+          |> Map.toSeq
+          |> Seq.filter (fun ((p, _), _) -> p = adhoc)
+          |> Seq.map (fst >> snd)
+          |> Seq.toList
+        xs
+        |> AsyncSeq.ofSeq
 
-    member this.FetchLocations package version = asyncSeq {
+    member this.FetchLocations locations package version = asyncSeq {
       match package with 
       | PackageIdentifier.GitHub g -> 
         let url = PackageLocation.gitHubUrl g
@@ -146,8 +204,12 @@ type DefaultSourceExplorer (gitManager : GitManager) =
             |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
             |> AsyncSeq.ofSeq
         | Buckaroo.Version.Latest -> ()
-      | _ -> 
-        return new Exception("Only GitHub packages are supported") |> raise
+      | PackageIdentifier.Adhoc adhoc -> 
+        match locations |> Map.tryFind (adhoc, version) with 
+        | Some source -> 
+          yield! fetchLocationsFromPackageSource source
+        | None -> 
+          return new Exception("No location specified for " + (PackageIdentifier.show package) + "@" + (Version.show version)) |> raise
     }
 
     member this.FetchManifest location = 
@@ -156,8 +218,11 @@ type DefaultSourceExplorer (gitManager : GitManager) =
         return 
           match Manifest.parse content with
           | Result.Ok manifest -> manifest
-          | Result.Error errorMessage -> 
-            new Exception("Invalid " + Constants.ManifestFileName + " file. \n" + errorMessage)
+          | Result.Error error -> 
+            let errorMessage = 
+              "Invalid " + Constants.ManifestFileName + " file. \n" + 
+              (Manifest.ManifestParseError.show error)
+            new Exception(errorMessage)
             |> raise
       }
 

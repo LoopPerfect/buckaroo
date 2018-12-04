@@ -128,9 +128,10 @@ module Command =
   }
 
   let showVersions (context : Tasks.TaskContext) (package : PackageIdentifier) = async {
-    let (_, sourceExplorer) = context
+    let sourceExplorer = context.SourceExplorer
+
     let! versions = 
-      sourceExplorer.FetchVersions package
+      sourceExplorer.FetchVersions Map.empty package
       |> AsyncSeq.toListAsync
     for v in versions do
       Version.show v |> Console.WriteLine
@@ -138,7 +139,8 @@ module Command =
   }
 
   let add (context : Tasks.TaskContext) dependencies = async {
-    let (_, sourceExplorer) = context
+    let sourceExplorer = context.SourceExplorer
+
     let! manifest = Tasks.readManifest
     let newManifest = { 
       manifest with 
