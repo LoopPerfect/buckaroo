@@ -28,7 +28,7 @@ module Helpers =
     do! Files.mkdirp (Path.Combine (gitPath, "objects", "info"))
     do! Files.mkdirp (Path.Combine (gitPath, "objects", "pack"))    
     do! Files.writeFile (Path.Combine (gitPath, "description")) ""
-    do! Files.writeFile (Path.Combine (gitPath, "info/exclude")) ""
+    do! Files.writeFile (Path.Combine (gitPath, "info", "exclude")) ""
     do! 
       Files.copyFile 
         (Path.Combine (src, "HEAD")) 
@@ -181,5 +181,3 @@ type GitLib () =
         let node = blob.[path].Target :?> Blob;
         return node.GetContentText()
     }
-    
-
