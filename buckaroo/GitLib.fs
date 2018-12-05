@@ -91,6 +91,7 @@ type GitLib () =
       do! Async.SwitchToThreadPool()     
       let repo = new Repository (gitPath)  
       let commit = repo.Lookup<Commit>(revision)
+      Console.WriteLine ("testing " + gitPath + " for " + revision)
       return 
         match commit with 
         | null -> false
