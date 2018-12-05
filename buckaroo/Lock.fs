@@ -1,52 +1,76 @@
 namespace Buckaroo
 
+type LockedPackage = {
+  Version : Version; 
+  Location : PackageLocation; 
+  PrivatePackages : Map<PackageIdentifier, LockedPackage>; 
+}
+
 type Lock = {
   ManifestHash : string; 
   Dependencies : Set<TargetIdentifier>; 
-  Packages : Map<PackageIdentifier, Version * PackageLocation>; 
+  Packages : Map<PackageIdentifier, LockedPackage>; 
 }
 
 module Lock = 
 
   open Buckaroo.Result
-  open System.Security.Cryptography
+
+  module LockedPackage = 
+    let show (x : LockedPackage) = 
+      let rec f (x : LockedPackage) (depth : int) = 
+        let indent = "-" |> String.replicate depth
+        indent + (Version.show x.Version) + "@" + (PackageLocation.show x.Location) +
+        (
+          x.PrivatePackages
+          |> Map.toSeq
+          |> Seq.map (fun (k, v) -> f v (depth + 1))
+          |> String.concat "\n"
+        )
+      f x 0
 
   let showDiff (before : Lock) (after : Lock) : string = 
     let additions = 
       after.Packages
-      |> Seq.filter (fun x -> before.Packages |> Map.containsKey x.Key |> not)
+      |> Map.toSeq
+      |> Seq.filter (fun (k, v) -> before.Packages |> Map.containsKey k |> not)
       |> Seq.distinct
+
     let removals = 
       before.Packages
-      |> Seq.filter (fun x -> after.Packages |> Map.containsKey x.Key |> not)
+      |> Map.toSeq
+      |> Seq.filter (fun (k, v) -> after.Packages |> Map.containsKey k |> not)
       |> Seq.distinct
+
     let changes = 
       before.Packages
-      |> Seq.choose (fun x -> 
+      |> Map.toSeq
+      |> Seq.choose (fun (k, v) -> 
         after.Packages 
-        |> Map.tryFind x.Key 
+        |> Map.tryFind k 
         |> Option.bind (fun y -> 
-          if y <> x.Value
-          then Some (x.Key, y, x.Value)
+          if y <> v
+          then Some (k, y, v)
           else None
         )
       )
+
     [
       "Added: "; 
       (
         additions 
-        |> Seq.map (fun x -> 
-          "  " + (PackageIdentifier.show x.Key) + 
-          " -> " + (PackageLocation.show (snd x.Value))
+        |> Seq.map (fun (k, v) -> 
+          "  " + (PackageIdentifier.show k) + 
+          " -> " + (LockedPackage.show v)
         )
         |> String.concat "\n"
       );
       "Removed: "; 
       (
         removals 
-        |> Seq.map (fun x -> 
-          "  " + (PackageIdentifier.show x.Key) + 
-          " -> " + (PackageLocation.show (snd x.Value))
+        |> Seq.map (fun (k, v) -> 
+          "  " + (PackageIdentifier.show k) + 
+          " -> " + (LockedPackage.show v)
         )
         |> String.concat "\n"
       );
@@ -55,43 +79,63 @@ module Lock =
         changes 
         |> Seq.map (fun (p, before, after) -> 
           "  " + (PackageIdentifier.show p) + 
-          " " + (PackageLocation.show (snd before)) + 
-          " -> " + (PackageLocation.show (snd after))
+          " " + (LockedPackage.show before) + 
+          " -> " + (LockedPackage.show after)
         )
         |> String.concat "\n"
       );
     ]
     |> String.concat "\n"
 
-  let bytesToHex bytes = 
-    bytes 
-    |> Array.map (fun (x : byte) -> System.String.Format("{0:x2}", x))
-    |> String.concat System.String.Empty
-
   let fromManifestAndSolution (manifest : Manifest) (solution : Solution) : Lock = 
     let manifestHash = 
       manifest
       |> Manifest.toToml
-      |> System.Text.Encoding.UTF8.GetBytes 
-      |> (new SHA256Managed()).ComputeHash 
-      |> bytesToHex
+      |> Hashing.sha256
+
     let dependencies = 
       manifest.Dependencies
       |> Seq.map (fun x -> x.Package)
       |> Seq.collect (fun p -> 
-        solution 
+        solution.Resolutions 
         |> Map.tryFind p 
-        |> Option.map (fun x -> 
-          x.Manifest.Targets 
+        |> Option.map (fun (rv, _) -> 
+          rv.Manifest.Targets 
           |> Seq.map (fun t -> { Package = p; Target = t})
         )
         |> Option.defaultValue Seq.empty
       )
       |> Set.ofSeq
+
+    let rec extractPackages (solution : Solution) : Map<PackageIdentifier, LockedPackage> = 
+      solution.Resolutions
+      |> Map.toSeq
+      |> Seq.map (fun (k, (rv, s)) -> 
+        let lockedPackage = {
+          Location = rv.Location; 
+          Version = rv.Version; 
+          PrivatePackages = extractPackages s; 
+        }
+
+        (k, lockedPackage)
+      )
+      |> Map.ofSeq
+
     let packages = 
       solution
-      |> Map.map (fun _ v -> (v.Version, v.Location))
+      |> extractPackages
+    
     { ManifestHash = manifestHash; Dependencies = dependencies; Packages = packages }
+
+  let rec private flattenLockedPackage (parents : PackageIdentifier list) (package : LockedPackage) = seq {
+    yield (parents, (package.Location, package.Version))
+    yield! 
+      package.PrivatePackages
+      |> Map.toSeq
+      |> Seq.collect (fun (k, v) -> flattenLockedPackage (parents @ [ k ]) v)
+  }
+
+  let private quote x = "\"" + x + "\""
 
   let toToml (lock : Lock) = 
     (
@@ -108,13 +152,13 @@ module Lock =
     ) + 
     (
       lock.Packages
+      |> Map.toSeq
+      |> Seq.collect (fun (k, v) -> flattenLockedPackage [ k ] v)
       |> Seq.map(fun x -> 
-        let package = x.Key
-        let (version, exactLocation) = x.Value
-        "[[lock]]\n" + 
-        "name = \"" + (PackageIdentifier.show package) + "\"\n" + 
+        let (parents, (location, version)) = x
+        "[lock." + (parents |> Seq.map (PackageIdentifier.show >> quote) |> String.concat ".") + "]\n" + 
         "version = \"" + (Version.show version) + "\"\n" + 
-        match exactLocation with 
+        match location with 
         | Git git -> 
           "url = \"" + git.Url + "\"\n" + 
           "revision = \"" + git.Revision + "\"\n"
@@ -129,153 +173,186 @@ module Lock =
       |> String.concat "\n"
     )
 
-  let private tomlTableToLockedHttpPackage (x : Nett.TomlTable) = result {
-    let! packageIdentifier = 
-      x 
-      |> Toml.get "name" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "name must be specified for every dependency"
-      |> Result.bind PackageIdentifier.parseAdhocIdentifier
-    
-    let! version = 
-      x 
-      |> Toml.get "version" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "version must be specified for every dependency"
-      |> Result.bind Version.parse
-    
+  let private tomlTableToHttpLocation x = result {
     let! url = 
       x
       |> Toml.get "url"
-      |> Option.bind Toml.asString 
-      |> optionToResult "url must be specified for every dependency"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
     let! sha256 = 
       x
       |> Toml.get "sha256"
-      |> Option.bind Toml.asString 
-      |> optionToResult "sha256 must be specified for every dependency"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
     
     let! stripPrefix = 
-      x
-      |> Toml.get "strip_prefix"
-      |> Option.map (fun element -> 
-        element 
-        |> Toml.asString
-        |> optionToResult "strip_prefix must be a string"
-        |> Result.map Option.Some
-      )
+      x 
+      |> Toml.tryGet "strip_prefix" 
+      |> Option.map (Toml.asString)
+      |> Option.map (Result.map Option.Some)
+      |> Option.map (Result.mapError Toml.TomlError.show)
       |> Option.defaultValue (Result.Ok Option.None)
 
     let! archiveType = 
-      x
-      |> Toml.get "type"
-      |> Option.map (fun element -> 
-        element 
-        |> Toml.asString
-        |> optionToResult "type must be a string"
-        |> Result.bind (ArchiveType.parse >> (Result.mapError ArchiveType.ParseError.show))
-        |> Result.map Option.Some
-      )
+      x 
+      |> Toml.tryGet "type" 
+      |> Option.map (Toml.asString)
+      |> Option.map (Result.mapError Toml.TomlError.show)
+      |> Option.map (Result.bind (ArchiveType.parse >> Result.mapError ArchiveType.ParseError.show))
+      |> Option.map (Result.map Option.Some)
       |> Option.defaultValue (Result.Ok Option.None)
 
-    let location = PackageLocation.Http {
+    return PackageLocation.Http {
       Url = url; 
       StripPrefix = stripPrefix; 
       Type = archiveType; 
       Sha256 = sha256; 
     }
-
-    return (PackageIdentifier.Adhoc packageIdentifier, (version, location))
   }
 
-  let private tomlTableToLockedGitHubPackage x = result {
+  let private tomlTableToGitHubLocation x = result {
     let! packageIdentifier = 
       x 
       |> Toml.get "name" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "name must be specified for every dependency"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind PackageIdentifier.parseGitHubIdentifier
-    
-    let! version = 
-      x 
-      |> Toml.get "version" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "version must be specified for every dependency"
-      |> Result.bind Version.parse
 
     let! revision = 
       x 
       |> Toml.get "revision" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "revision must be specified for every dependency"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    let hint = 
-      match version with
-      | Version.Branch b -> Hint.Branch b
-      | Version.Tag  t -> Hint.Tag t
-      | _ -> Hint.Default
+    let! version = 
+      x 
+      |> Toml.get "version" 
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+      |> Result.bind Version.parse
 
-    let packageLocation = 
+    let hint = Hint.fromVersion version
+
+    return
       PackageLocation.GitHub
         {
           Package = packageIdentifier; 
           Revision = revision; 
           Hint = hint; 
         }
-
-    return (PackageIdentifier.GitHub packageIdentifier, (version, packageLocation))
   }
 
-  let private tomlTableToLockedPackage (x : Nett.TomlTable) : Result<(PackageIdentifier * (Version * PackageLocation)), string> = result {
-    if x |> Toml.get "url" |> Option.isSome
-    then
-      return! tomlTableToLockedHttpPackage x
-    else 
-      return! tomlTableToLockedGitHubPackage x
+  let rec private tomlTableToLockedPackage (x : Nett.TomlTable) : Result<LockedPackage, string> = result {
+    let! version = 
+      x 
+      |> Toml.get "version" 
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+      |> Result.bind Version.parse
+
+    let! location = 
+      if x |> Toml.tryGet "url" |> Option.isSome
+      then
+        tomlTableToHttpLocation x
+      else 
+        tomlTableToGitHubLocation x
+
+    let! lockEntries = 
+      x
+      |> Toml.tryGet "lock"
+      |> Option.map (Toml.asTable)
+      |> Option.map (Result.map Toml.entries)
+      |> Option.map (Result.mapError Toml.TomlError.show)
+      |> Option.defaultValue (Result.Ok Seq.empty)
+    
+    let! privatePackages = 
+      lockEntries
+      |> Seq.map (fun (k, v) -> result {
+        let! packageIdentifier = 
+          k 
+          |> PackageIdentifier.parse
+        
+        let! lockedPackage = 
+          v
+          |> Toml.asTable
+          |> Result.mapError Toml.TomlError.show
+          |> Result.bind tomlTableToLockedPackage
+
+        return (packageIdentifier, lockedPackage)
+      })
+      |> Result.all
+      |> Result.map Map.ofSeq
+
+    return {
+      Version = version; 
+      Location = location; 
+      PrivatePackages = privatePackages;
+    }
   }
 
   let tomlTableToTargetIdentifier (x : Nett.TomlTable) : Result<TargetIdentifier, string> = result {
     let! package = 
       x 
       |> Toml.get "package" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "package must be specified for every dependency"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind PackageIdentifier.parse
+
     let! target = 
       x 
       |> Toml.get "target" 
-      |> Option.bind Toml.asString 
-      |> optionToResult "target must be specified for every dependency"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind Target.parse
+
     return { Package = package; Target = target }
   }
 
   let parse (content : string) : Result<Lock, string> = result {
-    let! table = Toml.parse content |> Result.mapError (fun e -> e.Message)
+    let! table = 
+      content
+      |> Toml.parse 
+      |> Result.mapError Toml.TomlError.show
+
     let! manifestHash = 
       table 
       |> Toml.get "manifest"
-      |> Option.bind Toml.asString 
-      |> optionToResult "manifest hash must be specified"
-    let! lockedPackages = 
-      table.Rows
-      |> Seq.filter (fun x -> x.Key = "lock")
-      |> Seq.choose (fun x -> Toml.asTableArray x.Value)
-      |> Seq.collect (fun x -> x.Items)
-      |> Seq.map tomlTableToLockedPackage
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+
+    let! lockEntries = 
+      table
+      |> Toml.tryGet "lock"
+      |> Option.map (Toml.asTable >> Result.map Toml.entries >> Result.mapError Toml.TomlError.show)
+      |> Option.defaultValue (Result.Ok Seq.empty)
+
+    let! packages = 
+      lockEntries
+      |> Seq.map (fun (k, v) -> result {
+        let! packageIdentifier = 
+          k 
+          |> PackageIdentifier.parse
+        
+        let! lockedPackage = 
+          v
+          |> Toml.asTable
+          |> Result.mapError Toml.TomlError.show
+          |> Result.bind tomlTableToLockedPackage
+
+        return (packageIdentifier, lockedPackage)
+      })
       |> Result.all
-    // TODO: If a project has more than one revision or location throw an error
-    let packages = 
-      lockedPackages
-      |> Map.ofSeq
+      |> Result.map Map.ofSeq
+
     let! dependencies = 
       table.Rows
       |> Seq.filter (fun x -> x.Key = "dependency")
-      |> Seq.choose (fun x -> Toml.asTableArray x.Value)
-      |> Seq.collect (fun x -> x.Items)
-      |> Seq.map tomlTableToTargetIdentifier
+      |> Seq.map (fun x -> Toml.asTableArray x.Value |> Result.mapError Toml.TomlError.show)
       |> Result.all
+      |> Result.map (Seq.collect (fun x -> x.Items))
+      |> Result.map (Seq.map (tomlTableToTargetIdentifier))
+      |> Result.bind (Result.all)
     
     return { 
       ManifestHash = manifestHash; 

@@ -167,6 +167,7 @@ module Command =
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
         do! InstallCommand.task context
       | _ -> ()
+      System.Console.WriteLine ("Success. ")
       return ()
   }
 

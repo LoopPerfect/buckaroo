@@ -1,34 +1,70 @@
-module Toml
+module Buckaroo.Toml
 
 open System
 
-let get (key : string) (table : Nett.TomlTable) : Option<Nett.TomlObject> = 
+type TomlError = 
+| CouldNotParse of Exception
+| KeyNotFound of string
+| UnexpectedType of string
+
+module TomlError = 
+  let show (x : TomlError) = 
+    match x with 
+    | CouldNotParse e -> "Could not parse TOML " + (string e)
+    | KeyNotFound k -> "Could not find an element with key " + k
+    | UnexpectedType t -> "Unexpected type " + t
+
+let get (key : string) (table : Nett.TomlTable) = 
+  match table.TryGetValue key with 
+  | null -> TomlError.KeyNotFound key |> Result.Error
+  | value -> Result.Ok value
+
+let tryGet (key : string) (table : Nett.TomlTable) = 
   match table.TryGetValue key with 
   | null -> None
   | value -> Some value
 
-let asArray (x : Nett.TomlObject) : Option<Nett.TomlArray> = 
+let asArray (x : Nett.TomlObject) = 
   try 
-    (x :?> Nett.TomlArray) |> Some
-  with | _ -> None
+    (x :?> Nett.TomlArray) |> Result.Ok
+  with _ ->
+    TomlError.UnexpectedType x.ReadableTypeName |> Result.Error
 
-let asString (x : Nett.TomlObject) : Option<string> = 
+let asString (x : Nett.TomlObject) = 
   try 
-    (x :?> Nett.TomlString).Value |> Some
-  with | _ -> None
+    (x :?> Nett.TomlString).Value |> Result.Ok
+  with _ ->
+    TomlError.UnexpectedType x.ReadableTypeName |> Result.Error
+
+let asBool (x : Nett.TomlObject) = 
+  try 
+    (x :?> Nett.TomlBool).Value |> Result.Ok
+  with _ -> 
+    TomlError.UnexpectedType x.ReadableTypeName |> Result.Error
 
 let items (x : Nett.TomlArray) = 
   x.Items |> Seq.toList
 
-let asTableArray (x : Nett.TomlObject) : Option<Nett.TomlTableArray> = 
-  try 
-    x :?> Nett.TomlTableArray |> Some
-  with | _ -> None
+let entries (x : Nett.TomlTable) = 
+  x.Keys
+  |> Seq.map (fun k -> (k, x.Item k))
 
-let parse (x : string) : Result<Nett.TomlTable, Exception> = 
+let asTable (x : Nett.TomlObject) = 
+  try 
+    x :?> Nett.TomlTable |> Result.Ok
+  with _ -> 
+    TomlError.UnexpectedType x.ReadableTypeName |> Result.Error
+
+let asTableArray (x : Nett.TomlObject) = 
+  try 
+    x :?> Nett.TomlTableArray |> Result.Ok
+  with _ -> 
+    TomlError.UnexpectedType x.ReadableTypeName |> Result.Error
+
+let parse (x : string) = 
   try 
     let table = Nett.Toml.ReadString x
     table.Freeze () |> ignore
     Result.Ok table
-  with 
-  | e -> Result.Error e
+  with error -> 
+    TomlError.CouldNotParse error |> Result.Error

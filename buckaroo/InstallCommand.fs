@@ -6,9 +6,9 @@ open Buckaroo.BuckConfig
 open Buckaroo.PackageLocation
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
-  let (_, location) =  
+  let location =  
     match lock.Packages |> Map.tryFind package with 
-    | Some location -> location
+    | Some lockedPackage -> lockedPackage.Location
     | None -> 
       new Exception("Lock file does not contain " + (PackageIdentifier.show package))
       |> raise
@@ -183,19 +183,20 @@ let task (context : Tasks.TaskContext) = async {
   let! lock = Tasks.readLock
   do! 
     lock.Packages
-    |> Seq.map (fun kvp -> async {
-      let project = kvp.Key
-      let (version, exactLocation) = kvp.Value
-      "Installing " + (PackageIdentifier.show project) + "... " |> Console.WriteLine
-      do! installLockedPackage context lock (project, exactLocation)
+    |> Map.toSeq
+    |> Seq.map (fun (k, v) -> async {
+      "Installing " + (PackageIdentifier.show k) + "... " |> Console.WriteLine
+      do! installLockedPackage context lock (k, v.Location)
     })
     |> Async.Parallel
     |> Async.Ignore
+  
   // Touch .buckconfig
   let buckConfigPath = ".buckconfig"
   if File.Exists buckConfigPath |> not 
   then 
     do! Files.writeFile buckConfigPath ""
+  
   // Write .buckconfig.d/.buckconfig.buckaroo
   let buckarooBuckConfigPath = 
     Path.Combine(".buckconfig.d", ".buckconfig.buckaroo")
@@ -216,12 +217,15 @@ let task (context : Tasks.TaskContext) = async {
     |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
   do! Files.mkdirp ".buckconfig.d"
   do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
+
   // Write BUCKAROO_DEPS
   let buckarooDepsPath = Path.Combine(Constants.BuckarooDepsFileName)
   let buckarooDepsContent = buckarooDeps lock.Dependencies
   do! Files.writeFile buckarooDepsPath buckarooDepsContent
+
   // Write Buckaroo macros
   let buckarooMacrosPath = Constants.BuckarooMacrosFileName
   do! Files.writeFile buckarooMacrosPath buckarooMacros
+  
   return ()
 }
