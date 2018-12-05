@@ -2,10 +2,9 @@ namespace Buckaroo
 
 open System
 open System.IO
-open System.Diagnostics
+open System.Threading.Tasks
 open Buckaroo.Git
 open LibGit2Sharp
-open System
 open LibGit2Sharp
 
 module Helpers =
@@ -71,28 +70,32 @@ type GitLib () =
 
   interface IGit with 
     member this.Clone (url : string) (directory : string) = async {
+      do! Async.SwitchToThreadPool()      
       let options = new CloneOptions()
       options.IsBare <- true;
-      Repository.Clone (url, directory, options) |> ignore
-      return ();
-    }
-   
-    member this.ShallowClone (url : String) (directory : string) = async {
-      let options = new CloneOptions()
-      options.IsBare <- true;
-
       options.OnTransferProgress <- new LibGit2Sharp.Handlers.TransferProgressHandler(fun p -> 
         System.Console.WriteLine ("Cloning " + url + 
           " " + p.ReceivedObjects.ToString() + "(" + p.IndexedObjects.ToString() + ")" + " / " + p.TotalObjects.ToString()
         )
-
         true
       )
 
       Repository.Clone (url, directory, options) |> ignore
-      return ();
+    }
+   
+    member this.ShallowClone (url : string) (directory : string) = async {
+      return! (this :> IGit).Clone url directory
     }
 
+    member this.HasCommit (gitPath : string) (revision : Revision) = async {
+      do! Async.SwitchToThreadPool()     
+      let repo = new Repository (gitPath)  
+      let commit = repo.Lookup<Commit>(revision)
+      return 
+        match commit with 
+        | null -> false
+        | _ -> true
+    }
 
     member this.DefaultBranch (gitPath : string) = async {
       let repo = new Repository (gitPath)
@@ -100,38 +103,45 @@ type GitLib () =
     }
 
     member this.Unshallow (gitDir : string) = async {
+      do! Async.SwitchToThreadPool()
       let repo = new Repository (gitDir);
       let options = new FetchOptions();
       Commands.Fetch(repo, "origin", ["+refs/heads/*:refs/remotes/origin/*"], options, "")
     }
-
     member this.Checkout (gitDir : string) (revision : string) = async {
+      do! Async.SwitchToThreadPool()
       let repo = new Repository (gitDir);
-      Commands.Checkout(repo, revision) |> ignore
-    }
-    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
-      do! Files.mkdirp installPath
-      do! Helpers.SharedGitClone gitPath installPath
-      let repo = new Repository (installPath);
-      let options = new FetchOptions();
-      Console.WriteLine ("checking out: " + installPath + " " + revision)
-      Commands.Fetch(repo, "origin", [], options, "")
-      Commands.Checkout(repo, revision) |> ignore
+      let options = new CheckoutOptions()
+      options.OnCheckoutProgress <- new LibGit2Sharp.Handlers.CheckoutProgressHandler(fun (msg) (i) (n) -> 
+        System.Console.WriteLine ("Checking out " + revision +  " " + msg + " " + i.ToString() + " / " + n.ToString())
+      )
 
-      return ()
+      Commands.Checkout(repo, revision, options) |> ignore     
+    }
+
+    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
+      let! exists = Files.directoryExists (installPath) 
+      if not exists then
+        do! Files.mkdirp installPath
+        do! Helpers.SharedGitClone gitPath installPath
+      do! (this :> IGit).Unshallow installPath // It's a shared repo, unshallow here syncs up the references with the cached repo
+      return! (this :> IGit).Checkout installPath revision
     }
 
     member this.FetchBranch (repository : String) (branch : Git.Branch) = async {
+      do! Async.SwitchToThreadPool()
       let repo = new Repository (repository);
       let options = new FetchOptions();
       Commands.Fetch(repo, "origin", [branch + ":" + branch], options, "")
     }
     member this.FetchCommit (repository : String) (commit : Revision) = async {
+      do! Async.SwitchToThreadPool()
       let repo = new Repository (repository);
       let options = new FetchOptions();
       Commands.Fetch(repo, "origin", [commit + ":" + commit], options, "")
     }
     member this.FetchCommits (repository : String) (branch : Git.Branch) : Async<Git.Revision list> = async {
+      do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let filter = new CommitFilter()
       filter.IncludeReachableFrom <- branch
@@ -140,7 +150,9 @@ type GitLib () =
           yield x.Sha
       } |> Seq.toList
     }
+
     member this.RemoteTags (url : String) = async {
+      do! Async.SwitchToThreadPool()
       return Repository.ListRemoteReferences(url) 
         |> Seq.filter(fun ref -> ref.CanonicalName.Contains("refs/tags/"))
         |> Seq.map(fun ref -> {
@@ -151,6 +163,7 @@ type GitLib () =
     }
 
     member this.RemoteHeads (url : String) = async {
+      do! Async.SwitchToThreadPool()
       return Repository.ListRemoteReferences(url) 
         |> Seq.filter(fun ref -> ref.CanonicalName.Contains("refs/heads/"))
         |> Seq.map(fun ref -> {
@@ -161,9 +174,11 @@ type GitLib () =
     }
 
     member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
-      let repo = new Repository (repository)
-      let blob = repo.Lookup<Commit>(commit)
-      let node = blob.[path].Target :?> Blob;
-      return node.GetContentText()
+        do! Async.SwitchToThreadPool()
+        let repo = new Repository (repository)
+        let blob = repo.Lookup<Commit>(commit)
+        let node = blob.[path].Target :?> Blob;
+        return node.GetContentText()
     }
+    
 

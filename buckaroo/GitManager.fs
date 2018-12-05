@@ -81,16 +81,21 @@ type GitManager (git : IGit, cacheDirectory : string) =
 
   member this.FetchCommit (url : string) (commit : string) (hint : Option<Branch>) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
-    let! branchHint = this.getBranchHint targetDirectory hint
-    try 
-      do! git.FetchCommit targetDirectory commit
-    with _ -> 
-      try 
+    let operations = [
+      fun () -> async { return () };
+      fun () -> async {
+        let! branchHint = this.getBranchHint targetDirectory hint
         do! git.FetchBranch url branchHint
-        do! git.FetchCommit targetDirectory commit
-      with _ ->
-        do! git.Unshallow targetDirectory
-        do! git.FetchCommit targetDirectory commit
+      };
+      fun () -> git.Unshallow targetDirectory;
+    ]
+    
+    for operation in operations do
+      do! operation()
+      let! success = git.HasCommit targetDirectory commit
+      if success then
+        return ()
+    raise <| new Exception("failed to find fetch: " + url + " " + commit)
   }
   member this.FetchBranch (url : string) (branch : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
