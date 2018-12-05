@@ -7,7 +7,7 @@ open Buckaroo.Git
 open LibGit2Sharp
 open LibGit2Sharp
 
-module Helpers =
+module private Helpers =
   let CreateSharedGitConfig (path : string) =
     "[core]\n" +
     "  repositoryformatversion = 0\n" +
