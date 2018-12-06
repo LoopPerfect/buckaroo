@@ -131,7 +131,6 @@ let private installLockedPackage (context : Tasks.TaskContext) (lock : Lock) (lo
   let ( package, location ) = lockedPackage
   let installPath = packageInstallPath package
 
-  do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
   do! installPackageSources context installPath location
     
   let! manifest = fetchManifestFromLock lock sourceExplorer package

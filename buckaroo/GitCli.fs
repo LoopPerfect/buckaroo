@@ -52,6 +52,17 @@ type GitCli () =
         |> Async.Ignore
     }
 
+    member this.HasCommit (gitPath : string) (revision : Revision) = async {
+      let command = 
+        "git --no-pager --git-dir=" + gitPath + 
+        " log " + revision + " --pretty=format:'%H' -n0"
+      let! result = runBash(command) |> Async.Catch
+      return 
+        match result with
+        | Choice1Of2 _ -> true
+        | Choice2Of2 _ -> false
+    }
+
     member this.DefaultBranch (gitPath : string) = async {
       return! runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
     }
