@@ -9,5 +9,7 @@ chmod +x ./warp-packer
 
 dotnet publish ./buckaroo-cli/ -c Release -r linux-x64 
 
-./warp-packer --arch linux-x64 --exec buckaroo-cli --input_dir ./buckaroo-cli/bin/Release/netcoreapp2.1/linux-x64 --output buckaroo-linux
-./buckaroo-linux
+mkdir -p warp
+
+./warp-packer --arch linux-x64 --exec buckaroo-cli --input_dir ./buckaroo-cli/bin/Release/netcoreapp2.1/linux-x64 --output warp/buckaroo-linux
+./warp/buckaroo-linux
