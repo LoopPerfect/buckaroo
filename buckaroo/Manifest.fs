@@ -1,40 +1,31 @@
 namespace Buckaroo
 
-// open FSharpx.Task
+open Buckaroo.Toml
 
 type Manifest = { 
   Targets : Set<Target>; 
   Tags : Set<string>; 
   Dependencies : Set<Dependency>; 
+  PrivateDependencies : Set<Dependency>;
   Locations : Map<AdhocPackageIdentifier * Version, PackageSource>; 
 }
 
 type DependencyParseError =
-| PackageNotSpecified
+| TomlError of TomlError
 | InvalidPackage of string
-| VersionNotSpecified
 | InvalidConstraint of string
-| InvalidTargets
 | InvalidTarget of string
 
 type LocationParseError = 
-| PackageNotSpecified
+| TomlError of TomlError
 | InvalidPackage of string
-| VersionNotSpecified
 | InvalidVersion of string
-| InvalidStripPrefix
-| UrlNotSpecified
-| InvalidArchiveType
 | ArchiveTypeParseError of ArchiveType.ParseError
 
 type ManifestParseError = 
-| InvalidToml of string
-| InvalidTags
-| InvalidTargets
+| TomlError of TomlError
 | InvalidTarget of string
-| InvalidDependency
 | Dependency of DependencyParseError
-| InvalidLocation
 | Location of LocationParseError
 | ConflictingLocations of (AdhocPackageIdentifier * Version) * PackageSource * PackageSource
 
@@ -45,35 +36,25 @@ module Manifest =
   module DependencyParseError = 
     let show (x : DependencyParseError) = 
       match x with 
-      | DependencyParseError.PackageNotSpecified -> "Package must be specified for all dependencies"
+      | DependencyParseError.TomlError e -> TomlError.show e
       | DependencyParseError.InvalidPackage e -> "Invalid package name: " + e
-      | DependencyParseError.VersionNotSpecified -> "Version must be specified for all dependencies"
       | DependencyParseError.InvalidConstraint e -> "Invalid constraint: " + e
-      | DependencyParseError.InvalidTargets -> "Targets must an array of strings"
       | DependencyParseError.InvalidTarget e -> "Invalid target: " + e
 
   module LocationParseError = 
     let show (x : LocationParseError) = 
       match x with 
-      | PackageNotSpecified -> "Package must be specified for all locations"
+      | LocationParseError.TomlError e -> TomlError.show e
       | InvalidPackage e -> "Invalid package name: " + e
-      | VersionNotSpecified -> "Version must be specified for all locations"
       | InvalidVersion e -> "Invalid version: " + e
-      | InvalidStripPrefix -> "Strip-prefix must be a string"
-      | UrlNotSpecified -> "URL must be specified for all locations"
-      | InvalidArchiveType -> "Archive type must be a string"
       | ArchiveTypeParseError s -> "Archive type parse error: " + (string s)
 
   module ManifestParseError = 
     let show (x : ManifestParseError) = 
       match x with 
-      | InvalidToml s -> "Invalid TOML: " + s
-      | InvalidTags -> "Invalid tags. Tags must be an array of strings. "
-      | InvalidTargets -> "Invalid targets. Targets must be an array of strings. "
+      | ManifestParseError.TomlError e -> TomlError.show e
       | InvalidTarget t -> "Invalid target. " + t
-      | InvalidDependency -> "Dependencies must be a TOML table"
       | Dependency d -> DependencyParseError.show d
-      | InvalidLocation -> "Locations must be a TOML table"
       | Location l -> LocationParseError.show l
       | ConflictingLocations ((p, v), a, b) -> 
         "Conflicting locations found for " + 
@@ -86,6 +67,7 @@ module Manifest =
     Targets = Set.empty;
     Tags = Set.empty;
     Dependencies = Set.empty;
+    PrivateDependencies = Set.empty;
     Locations = Map.empty; 
   }
 
@@ -97,41 +79,39 @@ module Manifest =
           |> Set.filter (fun d -> d.Package <> package); 
     }
 
-  let private tomlTableToDependency (x : Nett.TomlTable) : Result<Dependency, DependencyParseError> = result {
-    let! name = 
+  let private tomlTableToDependency (x : Nett.TomlTable) : Result<(bool * Dependency), DependencyParseError> = result {
+    let! package = 
       x 
       |> Toml.get "package" 
-      |> Option.bind Toml.asString 
-      |> optionToResult DependencyParseError.PackageNotSpecified
+      |> Result.bind Toml.asString 
+      |> Result.mapError (DependencyParseError.TomlError)
+      |> Result.bind (PackageIdentifier.parse >> (Result.mapError DependencyParseError.InvalidPackage))
+    
     let! version = 
       x 
       |> Toml.get "version" 
-      |> Option.bind Toml.asString 
-      |> optionToResult DependencyParseError.VersionNotSpecified
-    let! p = 
-      PackageIdentifier.parse name 
-      |> Result.mapError DependencyParseError.InvalidPackage
-    let! c = 
-      Constraint.parse version
-      |> Result.mapError DependencyParseError.InvalidConstraint
-    let! ts = result {
-      match x |> Toml.get "targets" with 
+      |> Result.bind Toml.asString
+      |> Result.mapError (DependencyParseError.TomlError)
+      |> Result.bind (Constraint.parse >> Result.mapError (DependencyParseError.InvalidConstraint))
+
+    let! targets = result {
+      match x |> Toml.tryGet "targets" with 
       | Some xs -> 
         let! array = 
           xs
           |> Toml.asArray
-          |> optionToResult DependencyParseError.InvalidTargets
+          |> Result.mapError DependencyParseError.TomlError
         let! targets = 
           array.Items 
           |> Seq.map (fun item -> result {
             let! s = 
               item
               |> Toml.asString 
-              |> optionToResult DependencyParseError.InvalidTargets
+              |> Result.mapError DependencyParseError.TomlError
             return! 
               s 
               |> Target.parse
-              |> Result.mapError DependencyParseError.InvalidTarget
+              |> Result.mapError (DependencyParseError.InvalidTarget)
           })
           |> Result.all
         return 
@@ -141,15 +121,27 @@ module Manifest =
       | None -> 
         return None
     }
-    return { Package = p; Constraint = c; Targets = ts }
+
+    let! isPrivate = 
+      x 
+      |> Toml.tryGet "private"
+      |> Option.map (fun x -> 
+        x 
+        |> Toml.asBool 
+        |> Result.mapError DependencyParseError.TomlError
+      )
+      |> Option.defaultValue (Ok false)
+    
+
+    return (isPrivate, { Package = package; Constraint = version; Targets = targets })
   }
 
   let private tomlTableToPackageSource (x : Nett.TomlTable) = result {
     let! package = 
       x 
       |> Toml.get "package" 
-      |> Option.bind Toml.asString 
-      |> optionToResult LocationParseError.PackageNotSpecified
+      |> Result.bind Toml.asString 
+      |> Result.mapError LocationParseError.TomlError
       |> Result.bind (
         PackageIdentifier.parseAdhocIdentifier 
         >> Result.mapError LocationParseError.InvalidPackage
@@ -158,8 +150,8 @@ module Manifest =
     let! version = 
       x 
       |> Toml.get "version" 
-      |> Option.bind Toml.asString 
-      |> optionToResult LocationParseError.VersionNotSpecified
+      |> Result.bind Toml.asString 
+      |> Result.mapError LocationParseError.TomlError
       |> Result.bind (
         Version.parse
         >> (Result.mapError LocationParseError.InvalidVersion)
@@ -168,29 +160,25 @@ module Manifest =
     let! url = 
       x 
       |> Toml.get "url" 
-      |> Option.bind Toml.asString 
-      |> optionToResult LocationParseError.UrlNotSpecified
+      |> Result.bind Toml.asString 
+      |> Result.mapError LocationParseError.TomlError
 
     let! stripPrefix = 
       x 
-      |> Toml.get "strip_prefix" 
-      |> Result.Ok
-      |> Result.map (Option.map Toml.asString)
-      |> Result.bind (optionToResult LocationParseError.InvalidStripPrefix)
+      |> Toml.tryGet "strip_prefix" 
+      |> Option.map (Toml.asString)
+      |> Option.map (Result.map Option.Some)
+      |> Option.map (Result.mapError LocationParseError.TomlError)
+      |> Option.defaultValue (Ok Option.None)
 
-    let! archiveType =
+    let! archiveType = 
       x 
-      |> Toml.get "type" 
-      |> Option.map (Toml.asString >> optionToResult LocationParseError.InvalidArchiveType >> Result.map Some)
-      |> Option.defaultValue (Result.Ok Option.None)
-      |> Result.bind (fun y -> 
-        match y with 
-        | Some y -> 
-          y 
-          |> (ArchiveType.parse >> Result.mapError LocationParseError.ArchiveTypeParseError)
-          |> Result.map Some
-        | None -> Result.Ok None
-      )
+      |> Toml.tryGet "type" 
+      |> Option.map (Toml.asString)
+      |> Option.map (Result.mapError LocationParseError.TomlError)
+      |> Option.map (Result.bind (ArchiveType.parse >> Result.mapError LocationParseError.ArchiveTypeParseError))
+      |> Option.map (Result.map Option.Some)
+      |> Option.defaultValue (Ok Option.None)
 
     let packageSource = 
       PackageSource.Http { Url = url; StripPrefix = stripPrefix; Type = archiveType }
@@ -198,71 +186,87 @@ module Manifest =
     return ((package, version), packageSource)
   }
 
-  let tomlToTags (toml : Nett.TomlObject) = result {
-    let! array = 
-      toml
-      |> Toml.asArray
-      |> optionToResult ManifestParseError.InvalidTags
-    let! tags = 
-      array.Items
-      |> Seq.map (fun item -> result {
-        let! s = 
-          item
-          |> Toml.asString
-          |> optionToResult ManifestParseError.InvalidTags
-        return s
-      })
-      |> all
-    return set tags
-  }
+  let tomlToTags (toml : Nett.TomlObject) = 
+    toml
+    |> Toml.asArray
+    |> Result.mapError ManifestParseError.TomlError
+    |> Result.bind (
+      Toml.items 
+      >> Seq.map (Toml.asString >> Result.mapError ManifestParseError.TomlError) 
+      >> all
+    )
+    |> Result.map set
 
   let tomlToTargets (toml : Nett.TomlObject) = result {
     let! array = 
       toml
       |> Toml.asArray
-      |> optionToResult ManifestParseError.InvalidTargets
+      |> Result.mapError ManifestParseError.TomlError
+
     let! tags = 
       array.Items
       |> Seq.map (fun item -> result {
         let! s = 
           item
           |> Toml.asString
-          |> optionToResult ManifestParseError.InvalidTargets
+          |> Result.mapError ManifestParseError.TomlError
+
         return! 
           s 
           |> Target.parse
           |> Result.mapError ManifestParseError.InvalidTarget
       })
       |> all
+
     return set tags
   }
 
   let parse (content : string) : Result<Manifest, ManifestParseError> = result {
     let! table = 
       Toml.parse content 
-      |> Result.mapError (fun e -> ManifestParseError.InvalidToml e.Message)
+      |> Result.mapError ManifestParseError.TomlError
 
     let! tags = 
-      match table |> Toml.get "tags" with
-      | None -> Ok Set.empty
-      | Some tags -> tomlToTags tags
+      table 
+      |> Toml.tryGet "tags"
+      |> Option.map tomlToTags
+      |> Option.defaultValue (Ok Set.empty)
 
     let! targets = 
-      match table |> Toml.get "targets" with
-      | None -> Ok Set.empty
-      | Some targets -> tomlToTargets targets
+      table 
+      |> Toml.tryGet "targets"
+      |> Option.map tomlToTargets
+      |> Option.defaultValue (Ok Set.empty)
 
-    let! dependencies = 
+    let! allDependencies = 
       table.Rows
       |> Seq.choose (fun kvp -> 
         if kvp.Key = "dependency"
         then Some kvp.Value
         else None
       )
-      |> Seq.map (Toml.asTableArray >> (optionToResult ManifestParseError.InvalidDependency))
+      |> Seq.map (Toml.asTableArray >> (Result.mapError ManifestParseError.TomlError))
       |> all
       |> Result.map (Seq.collect (fun x -> x.Items))
       |> Result.bind (Seq.map (tomlTableToDependency >> Result.mapError ManifestParseError.Dependency) >> all)
+
+    let dependencies =
+      allDependencies
+      |> Seq.choose (fun (isPrivate, dependency) -> 
+        match isPrivate with
+        | true -> None
+        | false -> Some dependency
+      ) 
+      |> Set.ofSeq
+
+    let privateDependencies =
+      allDependencies
+      |> Seq.choose (fun (isPrivate, dependency) -> 
+        match isPrivate with
+        | true -> Some dependency
+        | false -> None
+      ) 
+      |> Set.ofSeq
 
     let! locationEntries = 
       table.Rows
@@ -271,7 +275,7 @@ module Manifest =
         then Some kvp.Value
         else None
       )
-      |> Seq.map (Toml.asTableArray >> (optionToResult ManifestParseError.InvalidLocation))
+      |> Seq.map (Toml.asTableArray >> (Result.mapError ManifestParseError.TomlError))
       |> all
       |> Result.map (Seq.collect (fun x -> x.Items))
       |> Result.bind (Seq.map (tomlTableToPackageSource >> Result.mapError ManifestParseError.Location) >> all)
@@ -301,7 +305,8 @@ module Manifest =
     return { 
       Targets = targets |> set; 
       Tags = tags; 
-      Dependencies = dependencies |> Set.ofSeq; 
+      Dependencies = dependencies; 
+      PrivateDependencies = privateDependencies; 
       Locations = locations; 
     }
   }

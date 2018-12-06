@@ -15,6 +15,13 @@ type Hint =
 | Tag of string
 | Default
 
+module Hint = 
+  let fromVersion (v : Version) = 
+    match v with 
+    | Version.Branch b -> Hint.Branch b
+    | Version.Tag t -> Hint.Tag t
+    | _ -> Hint.Default
+
 type GitLocation = {
   Url : string; 
   Hint : Hint; 
