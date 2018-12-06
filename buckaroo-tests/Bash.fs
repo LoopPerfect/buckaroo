@@ -5,6 +5,12 @@ open Xunit
 open Buckaroo
 open System.Text
 
+#if OS_WINDOWS
+
+// No Bash on Windows
+
+#else
+
 // [<Fact>]
 // let ``Bash.runBash works correctly`` () = 
 //   let stdout = new StringBuilder()
@@ -37,3 +43,5 @@ let ``Stress test of Bash.runBashSync works correctly`` () =
     |> Seq.toList
 
   Assert.True(exitCodes |> Seq.exists (fun x -> x <> 0) |> not)
+
+#endif
