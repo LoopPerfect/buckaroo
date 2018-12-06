@@ -2,12 +2,17 @@ module Buckaroo.Files
 
 open System.IO
 open Buckaroo.Hashing
+open System
 
 [<Literal>]
 let private DefaultBufferSize = 4096
 
 let exists (path : string) = async {
   return File.Exists(path)
+}
+
+let copyFile (src : string) (dest : string) = async {
+  return File.Copy (src, dest)
 }
 
 let directoryExists (path : string) = async {
