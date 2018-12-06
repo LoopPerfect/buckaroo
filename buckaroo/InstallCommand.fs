@@ -92,23 +92,23 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
 let writeReceipt (installPath : string) location = async {
-  System.Console.WriteLine (installPath)
+  System.Console.WriteLine ("writing receipt: " + installPath)
   let receipt = 
     "[receipt]\n" + 
     "path = \"" + installPath + "\"\n" + 
     match location with 
     | Git git -> 
-      "type = git\n" +
+      "type = \"git\"\n" +
       "url = \"" + git.Url + "\"\n" + 
       "revision = \"" + git.Revision + "\"\n"
     | Http http -> 
-      "type = http\n" +
+      "type = \"http\"\n" +
       "url = \"" + http.Url + "\"\n" + 
       "sha256 = \"" + (http.Sha256) + "\"\n"
     | GitHub gitHub -> 
-      "type = github\n" +
-      "owner = " + gitHub.Package.Owner + "\n" +
-      "project = " + gitHub.Package.Project + "\n" +
+      "type = \"github\"\n" +
+      "owner = \""+ gitHub.Package.Owner + "\"\n" +
+      "project = \"" + gitHub.Package.Project + "\"\n" +
       "revision = \"" + gitHub.Revision + "\"\n"
   
   let receiptPath = getReceiptPath installPath
@@ -124,10 +124,11 @@ let compareReceipt installPath location = async {
     | false -> async { return false }
     | true -> async {
       let! receipt = Files.readFile receiptPath
-      let toml = Toml.parse receiptPath
+      let toml = Toml.parse receipt
       return 
         match toml with
-        | Result.Error _ -> false
+        | Result.Error _ -> 
+          false
         | Result.Ok parsed ->
           let oldReceipt = 
             parsed 
@@ -161,10 +162,10 @@ let compareReceipt installPath location = async {
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
-  System.Console.WriteLine installPath
-  let! mismatch = compareReceipt installPath location
-  if mismatch 
+  let! matches = compareReceipt installPath location
+  if matches = false
   then
+    System.Console.WriteLine ("installing: " + installPath)
     match location with 
     | GitHub gitHub -> 
       let gitUrl = PackageLocation.gitHubUrl gitHub.Package
@@ -184,6 +185,7 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     | _ -> 
       new Exception("Unsupported location type") |> raise
     do! writeReceipt installPath location
+  else System.Console.WriteLine (installPath + " is up-to-date")
 }
 
 let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : PackageIdentifier list) lockedPackage packages (pathToCell : string) = async {
@@ -281,6 +283,7 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
 
 let rec private installPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
   // Prepare workspace
+  do! Files.mkdirp root
   do! Files.touch (Path.Combine(root, ".buckconfig"))
 
   if File.Exists (Path.Combine(root, Constants.BuckarooMacrosFileName)) |> not
