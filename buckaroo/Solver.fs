@@ -199,30 +199,52 @@ module Solver =
                   ()
               }
 
-            let nextState = {
-              state with 
-                Solution = 
-                  { 
-                    state.Solution with 
-                      Resolutions = 
-                        state.Solution.Resolutions 
-                        |> Map.add atom.Package (resolvedVersion, Solution.empty)
-                  }; 
-                Constraints = 
-                  state.Constraints
-                  |> Set.ofSeq
-                  |> Set.union manifest.Dependencies; 
+            let privatePackagesSolverState = 
+              {
+                Solution = Solution.empty; 
+                Locations = Map.empty; 
+                Visited = Set.empty; 
+                Hints = state.Hints; 
                 Depth = state.Depth + 1; 
-                Visited = 
-                  state.Visited
-                  |> Set.add (atom, location); 
-                Locations = mergedLocations; 
-                Hints = 
-                  state.Hints 
-                  |> AsyncSeq.append freshHints; 
-            }
+                Constraints = manifest.PrivateDependencies; 
+              }
 
-            yield! step sourceExplorer strategy nextState
+            let privatePackagesSolutions = 
+              step sourceExplorer strategy privatePackagesSolverState
+              |> AsyncSeq.choose (fun resolution -> 
+                match resolution with 
+                | Resolution.Ok solution -> Some solution
+                | _ -> None
+              )
+
+            yield!
+              privatePackagesSolutions
+              |> AsyncSeq.collect (fun privatePackagesSolution -> asyncSeq {
+                let nextState = {
+                  state with 
+                    Solution = 
+                      { 
+                        state.Solution with 
+                          Resolutions = 
+                            state.Solution.Resolutions 
+                            |> Map.add atom.Package (resolvedVersion, privatePackagesSolution)
+                      }; 
+                    Constraints = 
+                      state.Constraints
+                      |> Set.ofSeq
+                      |> Set.union manifest.Dependencies; 
+                    Depth = state.Depth + 1; 
+                    Visited = 
+                      state.Visited
+                      |> Set.add (atom, location); 
+                    Locations = mergedLocations; 
+                    Hints = 
+                      state.Hints 
+                      |> AsyncSeq.append freshHints; 
+                }
+
+                yield! step sourceExplorer strategy nextState
+              })
           with error -> 
             log("Error exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
             System.Console.WriteLine(error)

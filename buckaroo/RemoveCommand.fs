@@ -11,7 +11,7 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
 
   let sourceExplorer = context.SourceExplorer
 
-  let! manifest = Tasks.readManifest
+  let! manifest = Tasks.readManifest "."
 
   let newManifest =
     packages
@@ -37,11 +37,10 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
       let removedPackages = 
         lock.Packages
         |> Map.toSeq
-        |> Seq.map (fun (package, _) -> package)
-        |> Seq.filter (fun x -> newLock.Packages |> Map.containsKey x |> not)
+        |> Seq.filter (fun (package, _) -> newLock.Packages |> Map.containsKey package |> not)
 
-      for removedPackage in removedPackages do 
-        let path = InstallCommand.packageInstallPath removedPackage
+      for (package, lockedPackage) in removedPackages do 
+        let path = InstallCommand.packageInstallPath package
         Console.WriteLine("Deleting " + path + "... ")
         Files.deleteDirectoryIfExists path |> ignore
 

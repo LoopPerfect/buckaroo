@@ -33,9 +33,9 @@ let getContext = async {
   }
 }
 
-let readManifest = async {
+let readManifest (root : string) = async {
   try 
-    let! content = Files.readFile Constants.ManifestFileName
+    let! content = Files.readFile (Path.Combine(root, Constants.ManifestFileName))
     return 
       match Manifest.parse content with 
       | Result.Ok manifest -> manifest

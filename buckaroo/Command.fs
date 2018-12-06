@@ -118,7 +118,7 @@ module Command =
     | Failure(error, _, _) -> Result.Error error
 
   let listDependencies = async {
-    let! manifest = Tasks.readManifest
+    let! manifest = Tasks.readManifest "."
     manifest.Dependencies
     |> Seq.distinct
     |> Seq.map Dependency.show
@@ -141,7 +141,7 @@ module Command =
   let add (context : Tasks.TaskContext) dependencies = async {
     let sourceExplorer = context.SourceExplorer
 
-    let! manifest = Tasks.readManifest
+    let! manifest = Tasks.readManifest "."
     let newManifest = { 
       manifest with 
         Dependencies = 

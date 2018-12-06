@@ -137,6 +137,9 @@ module Lock =
 
   let private quote x = "\"" + x + "\""
 
+  let private lockKey parents = 
+    parents |> Seq.map (PackageIdentifier.show >> quote >> ((+) "lock.")) |> String.concat "."
+  
   let toToml (lock : Lock) = 
     (
        "manifest = \"" + lock.ManifestHash + "\"\n\n"
@@ -156,7 +159,7 @@ module Lock =
       |> Seq.collect (fun (k, v) -> flattenLockedPackage [ k ] v)
       |> Seq.map(fun x -> 
         let (parents, (location, version)) = x
-        "[lock." + (parents |> Seq.map (PackageIdentifier.show >> quote) |> String.concat ".") + "]\n" + 
+        "[" + (lockKey parents) + "]\n" + 
         "version = \"" + (Version.show version) + "\"\n" + 
         match location with 
         | Git git -> 
@@ -211,14 +214,7 @@ module Lock =
     }
   }
 
-  let private tomlTableToGitHubLocation x = result {
-    let! packageIdentifier = 
-      x 
-      |> Toml.get "name" 
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind PackageIdentifier.parseGitHubIdentifier
-
+  let private tomlTableToGitHubLocation packageIdentifier x = result {
     let! revision = 
       x 
       |> Toml.get "revision" 
@@ -243,7 +239,7 @@ module Lock =
         }
   }
 
-  let rec private tomlTableToLockedPackage (x : Nett.TomlTable) : Result<LockedPackage, string> = result {
+  let rec private tomlTableToLockedPackage packageIdentifier x = result {
     let! version = 
       x 
       |> Toml.get "version" 
@@ -252,11 +248,11 @@ module Lock =
       |> Result.bind Version.parse
 
     let! location = 
-      if x |> Toml.tryGet "url" |> Option.isSome
-      then
+      match packageIdentifier with 
+      | PackageIdentifier.GitHub gitHub -> 
+        tomlTableToGitHubLocation gitHub x 
+      | PackageIdentifier.Adhoc _ -> 
         tomlTableToHttpLocation x
-      else 
-        tomlTableToGitHubLocation x
 
     let! lockEntries = 
       x
@@ -277,7 +273,7 @@ module Lock =
           v
           |> Toml.asTable
           |> Result.mapError Toml.TomlError.show
-          |> Result.bind tomlTableToLockedPackage
+          |> Result.bind (tomlTableToLockedPackage packageIdentifier)
 
         return (packageIdentifier, lockedPackage)
       })
@@ -338,7 +334,7 @@ module Lock =
           v
           |> Toml.asTable
           |> Result.mapError Toml.TomlError.show
-          |> Result.bind tomlTableToLockedPackage
+          |> Result.bind (tomlTableToLockedPackage packageIdentifier)
 
         return (packageIdentifier, lockedPackage)
       })

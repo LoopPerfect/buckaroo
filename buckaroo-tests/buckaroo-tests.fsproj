@@ -16,6 +16,7 @@
     <Compile Include="Manifest.fs" />
     <Compile Include="Bash.fs" />
     <Compile Include="Lock.fs" />
+    <Compile Include="Paths.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

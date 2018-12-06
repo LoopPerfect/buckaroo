@@ -30,6 +30,12 @@ let writeFile (path : string) (content : string) = async {
   return! sw.WriteAsync(content) |> Async.AwaitTask
 }
 
+let touch (path : string) = async {
+  if File.Exists path |> not 
+  then 
+    do! writeFile path ""
+}
+
 let readFile (path : string) = async {
   use sr = new StreamReader(path)
   return! sr.ReadToEndAsync() |> Async.AwaitTask

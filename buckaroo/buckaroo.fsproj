@@ -8,6 +8,7 @@
     <Compile Include="Glob.fs" />
     <Compile Include="Hashing.fs" />
     <Compile Include="Constants.fs" />
+    <Compile Include="Paths.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
     <Compile Include="BuckConfig.fs" />

@@ -2,8 +2,8 @@ module Buckaroo.InstallCommand
 
 open System
 open System.IO
-open Buckaroo.BuckConfig
 open Buckaroo.PackageLocation
+open Buckaroo.BuckConfig
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =  
@@ -69,29 +69,6 @@ let private buckarooMacros =
   ]
   |> String.concat "\n"
 
-let private buckarooDeps (dependencies : seq<TargetIdentifier>) = 
-  let cellName package = 
-    let (prefix, owner, project) = 
-      match package with 
-      | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
-      | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
-    "buckaroo." + prefix + "." + owner + "." + project
-  let requiredPackages = 
-    dependencies 
-    |> Seq.map (fun d -> (cellName d.Package) + (Target.show d.Target))
-    |> Seq.sort
-    |> Seq.distinct
-    |> Seq.toList
-  "print 'BUCKAROO_DEPS is deprecated; please use buckaroo_macros.bzl' \n\n" + 
-  "BUCKAROO_DEPS = [\n" + 
-  (requiredPackages |> Seq.map (fun x -> "  '" + x + "'") |> String.concat ", \n") + 
-  "\n]\n"
-
-let private fetchBuckarooDepsContent (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
-  let! targets = fetchDependencyTargets lock sourceExplorer manifest
-  return targets |> buckarooDeps
-}
-
 let private computeCellIdentifier (x : PackageIdentifier) = 
   (
     match x with 
@@ -124,108 +101,197 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     new Exception("Unsupported location type") |> raise
 }
 
-let private installLockedPackage (context : Tasks.TaskContext) (lock : Lock) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
-  let gitManager = context.GitManager
-  let sourceExplorer = context.SourceExplorer
+// let rec private installPackage (context : Tasks.TaskContext) (root : string) (package : PackageIdentifier) (lockedPackage : LockedPackage) = async {
+//   let installPath = Path.Combine(root, packageInstallPath package lockedPackage.Location)
+//   do! installPackageSources context installPath lockedPackage.Location
 
-  let ( package, location ) = lockedPackage
-  let installPath = packageInstallPath package
+//   for (k, v) in lockedPackage.PrivatePackages |> Map.toSeq do
+//     do! installPackage context installPath k v
+// }
 
-  do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
-  do! installPackageSources context installPath location
-    
-  let! manifest = fetchManifestFromLock lock sourceExplorer package
-  // Touch .buckconfig
-  let buckConfigPath = Path.Combine(installPath, ".buckconfig")
-  if File.Exists buckConfigPath |> not 
-  then 
-    do! Files.writeFile buckConfigPath ""
-  let! targets = 
-    fetchDependencyTargets lock sourceExplorer manifest
-  // Write .buckconfig.d/.buckconfig.buckaroo
-  let buckarooBuckConfigPath = 
-    Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
-  let buckarooCells = 
-    manifest.Dependencies
-    |> Seq.map (fun d -> 
-      let cell = computeCellIdentifier d.Package
-      // TODO: Make this more robust using relative path computation 
-      let path = Path.Combine("..", "..", "..", "..", (packageInstallPath d.Package))
-      (cell, INIString path)
-    )
-    |> Seq.toList
-  let buckarooSectionEntries = 
-    manifest.Dependencies
-    |> Seq.map (fun d -> 
-      let cell = computeCellIdentifier d.Package
-      (PackageIdentifier.show d.Package, INIString cell)
-    )
-    |> Seq.distinct
-    |> Seq.toList
-    |> List.append 
-      [ ("dependencies", targets |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
-  let buckarooConfig : INIData = 
-    Map.empty
-    |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
-    |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
-  do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
-  do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
-  // Write BUCKAROO_DEPS
-  let buckarooDepsPath = Path.Combine(installPath, Constants.BuckarooDepsFileName)
-  let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceExplorer manifest
-  do! Files.writeFile buckarooDepsPath buckarooDepsContent
-  // Write Buckaroo macros
-  let buckarooMacrosPath = Path.Combine(installPath, Constants.BuckarooMacrosFileName)
-  do! Files.writeFile buckarooMacrosPath buckarooMacros
-}
+let private generateBuckConfig (sourceExplorer : ISourceExplorer) (manifest : Manifest) packages (pathToCell : string) = async {
+  let pathToPackage (package : PackageIdentifier) = 
+    Path.Combine(
+      (".." + (string Path.DirectorySeparatorChar)) |> String.replicate ((Paths.depth pathToCell) + 1), // + 1 for .buckconfig.d
+      (packageInstallPath package))
+    |> Paths.normalize
 
-let task (context : Tasks.TaskContext) = async {
-  let! lock = Tasks.readLock
-  do! 
-    lock.Packages
+  let repositoriesCells = 
+    packages
     |> Map.toSeq
-    |> Seq.map (fun (k, v) -> async {
-      "Installing " + (PackageIdentifier.show k) + "... " |> Console.WriteLine
-      do! installLockedPackage context lock (k, v.Location)
+    |> Seq.filter (fun (k, _) -> manifest.Dependencies |> Seq.exists (fun d -> d.Package = k))
+    |> Seq.map (fun (k, _) -> (computeCellIdentifier k, pathToPackage k |> INIString))
+    |> Map.ofSeq
+  
+  let! targets = 
+    manifest.Dependencies
+    |> Seq.map (fun dependency -> async {
+      let lockedPackage = 
+        packages
+        |> Map.find dependency.Package
+
+      let! packageManifest = sourceExplorer.FetchManifest lockedPackage.Location
+
+      let targets = 
+        dependency.Targets
+        |> Option.defaultValue (List.ofSeq packageManifest.Targets)
+
+      return (dependency.Package, targets)
     })
     |> Async.Parallel
-    |> Async.Ignore
-  
-  // Touch .buckconfig
-  let buckConfigPath = ".buckconfig"
-  if File.Exists buckConfigPath |> not 
-  then 
-    do! Files.writeFile buckConfigPath ""
-  
-  // Write .buckconfig.d/.buckconfig.buckaroo
-  let buckarooBuckConfigPath = 
-    Path.Combine(".buckconfig.d", ".buckconfig.buckaroo")
-  let buckarooRepositoriesCells = 
-    lock.Packages
-    |> Seq.map (fun kvp -> kvp.Key)
-    |> Seq.map (fun t -> (computeCellIdentifier t, packageInstallPath t |> INIString))
+
+  let dependencies = 
+    targets
+    |> Seq.collect (fun (p, ts) -> ts |> Seq.map (fun t -> (p, t)))
+    |> Seq.distinct
+    |> Seq.map (fun (package, target) -> (computeCellIdentifier package) + (Target.show target) ) 
+    |> String.concat " " 
+    |> INIString
+
   let buckarooSectionEntries = 
-    lock.Dependencies
+    manifest.Dependencies
     |> Seq.map (fun d -> (PackageIdentifier.show d.Package, computeCellIdentifier d.Package |> INIString))
     |> Seq.distinct
     |> Seq.toList
-    |> List.append 
-      [ ("dependencies", lock.Dependencies |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
-  let buckarooConfig : INIData = 
+    |> List.append [ ("dependencies", dependencies) ]
+    |> Map.ofSeq
+  
+  let buckarooConfig = 
     Map.empty
-    |> Map.add "repositories" (buckarooRepositoriesCells |> Map.ofSeq)
-    |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
-  do! Files.mkdirp ".buckconfig.d"
-  do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
+    |> Map.add "repositories" repositoriesCells
+    |> Map.add "buckaroo" buckarooSectionEntries
+  
+  return buckarooConfig |> BuckConfig.render
+}
+
+let rec private installPackages (context : Tasks.TaskContext) (root : string) (packages : Map<PackageIdentifier, LockedPackage>) = async {
+  // Prepare workspace
+  do! Files.touch (Path.Combine(root, ".buckconfig"))
+  do! Files.writeFile (Path.Combine(root, Constants.BuckarooMacrosFileName)) buckarooMacros
+
+  let! manifest = Tasks.readManifest root
+
+  // Install packages
+  for (package, lockedPackage) in packages |> Map.toSeq do
+    let installPath = Path.Combine(root, packageInstallPath package)
+
+    do! installPackageSources context installPath lockedPackage.Location
+    do! installPackages context installPath lockedPackage.PrivatePackages
+
+    // Write .buckconfig.d for child package
+    let! packageManifest = Tasks.readManifest installPath
+    let! buckarooConfig = 
+      generateBuckConfig context.SourceExplorer packageManifest (packages |> Map.remove package) installPath
+    
+    do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
+    do! Files.writeFile (Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")) buckarooConfig
+}
+
+// let private installPackage (context : Tasks.TaskContext) (lock : Lock) (lockedPackage : (PackageIdentifier * PackageLocation)) = async {
+//   let gitManager = context.GitManager
+//   let sourceExplorer = context.SourceExplorer
+
+//   let ( package, location ) = lockedPackage
+//   let installPath = packageInstallPath package location
+
+//   do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
+//   do! installPackageSources context installPath location
+    
+//   let! manifest = fetchManifestFromLock lock sourceExplorer package
+//   // Touch .buckconfig
+//   let buckConfigPath = Path.Combine(installPath, ".buckconfig")
+//   if File.Exists buckConfigPath |> not 
+//   then 
+//     do! Files.writeFile buckConfigPath ""
+//   let! targets = 
+//     fetchDependencyTargets lock sourceExplorer manifest
+//   // Write .buckconfig.d/.buckconfig.buckaroo
+//   let buckarooBuckConfigPath = 
+//     Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")
+//   let buckarooCells = 
+//     manifest.Dependencies
+//     |> Seq.map (fun d -> 
+//       let cell = computeCellIdentifier d.Package
+//       // TODO: Make this more robust using relative path computation 
+//       let path = Path.Combine("..", "..", "..", "..", "..", (packageInstallPath d.Package d.))
+//       (cell, INIString path)
+//     )
+//     |> Seq.toList
+//   let buckarooSectionEntries = 
+//     manifest.Dependencies
+//     |> Seq.map (fun d -> 
+//       let cell = computeCellIdentifier d.Package
+//       (PackageIdentifier.show d.Package, INIString cell)
+//     )
+//     |> Seq.distinct
+//     |> Seq.toList
+//     |> List.append 
+//       [ ("dependencies", targets |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
+//   let buckarooConfig : INIData = 
+//     Map.empty
+//     |> Map.add "repositories" (buckarooCells |> Map.ofSeq)
+//     |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
+//   do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
+//   do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
+//   // Write BUCKAROO_DEPS
+//   let buckarooDepsPath = Path.Combine(installPath, Constants.BuckarooDepsFileName)
+//   let! buckarooDepsContent = fetchBuckarooDepsContent lock sourceExplorer manifest
+//   do! Files.writeFile buckarooDepsPath buckarooDepsContent
+//   // Write Buckaroo macros
+//   let buckarooMacrosPath = Path.Combine(installPath, Constants.BuckarooMacrosFileName)
+//   do! Files.writeFile buckarooMacrosPath buckarooMacros
+// }
+
+let task (context : Tasks.TaskContext) = async {
+  let! lock = Tasks.readLock
+
+  do! installPackages context "." lock.Packages
+
+  // do! 
+  //   lock.Packages
+  //   |> Map.toSeq
+  //   |> Seq.map (fun (k, v) -> async {
+  //     "Installing " + (PackageIdentifier.show k) + "... " |> Console.WriteLine
+  //     do! installPackage context "." k v
+  //   })
+  //   |> Async.Parallel
+  //   |> Async.Ignore
+  
+  // Touch .buckconfig
+  // let buckConfigPath = ".buckconfig"
+  // if File.Exists buckConfigPath |> not 
+  // then 
+  //   do! Files.writeFile buckConfigPath ""
+  
+  // Write .buckconfig.d/.buckconfig.buckaroo
+  // let buckarooBuckConfigPath = 
+  //   Path.Combine(".buckconfig.d", ".buckconfig.buckaroo")
+  // let buckarooRepositoriesCells = 
+  //   lock.Packages
+  //   |> Seq.map (fun kvp -> kvp.Key)
+  //   |> Seq.map (fun t -> (computeCellIdentifier t, packageInstallPath t |> INIString))
+  // let buckarooSectionEntries = 
+  //   lock.Dependencies
+  //   |> Seq.map (fun d -> (PackageIdentifier.show d.Package, computeCellIdentifier d.Package |> INIString))
+  //   |> Seq.distinct
+  //   |> Seq.toList
+  //   |> List.append 
+  //     [ ("dependencies", lock.Dependencies |> Seq.map (fun x -> ( computeCellIdentifier x.Package ) + (Target.show x.Target) ) |> String.concat " " |> INIString) ]
+  // let buckarooConfig : INIData = 
+  //   Map.empty
+  //   |> Map.add "repositories" (buckarooRepositoriesCells |> Map.ofSeq)
+  //   |> Map.add "buckaroo" (buckarooSectionEntries |> Map.ofSeq)
+  // do! Files.mkdirp ".buckconfig.d"
+  // do! Files.writeFile buckarooBuckConfigPath (buckarooConfig |> BuckConfig.render)
 
   // Write BUCKAROO_DEPS
-  let buckarooDepsPath = Path.Combine(Constants.BuckarooDepsFileName)
-  let buckarooDepsContent = buckarooDeps lock.Dependencies
-  do! Files.writeFile buckarooDepsPath buckarooDepsContent
+  // let buckarooDepsPath = Path.Combine(Constants.BuckarooDepsFileName)
+  // let buckarooDepsContent = buckarooDeps lock.Dependencies
+  // do! Files.writeFile buckarooDepsPath buckarooDepsContent
 
   // Write Buckaroo macros
-  let buckarooMacrosPath = Constants.BuckarooMacrosFileName
-  do! Files.writeFile buckarooMacrosPath buckarooMacros
+  // let buckarooMacrosPath = Constants.BuckarooMacrosFileName
+  // do! Files.writeFile buckarooMacrosPath buckarooMacros
   
   return ()
 }

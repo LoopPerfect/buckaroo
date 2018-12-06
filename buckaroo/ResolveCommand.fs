@@ -10,7 +10,7 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
   let resolveStart = DateTime.Now
   "Resolve start: " + (string resolveStart) |> Console.WriteLine
 
-  let! manifest = Tasks.readManifest
+  let! manifest = Tasks.readManifest "."
   "Resolving dependencies... " |> Console.WriteLine
   let! resolution = Solver.solve sourceExplorer manifest resolutionStyle maybeLock 
 
