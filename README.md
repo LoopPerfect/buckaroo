@@ -32,6 +32,13 @@ If you would like to use Buckaroo (as opposed to develop Buckaroo), the best pla
 
 
 ## As a Developer
+
+> Hey! 👋 
+> 
+> Future developments are happening on the [`buckaroo-redux`](https://github.com/LoopPerfect/buckaroo/tree/buckaroo-redux) branch. 
+> 
+> Keep an eye out for issues marked [buckaroo-redux](https://github.com/LoopPerfect/buckaroo/issues?q=is%3Aopen+is%3Aissue+label%3Abuckaroo-redux) in the tracker. 
+
 If you would like to develop Buckaroo, then you will need to install [Buck](https://buckbuild.com/setup/getting_started.html) on your system.
 
 Then to build:
