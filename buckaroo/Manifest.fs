@@ -24,13 +24,8 @@ type LocationParseError =
 
 type ManifestParseError = 
 | TomlError of TomlError
-| InvalidToml of string
-| InvalidTags
-| InvalidTargets
 | InvalidTarget of string
-| InvalidDependency
 | Dependency of DependencyParseError
-| InvalidLocation
 | Location of LocationParseError
 | ConflictingLocations of (AdhocPackageIdentifier * Version) * PackageSource * PackageSource
 
@@ -57,13 +52,9 @@ module Manifest =
   module ManifestParseError = 
     let show (x : ManifestParseError) = 
       match x with 
-      | InvalidToml s -> "Invalid TOML: " + s
-      | InvalidTags -> "Invalid tags. Tags must be an array of strings. "
-      | InvalidTargets -> "Invalid targets. Targets must be an array of strings. "
+      | ManifestParseError.TomlError e -> TomlError.show e
       | InvalidTarget t -> "Invalid target. " + t
-      | InvalidDependency -> "Dependencies must be a TOML table"
       | Dependency d -> DependencyParseError.show d
-      | InvalidLocation -> "Locations must be a TOML table"
       | Location l -> LocationParseError.show l
       | ConflictingLocations ((p, v), a, b) -> 
         "Conflicting locations found for " + 

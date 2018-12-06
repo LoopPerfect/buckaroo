@@ -17,6 +17,7 @@ let ``Paths.normalize works correctly`` () =
     ("b", "a/../b"); 
     ("c/d", "a/../b/../c/./././d"); 
     ("../../../a/b/c", "../../../a/b/c"); 
+    ("../../../a", "../../.././a"); 
   ]
 
   for (expected, input) in cases do

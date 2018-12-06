@@ -119,7 +119,10 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (manifest : Ma
   let repositoriesCells = 
     packages
     |> Map.toSeq
-    |> Seq.filter (fun (k, _) -> manifest.Dependencies |> Seq.exists (fun d -> d.Package = k))
+    |> Seq.filter (fun (k, _) -> 
+      manifest.Dependencies |> Seq.exists (fun d -> d.Package = k) || 
+      manifest.PrivateDependencies |> Seq.exists (fun d -> d.Package = k) 
+    )
     |> Seq.map (fun (k, _) -> (computeCellIdentifier k, pathToPackage k |> INIString))
     |> Map.ofSeq
   
