@@ -68,3 +68,18 @@ let parse (x : string) =
     Result.Ok table
   with error -> 
     TomlError.CouldNotParse error |> Result.Error
+
+
+let compareFieldIn toml field x =
+  toml                   
+    |> Result.bind (get field)
+    |> Result.bind asString
+    |> Result.map (fun y -> x = y)
+
+let rec compareTable table fields =
+  match fields with
+  | (key, value)::xs -> 
+    match (compareFieldIn table key value) with
+    | Result.Ok true -> compareTable table xs
+    | _ -> false
+  | [] -> true

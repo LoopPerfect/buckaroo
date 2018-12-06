@@ -4,6 +4,7 @@ open System
 open System.IO
 open Buckaroo.PackageLocation
 open Buckaroo.BuckConfig
+open Buckaroo.Option
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =  
@@ -88,26 +89,108 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
     Path.Combine(packageInstallPath tail head, packageInstallPath [] package)
     |> Paths.normalize
 
+
+let getReceiptPath installPath = installPath + ".receipt.toml"
+let writeReceipt (installPath : string) location = async {
+  System.Console.WriteLine ("writing receipt: " + installPath)
+  let receipt = 
+    "[receipt]\n" + 
+    "path = \"" + installPath + "\"\n" + 
+    "lastUpdated = \"" + System.DateTime.Now.ToUniversalTime().ToString() + "\"\n" + 
+    match location with 
+    | Git g -> 
+      "type = \"git\"\n" +
+      "url = \"" + g.Url + "\"\n" + 
+      "revision = \"" + g.Revision + "\"\n"
+    | Http h -> 
+      "type = \"http\"\n" +
+      "url = \"" + h.Url + "\"\n" + 
+      "sha256 = \"" + (h.Sha256) + "\"\n" +
+      "stripPrefix = \"" + (h.StripPrefix |> Option.defaultValue("")) + "\"\n" +
+      "archiveType = \"" + (h.Type |> Option.map string |> Option.defaultValue "zip") + "\"\n"
+    | GitHub g -> 
+      "type = \"github\"\n" +
+      "owner = \""+ g.Package.Owner + "\"\n" +
+      "project = \"" + g.Package.Project + "\"\n" +
+      "revision = \"" + g.Revision + "\"\n"
+  
+  let receiptPath = getReceiptPath installPath
+  do! Files.writeFile receiptPath receipt
+  return ()
+}
+  
+let compareReceipt installPath location = async {
+  let receiptPath = getReceiptPath installPath
+  let! exists = Files.exists receiptPath
+  return! 
+    match exists with
+    | false -> async { return false }
+    | true -> async {
+      let! receipt = Files.readFile receiptPath
+      let toml = Toml.parse receipt
+      return 
+        match toml with
+        | Result.Error _ -> 
+          false
+        | Result.Ok parsed ->
+          let oldReceipt = 
+            parsed 
+              |> Toml.get("receipt") 
+              |> Result.bind Toml.asTable
+          
+          let t = 
+            oldReceipt
+              |> Result.bind (Toml.get "type")
+              |> Result.bind Toml.asString
+
+          match (t, location) with
+          | (Result.Ok "git", Git g) -> Toml.compareTable oldReceipt [ 
+              ("url", g.Url);
+              ("revision", g.Revision);
+            ]
+          | (Result.Ok "github", GitHub g) -> Toml.compareTable oldReceipt [
+              ("owner", g.Package.Owner);
+              ("project", g.Package.Project);
+              ("revision", g.Revision);
+            ]
+          | (Result.Ok "http", Http h) -> Toml.compareTable oldReceipt [
+              ("url", h.Url);
+              ("sha256", h.Sha256);
+              ("stripPrefix", h.StripPrefix |> Option.defaultValue("") );
+              ("archiveType", (h.Type |> Option.map string |> Option.defaultValue("zip")) );
+            ]
+          |  _ -> false    
+  }
+}
+
+
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
-  match location with 
-  | GitHub gitHub -> 
-    let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-    do! gitManager.FetchCommit gitUrl gitHub.Revision (hintToBranch gitHub.Hint)
-    do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
-  | Http http -> 
-    let! pathToCache = downloadManager.DownloadToCache http.Url
-    let! discoveredHash = Files.sha256 pathToCache
-    if discoveredHash <> http.Sha256
-    then
-      return 
-        new Exception("Hash mismatch for " + http.Url + "! Expected " + http.Sha256 + "but found " + discoveredHash)
-        |> raise
-    do! Files.mkdirp installPath
-    do! Archive.extractTo pathToCache installPath http.StripPrefix
-  | _ -> 
-    new Exception("Unsupported location type") |> raise
+  let! isSame = compareReceipt installPath location
+  if isSame = false
+  then
+    System.Console.WriteLine ("installing: " + installPath)
+    match location with 
+    | GitHub gitHub -> 
+      let gitUrl = PackageLocation.gitHubUrl gitHub.Package
+      do! gitManager.FetchCommit gitUrl gitHub.Revision (hintToBranch gitHub.Hint)
+      do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
+    | Http http -> 
+      let! pathToCache = downloadManager.DownloadToCache http.Url
+      let! discoveredHash = Files.sha256 pathToCache
+      if discoveredHash <> http.Sha256
+      then
+        return 
+          new Exception("Hash mismatch for " + http.Url + "! Expected " + http.Sha256 + "but found " + discoveredHash)
+          |> raise
+      do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
+      do! Files.mkdirp installPath
+      do! Archive.extractTo pathToCache installPath http.StripPrefix
+    | _ -> 
+      new Exception("Unsupported location type") |> raise
+    do! writeReceipt installPath location
+  else System.Console.WriteLine (installPath + " is up-to-date")
 }
 
 let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : PackageIdentifier list) lockedPackage packages (pathToCell : string) = async {
@@ -205,6 +288,7 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
 
 let rec private installPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
   // Prepare workspace
+  do! Files.mkdirp root
   do! Files.touch (Path.Combine(root, ".buckconfig"))
 
   if File.Exists (Path.Combine(root, Constants.BuckarooMacrosFileName)) |> not
