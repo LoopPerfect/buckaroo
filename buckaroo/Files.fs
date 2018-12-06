@@ -2,6 +2,7 @@ module Buckaroo.Files
 
 open System.IO
 open Buckaroo.Hashing
+open System
 
 [<Literal>]
 let private DefaultBufferSize = 4096

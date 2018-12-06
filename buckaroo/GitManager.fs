@@ -72,9 +72,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
   }
 
   member this.CopyFromCache  (gitUrl : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
-    let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git"))
+    let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git/"))
     if hasGit then
-      do! git.Checkout installPath revision
+      return! git.Checkout installPath revision
     else
       do! git.CheckoutTo (cloneFolderName gitUrl) revision installPath
   }
@@ -85,21 +85,25 @@ type GitManager (git : IGit, cacheDirectory : string) =
       fun () -> async { return () };
       fun () -> async {
         let! branchHint = this.getBranchHint targetDirectory hint
-        Console.WriteLine "fetching branch"
         do! git.FetchBranch targetDirectory branchHint
       };
       fun () -> git.Unshallow targetDirectory;
     ]
     
-    let mutable successful = false
-    for operation in operations do
-      do! operation()
-      let! success = git.HasCommit targetDirectory commit
-      successful <- success
-      if success then
-        return ()
-    
-    if not successful then
+    let! success = 
+      let rec loop = 
+        function
+          | [] -> async { return false }
+          | op::ops -> async {
+            do! op()
+            let! success = git.HasCommit targetDirectory commit
+            return! 
+              match success with
+              | true -> async { return true }
+              | false -> loop ops
+          }
+      loop operations
+    if not success then
       raise <| new Exception("failed to find fetch: " + url + " " + commit)
   }
   member this.FetchBranch (url : string) (branch : string) : Async<Unit> = async {

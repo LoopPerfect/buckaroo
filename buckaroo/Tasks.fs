@@ -22,7 +22,6 @@ let private getCachePath = async {
 let getContext = async {
   let! cachePath = getCachePath
   //let git = new GitLib()
-
   let downloadManager = new DownloadManager(cachePath)
   let git = new GitLib()
   let gitManager = new Git.GitManager(git, cachePath)
