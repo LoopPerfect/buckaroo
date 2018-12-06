@@ -23,7 +23,7 @@ let private getCachePath = async {
 let getContext = async {
   let! cachePath = getCachePath
   let downloadManager = new DownloadManager(cachePath)
-  let useLibGit2 = System.Environment.GetEnvironmentVariable("USE_LIBGIT2") <> ""
+  let useLibGit2 = System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null
   let git = 
     if useLibGit2  
       then new GitLib() :> IGit
