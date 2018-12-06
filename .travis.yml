@@ -6,6 +6,7 @@ addons:
   apt:
     packages:
     - hello
+    - libcurl-dev
   homebrew:
     packages:
     - hello
@@ -16,3 +17,5 @@ script:
   - dotnet build ./buckaroo
   - dotnet build ./buckaroo-cli
   - dotnet test ./buckaroo-tests
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then ./warp-bundle-macos.sh       ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./warp-bundle-linux.sh       ; fi

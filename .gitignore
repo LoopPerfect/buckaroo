@@ -286,3 +286,6 @@ __pycache__/
 
 warp-packer
 buckaroo-macos
+buckaroo-linux
+
+fsi.fsx
