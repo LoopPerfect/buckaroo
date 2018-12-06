@@ -4,7 +4,7 @@ open System
 open System.IO
 open Buckaroo.PackageLocation
 open Buckaroo.BuckConfig
-open Buckaroo.Result
+open Buckaroo.Option
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =  
@@ -96,20 +96,23 @@ let writeReceipt (installPath : string) location = async {
   let receipt = 
     "[receipt]\n" + 
     "path = \"" + installPath + "\"\n" + 
+    "lastUpdated = \"" + System.DateTime.Now.ToUniversalTime().ToString() + "\"\n" + 
     match location with 
-    | Git git -> 
+    | Git g -> 
       "type = \"git\"\n" +
-      "url = \"" + git.Url + "\"\n" + 
-      "revision = \"" + git.Revision + "\"\n"
-    | Http http -> 
+      "url = \"" + g.Url + "\"\n" + 
+      "revision = \"" + g.Revision + "\"\n"
+    | Http h -> 
       "type = \"http\"\n" +
-      "url = \"" + http.Url + "\"\n" + 
-      "sha256 = \"" + (http.Sha256) + "\"\n"
-    | GitHub gitHub -> 
+      "url = \"" + h.Url + "\"\n" + 
+      "sha256 = \"" + (h.Sha256) + "\"\n" +
+      "stripPrefix = \"" + (h.StripPrefix |> Option.defaultValue("")) + "\"\n" +
+      "archiveType = \"" + (h.Type |> Option.map string |> Option.defaultValue "zip") + "\"\n"
+    | GitHub g -> 
       "type = \"github\"\n" +
-      "owner = \""+ gitHub.Package.Owner + "\"\n" +
-      "project = \"" + gitHub.Package.Project + "\"\n" +
-      "revision = \"" + gitHub.Revision + "\"\n"
+      "owner = \""+ g.Package.Owner + "\"\n" +
+      "project = \"" + g.Package.Project + "\"\n" +
+      "revision = \"" + g.Revision + "\"\n"
   
   let receiptPath = getReceiptPath installPath
   do! Files.writeFile receiptPath receipt
@@ -152,7 +155,9 @@ let compareReceipt installPath location = async {
             ]
           | (Result.Ok "http", Http h) -> Toml.compareTable oldReceipt [
               ("url", h.Url);
-              ("Sha256", h.Sha256);
+              ("sha256", h.Sha256);
+              ("stripPrefix", h.StripPrefix |> Option.defaultValue("") );
+              ("archiveType", (h.Type |> Option.map string |> Option.defaultValue("zip")) );
             ]
           |  _ -> false    
   }
@@ -162,8 +167,8 @@ let compareReceipt installPath location = async {
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
-  let! matches = compareReceipt installPath location
-  if matches = false
+  let! isSame = compareReceipt installPath location
+  if isSame = false
   then
     System.Console.WriteLine ("installing: " + installPath)
     match location with 
