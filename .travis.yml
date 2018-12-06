@@ -6,7 +6,7 @@ addons:
   apt:
     packages:
     - hello
-    - libcurl-dev
+    - libcurl4-gnutls-dev
   homebrew:
     packages:
     - hello
