@@ -12,7 +12,6 @@ addons:
 os:
   - linux
   - osx
-  - windows
 script: 
   - dotnet build ./buckaroo
   - dotnet build ./buckaroo-cli
