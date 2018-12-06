@@ -1,6 +1,8 @@
 namespace Buckaroo
 
-type Solution = Map<PackageIdentifier, ResolvedVersion>
+type Solution = {
+  Resolutions : Map<PackageIdentifier, ResolvedVersion * Solution>
+}
 
 type ResolutionStyle = 
 | Quick
@@ -13,10 +15,44 @@ type Resolution =
 
 module Solution = 
 
+  let empty = {
+    Resolutions = Map.empty; 
+  }
+
+  type SolutionMergeError = 
+  | Conflict of PackageIdentifier
+
+  let merge (a : Solution) (b : Solution) = 
+    let folder state (key, value) = 
+      match state with 
+      | Result.Ok solution -> 
+        match solution.Resolutions |> Map.tryFind key with 
+        | Some v -> 
+          if value = v 
+          then state
+          else Result.Error (Conflict key)
+        | None -> 
+          {
+            solution with 
+              Resolutions = 
+                solution.Resolutions |> Map.add key value 
+          }
+          |> Result.Ok
+      | Result.Error _ -> state
+    a.Resolutions |> Map.toSeq |> Seq.fold folder (Result.Ok b)
+
   let show (solution : Solution) = 
-    solution 
-    |> Seq.map (fun x -> PackageIdentifier.show x.Key + "@" + ResolvedVersion.show x.Value) 
-    |> String.concat " "
+    let rec f solution depth = 
+      let indent = "|" + ("_" |> String.replicate depth)
+      solution.Resolutions 
+      |> Map.toSeq
+      |> Seq.map (fun (k, v) -> 
+        let (resolvedVersion, subSolution) = v
+        indent + (PackageIdentifier.show k) + "@" + (ResolvedVersion.show resolvedVersion) + 
+          (f subSolution (depth + 1))
+      ) 
+      |> String.concat "\n"
+    f solution 0 
 
 module Resolution = 
 
@@ -39,15 +75,6 @@ module Resolution =
     | (Error e, _) -> Error e
     | (_, Error e) -> Error e
     | (Ok x, Ok y) -> 
-      let folder state (key, value) = 
-        match state with 
-        | Ok z -> 
-          match z |> Map.tryFind key with 
-          | Some v -> 
-            if value = v 
-            then state
-            else set [] |> Resolution.Conflict // TODO
-          | None -> 
-            z |> Map.add key value |> Ok
-        | _ -> state
-      x |> Map.toSeq |> Seq.fold folder (Ok y)
+      match Solution.merge x y with
+      | Result.Ok z -> Ok z
+      | Result.Error e -> Resolution.Conflict (set []) // TODO
