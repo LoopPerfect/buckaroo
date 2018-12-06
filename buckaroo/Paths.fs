@@ -13,12 +13,10 @@ let normalize (path : string) : string =
     let rec loop (path : string) = 
       let parts = 
         path.Split(Path.DirectorySeparatorChar, StringSplitOptions.None)
+        |> Seq.filter (fun x -> x <> ".")
         |> Seq.toList
       
       match parts with
-      | x::"."::rest -> 
-        (x + sep + (rest |> String.concat sep |> loop))
-        |> loop
       | ".."::".."::rest -> 
         ".." + sep + ".." + sep + (rest |> String.concat sep |> loop)
       | _::".."::rest -> 

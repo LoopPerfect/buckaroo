@@ -1,9 +1,7 @@
 module Buckaroo.Tests.Paths
 
 open Xunit
-
 open Buckaroo
-open System
 
 [<Fact>]
 let ``Paths.normalize works correctly`` () = 
@@ -18,6 +16,10 @@ let ``Paths.normalize works correctly`` () =
     ("c/d", "a/../b/../c/./././d"); 
     ("../../../a/b/c", "../../../a/b/c"); 
     ("../../../a", "../../.././a"); 
+    (
+      "../../../../../../buckaroo/github/buckaroo-pm/pkg-config-cairo", 
+      "../../../../../.././buckaroo/github/buckaroo-pm/pkg-config-cairo"
+    ); 
   ]
 
   for (expected, input) in cases do

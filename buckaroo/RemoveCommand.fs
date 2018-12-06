@@ -40,7 +40,7 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
         |> Seq.filter (fun (package, _) -> newLock.Packages |> Map.containsKey package |> not)
 
       for (package, lockedPackage) in removedPackages do 
-        let path = InstallCommand.packageInstallPath package
+        let path = InstallCommand.packageInstallPath [] package
         Console.WriteLine("Deleting " + path + "... ")
         Files.deleteDirectoryIfExists path |> ignore
 
