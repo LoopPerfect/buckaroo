@@ -8,7 +8,7 @@ open LibGit2Sharp
 open LibGit2Sharp
 
 module private Helpers =
-  let CreateSharedGitConfig (path : string) =
+  let createSharedGitConfig (path : string) =
     "[core]\n" +
     "  repositoryformatversion = 0\n" +
     "  filemode = true\n" +
@@ -18,7 +18,7 @@ module private Helpers =
     "  url =" + path + "\n"+
     "  fetch = +refs/heads/*:refs/remotes/origin/*\n"
 
-  let SharedGitClone (src : string) (destination : string) = async {
+  let sharedGitClone (src : string) (destination : string) = async {
     let gitPath = Path.Combine (destination, ".git")
     do! Files.mkdirp gitPath
     do! Files.mkdirp (Path.Combine (gitPath, "info"))
@@ -37,7 +37,7 @@ module private Helpers =
     do! 
       Files.writeFile 
         (Path.Combine (gitPath, "config")) 
-        (CreateSharedGitConfig src)
+        (createSharedGitConfig src)
 
     do! 
       Files.writeFile 
@@ -123,7 +123,7 @@ type GitLib () =
       let! exists = Files.directoryExists (installPath) 
       if not exists then
         do! Files.mkdirp installPath
-        do! Helpers.SharedGitClone gitPath installPath
+        do! Helpers.sharedGitClone gitPath installPath
       do! (this :> IGit).Unshallow installPath // It's a shared repo, unshallow here syncs up the references with the cached repo
       return! (this :> IGit).Checkout installPath revision
     }
