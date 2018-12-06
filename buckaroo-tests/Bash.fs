@@ -5,6 +5,12 @@ open Xunit
 open Buckaroo
 open System.Text
 
+#if OS_WINDOWS
+
+// No Bash on Windows
+
+#else
+
 // [<Fact>]
 // let ``Bash.runBash works correctly`` () = 
 //   let stdout = new StringBuilder()
@@ -18,15 +24,15 @@ open System.Text
 let ``Bash.runBashSync works correctly`` () = 
   let stdout = new StringBuilder()
   let exitCode = 
-    Bash.runBashSync "hello" (stdout.Append >> ignore) ignore 
+    Bash.runBashSync "true" (stdout.Append >> ignore) ignore 
     |> Async.RunSynchronously
   Assert.Equal(0, exitCode)
-  Assert.Equal("Hello, world!", stdout.ToString().Trim())
+  Assert.Equal("", stdout.ToString().Trim())
 
 [<Fact>]
 let ``Stress test of Bash.runBashSync works correctly`` () = 
   let task = 
-    Bash.runBashSync "hello" ignore ignore
+    Bash.runBashSync "true" ignore ignore
 
   let exitCodes = 
     task 
@@ -37,3 +43,5 @@ let ``Stress test of Bash.runBashSync works correctly`` () =
     |> Seq.toList
 
   Assert.True(exitCodes |> Seq.exists (fun x -> x <> 0) |> not)
+
+#endif
