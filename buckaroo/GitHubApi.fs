@@ -3,7 +3,7 @@ module Buckaroo.GitHubApi
 open System
 open FSharp.Data
 
-let fetchFile (package : GitHubPackageIdentifier) (commit : Revision) (file : string) = async {
+let fetchFile (package : AdhocPackageIdentifier) (commit : Revision) (file : string) = async {
   if commit.Length <> 40
   then
     return raise <| new ArgumentException("GitHub API requires full length commit hashes")

@@ -172,6 +172,8 @@ module Lock =
           (http.StripPrefix |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n") |> Option.defaultValue "")
         | GitHub gitHub -> 
           "revision = \"" + gitHub.Revision + "\"\n"
+        | BitBucket bitBucket -> 
+          "revision = \"" + bitBucket.Revision + "\"\n"
       )
       |> String.concat "\n"
     )
@@ -239,6 +241,31 @@ module Lock =
         }
   }
 
+  let private tomlTableToBitBucketLocation packageIdentifier x = result {
+    let! revision = 
+      x 
+      |> Toml.get "revision" 
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+
+    let! version = 
+      x 
+      |> Toml.get "version" 
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+      |> Result.bind Version.parse
+
+    let hint = Hint.fromVersion version
+
+    return
+      PackageLocation.BitBucket
+        {
+          Package = packageIdentifier; 
+          Revision = revision; 
+          Hint = hint; 
+        }
+  }
+
   let rec private tomlTableToLockedPackage packageIdentifier x = result {
     let! version = 
       x 
@@ -251,6 +278,8 @@ module Lock =
       match packageIdentifier with 
       | PackageIdentifier.GitHub gitHub -> 
         tomlTableToGitHubLocation gitHub x 
+      | PackageIdentifier.BitBucket bitBucket -> 
+        tomlTableToBitBucketLocation bitBucket x 
       | PackageIdentifier.Adhoc _ -> 
         tomlTableToHttpLocation x
 
