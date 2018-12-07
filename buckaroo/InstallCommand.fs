@@ -4,6 +4,7 @@ open System
 open System.IO
 open Buckaroo.PackageLocation
 open Buckaroo.BuckConfig
+open FSharpx.Control
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =  
@@ -337,8 +338,26 @@ let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Loc
     )
     |> Map.ofSeq
 
+  let buckarooSection = 
+    lock.Packages
+    |> Map.toSeq
+    |> Seq.map (fun (k, _) -> (PackageIdentifier.show k, INIString (computeCellIdentifier [] k)))
+    |> Seq.append [ 
+      (
+        "dependencies", 
+        (
+          lock.Dependencies
+          |> Seq.map (fun d -> (computeCellIdentifier [] d.Package) + (Target.show d.Target))
+          |> String.concat " "
+          |> INIString
+        )
+      );
+    ]
+    |> Map.ofSeq
+
   let config = 
     Map.empty
+    |> Map.add "buckaroo" buckarooSection
     |> Map.add "repositories" repositoriesSection
 
   do! Files.mkdirp (Path.Combine(root, ".buckconfig.d"))
