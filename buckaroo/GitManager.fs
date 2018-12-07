@@ -1,11 +1,10 @@
-namespace Buckaroo.Git
+namespace Buckaroo
 
 open System
 open System.IO
 open System.Security.Cryptography
 open System.Text.RegularExpressions
 open FSharpx.Control
-open Buckaroo
 
 
 type CloneRequest = 
@@ -71,7 +70,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
     return! res 
   }
 
-  member this.CopyFromCache  (gitUrl : string) (revision : Git.Revision) (installPath : string) : Async<Unit> = async {
+  member this.CopyFromCache  (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
     let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git/"))
     if hasGit then
       return! git.Checkout installPath revision

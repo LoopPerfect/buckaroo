@@ -2,7 +2,6 @@ namespace Buckaroo
 
 open System
 open FSharp.Control
-open Buckaroo.Git
 open Buckaroo.PackageLocation
 
 type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) = 

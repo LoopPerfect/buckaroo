@@ -2,15 +2,12 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <DefineConstants>OS_WINDOWS</DefineConstants>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Include="Glob.fs" />
     <Compile Include="SemVer.fs" />
@@ -23,9 +20,9 @@
     <Compile Include="Bash.fs" />
     <Compile Include="Lock.fs" />
     <Compile Include="Paths.fs" />
+    <Compile Include="Git.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.3" />
     <PackageReference Include="FSharp.Data" Version="3.0.0" />
