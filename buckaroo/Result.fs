@@ -10,6 +10,11 @@ type ResultBuilder () =
 
 let result = new ResultBuilder()
 
+let isOk x = 
+  match x with 
+  | Ok _ -> true
+  | Error _ -> false
+
 let optionToResult error x =
   match x with 
   | Some x -> Result.Ok x

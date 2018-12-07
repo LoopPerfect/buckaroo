@@ -2,12 +2,10 @@ namespace Buckaroo
 
 open System
 open System.IO
-open System.Threading.Tasks
-open Buckaroo.Git
-open LibGit2Sharp
 open LibGit2Sharp
 
-module private Helpers =
+type GitLib () = 
+
   let createSharedGitConfig (path : string) =
     "[core]\n" +
     "  repositoryformatversion = 0\n" +
@@ -47,10 +45,6 @@ module private Helpers =
     return ()
   }
 
-  
-
-type GitLib () = 
-  let nl = System.Environment.NewLine
   member this.Init (directory : string) = async {
     Repository.Init (directory, true) |> ignore
   }
@@ -119,16 +113,16 @@ type GitLib () =
       Commands.Checkout(repo, revision, options) |> ignore     
     }
 
-    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
+    member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
       let! exists = Files.directoryExists (installPath) 
       if not exists then
         do! Files.mkdirp installPath
-        do! Helpers.sharedGitClone gitPath installPath
+        do! sharedGitClone gitPath installPath
       do! (this :> IGit).Unshallow installPath // It's a shared repo, unshallow here syncs up the references with the cached repo
       return! (this :> IGit).Checkout installPath revision
     }
 
-    member this.FetchBranch (repository : String) (branch : Git.Branch) = async {
+    member this.FetchBranch (repository : String) (branch : Buckaroo.Branch) = async {
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository);
       let options = new FetchOptions();
@@ -140,7 +134,7 @@ type GitLib () =
       let options = new FetchOptions();
       Commands.Fetch(repo, "origin", [commit + ":" + commit], options, "")
     }
-    member this.FetchCommits (repository : String) (branch : Git.Branch) : Async<Git.Revision list> = async {
+    member this.FetchCommits (repository : String) (branch : Buckaroo.Branch) : Async<Revision list> = async {
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let filter = new CommitFilter()

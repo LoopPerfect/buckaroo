@@ -2,7 +2,6 @@ namespace Buckaroo
 
 open System
 open System.Text
-open Buckaroo.Git
 
 type GitCli () = 
   let nl = System.Environment.NewLine
@@ -67,7 +66,7 @@ type GitCli () =
       return! runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
     }
 
-    member this.CheckoutTo (gitPath : string) (revision : Git.Revision) (installPath : string) = async {
+    member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
       do! Files.mkdirp installPath
       do! 
         runBash ("git clone -s -n " + gitPath + " " + installPath  + " && git -C " + installPath + " checkout " + revision)
@@ -102,7 +101,7 @@ type GitCli () =
         |> Async.Ignore
     }
 
-    member this.FetchCommits (repository : String) (branch : Branch) : Async<Git.Revision list> = async {
+    member this.FetchCommits (repository : String) (branch : Branch) : Async<Revision list> = async {
       do! (this :> IGit).FetchBranch repository branch
       let gitDir = repository
       let command = 
