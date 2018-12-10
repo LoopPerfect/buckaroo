@@ -285,7 +285,10 @@ module Solver =
 
     let state = {
       Solution = Solution.empty; 
-      Constraints = manifest.Dependencies |> Set.ofSeq;
+      Constraints = 
+        manifest.Dependencies
+        |> Seq.append manifest.PrivateDependencies 
+        |> Set.ofSeq;
       Depth = 0;
       Visited = Set.empty; 
       Locations = manifest.Locations; 

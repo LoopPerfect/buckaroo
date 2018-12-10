@@ -91,6 +91,7 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
+
 let writeReceipt (installPath : string) location = async {
   System.Console.WriteLine ("writing receipt: " + installPath)
   let receipt = 
