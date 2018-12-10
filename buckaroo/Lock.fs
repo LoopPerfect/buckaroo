@@ -95,6 +95,7 @@ module Lock =
 
     let dependencies = 
       manifest.Dependencies
+      |> Seq.append manifest.PrivateDependencies
       |> Seq.map (fun x -> x.Package)
       |> Seq.collect (fun p -> 
         solution.Resolutions 
