@@ -1,6 +1,5 @@
 namespace Buckaroo
 
-open System
 open FSharp.Control
 open Buckaroo.PackageLocation
 
@@ -12,7 +11,49 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | "develop" -> 1
     | _ -> 2
 
-  let fetchLocationsFromPackageSource (source : PackageSource) = asyncSeq {
+  let fetchLocationsFromGit (url : string) (version : Version) = asyncSeq {
+    match version with 
+    | Buckaroo.SemVerVersion semVer -> 
+      let! tags = gitManager.FetchTags url
+      yield! 
+        tags 
+        |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
+        |> Seq.map (fun t -> t.Commit)
+        |> Seq.distinct
+        |> Seq.map (fun x -> (Hint.Default, x))
+        |> AsyncSeq.ofSeq
+    | Buckaroo.Version.Branch branch -> 
+      let! branches = gitManager.FetchBranches url
+
+      yield! 
+        branches
+        |> Seq.filter (fun x -> x.Name = branch)
+        |> Seq.map (fun x -> (Hint.Branch x.Name, x.Head))
+        |> AsyncSeq.ofSeq
+
+      do! gitManager.FetchBranch url branch
+      let! commits = gitManager.FetchCommits url branch
+      yield!
+        commits
+        |> Seq.except (branches |> Seq.map (fun x -> x.Head))
+        |> Seq.map (fun x -> (Hint.Branch branch, x))
+        |> AsyncSeq.ofSeq
+
+    | Buckaroo.Version.Revision r -> 
+      yield (Hint.Default, r)
+    | Buckaroo.Version.Tag tag -> 
+      let! tags = gitManager.FetchTags url
+      yield! 
+        tags 
+        |> Seq.filter (fun t -> t.Name = tag)
+        |> Seq.map (fun t -> t.Commit)
+        |> Seq.distinct
+        |> Seq.map (fun x -> (Hint.Default, x))
+        |> AsyncSeq.ofSeq
+    | Buckaroo.Version.Latest -> ()
+  }
+
+  let fetchLocationsFromPackageSource (source : PackageSource) (version : Version) = asyncSeq {
     match source with 
     | PackageSource.Http http -> 
       let! path = downloadManager.DownloadToCache http.Url
@@ -30,7 +71,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip 
     then
-      return raise (new Exception("Only zip is currently supported"))
+      return raise (new System.Exception("Only zip is currently supported"))
     
     let! pathToZip = downloadManager.DownloadToCache source.Url
     use file = System.IO.File.OpenRead pathToZip
@@ -52,10 +93,10 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         | [ root ] -> return root
         | [] -> 
           return 
-            raise (new Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
+            raise (new System.Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
         | _ -> 
           return 
-            raise (new Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
+            raise (new System.Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
       | None -> 
         return ""
     }
@@ -67,7 +108,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       streamReader.ReadToEndAsync() |> Async.AwaitTask
   }
 
-  let fetchVersionsFromGit (url : String) = asyncSeq {
+  let fetchVersionsFromGit (url : string) = asyncSeq {
     let! branchesTask = 
       gitManager.FetchBranches url
       |> Async.StartChild
@@ -91,7 +132,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
         | (SemVerVersion _, Version.Tag _) -> -1
         | (Version.Tag _, SemVerVersion _) -> 1
-        | (Version.Tag i, Version.Tag j) -> String.Compare(i, j)
+        | (Version.Tag i, Version.Tag j) -> System.String.Compare(i, j)
         | _ -> 0
       )
       |> AsyncSeq.ofSeq
@@ -136,6 +177,8 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
 
   let fetchFile location path = 
     match location with 
+    | PackageLocation.BitBucket bitBucket -> 
+      BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
     | PackageLocation.GitHub gitHub -> 
       GitHubApi.fetchFile gitHub.Package gitHub.Revision path
     | PackageLocation.Git git -> 
@@ -147,6 +190,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
 
     member this.FetchVersions locations package = 
       match package with 
+      | PackageIdentifier.BitBucket bitBucket -> 
+        let url = PackageLocation.bitBucketUrl bitBucket
+        fetchVersionsFromGit url
       | PackageIdentifier.GitHub gitHub -> 
         let url = PackageLocation.gitHubUrl gitHub
         fetchVersionsFromGit url
@@ -162,53 +208,38 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
 
     member this.FetchLocations locations package version = asyncSeq {
       match package with 
-      | PackageIdentifier.GitHub g -> 
-        let url = PackageLocation.gitHubUrl g
-        match version with 
-        | Buckaroo.SemVerVersion semVer -> 
-          let! tags = gitManager.FetchTags url
-          yield! 
-            tags 
-            |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
-            |> Seq.map (fun t -> t.Commit)
-            |> Seq.distinct
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
-            |> AsyncSeq.ofSeq
-        | Buckaroo.Version.Branch branch -> 
-          let! branches = gitManager.FetchBranches url
-
-          yield! 
-            branches
-            |> Seq.filter (fun x -> x.Name = branch)
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Branch x.Name; Revision = x.Head })
-            |> AsyncSeq.ofSeq
-
-          do! gitManager.FetchBranch url branch
-          let! commits = gitManager.FetchCommits url branch
-          yield!
-            commits
-            |> Seq.except (branches |> Seq.map (fun x -> x.Head))
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Branch branch;  Revision = x })
-            |> AsyncSeq.ofSeq
-
-        | Buckaroo.Version.Revision r -> 
-          yield PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = r }
-        | Buckaroo.Version.Tag tag -> 
-          let! tags = gitManager.FetchTags url
-          yield! 
-            tags 
-            |> Seq.filter (fun t -> t.Name = tag)
-            |> Seq.map (fun t -> t.Commit)
-            |> Seq.distinct
-            |> Seq.map (fun x -> PackageLocation.GitHub { Package = g; Hint = Hint.Default; Revision = x })
-            |> AsyncSeq.ofSeq
-        | Buckaroo.Version.Latest -> ()
+      | PackageIdentifier.GitHub gitHub -> 
+        let url = PackageLocation.gitHubUrl gitHub
+        yield! 
+          fetchLocationsFromGit url version
+          |> AsyncSeq.map (fun (hint, revision) -> 
+            PackageLocation.GitHub {
+              Package = gitHub; 
+              Hint = hint; 
+              Revision = revision; 
+            }
+          )
+      | PackageIdentifier.BitBucket bitBucket -> 
+        let url = PackageLocation.bitBucketUrl bitBucket
+        yield! 
+          fetchLocationsFromGit url version
+          |> AsyncSeq.map (fun (hint, revision) -> 
+            PackageLocation.BitBucket {
+              Package = bitBucket; 
+              Hint = hint; 
+              Revision = revision; 
+            }
+          )
       | PackageIdentifier.Adhoc adhoc -> 
         match locations |> Map.tryFind (adhoc, version) with 
         | Some source -> 
-          yield! fetchLocationsFromPackageSource source
+          yield! fetchLocationsFromPackageSource source version
         | None -> 
-          return new Exception("No location specified for " + (PackageIdentifier.show package) + "@" + (Version.show version)) |> raise
+          let message = 
+            "No location specified for " + 
+            (PackageIdentifier.show package) + "@" + (Version.show version)
+          
+          return new System.Exception(message) |> raise
     }
 
     member this.FetchManifest location = 
@@ -221,7 +252,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             let errorMessage = 
               "Invalid " + Constants.ManifestFileName + " file. \n" + 
               (Manifest.ManifestParseError.show error)
-            new Exception(errorMessage)
+            new System.Exception(errorMessage)
             |> raise
       }
 
@@ -232,6 +263,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
           match Lock.parse content with
           | Result.Ok manifest -> manifest
           | Result.Error errorMessage -> 
-            new Exception("Invalid " + Constants.LockFileName + " file. \n" + errorMessage)
+            new System.Exception("Invalid " + Constants.LockFileName + " file. \n" + errorMessage)
             |> raise
       }

@@ -1,6 +1,7 @@
 namespace Buckaroo
 
-open Buckaroo.Git
+open System
+open Buckaroo
 open FSharpx
 
 type HttpLocation = {
@@ -29,8 +30,8 @@ type GitLocation = {
 }
 
 // GitHub is different to Git because we can switch HTTPS & SSH easily
-type GitHubLocation = {
-  Package : GitHubPackageIdentifier; 
+type HostedGitLocation = {
+  Package : AdhocPackageIdentifier; 
   Hint : Hint; 
   Revision : Revision; 
 }
@@ -38,7 +39,8 @@ type GitHubLocation = {
 type PackageLocation = 
 | Http of HttpLocation
 | Git of GitLocation
-| GitHub of GitHubLocation
+| GitHub of HostedGitLocation
+| BitBucket of HostedGitLocation
 
 module PackageLocation = 
 
@@ -47,9 +49,19 @@ module PackageLocation =
     | Branch b -> Option.Some b
     | _ -> Option.None
 
-  let gitHubUrl (x : GitHubPackageIdentifier) = 
-    // "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"
-    "https://github.com/" + x.Owner + "/" + x.Project + ".git"
+  let gitHubUrl (x : AdhocPackageIdentifier) = 
+    if Environment.GetEnvironmentVariable "BUCKAROO_GITHUB_SSH" |> isNull
+    then
+      "https://github.com/" + x.Owner + "/" + x.Project + ".git"
+    else
+      "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"
+
+  let bitBucketUrl (x : AdhocPackageIdentifier) = 
+    if Environment.GetEnvironmentVariable "BUCKAROO_BITBUCKET_SSH" |> isNull
+    then
+      "https://bitbucket.org/" + x.Owner + "/" + x.Project + ".git"
+    else
+      "ssh://git@bitbucket.org:" + x.Owner + "/" + x.Project + ".git"
 
   let show (x : PackageLocation) = 
     match x with 
@@ -57,5 +69,5 @@ module PackageLocation =
       y.Url + 
       (y.StripPrefix |> Option.map ((+) "#") |> Option.defaultValue "") + 
       (y.Type |> Option.map (fun x -> "#" + (ArchiveType.show x)) |> Option.defaultValue "") 
-    | Git y -> y.Url + "#" + y.Revision
     | GitHub y -> (gitHubUrl y.Package) + "#" + y.Revision
+    | BitBucket y -> (bitBucketUrl y.Package) + "#" + y.Revision
