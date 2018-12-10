@@ -36,6 +36,7 @@
     <Compile Include="Lock.fs" />
     <Compile Include="GitHubApi.fs" />
     <Compile Include="BitBucketApi.fs" />
+    <Compile Include="GitLabApi.fs" />
     <Compile Include="SourceExplorer.fs" />
     <Compile Include="DefaultSourceExplorer.fs" />
     <Compile Include="CachedSourceExplorer.fs" />
