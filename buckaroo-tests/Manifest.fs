@@ -4,6 +4,7 @@ open System
 open Xunit
 
 open Buckaroo
+open Buckaroo.Tests
 
 [<Fact>]
 let ``Manifest.parse works correctly`` () =
@@ -31,7 +32,7 @@ let ``Manifest.parse works correctly`` () =
     PackageSource.Http (
       Map.ofSeq [
         (
-          Version.SemVerVersion SemVer.zero, {
+          Version.SemVerVersion { SemVer.zero with Major = 1 }, {
             Url = "https://lmn/qrs.zip";
             StripPrefix = Some "%";
             Type = None;
