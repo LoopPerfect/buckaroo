@@ -180,7 +180,7 @@ module Manifest =
       |> Option.defaultValue (Ok Option.None)
 
     return PackageSource.Http (Map.ofSeq ([
-        (version, { Url = url; StripPrefix = stripPrefix; Type = archiveType; Version = version })
+        (version, { Url = url; StripPrefix = stripPrefix; Type = archiveType; })
     ]))
   }
 
@@ -358,6 +358,34 @@ module Manifest =
           |> String.concat ", "
         ) + " ]\n\n"
       | false -> ""
+    ) +
+    (
+      x.Locations
+      |> Map.toSeq
+      |> Seq.map (fun (package, source) ->
+        match source with
+          | PackageSource.Git git ->
+            "[[location]]\n" +
+            "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
+            "git = \"" + git.Uri + "\"\n"
+          | PackageSource.Http http ->
+            http
+              |> Map.toSeq
+              |> Seq.map (fun (version, h) ->
+                "[[location]]\n" +
+                "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
+                "version = \"" + version.ToString() + "\"\n" +
+                "url = \"" + h.Url + "\"" +
+                (h.StripPrefix
+                  |> Option.map(fun p -> "strip_prefix = \"" + p + "\"")
+                  |> Option.defaultValue("")) +
+                (h.Type
+                  |> Option.map(fun t -> "type = \"" + t.ToString() + "\"")
+                  |> Option.defaultValue(""))
+              )
+              |> String.concat "\n"
+      )
+      |> String.concat "\n"
     ) +
     (
       x.Dependencies
