@@ -175,6 +175,8 @@ module Lock =
           "revision = \"" + gitHub.Revision + "\"\n"
         | BitBucket bitBucket ->
           "revision = \"" + bitBucket.Revision + "\"\n"
+        | GitLab gitLab ->
+          "revision = \"" + gitLab.Revision + "\"\n"
       )
       |> String.concat "\n"
     )
@@ -313,6 +315,31 @@ module Lock =
         }
   }
 
+  let private tomlTableToGitLabLocation packageIdentifier x = result {
+    let! revision =
+      x
+      |> Toml.get "revision"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+
+    let! version =
+      x
+      |> Toml.get "version"
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
+      |> Result.bind Version.parse
+
+    let hint = Hint.fromVersion version
+
+    return
+      PackageLocation.GitLab
+        {
+          Package = packageIdentifier;
+          Revision = revision;
+          Hint = hint;
+        }
+  }
+
   let rec private tomlTableToLockedPackage packageIdentifier x = result {
     let! version =
       x
@@ -327,6 +354,8 @@ module Lock =
         tomlTableToGitHubLocation gitHub x
       | PackageIdentifier.BitBucket bitBucket ->
         tomlTableToBitBucketLocation bitBucket x
+      | PackageIdentifier.GitLab gitLab ->
+        tomlTableToGitLabLocation gitLab x
       | PackageIdentifier.Adhoc _ ->
         tomlTableToAdhocLocation x
 

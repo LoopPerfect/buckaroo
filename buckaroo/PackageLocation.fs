@@ -41,6 +41,7 @@ type PackageLocation =
 | Git of GitLocation
 | GitHub of HostedGitLocation
 | BitBucket of HostedGitLocation
+| GitLab of HostedGitLocation
 
 module PackageLocation =
 
@@ -63,12 +64,19 @@ module PackageLocation =
     else
       "ssh://git@bitbucket.org:" + x.Owner + "/" + x.Project + ".git"
 
+  let gitLabUrl (x : AdhocPackageIdentifier) =
+    if Environment.GetEnvironmentVariable "BUCKAROO_GITLAB_SSH" |> isNull
+    then
+      "https://gitlab.com/" + x.Owner + "/" + x.Project + ".git"
+    else
+      "ssh://git@gitlab.com:" + x.Owner + "/" + x.Project + ".git"
   let show (x : PackageLocation) =
     match x with
-    | Git g -> g.Url
+    | Git g -> g.Url + "#" + g.Revision
     | Http y ->
       y.Url +
       (y.StripPrefix |> Option.map ((+) "#") |> Option.defaultValue "") +
-      (y.Type |> Option.map ArchiveType.show |> Option.map (fun x -> "#" + x) |> Option.defaultValue "")
+      (y.Type |> Option.map (ArchiveType.show) |> Option.map (fun x -> "#" + x) |> Option.defaultValue "")
     | GitHub y -> (gitHubUrl y.Package) + "#" + y.Revision
     | BitBucket y -> (bitBucketUrl y.Package) + "#" + y.Revision
+    | GitLab y -> (gitLabUrl y.Package) + "#" + y.Revision

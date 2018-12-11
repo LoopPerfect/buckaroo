@@ -195,6 +195,8 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
     | PackageLocation.GitHub gitHub ->
       GitHubApi.fetchFile gitHub.Package gitHub.Revision path
+    | PackageLocation.GitLab gitLab ->
+      GitLabApi.fetchFile gitLab.Package gitLab.Revision path
     | PackageLocation.Git git ->
       gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
     | PackageLocation.Http http ->
@@ -209,6 +211,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         fetchVersionsFromGit url
       | PackageIdentifier.GitHub gitHub ->
         let url = PackageLocation.gitHubUrl gitHub
+        fetchVersionsFromGit url
+      | PackageIdentifier.GitLab gitLab ->
+        let url = PackageLocation.gitLabUrl gitLab
         fetchVersionsFromGit url
       | PackageIdentifier.Adhoc adhoc ->
         let (_, source) =
@@ -243,6 +248,17 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
           |> AsyncSeq.map (fun (hint, revision) ->
             PackageLocation.BitBucket {
               Package = bitBucket;
+              Hint = hint;
+              Revision = revision;
+            }
+          )
+      | PackageIdentifier.GitLab gitLab ->
+        let url = PackageLocation.gitLabUrl gitLab
+        yield!
+          fetchLocationsFromGit url version
+          |> AsyncSeq.map (fun (hint, revision) ->
+            PackageLocation.GitLab {
+              Package = gitLab;
               Hint = hint;
               Revision = revision;
             }

@@ -2,6 +2,8 @@
 
 Experiments implementing Buckaroo in F#
 
+[![](https://img.shields.io/travis/LoopPerfect/buckaroo/buckaroo-redux.svg)](https://travis-ci.org/LoopPerfect/buckaroo)
+
 ```bash=
 dotnet restore ./buckaroo
 dotnet build ./buckaroo

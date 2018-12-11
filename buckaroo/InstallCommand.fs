@@ -72,6 +72,8 @@ let rec computeCellIdentifier (parents : PackageIdentifier list) (package : Pack
         [ "buckaroo"; "github"; gitHub.Owner; gitHub.Project ]
       | PackageIdentifier.BitBucket bitBucket ->
         [ "buckaroo"; "bitbucket"; bitBucket.Owner; bitBucket.Project ]
+      | PackageIdentifier.GitLab gitLab ->
+        [ "buckaroo"; "gitlab"; gitLab.Owner; gitLab.Project ]
       | PackageIdentifier.Adhoc adhoc ->
         [ "buckaroo"; "adhoc"; adhoc.Owner; adhoc.Project ]
     )
@@ -86,6 +88,7 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
       match package with
         | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
         | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
+        | PackageIdentifier.GitLab x -> ("gitlab", x.Owner, x.Project)
         | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
     Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
   | head::tail ->
@@ -114,6 +117,11 @@ let writeReceipt (installPath : string) location = async {
       "archiveType = \"" + (h.Type |> Option.map string |> Option.defaultValue "zip") + "\"\n"
     | GitHub g ->
       "type = \"github\"\n" +
+      "owner = \""+ g.Package.Owner + "\"\n" +
+      "project = \"" + g.Package.Project + "\"\n" +
+      "revision = \"" + g.Revision + "\"\n"
+    | GitLab g ->
+      "type = \"gitlab\"\n" +
       "owner = \""+ g.Package.Owner + "\"\n" +
       "project = \"" + g.Package.Project + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
@@ -162,6 +170,16 @@ let compareReceipt installPath location = async {
               ("project", g.Package.Project);
               ("revision", g.Revision);
             ]
+          | (Result.Ok "bitbucket", BitBucket g) -> Toml.compareTable oldReceipt [
+              ("owner", g.Package.Owner);
+              ("project", g.Package.Project);
+              ("revision", g.Revision);
+            ]
+          | (Result.Ok "gitlab", GitLab g) -> Toml.compareTable oldReceipt [
+              ("owner", g.Package.Owner);
+              ("project", g.Package.Project);
+              ("revision", g.Revision);
+            ]
           | (Result.Ok "http", Http h) -> Toml.compareTable oldReceipt [
               ("url", h.Url);
               ("sha256", h.Sha256);
@@ -195,6 +213,9 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
       do! installFromGit url bitBucket.Revision bitBucket.Hint
     | Git git ->
       do! installFromGit git.Url git.Revision git.Hint
+    | GitLab gitLab ->
+      let url = PackageLocation.gitLabUrl gitLab.Package
+      do! installFromGit url gitLab.Revision gitLab.Hint
     | Http http ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache
