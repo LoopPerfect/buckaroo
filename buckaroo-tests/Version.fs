@@ -30,11 +30,14 @@ let ``Version.compare works correctly`` () =
     (Version.Branch "develop"); 
     (Version.Revision "aabbccddee"); 
   ]
+  
   let expected = [ 
     (Version.Tag "v1.0.0"); 
     (Version.Branch "master"); 
     (Version.Branch "develop"); 
     (Version.Revision "aabbccddee"); 
   ]
+
   let actual = input |> List.sortWith Version.compare
+
   Assert.Equal<List<Version>>(expected, actual)

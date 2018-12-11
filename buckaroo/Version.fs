@@ -69,17 +69,15 @@ module Version =
 
   let identifierParser = CharParsers.regex @"[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){2,64}"
 
-  let branchNameParser = CharParsers.regex @"[a-zA-Z0-9-\.]{2,64}"
-
   let tagVersionParser = parse {
     do! CharParsers.skipString "tag="
-    let! tag = CharParsers.regex @"[a-zA-Z\d\\\.\-_/]{2,64}"
+    let! tag = Git.branchOrTagNameParser
     return Tag tag
   }
 
   let branchVersionParser = parse {
     do! CharParsers.skipString "branch="
-    let! branch = branchNameParser
+    let! branch = Git.branchOrTagNameParser
     return Branch branch
   }
 

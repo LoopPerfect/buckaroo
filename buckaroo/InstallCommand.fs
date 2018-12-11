@@ -4,6 +4,7 @@ open System
 open System.IO
 open Buckaroo.PackageLocation
 open Buckaroo.BuckConfig
+open FSharpx.Control
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =  
@@ -69,6 +70,8 @@ let rec computeCellIdentifier (parents : PackageIdentifier list) (package : Pack
       match package with 
       | PackageIdentifier.GitHub gitHub -> 
         [ "buckaroo"; "github"; gitHub.Owner; gitHub.Project ] 
+      | PackageIdentifier.BitBucket bitBucket -> 
+        [ "buckaroo"; "bitbucket"; bitBucket.Owner; bitBucket.Project ] 
       | PackageIdentifier.Adhoc adhoc -> 
         [ "buckaroo"; "adhoc"; adhoc.Owner; adhoc.Project ]
     )
@@ -82,6 +85,7 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
     let (prefix, owner, project) = 
       match package with 
         | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
+        | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
         | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
     Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
   | head::tail -> 
@@ -90,6 +94,7 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
+
 let writeReceipt (installPath : string) location = async {
   System.Console.WriteLine ("writing receipt: " + installPath)
   let receipt = 
@@ -112,7 +117,12 @@ let writeReceipt (installPath : string) location = async {
       "owner = \""+ g.Package.Owner + "\"\n" +
       "project = \"" + g.Package.Project + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
-  
+    | BitBucket b -> 
+      "type = \"bitbucket\"\n" +
+      "owner = \""+ b.Package.Owner + "\"\n" +
+      "project = \"" + b.Package.Project + "\"\n" +
+      "revision = \"" + b.Revision + "\"\n"
+
   let receiptPath = getReceiptPath installPath
   do! Files.writeFile receiptPath receipt
   return ()
@@ -169,12 +179,20 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
   let! isSame = compareReceipt installPath location
   if isSame = false
   then
-    System.Console.WriteLine ("installing: " + installPath)
+    System.Console.WriteLine ("Installing: " + installPath)
+
+    let installFromGit url revision hint = async {
+      do! gitManager.FetchCommit url revision (hintToBranch hint)
+      do! gitManager.CopyFromCache url revision installPath
+    }
+
     match location with 
     | GitHub gitHub -> 
-      let gitUrl = PackageLocation.gitHubUrl gitHub.Package
-      do! gitManager.FetchCommit gitUrl gitHub.Revision (hintToBranch gitHub.Hint)
-      do! gitManager.CopyFromCache gitUrl gitHub.Revision installPath
+      let url = PackageLocation.gitHubUrl gitHub.Package
+      do! installFromGit url gitHub.Revision gitHub.Hint
+    | BitBucket bitBucket -> 
+      let url = PackageLocation.bitBucketUrl bitBucket.Package
+      do! installFromGit url bitBucket.Revision bitBucket.Hint
     | Http http -> 
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache
@@ -337,8 +355,26 @@ let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Loc
     )
     |> Map.ofSeq
 
+  let buckarooSection = 
+    lock.Packages
+    |> Map.toSeq
+    |> Seq.map (fun (k, _) -> (PackageIdentifier.show k, INIString (computeCellIdentifier [] k)))
+    |> Seq.append [ 
+      (
+        "dependencies", 
+        (
+          lock.Dependencies
+          |> Seq.map (fun d -> (computeCellIdentifier [] d.Package) + (Target.show d.Target))
+          |> String.concat " "
+          |> INIString
+        )
+      );
+    ]
+    |> Map.ofSeq
+
   let config = 
     Map.empty
+    |> Map.add "buckaroo" buckarooSection
     |> Map.add "repositories" repositoriesSection
 
   do! Files.mkdirp (Path.Combine(root, ".buckconfig.d"))

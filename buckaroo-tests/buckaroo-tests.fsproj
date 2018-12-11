@@ -2,6 +2,9 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <DefineConstants>OS_WINDOWS</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../buckaroo/buckaroo.fsproj" />
   </ItemGroup>
@@ -17,6 +20,7 @@
     <Compile Include="Bash.fs" />
     <Compile Include="Lock.fs" />
     <Compile Include="Paths.fs" />
+    <Compile Include="Git.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
