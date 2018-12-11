@@ -2,7 +2,7 @@ namespace Buckaroo
 
 open FSharp.Control
 
-type PackageSources = Map<AdhocPackageIdentifier * Version, PackageSource>
+type PackageSources = Map<AdhocPackageIdentifier, PackageSource>
 
 type ISourceExplorer =
   abstract member FetchVersions : PackageSources -> PackageIdentifier -> AsyncSeq<Buckaroo.Version>
