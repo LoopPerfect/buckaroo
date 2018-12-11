@@ -362,6 +362,7 @@ module Manifest =
     (
       x.Locations
       |> Map.toSeq
+      |> Seq.sortBy fst
       |> Seq.map (fun (package, source) ->
         match source with
           | PackageSource.Git git ->
@@ -371,6 +372,7 @@ module Manifest =
           | PackageSource.Http http ->
             http
               |> Map.toSeq
+              |> Seq.sortBy fst
               |> Seq.map (fun (version, h) ->
                 "[[location]]\n" +
                 "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
