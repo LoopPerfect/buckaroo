@@ -5,6 +5,7 @@ type AdhocPackageIdentifier = { Owner : string; Project : string }
 type PackageIdentifier = 
 | GitHub of AdhocPackageIdentifier
 | BitBucket of AdhocPackageIdentifier
+| GitLab of AdhocPackageIdentifier
 | Adhoc of AdhocPackageIdentifier
 
 module PackageIdentifier = 
@@ -15,6 +16,7 @@ module PackageIdentifier =
     match id with
     | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
     | BitBucket x -> "bitbucket.org/" + x.Owner + "/" + x.Project
+    | GitLab x -> "gitlab.com/" + x.Owner + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
   let private gitHubIdentifierParser = 
@@ -59,9 +61,23 @@ module PackageIdentifier =
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
 
+  let gitLabPackageIdentifierParser = parse {
+    do! CharParsers.skipString "gitlab.com/" <|> CharParsers.skipString "gitlab+"
+    let! owner = gitHubIdentifierParser
+    do! CharParsers.skipString "/"
+    let! project = gitHubIdentifierParser
+    return { Owner = owner; Project = project }
+  }
+
+  let parseGitLabIdentifier (x : string) = 
+    match run (gitLabPackageIdentifierParser .>> CharParsers.eof) x with
+    | Success(result, _, _) -> Result.Ok result
+    | Failure(error, _, _) -> Result.Error error
+
   let parser =
     gitHubPackageIdentifierParser |>> PackageIdentifier.GitHub
     <|> (bitBucketPackageIdentifierParser |>> PackageIdentifier.BitBucket)
+    <|> (gitLabPackageIdentifierParser |>> PackageIdentifier.GitLab)
     <|> (adhocPackageIdentifierParser |>> PackageIdentifier.Adhoc)
 
   let parse (x : string) : Result<PackageIdentifier, string> = 

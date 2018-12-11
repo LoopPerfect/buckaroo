@@ -12,6 +12,8 @@ let ``PackageIdentifier.parse works correctly`` () =
     ("github+abc/def", PackageIdentifier.GitHub { Owner = "abc"; Project = "def" });
     ("github+abc/def_ghi", PackageIdentifier.GitHub { Owner = "abc"; Project = "def_ghi" });
     ("bitbucket.org/abc/def", PackageIdentifier.BitBucket { Owner = "abc"; Project = "def" });
+    ("gitlab.com/abc/def", PackageIdentifier.GitLab { Owner = "abc"; Project = "def" });
+    ("gitlab.com/abc-def/xyz", PackageIdentifier.GitLab { Owner = "abc-def"; Project = "xyz" });
   ]
 
   for (input, expected) in cases do

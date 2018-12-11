@@ -177,10 +177,12 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
 
   let fetchFile location path = 
     match location with 
-    | PackageLocation.BitBucket bitBucket -> 
-      BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
     | PackageLocation.GitHub gitHub -> 
       GitHubApi.fetchFile gitHub.Package gitHub.Revision path
+    | PackageLocation.BitBucket bitBucket -> 
+      BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
+    | PackageLocation.GitLab gitLab -> 
+      GitLabApi.fetchFile gitLab.Package gitLab.Revision path
     | PackageLocation.Git git -> 
       gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
     | PackageLocation.Http http -> 
@@ -190,11 +192,14 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
 
     member this.FetchVersions locations package = 
       match package with 
+      | PackageIdentifier.GitHub gitHub -> 
+        let url = PackageLocation.gitHubUrl gitHub
+        fetchVersionsFromGit url
       | PackageIdentifier.BitBucket bitBucket -> 
         let url = PackageLocation.bitBucketUrl bitBucket
         fetchVersionsFromGit url
-      | PackageIdentifier.GitHub gitHub -> 
-        let url = PackageLocation.gitHubUrl gitHub
+      | PackageIdentifier.GitLab gitLab -> 
+        let url = PackageLocation.gitLabUrl gitLab
         fetchVersionsFromGit url
       | PackageIdentifier.Adhoc adhoc -> 
         let xs = 
@@ -226,6 +231,17 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
           |> AsyncSeq.map (fun (hint, revision) -> 
             PackageLocation.BitBucket {
               Package = bitBucket; 
+              Hint = hint; 
+              Revision = revision; 
+            }
+          )
+      | PackageIdentifier.GitLab gitLab -> 
+        let url = PackageLocation.gitLabUrl gitLab
+        yield! 
+          fetchLocationsFromGit url version
+          |> AsyncSeq.map (fun (hint, revision) -> 
+            PackageLocation.GitLab {
+              Package = gitLab; 
               Hint = hint; 
               Revision = revision; 
             }
