@@ -29,6 +29,7 @@ type ManifestParseError =
 | Location of LocationParseError
 | ConflictingLocations of AdhocPackageIdentifier * PackageSource * PackageSource
 
+
 module Manifest =
 
   open Buckaroo.Result
@@ -58,11 +59,9 @@ module Manifest =
       | Location l -> LocationParseError.show l
       | ConflictingLocations (p, a, b) ->
         "Conflicting locations found for " +
-        (PackageIdentifier.show (Adhoc p)) + "@" +
-//        (Version.show v) + ": [ " +
-//        (PackageSource.show a) + ", " +
-//        (PackageSource.show b) +
-        " ]"
+        (PackageIdentifier.show (Adhoc p)) + ": [ " +
+        (PackageSource.show a) + ", " +
+        (PackageSource.show b) + " ]"
 
   let zero : Manifest = {
     Targets = Set.empty;

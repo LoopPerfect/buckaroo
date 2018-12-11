@@ -76,22 +76,35 @@ module Solver =
 
   let private mergeLocations (a : Map<AdhocPackageIdentifier, PackageSource>) (b : Map<AdhocPackageIdentifier, PackageSource>) =
     let folder state next = result {
-      let (key, source) = next
+      let (key : AdhocPackageIdentifier, source) = next
       let! s = state
       match (s |> Map.tryFind key, source) with
       | Some (PackageSource.Http l), PackageSource.Http r ->
-        return
-          s
-          |> Map.add
-            key
-            (PackageSource.Http (Map(Seq.concat [ (Map.toSeq l) ; (Map.toSeq r) ])))
+        let conflicts =
+          l
+          |> Map.toSeq
+          |> Seq.map (fun (v, s) -> (v, s, r.[v]))
+          |> Seq.filter(fun (_, sl, sr) -> sl <> sr)
+          |> Seq.toList
+
+        match (conflicts |> List.length > 0) with
+        | false ->
+          return!
+            Result.Error
+              (ConflictingLocations (key, PackageSource.Http l, PackageSource.Http r))
+        | true ->
+          return s
+            |> Map.add
+              key
+              (PackageSource.Http (Map(Seq.concat [ (Map.toSeq l) ; (Map.toSeq r) ])))
 
       | Some (PackageSource.Git _), PackageSource.Git _ ->
         return
           s
           |> Map.add key source
-      | Some _, _ ->
-        return! Result.Error ("Conflicting PackageSources for " + (string key))
+      | Some a, b ->
+        return! Result.Error
+          (ConflictingLocations (key, a, b))
       | None, _->
         return
           s
@@ -177,7 +190,7 @@ module Solver =
               return
                 match mergeLocations state.Locations manifest.Locations with
                 | Result.Ok xs -> xs
-                | Result.Error e -> raise (new System.Exception(e))
+                | Result.Error e -> raise (new System.Exception(e.ToString()))
             }
 
             let resolvedVersion = {
