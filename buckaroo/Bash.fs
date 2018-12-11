@@ -61,7 +61,7 @@ let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHan
 
   do! exitSignal
 
-  if p.ExitCode > 0 && p.ExitCode < 128
+  if p.ExitCode > 0
   then
     return
       raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n" + "command:\n" + command )
