@@ -1,23 +1,16 @@
 namespace Buckaroo
 
 type HttpPackageSource = {
-  Url : string; 
-  StripPrefix : string option; 
-  Type : ArchiveType option; 
+  Url : string;
+  StripPrefix : string option;
+  Type : ArchiveType option;
+  Version : Version
 }
 
 type GitPackageSource = {
-  Uri : string; 
+  Uri : string
 }
 
-type PackageSource = 
-| Http of HttpPackageSource
+type PackageSource =
 | Git of GitPackageSource
-
-module PackageSource = 
-  let show (x : PackageSource) = 
-    match x with 
-    | Http http -> 
-      http.Url + 
-      (http.StripPrefix |> Option.map (fun x -> "#" + x) |> Option.defaultValue "")
-    | Git git -> git.Uri
+| Http of Map<Version, HttpPackageSource>
