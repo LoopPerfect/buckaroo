@@ -2,25 +2,25 @@ namespace Buckaroo
 
 type AdhocPackageIdentifier = { Owner : string; Project : string }
 
-type PackageIdentifier = 
+type PackageIdentifier =
 | GitHub of AdhocPackageIdentifier
 | BitBucket of AdhocPackageIdentifier
 | GitLab of AdhocPackageIdentifier
 | Adhoc of AdhocPackageIdentifier
 
-module PackageIdentifier = 
-  
+module PackageIdentifier =
+
   open FParsec
-  let show (id : PackageIdentifier) = 
+  let show (id : PackageIdentifier) =
     match id with
     | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
     | BitBucket x -> "bitbucket.org/" + x.Owner + "/" + x.Project
     | GitLab x -> "gitlab.com/" + x.Owner + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
-  let private gitHubIdentifierParser = 
+  let private gitHubIdentifierParser =
     CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z_.\d]|-(?=[a-zA-Z_.\d])){0,38}"
-   
+
   let adhocPackageIdentifierParser = parse {
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
@@ -28,22 +28,21 @@ module PackageIdentifier =
     return { Owner = owner; Project = project }
   }
 
-  let parseAdhocIdentifier (x : string) : Result<AdhocPackageIdentifier, string> = 
+  let parseAdhocIdentifier (x : string) : Result<AdhocPackageIdentifier, string> =
     match run (adhocPackageIdentifierParser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
 
 
   let gitHubPackageIdentifierParser = parse {
-    do! CharParsers.skipString "github.com/" 
-      <|> CharParsers.skipString "gh+"
+    do! CharParsers.skipString "github.com/" <|> CharParsers.skipString "github+"
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
     return { Owner = owner; Project = project }
   }
 
-  let parseGitHubIdentifier (x : string) = 
+  let parseGitHubIdentifier (x : string) =
     match run (gitHubPackageIdentifierParser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
@@ -56,7 +55,7 @@ module PackageIdentifier =
     return { Owner = owner; Project = project }
   }
 
-  let parseBitBucketIdentifier (x : string) = 
+  let parseBitBucketIdentifier (x : string) =
     match run (bitBucketPackageIdentifierParser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
@@ -69,7 +68,7 @@ module PackageIdentifier =
     return { Owner = owner; Project = project }
   }
 
-  let parseGitLabIdentifier (x : string) = 
+  let parseGitLabIdentifier (x : string) =
     match run (gitLabPackageIdentifierParser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
@@ -80,7 +79,7 @@ module PackageIdentifier =
     <|> (gitLabPackageIdentifierParser |>> PackageIdentifier.GitLab)
     <|> (adhocPackageIdentifierParser |>> PackageIdentifier.Adhoc)
 
-  let parse (x : string) : Result<PackageIdentifier, string> = 
+  let parse (x : string) : Result<PackageIdentifier, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
