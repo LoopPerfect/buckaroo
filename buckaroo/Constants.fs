@@ -1,6 +1,9 @@
 module Buckaroo.Constants
 
 [<Literal>]
+let Version = "2.0.0"
+
+[<Literal>]
 let PackagesDirectory = "buckaroo"
 
 [<Literal>]

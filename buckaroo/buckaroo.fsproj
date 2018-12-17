@@ -49,6 +49,7 @@
     <Compile Include="ResolveCommand.fs" />
     <Compile Include="RemoveCommand.fs" />
     <Compile Include="QuickstartCommand.fs" />
+    <Compile Include="VersionCommand.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>

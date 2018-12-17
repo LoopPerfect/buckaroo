@@ -4,6 +4,7 @@ type Command =
 | Start
 | Help
 | Init
+| Version
 | ListDependencies
 | Resolve
 | Install
@@ -19,7 +20,6 @@ module Command =
   open System.IO
   open FSharp.Control
   open FParsec
-  open Buckaroo.Constants
 
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
@@ -38,6 +38,13 @@ module Command =
     do! CharParsers.skipString "help"
     do! CharParsers.spaces
     return Help
+  }
+
+  let versionParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "version"
+    do! CharParsers.spaces
+    return Command.Version
   }
 
   let listDependenciesParser : Parser<Command, Unit> = parse {
@@ -109,6 +116,7 @@ module Command =
     <|> quickstartParser
     <|> showVersionsParser
     <|> initParser
+    <|> versionParser
     <|> helpParser
     <|> startParser
 
@@ -134,7 +142,7 @@ module Command =
       sourceExplorer.FetchVersions Map.empty package
       |> AsyncSeq.toListAsync
     for v in versions do
-      Version.show v |> Console.WriteLine
+      Buckaroo.Version.show v |> Console.WriteLine
     return ()
   }
 
@@ -178,12 +186,12 @@ module Command =
   }
 
   let init = async {
-    let path = ManifestFileName
+    let path = Constants.ManifestFileName
     if File.Exists(path) |> not
     then
       use sw = File.CreateText(path)
       sw.Write(Manifest.zero |> Manifest.show)
-      System.Console.WriteLine("Wrote " + ManifestFileName)
+      System.Console.WriteLine("Wrote " + Constants.ManifestFileName)
     else 
       new Exception("There is already a manifest in this directory") |> raise
   }
@@ -195,6 +203,7 @@ module Command =
       | Start -> StartCommand.task
       | Init -> init
       | Help -> HelpCommand.task
+      | Version -> VersionCommand.task context
       | ListDependencies -> listDependencies
       | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
       | Upgrade -> upgrade context
