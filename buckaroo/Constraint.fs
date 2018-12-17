@@ -1,88 +1,109 @@
 namespace Buckaroo
 
-type Constraint = 
+type Constraint =
 | Exactly of Version
 | Complement of Constraint
 | Any of List<Constraint>
 | All of List<Constraint>
 
+type Contingency =
+| Branch
+| Tag
+| SemVer
+| Revision
+| Other
+
+
+
+
+
 #nowarn "40"
 
-module Constraint = 
+module Constraint =
+  let rec contingencyOf constraints =
+    match constraints with
+    | Exactly (Version.Branch _) -> Set [Contingency.Branch]
+    | Exactly (Version.Revision _) -> Set [Contingency.Revision]
+    | Exactly (Version.SemVerVersion _) -> Set [Contingency.Revision]
+    | Exactly (Version.Tag _) -> Set [Contingency.Revision]
+    | Exactly Latest -> Set [Other]
+    | Complement c -> contingencyOf c
+    | Any c -> c |> List.map contingencyOf |> Set.unionMany
+    | All c -> c |> List.map contingencyOf |> Set.unionMany
 
   open FParsec
 
   let wildcard = All []
 
-  let intersection (c : Constraint) (d : Constraint) : Constraint = 
+  let intersection (c : Constraint) (d : Constraint) : Constraint =
     All [ c; d ]
 
-  let union (c : Constraint) (d : Constraint) : Constraint = 
+  let union (c : Constraint) (d : Constraint) : Constraint =
     Any [ c; d ]
 
-  let complement (c : Constraint) : Constraint = 
+  let complement (c : Constraint) : Constraint =
     Complement c
 
-  let rec satisfies (c : Constraint) (v : Version) : bool = 
+  let rec satisfies (c : Constraint) (v : Version) : bool =
     match c with
     | Exactly u -> v = u
-    | Complement x -> satisfies x v |> not 
+    | Complement x -> satisfies x v |> not
     | Any xs -> xs |> Seq.exists(fun c -> satisfies c v)
     | All xs -> xs |> Seq.forall(fun c -> satisfies c v)
 
-  let rec agreesWith (c : Constraint) (v : Version) : bool = 
+  let rec agreesWith (c : Constraint) (v : Version) : bool =
     match c with
-    | Exactly u -> 
-      match (v, u) with 
+    | Exactly u ->
+      match (v, u) with
       | (Version.SemVerVersion x, Version.SemVerVersion y) -> x = y
       | (Version.Branch x, Version.Branch y) -> x = y
       | (Version.Revision x, Version.Revision y) -> x = y
       | (Version.Tag x, Version.Tag y) -> x = y
       | _ -> true
-    | Complement x -> agreesWith x v |> not 
+    | Complement x -> agreesWith x v |> not
     | Any xs -> xs |> Seq.exists(fun c -> agreesWith c v)
     | All xs -> xs |> Seq.forall(fun c -> agreesWith c v)
 
-  let rec compare (x : Constraint) (y : Constraint) : int = 
-    match (x, y) with 
+  let rec compare (x : Constraint) (y : Constraint) : int =
+    match (x, y) with
     | (Exactly u, Exactly v) -> Version.compareSpecificity u v
-    | (Any xs, y) -> 
-      xs 
-      |> Seq.map (fun x -> compare x y) 
+    | (Any xs, y) ->
+      xs
+      |> Seq.map (fun x -> compare x y)
       |> Seq.append [ -1 ]
       |> Seq.max
-    | (y, Any xs) -> 
+    | (y, Any xs) ->
       (compare (Any xs) y) * -1
-    | (All xs, y) -> 
-      xs 
-      |> Seq.map (fun x -> compare x y) 
+    | (All xs, y) ->
+      xs
+      |> Seq.map (fun x -> compare x y)
       |> Seq.append [ 1 ]
       |> Seq.min
-    | (y, All xs) -> 
+    | (y, All xs) ->
       (compare (All xs) y) * -1
-    | (Complement c, y) -> 
+    | (Complement c, y) ->
       compare y c
-    | (y, Complement c) -> 
+    | (y, Complement c) ->
       compare c y
 
-  let rec show ( c : Constraint) : string = 
+  let rec show ( c : Constraint) : string =
     match c with
     | Exactly v -> Version.show v
     | Complement c -> "!" + show c
-    | Any xs -> 
-      "any(" + 
-      (xs 
-        |> Seq.map (fun x -> show x) 
-        |> String.concat " ") + 
+    | Any xs ->
+      "any(" +
+      (xs
+        |> Seq.map (fun x -> show x)
+        |> String.concat " ") +
       ")"
-    | All xs -> 
-      if Seq.isEmpty xs 
+    | All xs ->
+      if Seq.isEmpty xs
       then "*"
-      else 
-        "all(" + 
-        (xs 
-          |> Seq.map (fun x -> show x) 
-          |> String.concat " ") + 
+      else
+        "all(" +
+        (xs
+          |> Seq.map (fun x -> show x)
+          |> String.concat " ") +
         ")"
 
   let wildcardParser = parse {
@@ -116,15 +137,16 @@ module Constraint =
       return All elements
     }
 
-    return! 
-      wildcardParser 
-      <|> exactlyParser 
-      <|> complementParser 
+    return!
+      wildcardParser
+      <|> exactlyParser
+      <|> complementParser
       <|> anyParser
       <|> allParser
   }
 
-  let parse (x : string) : Result<Constraint, string> = 
+  let parse (x : string) : Result<Constraint, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
+

@@ -1,4 +1,5 @@
 namespace Buckaroo
+open FSharpx.Collections
 
 module Solver =
 
@@ -115,12 +116,33 @@ module Solver =
       |> Map.toSeq
       |> Seq.fold folder (Result.Ok b)
 
-  let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
+  let getUnsatisfied (state : SolverState) =
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
       |> Seq.toList
       |> List.sortWith (fun x y -> Constraint.compare x.Constraint y.Constraint)
 
+    let globalConstraintsMap =
+      state.Constraints
+        |> Set.toSeq
+        |> Seq.map (fun x -> (x.Package, Set [x.Constraint]) )
+        |> Seq.fold
+            (fun m (p, c) ->
+              let s =
+                match m |> Map.tryFind p with
+                | Some x -> Set.union x c
+                | None -> c
+              m |> Map.add p s)
+          Map.empty
+        |> Map.map (fun _ v -> Constraint.All (Set.toList v))
+
+    (unsatisfied, globalConstraintsMap)
+
+
+  let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
+    let (unsatisfied, globalConstraints) = getUnsatisfied state
+
+    // Solution.visited will filter out any hints that we already tried in Solver.step
     for (atom, location) in state.Hints do
       if unsatisfied |> Seq.exists (fun x -> Dependency.satisfies x atom)
       then
@@ -128,26 +150,23 @@ module Solver =
 
     for dependency in unsatisfied do
       let package = dependency.Package
-      for version in sourceExplorer.FetchVersions state.Locations package do
-        if version |> Constraint.satisfies dependency.Constraint then
-          let atom = { Package = package; Version = version }
-          for location in sourceExplorer.FetchLocations state.Locations package version do
-            yield (atom, location)
+      let constraints = globalConstraints.[package]
+      for version in sourceExplorer.FetchVersions state.Locations package constraints do
+        let atom = { Package = package; Version = version }
+        for location in sourceExplorer.FetchLocations state.Locations package version do
+          yield (atom, location)
   }
 
   let upgradeSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
-    let unsatisfied =
-      findUnsatisfied state.Solution state.Constraints
-      |> Seq.toList
-      |> List.sortWith (fun x y -> Constraint.compare x.Constraint y.Constraint)
+    let (unsatisfied, globalConstraints) = getUnsatisfied state
 
     for dependency in unsatisfied do
       let package = dependency.Package
-      for version in sourceExplorer.FetchVersions state.Locations package do
-        if version |> Constraint.satisfies dependency.Constraint then
-          let atom = { Package = package; Version = version }
-          for location in sourceExplorer.FetchLocations state.Locations package version do
-            yield (atom, location)
+      let constraints = globalConstraints.[package]
+      for version in sourceExplorer.FetchVersions state.Locations package constraints do
+        let atom = { Package = package; Version = version }
+        for location in sourceExplorer.FetchLocations state.Locations package version do
+          yield (atom, location)
   }
 
   let rec private step (sourceExplorer : ISourceExplorer) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {

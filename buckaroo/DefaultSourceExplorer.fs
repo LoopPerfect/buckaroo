@@ -2,6 +2,7 @@ namespace Buckaroo
 
 open FSharp.Control
 open Buckaroo.PackageLocation
+open Buckaroo.Constraint
 
 type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) =
 
@@ -126,10 +127,10 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       streamReader.ReadToEndAsync() |> Async.AwaitTask
   }
 
-  let fetchVersionsFromGit (url : string) = asyncSeq {
+  let fetchVersionsFromGit url constraints = asyncSeq {
+    let contingent = contingencyOf constraints
     let! refs = gitManager.FetchRefs url
 
-    // Tags and sem-vers
     let tags = refs |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
     let branches = refs |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
 
@@ -180,14 +181,15 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       |> Seq.append (tags |> Seq.map (fun x -> x.Revision))
       |> Set.ofSeq
 
-    // All Revisions
-    for branch in branches do
-      let! commits = gitManager.FetchCommits url branch.Name
-      yield!
-        commits
-        |> Seq.except alreadyYielded
-        |> Seq.map (fun x -> Buckaroo.Version.Revision x)
-        |> AsyncSeq.ofSeq
+
+    if contingent.Contains(Contingency.Revision) then
+      for branch in branches do
+        let! commits = gitManager.FetchCommits url branch.Name
+        yield!
+          commits
+          |> Seq.except alreadyYielded
+          |> Seq.map (fun x -> Buckaroo.Version.Revision x)
+          |> AsyncSeq.ofSeq
   }
 
   let fetchFile location path =
@@ -205,17 +207,17 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
 
   interface ISourceExplorer with
 
-    member this.FetchVersions locations package =
+    member this.FetchVersions locations package constraints =
       match package with
       | PackageIdentifier.BitBucket bitBucket ->
         let url = PackageLocation.bitBucketUrl bitBucket
-        fetchVersionsFromGit url
+        fetchVersionsFromGit url constraints
       | PackageIdentifier.GitHub gitHub ->
         let url = PackageLocation.gitHubUrl gitHub
-        fetchVersionsFromGit url
+        fetchVersionsFromGit url constraints
       | PackageIdentifier.GitLab gitLab ->
         let url = PackageLocation.gitLabUrl gitLab
-        fetchVersionsFromGit url
+        fetchVersionsFromGit url constraints
       | PackageIdentifier.Adhoc adhoc ->
         let (_, source) =
           locations
@@ -223,7 +225,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
           |> Seq.find (fun (p, _) -> p = adhoc)
 
         match source with
-        | PackageSource.Git g -> fetchVersionsFromGit g.Uri
+        | PackageSource.Git g -> fetchVersionsFromGit g.Uri constraints
         | PackageSource.Http h -> asyncSeq {
           for (v, _) in h |> Map.toSeq do
             yield v
