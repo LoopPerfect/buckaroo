@@ -18,6 +18,8 @@
     <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />
     <Compile Include="Bash.fs" />
+    <Compile Include="RichOutput.fs" />
+    <Compile Include="ConsoleManager.fs" />
     <Compile Include="DownloadManager.fs" />
     <Compile Include="Git.fs" />
     <Compile Include="GitCli.fs" />

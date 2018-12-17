@@ -11,7 +11,6 @@ type Command =
 | Quickstart
 | AddDependencies of List<Dependency>
 | RemoveDependencies of List<PackageIdentifier>
-| ShowVersions of PackageIdentifier
 
 module Command = 
 
@@ -91,14 +90,6 @@ module Command =
     return RemoveDependencies deps
   }
 
-  let showVersionsParser = parse {
-    do! CharParsers.spaces
-    do! CharParsers.skipString "show-versions"
-    do! CharParsers.spaces1
-    let! project = PackageIdentifier.parser
-    return ShowVersions project
-  }
-
   let parser = 
     listDependenciesParser 
     <|> resolveParser
@@ -107,7 +98,6 @@ module Command =
     <|> removeDependenciesParser
     <|> installParser
     <|> quickstartParser
-    <|> showVersionsParser
     <|> initParser
     <|> helpParser
     <|> startParser
@@ -124,17 +114,6 @@ module Command =
     |> Seq.map Dependency.show
     |> String.concat "\n"
     |> Console.WriteLine
-    return ()
-  }
-
-  let showVersions (context : Tasks.TaskContext) (package : PackageIdentifier) = async {
-    let sourceExplorer = context.SourceExplorer
-
-    let! versions = 
-      sourceExplorer.FetchVersions Map.empty package
-      |> AsyncSeq.toListAsync
-    for v in versions do
-      Version.show v |> Console.WriteLine
     return ()
   }
 
@@ -190,11 +169,12 @@ module Command =
 
   let runCommand command = async {
     let! context = Tasks.getContext
+
     do! 
       match command with
-      | Start -> StartCommand.task
+      | Start -> StartCommand.task context
       | Init -> init
-      | Help -> HelpCommand.task
+      | Help -> HelpCommand.task context
       | ListDependencies -> listDependencies
       | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
       | Upgrade -> upgrade context
@@ -202,5 +182,6 @@ module Command =
       | Quickstart -> QuickstartCommand.task context
       | AddDependencies dependencies -> add context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
-      | ShowVersions project -> showVersions context project
+
+    do! context.Console.Flush()
   }

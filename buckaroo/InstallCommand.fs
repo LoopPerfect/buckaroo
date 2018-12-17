@@ -5,6 +5,7 @@ open System.IO
 open Buckaroo.PackageLocation
 open Buckaroo.BuckConfig
 open FSharpx.Control
+open Buckaroo.RichOutput
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =
@@ -99,7 +100,6 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 let getReceiptPath installPath = installPath + ".receipt.toml"
 
 let writeReceipt (installPath : string) location = async {
-  System.Console.WriteLine ("writing receipt: " + installPath)
   let receipt =
     "[receipt]\n" +
     "path = \"" + installPath + "\"\n" +
@@ -192,12 +192,23 @@ let compareReceipt installPath location = async {
 
 
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
+  let log x = 
+    x
+    |> RichOutput.text
+    |> context.Console.Write
+
+  let logSuccess x = 
+    x
+    |> RichOutput.text
+    |> RichOutput.foreground ConsoleColor.Green
+    |> context.Console.Write
+
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
   let! isSame = compareReceipt installPath location
   if isSame = false
   then
-    System.Console.WriteLine ("Installing: " + installPath)
+    log("Installing " + installPath + "... ")
 
     let installFromGit url revision hint = async {
       do! gitManager.FetchCommit url revision (hintToBranch hint)
@@ -227,10 +238,11 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
       do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
       do! Files.mkdirp installPath
       do! Archive.extractTo pathToCache installPath http.StripPrefix
-    | _ ->
-      new Exception("Unsupported location type") |> raise
+    log ("Writing installation receipt for " + installPath + "... ")
     do! writeReceipt installPath location
-  else System.Console.WriteLine (installPath + " is up-to-date")
+    logSuccess ("Installed " + installPath)
+  else 
+    logSuccess (installPath + " is already up-to-date")
 }
 
 let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : PackageIdentifier list) lockedPackage packages (pathToCell : string) = async {
@@ -337,7 +349,10 @@ let rec private installPackages (context : Tasks.TaskContext) (root : string) (p
 
   // Install packages
   for (package, lockedPackage) in packages |> Map.toSeq do
-    let installPath = Path.Combine(root, packageInstallPath [] package)
+    let installPath = 
+      Path.Combine(root, packageInstallPath [] package) 
+      |> Paths.normalize
+    
     let childParents = (parents @ [ package ])
 
     // Install child package sources

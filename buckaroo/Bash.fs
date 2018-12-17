@@ -2,7 +2,6 @@ module Buckaroo.Bash
 
 open System
 open System.Diagnostics
-open System.Threading
 open System.Threading.Tasks
 
 type ProgressCallback = string -> Unit
@@ -30,8 +29,6 @@ let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHan
   p.StartInfo <- startInfo
 
   let startProcess () =
-    System.Console.WriteLine command
-
     p.OutputDataReceived.AddHandler(new DataReceivedEventHandler(fun _ event ->
       if event.Data <> null
       then
@@ -97,8 +94,6 @@ let runBash (command : string) (stdoutHandler : ProgressCallback) (stderrHandler
     then
       stderrHandler event.Data
   ))
-
-  System.Console.WriteLine command
 
   p.Start() |> ignore
 
