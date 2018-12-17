@@ -134,7 +134,7 @@ module Command =
       sourceExplorer.FetchVersions Map.empty package
       |> AsyncSeq.toListAsync
     for v in versions do
-      Version.show v |> Console.WriteLine
+      Buckaroo.Version.show v |> Console.WriteLine
     return ()
   }
 
