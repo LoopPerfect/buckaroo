@@ -7,32 +7,31 @@ open System.Text.RegularExpressions
 open FSharpx.Control
 
 
-type CloneRequest = 
+type CloneRequest =
   | CloneRequest of string * AsyncReplyChannel<Async<string>>
 
-type GitManager (git : IGit, cacheDirectory : string) = 
+type GitManager (git : IGit, cacheDirectory : string) =
 
-  let mutable tagsCache = Map.empty
-  let mutable headsCache = Map.empty
+  let mutable refsCache = Map.empty
 
-  let bytesToHex bytes = 
-    bytes 
+  let bytesToHex bytes =
+    bytes
     |> Array.map (fun (x : byte) -> System.String.Format("{0:x2}", x))
     |> String.concat System.String.Empty
 
-  let sanitizeFilename (x : string) = 
-    let regexSearch = 
-      new string(Path.GetInvalidFileNameChars()) + 
-      new string(Path.GetInvalidPathChars()) + 
+  let sanitizeFilename (x : string) =
+    let regexSearch =
+      new string(Path.GetInvalidFileNameChars()) +
+      new string(Path.GetInvalidPathChars()) +
       "@.:\\/";
     let r = new Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
     Regex.Replace(r.Replace(x, "-"), "-{2,}", "-")
 
-  let cloneFolderName (url : string) = 
+  let cloneFolderName (url : string) =
     let bytes = System.Text.Encoding.UTF8.GetBytes url
-    let hash = 
-      bytes 
-      |> (new SHA256Managed()).ComputeHash 
+    let hash =
+      bytes
+      |> (new SHA256Managed()).ComputeHash
       |> bytesToHex
     let folder = sanitizeFilename(url).ToLower() + "-" + hash.Substring(0, 16)
     Path.Combine(cacheDirectory, folder)
@@ -43,23 +42,23 @@ type GitManager (git : IGit, cacheDirectory : string) =
       let! message = inbox.Receive()
       let (CloneRequest(url, replyChannel)) = message
       match cloneCache |> Map.tryFind url with
-      | Some task -> 
+      | Some task ->
         replyChannel.Reply(task)
-      | None -> 
+      | None ->
         let targetDirectory = cloneFolderName url
-        let task = 
+        let task =
           async {
             if Directory.Exists targetDirectory |> not
-            then 
+            then
               do! git.ShallowClone url targetDirectory
             return targetDirectory
           }
           |> Async.Cache
         cloneCache <- cloneCache |> Map.add url task
-        replyChannel.Reply(task) 
+        replyChannel.Reply(task)
   })
 
-  member private this.getBranchHint (targetDirectory : string) (hint: Option<Branch>) = async { 
+  member private this.getBranchHint (targetDirectory : string) (hint: Option<Branch>) = async {
     return!
       match hint with
       | None -> this.DefaultBranch targetDirectory
@@ -67,7 +66,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
   }
   member this.Clone (url : string) : Async<string> = async {
     let! res = mailboxProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
-    return! res 
+    return! res
   }
 
   member this.CopyFromCache  (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
@@ -88,15 +87,15 @@ type GitManager (git : IGit, cacheDirectory : string) =
       };
       fun () -> git.Unshallow targetDirectory;
     ]
-    
-    let! success = 
-      let rec loop = 
+
+    let! success =
+      let rec loop =
         function
           | [] -> async { return false }
           | op::ops -> async {
             do! op()
             let! success = git.HasCommit targetDirectory commit
-            return! 
+            return!
               match success with
               | true -> async { return true }
               | false -> loop ops
@@ -107,29 +106,19 @@ type GitManager (git : IGit, cacheDirectory : string) =
   }
   member this.FetchBranch (url : string) (branch : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
-    return! 
+    return!
       git.FetchBranch targetDirectory branch
       |> Async.Ignore
   }
-  member this.FetchTags (url : string) = async {
-    match tagsCache |> Map.tryFind url with
-    | Some tags -> return tags
-    | None -> 
-      let! tags = git.RemoteTags url
-      tagsCache <- tagsCache |> Map.add url tags
-      return tags
+  member this.FetchRefs (url : string) = async {
+    match refsCache |> Map.tryFind url with
+    | Some refs -> return refs
+    | None ->
+      let! refs = git.RemoteRefs url
+      refsCache <- refsCache |> Map.add url refs
+      return refs
   }
-
-  member this.FetchBranches (url : string) = async {
-    match headsCache |> Map.tryFind url with
-    | Some heads -> return heads
-    | None -> 
-      let! heads = git.RemoteHeads url
-      headsCache <- headsCache |> Map.add url heads
-      return heads
-  }
-
-  member this.FetchFile (url : string) (revision : Revision) (file : string) (hint : Option<Branch>) : Async<string> = 
+  member this.FetchFile (url : string) (revision : Revision) (file : string) (hint : Option<Branch>) : Async<string> =
     async {
       let! targetDirectory = this.Clone(url)
       do! this.FetchCommit url revision hint
@@ -138,7 +127,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
 
   member this.FetchCommits (url : string) (branch : Branch) = async {
     let! targetDirectory = this.Clone(url)
-    do! 
+    do!
       git.FetchBranch targetDirectory branch
       |> Async.Ignore
     return! git.FetchCommits targetDirectory branch
@@ -147,4 +136,3 @@ type GitManager (git : IGit, cacheDirectory : string) =
   member this.DefaultBranch (path) = async {
     return! git.DefaultBranch path
   }
-  

@@ -4,7 +4,7 @@ open System
 open System.IO
 open LibGit2Sharp
 
-type GitLib () = 
+type GitLib () =
 
   let createSharedGitConfig (path : string) =
     "[core]\n" +
@@ -24,21 +24,21 @@ type GitLib () =
     do! Files.mkdirp (Path.Combine (gitPath, "refs", "heads"))
     do! Files.mkdirp (Path.Combine (gitPath, "refs", "tags"))
     do! Files.mkdirp (Path.Combine (gitPath, "objects", "info"))
-    do! Files.mkdirp (Path.Combine (gitPath, "objects", "pack"))    
+    do! Files.mkdirp (Path.Combine (gitPath, "objects", "pack"))
     do! Files.writeFile (Path.Combine (gitPath, "description")) ""
     do! Files.writeFile (Path.Combine (gitPath, "info", "exclude")) ""
-    do! 
-      Files.copyFile 
-        (Path.Combine (src, "HEAD")) 
-        (Path.Combine (gitPath, "HEAD")) 
-            
-    do! 
-      Files.writeFile 
-        (Path.Combine (gitPath, "config")) 
+    do!
+      Files.copyFile
+        (Path.Combine (src, "HEAD"))
+        (Path.Combine (gitPath, "HEAD"))
+
+    do!
+      Files.writeFile
+        (Path.Combine (gitPath, "config"))
         (createSharedGitConfig src)
 
-    do! 
-      Files.writeFile 
+    do!
+      Files.writeFile
         (Path.Combine (gitPath, "objects", "info", "alternatives"))
         src
 
@@ -60,15 +60,15 @@ type GitLib () =
     return repo.Branches
       |> Seq.toList
   }
-  
 
-  interface IGit with 
+
+  interface IGit with
     member this.Clone (url : string) (directory : string) = async {
-      do! Async.SwitchToThreadPool()      
+      do! Async.SwitchToThreadPool()
       let options = new CloneOptions()
       options.IsBare <- true;
-      options.OnTransferProgress <- new LibGit2Sharp.Handlers.TransferProgressHandler(fun p -> 
-        System.Console.WriteLine ("Cloning " + url + 
+      options.OnTransferProgress <- new LibGit2Sharp.Handlers.TransferProgressHandler(fun p ->
+        System.Console.WriteLine ("Cloning " + url +
           " " + p.ReceivedObjects.ToString() + "(" + p.IndexedObjects.ToString() + ")" + " / " + p.TotalObjects.ToString()
         )
         true
@@ -76,17 +76,17 @@ type GitLib () =
 
       Repository.Clone (url, directory, options) |> ignore
     }
-   
+
     member this.ShallowClone (url : string) (directory : string) = async {
       return! (this :> IGit).Clone url directory
     }
 
     member this.HasCommit (gitPath : string) (revision : Revision) = async {
-      do! Async.SwitchToThreadPool()     
-      let repo = new Repository (gitPath)  
+      do! Async.SwitchToThreadPool()
+      let repo = new Repository (gitPath)
       let commit = repo.Lookup<Commit>(revision)
-      return 
-        match commit with 
+      return
+        match commit with
         | null -> false
         | _ -> true
     }
@@ -106,15 +106,15 @@ type GitLib () =
       do! Async.SwitchToThreadPool()
       let repo = new Repository (gitDir);
       let options = new CheckoutOptions()
-      options.OnCheckoutProgress <- new LibGit2Sharp.Handlers.CheckoutProgressHandler(fun (msg) (i) (n) -> 
+      options.OnCheckoutProgress <- new LibGit2Sharp.Handlers.CheckoutProgressHandler(fun (msg) (i) (n) ->
         System.Console.WriteLine ("Checking out " + revision +  " " + msg + " " + i.ToString() + " / " + n.ToString())
       )
 
-      Commands.Checkout(repo, revision, options) |> ignore     
+      Commands.Checkout(repo, revision, options) |> ignore
     }
 
     member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
-      let! exists = Files.directoryExists (installPath) 
+      let! exists = Files.directoryExists (installPath)
       if not exists then
         do! Files.mkdirp installPath
         do! sharedGitClone gitPath installPath
@@ -145,25 +145,23 @@ type GitLib () =
       } |> Seq.toList
     }
 
-    member this.RemoteTags (url : String) = async {
+    member this.RemoteRefs (url : String) = async {
       do! Async.SwitchToThreadPool()
-      return Repository.ListRemoteReferences(url) 
-        |> Seq.filter(fun ref -> ref.CanonicalName.Contains("refs/tags/"))
-        |> Seq.map(fun ref -> {
-          Commit = ref.TargetIdentifier; 
-          Name = ref.CanonicalName.Substring("refs/tags/".Length);
-        })
-        |> Seq.toList
-    }
-
-    member this.RemoteHeads (url : String) = async {
-      do! Async.SwitchToThreadPool()
-      return Repository.ListRemoteReferences(url) 
-        |> Seq.filter(fun ref -> ref.CanonicalName.Contains("refs/heads/"))
-        |> Seq.map(fun ref -> {
-          Head = ref.TargetIdentifier; 
-          Name = ref.CanonicalName.Substring("refs/heads/".Length);
-        })
+      return Repository.ListRemoteReferences(url)
+        |> Seq.map(fun ref ->
+          let isTag = ref.CanonicalName.Contains("refs/tags/")
+          match isTag with
+          | true -> {
+              Type = RefType.Tag
+              Revision = ref.TargetIdentifier;
+              Name = ref.CanonicalName.Substring("refs/tags/".Length);
+            }
+          | false -> {
+            Type = RefType.Branch
+            Revision = ref.TargetIdentifier;
+            Name = ref.CanonicalName.Substring("refs/heads/".Length);
+            }
+          )
         |> Seq.toList
     }
 
