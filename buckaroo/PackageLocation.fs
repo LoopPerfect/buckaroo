@@ -11,28 +11,14 @@ type HttpLocation = {
   Sha256 : string;
 }
 
-type Hint =
-| Branch of string
-| Tag of string
-| Default
-
-module Hint =
-  let fromVersion (v : Version) =
-    match v with
-    | Version.Branch b -> Hint.Branch b
-    | Version.Tag t -> Hint.Tag t
-    | _ -> Hint.Default
-
 type GitLocation = {
   Url : string;
-  Hint : Hint;
   Revision : Revision;
 }
 
 // GitHub is different to Git because we can switch HTTPS & SSH easily
 type HostedGitLocation = {
   Package : AdhocPackageIdentifier;
-  Hint : Hint;
   Revision : Revision;
 }
 
@@ -45,10 +31,7 @@ type PackageLocation =
 
 module PackageLocation =
 
-  let hintToBranch (hint : Hint) =
-    match hint with
-    | Branch b -> Option.Some b
-    | _ -> Option.None
+  open Buckaroo.Result
 
   let gitHubUrl (x : AdhocPackageIdentifier) =
     if Environment.GetEnvironmentVariable "BUCKAROO_GITHUB_SSH" |> isNull
@@ -80,3 +63,77 @@ module PackageLocation =
     | GitHub y -> (gitHubUrl y.Package) + "#" + y.Revision
     | BitBucket y -> (bitBucketUrl y.Package) + "#" + y.Revision
     | GitLab y -> (gitLabUrl y.Package) + "#" + y.Revision
+
+  let fromToml toml = result {
+    match toml |> Toml.tryGet "git" with
+    | Some gitToml -> 
+      let! git = 
+        gitToml 
+        |> Toml.asString
+        |> Result.mapError Toml.TomlError.show
+
+      let! revision = 
+        toml
+        |> Toml.get "revision"
+        |> Result.bind Toml.asString
+        |> Result.mapError Toml.TomlError.show
+
+      return PackageLocation.Git { Url = git; Revision = revision }
+    | None -> 
+      match toml |> Toml.tryGet "package" with 
+      | Some tomlPackage -> 
+        let! package = 
+          tomlPackage
+          |> Toml.asString
+          |> Result.mapError Toml.TomlError.show
+          |> Result.bind PackageIdentifier.parse
+        
+        let! revision = 
+          toml
+          |> Toml.get "revision"
+          |> Result.bind Toml.asString
+          |> Result.mapError Toml.TomlError.show
+
+        match package with 
+        | PackageIdentifier.Adhoc _ -> 
+          return! Result.Error "Expected a hosted-git package"
+        | PackageIdentifier.GitHub x -> 
+          return PackageLocation.GitHub { Package = x; Revision = revision }
+        | PackageIdentifier.BitBucket x -> 
+          return PackageLocation.BitBucket { Package = x; Revision = revision }
+        | PackageIdentifier.GitLab x -> 
+          return PackageLocation.GitLab { Package = x; Revision = revision }
+      | None -> 
+        let! url = 
+          toml
+          |> Toml.get "url"
+          |> Result.bind Toml.asString
+          |> Result.mapError Toml.TomlError.show
+
+        let! sha256 = 
+          toml
+          |> Toml.get "sha256"
+          |> Result.bind Toml.asString
+          |> Result.mapError Toml.TomlError.show
+
+        let! stripPrefix =
+          toml
+          |> Toml.tryGet "strip_prefix"
+          |> Option.map (Toml.asString)
+          |> Option.map (Result.map Option.Some)
+          |> Option.map (Result.mapError Toml.TomlError.show)
+          |> Option.defaultValue (Result.Ok Option.None)
+
+        let! archiveType =
+          toml
+          |> Toml.tryGet "type"
+          |> Option.map (Toml.asString)
+          |> Option.map (Result.mapError Toml.TomlError.show)
+          |> Option.map (Result.bind (ArchiveType.parse >> Result.mapError ArchiveType.ParseError.show))
+          |> Option.map (Result.map Option.Some)
+          |> Option.defaultValue (Result.Ok Option.None)
+
+        return 
+         PackageLocation.Http 
+         { Url = url; Sha256 = sha256; StripPrefix = stripPrefix; Type = archiveType }
+  }

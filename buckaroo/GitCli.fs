@@ -146,7 +146,7 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.RemoteRefs (url : String) = async {
-      let! output = runBash("git --no-pager ls-remote --ht " + url)
+      let! output = runBash("git --no-pager ls-remote --heads --tags " + url)
       return
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
         |> Seq.choose (fun x ->

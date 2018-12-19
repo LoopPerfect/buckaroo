@@ -2,10 +2,11 @@ module Buckaroo.InstallCommand
 
 open System
 open System.IO
-open Buckaroo.PackageLocation
-open Buckaroo.BuckConfig
 open FSharpx.Control
-open Buckaroo.RichOutput
+open Buckaroo
+open Buckaroo.BuckConfig
+open Buckaroo.Tasks
+open Buckaroo.Console
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =
@@ -101,95 +102,70 @@ let getReceiptPath installPath = installPath + ".receipt.toml"
 
 let writeReceipt (installPath : string) location = async {
   let receipt =
-    "[receipt]\n" +
-    "path = \"" + installPath + "\"\n" +
-    "lastUpdated = \"" + System.DateTime.Now.ToUniversalTime().ToString() + "\"\n" +
+    "last_updated = " + (Toml.formatDateTime <| System.DateTime.Now.ToUniversalTime()) + "\n" +
     match location with
     | Git g ->
-      "type = \"git\"\n" +
-      "url = \"" + g.Url + "\"\n" +
+      "git = \"" + g.Url + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
     | Http h ->
-      "type = \"http\"\n" +
       "url = \"" + h.Url + "\"\n" +
       "sha256 = \"" + (h.Sha256) + "\"\n" +
-      "stripPrefix = \"" + (h.StripPrefix |> Option.defaultValue("")) + "\"\n" +
-      "archiveType = \"" + (h.Type |> Option.map string |> Option.defaultValue "zip") + "\"\n"
+      (
+        h.StripPrefix 
+        |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n") 
+        |> Option.defaultValue("")
+      ) + 
+      (
+        h.Type
+        |> Option.map (fun x -> "archive_type = \"" + (string x) + "\"\n")
+        |> Option.defaultValue ""
+      )
     | GitHub g ->
-      "type = \"github\"\n" +
-      "owner = \""+ g.Package.Owner + "\"\n" +
-      "project = \"" + g.Package.Project + "\"\n" +
+      let package = PackageIdentifier.GitHub g.Package
+      "package = \"" + (PackageIdentifier.show package) + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
     | GitLab g ->
-      "type = \"gitlab\"\n" +
-      "owner = \""+ g.Package.Owner + "\"\n" +
-      "project = \"" + g.Package.Project + "\"\n" +
+      let package = PackageIdentifier.GitHub g.Package
+      "package = \"" + (PackageIdentifier.show package) + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
     | BitBucket b ->
-      "type = \"bitbucket\"\n" +
-      "owner = \""+ b.Package.Owner + "\"\n" +
-      "project = \"" + b.Package.Project + "\"\n" +
-      "revision = \"" + b.Revision + "\"\n"
+      let package = PackageIdentifier.GitHub b.Package
+      "package = \"" + (PackageIdentifier.show package) + "\"\n" +
+      "revision = \"" + b.Revision + "\"\n" 
 
   let receiptPath = getReceiptPath installPath
   do! Files.writeFile receiptPath receipt
-  return ()
 }
 
-let compareReceipt installPath location = async {
+let compareReceipt (context : TaskContext) installPath location = async {
   let receiptPath = getReceiptPath installPath
-  let! exists = Files.exists receiptPath
-  return!
-    match exists with
-    | false -> async { return false }
-    | true -> async {
-      let! receipt = Files.readFile receiptPath
-      let toml = Toml.parse receipt
-      return
-        match toml with
-        | Result.Error _ ->
-          false
-        | Result.Ok parsed ->
-          let oldReceipt =
-            parsed
-              |> Toml.get("receipt")
-              |> Result.bind Toml.asTable
 
-          let t =
-            oldReceipt
-              |> Result.bind (Toml.get "type")
-              |> Result.bind Toml.asString
-
-          match (t, location) with
-          | (Result.Ok "git", Git g) -> Toml.compareTable oldReceipt [
-              ("url", g.Url);
-              ("revision", g.Revision);
-            ]
-          | (Result.Ok "github", GitHub g) -> Toml.compareTable oldReceipt [
-              ("owner", g.Package.Owner);
-              ("project", g.Package.Project);
-              ("revision", g.Revision);
-            ]
-          | (Result.Ok "bitbucket", BitBucket g) -> Toml.compareTable oldReceipt [
-              ("owner", g.Package.Owner);
-              ("project", g.Package.Project);
-              ("revision", g.Revision);
-            ]
-          | (Result.Ok "gitlab", GitLab g) -> Toml.compareTable oldReceipt [
-              ("owner", g.Package.Owner);
-              ("project", g.Package.Project);
-              ("revision", g.Revision);
-            ]
-          | (Result.Ok "http", Http h) -> Toml.compareTable oldReceipt [
-              ("url", h.Url);
-              ("sha256", h.Sha256);
-              ("stripPrefix", h.StripPrefix |> Option.defaultValue("") );
-              ("archiveType", (h.Type |> Option.map string |> Option.defaultValue("zip")) );
-            ]
-          |  _ -> false
-  }
+  if File.Exists receiptPath
+  then
+    context.Console.Write("Reading receipt at " + receiptPath, LoggingLevel.Trace)
+    let! content = Files.readFile receiptPath
+    let maybePackageLocation = 
+      content 
+      |> Toml.parse
+      |> Result.mapError Toml.TomlError.show
+      |> Result.bind PackageLocation.fromToml
+    match maybePackageLocation with 
+    | Result.Ok receiptLocation -> 
+      if receiptLocation = location
+      then
+        return true
+      else
+        context.Console.Write("Outdated receipt at " + installPath, LoggingLevel.Trace)
+        return false
+    | Result.Error error -> 
+      context.Console.Write(error, LoggingLevel.Debug)
+      context.Console.Write("Invalid receipt at " + receiptPath + "; it will be deleted. ", LoggingLevel.Info)
+      do! Files.delete receiptPath
+      return false
+  else
+    context.Console.Write("No receipt found for " + installPath, LoggingLevel.Trace)
+    return false
 }
-
 
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
   let log x = 
@@ -205,28 +181,28 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
 
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
-  let! isSame = compareReceipt installPath location
+  let! isSame = compareReceipt context installPath location
   if isSame = false
   then
     log("Installing " + installPath + "... ")
 
-    let installFromGit url revision hint = async {
-      do! gitManager.FetchCommit url revision (hintToBranch hint)
+    let installFromGit url revision = async {
+      do! gitManager.FetchCommit url revision None
       do! gitManager.CopyFromCache url revision installPath
     }
 
     match location with
     | GitHub gitHub ->
       let url = PackageLocation.gitHubUrl gitHub.Package
-      do! installFromGit url gitHub.Revision gitHub.Hint
+      do! installFromGit url gitHub.Revision
     | BitBucket bitBucket ->
       let url = PackageLocation.bitBucketUrl bitBucket.Package
-      do! installFromGit url bitBucket.Revision bitBucket.Hint
+      do! installFromGit url bitBucket.Revision
     | Git git ->
-      do! installFromGit git.Url git.Revision git.Hint
+      do! installFromGit git.Url git.Revision
     | GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
-      do! installFromGit url gitLab.Revision gitLab.Hint
+      do! installFromGit url gitLab.Revision
     | Http http ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache

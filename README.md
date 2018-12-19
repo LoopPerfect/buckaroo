@@ -8,7 +8,7 @@ Experiments implementing Buckaroo in F#
 dotnet restore ./buckaroo
 dotnet build ./buckaroo
 dotnet run --project ./buckaroo-cli
-dotnet test ./buckaroo-tests
+dotnet test
 ```
 
 ## Releases 

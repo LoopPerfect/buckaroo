@@ -232,17 +232,8 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    let! hint =
-      x
-      |> Toml.get "version"
-      |> Result.bind (Toml.asString)
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Version.parse)
-      |> Result.map (Hint.fromVersion)
-
     return PackageLocation.Git {
       Url = uri;
-      Hint = hint;
       Revision = revision
     }
   }
@@ -279,14 +270,11 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind Version.parse
 
-    let hint = Hint.fromVersion version
-
     return
       PackageLocation.GitHub
         {
           Package = packageIdentifier;
           Revision = revision;
-          Hint = hint;
         }
   }
 
@@ -304,14 +292,11 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind Version.parse
 
-    let hint = Hint.fromVersion version
-
     return
       PackageLocation.BitBucket
         {
           Package = packageIdentifier;
           Revision = revision;
-          Hint = hint;
         }
   }
 
@@ -329,14 +314,11 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind Version.parse
 
-    let hint = Hint.fromVersion version
-
     return
       PackageLocation.GitLab
         {
           Package = packageIdentifier;
           Revision = revision;
-          Hint = hint;
         }
   }
 
