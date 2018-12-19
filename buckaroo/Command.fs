@@ -1,10 +1,11 @@
 namespace Buckaroo
 
+open Tasks
+
 type Command = 
 | Start
 | Help
 | Init
-| ListDependencies
 | Resolve
 | Install
 | Upgrade
@@ -16,7 +17,6 @@ module Command =
 
   open System
   open System.IO
-  open FSharp.Control
   open FParsec
   open Buckaroo.Constants
 
@@ -37,13 +37,6 @@ module Command =
     do! CharParsers.skipString "help"
     do! CharParsers.spaces
     return Help
-  }
-
-  let listDependenciesParser : Parser<Command, Unit> = parse {
-    do! CharParsers.spaces
-    do! CharParsers.skipString "list"
-    do! CharParsers.spaces
-    return ListDependencies
   }
 
   let resolveParser = parse {
@@ -91,8 +84,7 @@ module Command =
   }
 
   let parser = 
-    listDependenciesParser 
-    <|> resolveParser
+    resolveParser
     <|> upgradeParser
     <|> addDependenciesParser
     <|> removeDependenciesParser
@@ -107,62 +99,19 @@ module Command =
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
 
-  let listDependencies = async {
-    let! manifest = Tasks.readManifest "."
-    manifest.Dependencies
-    |> Seq.distinct
-    |> Seq.map Dependency.show
-    |> String.concat "\n"
-    |> Console.WriteLine
-    return ()
-  }
-
-  let add (context : Tasks.TaskContext) dependencies = async {
-    let sourceExplorer = context.SourceExplorer
-
-    let! manifest = Tasks.readManifest "."
-    let newManifest = { 
-      manifest with 
-        Dependencies = 
-          manifest.Dependencies 
-          |> Seq.append dependencies 
-          |> Set.ofSeq;
-    }
-    if manifest = newManifest 
-    then return ()
-    else 
-      let! maybeLock = async {
-        if File.Exists(Constants.LockFileName)
-        then
-          let! lock = Tasks.readLock
-          return Some lock
-        else
-          return None
-      }
-      let! resolution = Solver.solve sourceExplorer newManifest ResolutionStyle.Quick maybeLock 
-      match resolution with
-      | Resolution.Ok solution -> 
-        do! Tasks.writeManifest newManifest
-        do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
-        do! InstallCommand.task context
-      | _ -> ()
-      System.Console.WriteLine ("Success. ")
-      return ()
-  }
-
   let upgrade context = async {
     // TODO: Roll-back on failure! 
     do! ResolveCommand.task context ResolutionStyle.Upgrading
     do! InstallCommand.task context
   }
 
-  let init = async {
+  let init (context : TaskContext) = async {
     let path = ManifestFileName
     if File.Exists(path) |> not
     then
       use sw = File.CreateText(path)
       sw.Write(Manifest.zero |> Manifest.show)
-      System.Console.WriteLine("Wrote " + ManifestFileName)
+      context.Console.Write("Wrote " + ManifestFileName)
     else 
       new Exception("There is already a manifest in this directory") |> raise
   }
@@ -173,14 +122,13 @@ module Command =
     do! 
       match command with
       | Start -> StartCommand.task context
-      | Init -> init
+      | Init -> init context
       | Help -> HelpCommand.task context
-      | ListDependencies -> listDependencies
       | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
       | Upgrade -> upgrade context
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
-      | AddDependencies dependencies -> add context dependencies
+      | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
 
     do! context.Console.Flush()

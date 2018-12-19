@@ -6,6 +6,7 @@
     <Compile Include="Option.fs" />
     <Compile Include="Result.fs" />
     <Compile Include="Glob.fs" />
+    <Compile Include="RichOutput.fs" />
     <Compile Include="Constants.fs" />
     <Compile Include="Hashing.fs" />
     <Compile Include="Paths.fs" />
@@ -18,7 +19,6 @@
     <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />
     <Compile Include="Bash.fs" />
-    <Compile Include="RichOutput.fs" />
     <Compile Include="ConsoleManager.fs" />
     <Compile Include="DownloadManager.fs" />
     <Compile Include="Git.fs" />
@@ -43,14 +43,15 @@
     <Compile Include="DefaultSourceExplorer.fs" />
     <Compile Include="CachedSourceExplorer.fs" />
     <Compile Include="LoggingSourceExplorer.fs" />
-    <Compile Include="Solver.fs" />
     <Compile Include="Tasks.fs" />
+    <Compile Include="Solver.fs" />
     <Compile Include="StartCommand.fs" />
     <Compile Include="HelpCommand.fs" />
     <Compile Include="InstallCommand.fs" />
     <Compile Include="ResolveCommand.fs" />
     <Compile Include="RemoveCommand.fs" />
     <Compile Include="QuickstartCommand.fs" />
+    <Compile Include="AddCommand.fs" />
     <Compile Include="Command.fs" />
   </ItemGroup>
   <ItemGroup>

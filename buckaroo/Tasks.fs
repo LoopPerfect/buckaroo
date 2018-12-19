@@ -25,7 +25,7 @@ let getContext = async {
   let consoleManager = new ConsoleManager(LoggingLevel.Trace)
 
   let! cachePath = getCachePath
-  let downloadManager = new DownloadManager(cachePath)
+  let downloadManager = new DownloadManager(consoleManager, cachePath)
 
   let useLibGit2 = System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null
   

@@ -2,6 +2,7 @@ module Buckaroo.QuickstartCommand
 
 open System
 open System.Text.RegularExpressions
+open Buckaroo.Tasks
 
 let private defaultBuck (libraryName : string) = 
   [
@@ -67,20 +68,21 @@ let private defaultMain =
 let isValidProjectName (candidate : string) = 
   (new Regex(@"^[A-Za-z0-9\-_]{2,32}$")).IsMatch(candidate)
 
-let requestProjectName = async {
+let requestProjectName (context : TaskContext) = async {
   let mutable candidate = ""
 
   while isValidProjectName candidate |> not do 
-    System.Console.WriteLine("Please enter a project name (alphanumeric, underscores, dashes): ")
-    candidate <- System.Console.ReadLine().Trim()
+    context.Console.Write("Please enter a project name (alphanumeric + underscores + dashes): ")
+    let! input = context.Console.Read()
+    candidate <- input.Trim()
 
   return candidate
 }
 
 let task (context : Tasks.TaskContext) = async {
-  let! projectName = requestProjectName
+  let! projectName = requestProjectName context
 
-  Console.WriteLine("Writing project files... ")
+  context.Console.Write("Writing project files... ")
 
   do! Tasks.writeManifest Manifest.zero
   do! Files.mkdirp "src"
@@ -93,7 +95,11 @@ let task (context : Tasks.TaskContext) = async {
   do! ResolveCommand.task context ResolutionStyle.Quick
   do! InstallCommand.task context
 
-  Console.WriteLine("To start your app: ")
-  Console.WriteLine("$ buck run :app")
-  Console.WriteLine("")
+  context.Console.Write("To start your app: ")
+  context.Console.Write(
+    "$ buck run :app" 
+    |> RichOutput.text 
+    |> RichOutput.foreground ConsoleColor.Green
+  )
+  context.Console.Write("")
 }

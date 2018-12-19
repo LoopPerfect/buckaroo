@@ -11,6 +11,8 @@ type PackageIdentifier =
 module PackageIdentifier =
 
   open FParsec
+  open Buckaroo.RichOutput
+
   let show (id : PackageIdentifier) =
     match id with
     | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
@@ -18,6 +20,18 @@ module PackageIdentifier =
     | GitLab x -> "gitlab.com/" + x.Owner + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
+  let showRich (id : PackageIdentifier) = 
+    let host = text >> (foreground System.ConsoleColor.Magenta)
+    let owner = text >> (foreground System.ConsoleColor.Cyan)
+    let project = text >> (foreground System.ConsoleColor.Green)
+    let subtle = text >> (foreground System.ConsoleColor.DarkGray)
+
+    match id with
+    | GitHub x -> (host "github.com") + (subtle "/") + (owner x.Owner) + (subtle "/") + (project x.Project)
+    | BitBucket x -> (host "bitbucket.org") + (subtle "/") + x.Owner + (subtle "/") + (project x.Project)
+    | GitLab x -> (host "gitlab.com") + (subtle "/") + x.Owner + (subtle "/") + (project x.Project)
+    | Adhoc x -> (owner x.Owner) + (subtle "/") + (project x.Project)
+  
   let private gitHubIdentifierParser =
     CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z_.\d]|-(?=[a-zA-Z_.\d])){0,38}"
 

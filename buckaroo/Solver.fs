@@ -1,5 +1,8 @@
 namespace Buckaroo
 
+open Buckaroo.Tasks
+open Buckaroo.RichOutput
+
 module Solver =
 
   open FSharp.Control
@@ -150,11 +153,18 @@ module Solver =
             yield (atom, location)
   }
 
-  let rec private step (sourceExplorer : ISourceExplorer) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
+  let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
+
+    let sourceExplorer = context.SourceExplorer
 
     let log (x : string) =
-      "[" + (string state.Depth) + "] " + x
-      |> System.Console.WriteLine
+      (
+        "[" + (string state.Depth) + "] " 
+        |> RichOutput.text 
+        |> RichOutput.foreground System.ConsoleColor.DarkGray
+      ) + 
+      (x |> RichOutput.text)
+      |> context.Console.Write
 
     let conflicts =
       findConflicts state.Solution state.Constraints
@@ -214,7 +224,7 @@ module Solver =
                     |> AsyncSeq.ofSeq
                 with error ->
                   log("Could not fetch buckaroo.lock.toml for " + (PackageLocation.show location))
-                  System.Console.WriteLine error
+                  log(string error)
                   ()
               }
 
@@ -229,7 +239,7 @@ module Solver =
               }
 
             let privatePackagesSolutions =
-              step sourceExplorer strategy privatePackagesSolverState
+              step context strategy privatePackagesSolverState
               |> AsyncSeq.choose (fun resolution ->
                 match resolution with
                 | Resolution.Ok solution -> Some solution
@@ -262,11 +272,11 @@ module Solver =
                       |> AsyncSeq.append freshHints;
                 }
 
-                yield! step sourceExplorer strategy nextState
+                yield! step context strategy nextState
               })
           with error ->
             log("Error exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
-            System.Console.WriteLine(error)
+            log(string error)
             yield Resolution.Error error
 
         // We've run out of versions to try
@@ -291,7 +301,7 @@ module Solver =
     |> Async.RunSynchronously
     |> List.tryHead
 
-  let solve (sourceExplorer : ISourceExplorer) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
+  let solve (context : TaskContext) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
     let hints =
       lock
       |> Option.map (lockToHints >> AsyncSeq.ofSeq)
@@ -315,7 +325,7 @@ module Solver =
     }
 
     let resolutions =
-      step sourceExplorer strategy state
+      step context strategy state
 
     return
       resolutions

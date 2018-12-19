@@ -11,6 +11,20 @@ type RichOutput =
   {
     Segments : Segment list
   }
+    override this.ToString() = 
+      this.Segments 
+      |> Seq.map (fun x -> x.Text)
+      |> String.concat ""
+
+    static member (+) (a, b : string) = 
+      {
+        a 
+          with 
+            Segments = 
+              a.Segments 
+              @ [ { Text = b; Foreground = None; Background = None } ]
+      }
+
     static member (+) (a, b : Segment) = 
       {
         a 
@@ -85,3 +99,11 @@ let noBackground richOutput =
             x with Background = None; 
           })
   }
+
+let concat sep xs = 
+  let rec loop sep xs = 
+    match xs with 
+    | [ x ] -> x
+    | head::tail -> (head + sep + (loop sep tail))
+    | [] -> text ""
+  loop sep (Seq.toList xs)

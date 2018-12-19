@@ -34,24 +34,22 @@ let private readPassword () =
   loop ""
 
 let private renderRichOutput (xs : RichOutput) = 
-  let mutable previousForeground = Option.None
-  let mutable previousBackground = Option.None
-
   for x in xs.Segments do
-    match (x.Foreground, x.Foreground = previousForeground) with
-    | (Some c, false) -> 
+    Console.ResetColor()
+
+    match x.Foreground with
+    | Some c -> 
       Console.ForegroundColor <- c
-      previousForeground <- x.Foreground
     | _ -> ()
 
-    match (x.Background, x.Background = previousBackground) with
-    | (Some c, false) -> 
+    match x.Background with
+    | Some c -> 
       Console.BackgroundColor <- c
-      previousBackground <- x.Background
     | _ -> ()
 
-    Console.WriteLine x.Text
+    Console.Write x.Text
 
+  Console.Write(System.Environment.NewLine)
   Console.ResetColor()
 
 type ConsoleMessage = 
