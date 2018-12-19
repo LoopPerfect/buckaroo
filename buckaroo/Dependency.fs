@@ -21,6 +21,32 @@ module Dependency =
         |> Option.defaultValue ""
       )
 
+  let showRich (x : Dependency) = 
+    (
+      PackageIdentifier.show x.Package 
+      |> RichOutput.text
+      |> RichOutput.foreground System.ConsoleColor.Cyan
+    ) + 
+    "@" + 
+    (
+      Constraint.show x.Constraint 
+      |> RichOutput.text
+      |> RichOutput.foreground System.ConsoleColor.DarkRed
+    ) + 
+    (
+      x.Targets 
+      |> Option.map (fun xs -> 
+        (RichOutput.text "[ ") + 
+        (xs 
+          |> Seq.map Target.show 
+          |> String.concat " " 
+          |> RichOutput.text 
+          |> RichOutput.foreground System.ConsoleColor.Green) + 
+        " ]"
+      ) 
+      |> Option.defaultValue (RichOutput.text "")
+    )
+
   let parser = parse {
     let! p = PackageIdentifier.parser
     do! CharParsers.skipString "@"

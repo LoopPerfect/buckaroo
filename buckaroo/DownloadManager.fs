@@ -5,6 +5,8 @@ open System.IO
 open System.Text.RegularExpressions
 open FSharp.Data
 open FSharpx.Control
+open Buckaroo.RichOutput
+open Buckaroo.Console
 open Buckaroo.Hashing
 
 type CopyMessage = 
@@ -13,7 +15,7 @@ type CopyMessage =
 type DownloadMessage = 
 | Download of string * AsyncReplyChannel<Async<string>>
 
-type DownloadManager (cacheDirectory : string) = 
+type DownloadManager (console : ConsoleManager, cacheDirectory : string) = 
   
   let sanitizeFilename (x : string) = 
     let regexSearch = 
@@ -31,7 +33,11 @@ type DownloadManager (cacheDirectory : string) =
     Path.Combine(cacheDirectory, hash)
 
   let downloadFile (url : string) (target : string) = async {
-    System.Console.WriteLine ("Downloading " + url + " to " + target + "... ")
+    console.Write (
+      (text "Downloading ") + 
+      (text url |> foreground ConsoleColor.Magenta) + 
+      " to " + 
+      (text target |> foreground ConsoleColor.Cyan) + "... ")
     let! request = Http.AsyncRequestStream url
     use outputFile = new FileStream(target, FileMode.Create)
     do! 
@@ -77,7 +83,7 @@ type DownloadManager (cacheDirectory : string) =
           async {
             if File.Exists target
             then
-              System.Console.WriteLine ("Deleting " + target + "... ")
+              console.Write ((text "Deleting ") + (text target |> foreground ConsoleColor.Cyan) + "... ")
               do! Files.delete target
             let! cachePath = downloadFile url target 
             let! hash = Files.sha256 cachePath

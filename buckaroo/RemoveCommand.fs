@@ -1,15 +1,14 @@
 module Buckaroo.RemoveCommand
 
 open System
+open Buckaroo.RichOutput
 
 let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = async {
-  Console.WriteLine(
-    "Removing [ " + 
-    (packages |> Seq.map PackageIdentifier.show |> String.concat " ") + 
+  context.Console.Write(
+    (text "Removing [ ") + 
+    (packages |> Seq.map PackageIdentifier.showRich |> RichOutput.concat (text " ")) + 
     " ]... "
   )
-
-  let sourceExplorer = context.SourceExplorer
 
   let! manifest = Tasks.readManifest "."
 
@@ -19,10 +18,10 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
   
   if manifest = newManifest 
   then
-    Console.WriteLine("No changes were made. ")
+    context.Console.Write("No changes to be made. " |> text |> foreground ConsoleColor.Green)
   else
     let! maybeLock = Tasks.readLockIfPresent
-    let! resolution = Solver.solve sourceExplorer newManifest ResolutionStyle.Quick maybeLock 
+    let! resolution = Solver.solve context newManifest ResolutionStyle.Quick maybeLock 
 
     match resolution with
     | Ok solution -> 
@@ -32,25 +31,25 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
         maybeLock 
         |> Option.defaultValue { newLock with Packages = Map.empty }
       
-      Console.WriteLine(Lock.showDiff lock newLock)
+      context.Console.Write(Lock.showDiff lock newLock)
 
       let removedPackages = 
         lock.Packages
         |> Map.toSeq
         |> Seq.filter (fun (package, _) -> newLock.Packages |> Map.containsKey package |> not)
 
-      for (package, lockedPackage) in removedPackages do 
+      for (package, _) in removedPackages do 
         let path = InstallCommand.packageInstallPath [] package
-        Console.WriteLine("Deleting " + path + "... ")
+        context.Console.Write("Deleting " + path + "... ")
         Files.deleteDirectoryIfExists path |> ignore
 
       do! Tasks.writeManifest newManifest
       do! Tasks.writeLock newLock
       do! InstallCommand.task context
 
-      Console.WriteLine("Done. ")
+      context.Console.Write("Done. " |> text |> foreground ConsoleColor.Green)
 
     | x -> 
-      Console.WriteLine(x)
-      Console.WriteLine("No changes were written. ")
+      context.Console.Write(string x)
+      context.Console.Write("No changes were written. " |> text |> foreground ConsoleColor.Green)
 }

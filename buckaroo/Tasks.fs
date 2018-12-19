@@ -2,8 +2,10 @@ module Buckaroo.Tasks
 
 open System
 open System.IO
+open Buckaroo.Console
 
 type TaskContext = {
+  Console : ConsoleManager; 
   DownloadManager : DownloadManager; 
   GitManager : GitManager; 
   SourceExplorer : ISourceExplorer;
@@ -20,20 +22,23 @@ let private getCachePath = async {
 }
 
 let getContext = async {
+  let consoleManager = new ConsoleManager(LoggingLevel.Trace)
+
   let! cachePath = getCachePath
-  let downloadManager = new DownloadManager(cachePath)
+  let downloadManager = new DownloadManager(consoleManager, cachePath)
 
   let useLibGit2 = System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null
   
   let git = 
     if useLibGit2  
-      then new GitLib() :> IGit
-      else new GitCli() :> IGit
+      then new GitLib(consoleManager) :> IGit
+      else new GitCli(consoleManager) :> IGit
   
   let gitManager = new GitManager(git, cachePath)
   let sourceExplorer = new DefaultSourceExplorer(downloadManager, gitManager)
 
   return {
+    Console = consoleManager; 
     DownloadManager = downloadManager; 
     GitManager = gitManager; 
     SourceExplorer = sourceExplorer;
