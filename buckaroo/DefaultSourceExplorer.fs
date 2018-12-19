@@ -14,39 +14,43 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
   let fetchLocationsFromGit (url : string) (version : Version) = asyncSeq {
     match version with
     | Buckaroo.SemVerVersion semVer ->
-      let! tags = gitManager.FetchTags url
+      let! refs = gitManager.FetchRefs url
       yield!
-        tags
+        refs
+        |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
         |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
-        |> Seq.map (fun t -> t.Commit)
+        |> Seq.map (fun t -> t.Revision)
         |> Seq.distinct
         |> Seq.map (fun x -> (Hint.Default, x))
         |> AsyncSeq.ofSeq
     | Buckaroo.Version.Branch branch ->
-      let! branches = gitManager.FetchBranches url
-
+      let! refs = gitManager.FetchRefs url
+      let  branches =
+        refs
+        |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
       yield!
         branches
         |> Seq.filter (fun x -> x.Name = branch)
-        |> Seq.map (fun x -> (Hint.Branch x.Name, x.Head))
+        |> Seq.map (fun x -> (Hint.Branch x.Name, x.Revision))
         |> AsyncSeq.ofSeq
 
       do! gitManager.FetchBranch url branch
       let! commits = gitManager.FetchCommits url branch
       yield!
         commits
-        |> Seq.except (branches |> Seq.map (fun x -> x.Head))
+        |> Seq.except (branches |> Seq.map (fun x -> x.Revision))
         |> Seq.map (fun x -> (Hint.Branch branch, x))
         |> AsyncSeq.ofSeq
 
     | Buckaroo.Version.Revision r ->
       yield (Hint.Default, r)
     | Buckaroo.Version.Tag tag ->
-      let! tags = gitManager.FetchTags url
+      let! refs = gitManager.FetchRefs url
       yield!
-        tags
+        refs
+        |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
         |> Seq.filter (fun t -> t.Name = tag)
-        |> Seq.map (fun t -> t.Commit)
+        |> Seq.map (fun t -> t.Revision)
         |> Seq.distinct
         |> Seq.map (fun x -> (Hint.Default, x))
         |> AsyncSeq.ofSeq
@@ -123,12 +127,11 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
   }
 
   let fetchVersionsFromGit (url : string) = asyncSeq {
-    let! branchesTask =
-      gitManager.FetchBranches url
-      |> Async.StartChild
+    let! refs = gitManager.FetchRefs url
 
     // Tags and sem-vers
-    let! tags = gitManager.FetchTags url
+    let tags = refs |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
+    let branches = refs |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
 
     yield!
       tags
@@ -151,8 +154,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       )
       |> AsyncSeq.ofSeq
 
-    let! branches = branchesTask
-
     // Branches
     yield!
       branches
@@ -164,19 +165,19 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     // Tag Revisions
     yield!
       tags
-      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Commit)
+      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Revision)
       |> AsyncSeq.ofSeq
 
     // Branch Revisions
     yield!
       branches
-      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Head)
+      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Revision)
       |> AsyncSeq.ofSeq
 
     let alreadyYielded =
       branches
-      |> Seq.map (fun x -> x.Head)
-      |> Seq.append (tags |> Seq.map (fun x -> x.Commit))
+      |> Seq.map (fun x -> x.Revision)
+      |> Seq.append (tags |> Seq.map (fun x -> x.Revision))
       |> Set.ofSeq
 
     // All Revisions
