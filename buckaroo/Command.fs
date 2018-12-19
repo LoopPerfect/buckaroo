@@ -6,6 +6,7 @@ type Command =
 | Start
 | Help
 | Init
+| Version
 | Resolve
 | Install
 | Upgrade
@@ -18,7 +19,6 @@ module Command =
   open System
   open System.IO
   open FParsec
-  open Buckaroo.Constants
 
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
@@ -37,6 +37,13 @@ module Command =
     do! CharParsers.skipString "help"
     do! CharParsers.spaces
     return Help
+  }
+
+  let versionParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "version"
+    do! CharParsers.spaces
+    return Command.Version
   }
 
   let resolveParser = parse {
@@ -91,6 +98,7 @@ module Command =
     <|> installParser
     <|> quickstartParser
     <|> initParser
+    <|> versionParser
     <|> helpParser
     <|> startParser
 
@@ -105,13 +113,13 @@ module Command =
     do! InstallCommand.task context
   }
 
-  let init (context : TaskContext) = async {
-    let path = ManifestFileName
+  let init context = async {
+    let path = Constants.ManifestFileName
     if File.Exists(path) |> not
     then
       use sw = File.CreateText(path)
       sw.Write(Manifest.zero |> Manifest.show)
-      context.Console.Write("Wrote " + ManifestFileName)
+      context.Console.Write("Wrote " + Constants.ManifestFileName)
     else 
       new Exception("There is already a manifest in this directory") |> raise
   }
@@ -124,6 +132,7 @@ module Command =
       | Start -> StartCommand.task context
       | Init -> init context
       | Help -> HelpCommand.task context
+      | Version -> VersionCommand.task context
       | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
       | Upgrade -> upgrade context
       | Install -> InstallCommand.task context

@@ -52,7 +52,9 @@
     <Compile Include="RemoveCommand.fs" />
     <Compile Include="QuickstartCommand.fs" />
     <Compile Include="AddCommand.fs" />
+    <Compile Include="VersionCommand.fs" />
     <Compile Include="Command.fs" />
+    <Compile Include="Telemetry.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.3" />
