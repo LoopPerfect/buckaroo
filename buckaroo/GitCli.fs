@@ -4,16 +4,16 @@ open System
 open System.Text
 open Buckaroo.Console
 
-type GitCli (console : ConsoleManager) = 
+type GitCli (console : ConsoleManager) =
   let nl = System.Environment.NewLine
 
   let runBash command = async {
-    let rt = 
+    let rt =
       (
         "Running bash "
         |> RichOutput.text
         |> RichOutput.foreground ConsoleColor.Gray
-      ) + 
+      ) +
       (
         command
         |> RichOutput.text

@@ -29,24 +29,47 @@ module Lock =
         )
       f x 0
 
-  let showDiff (before : Lock) (after : Lock) : string =
-    let additions =
-      after.Packages
+  let rec private flattenLockedPackage (parents : PackageIdentifier list) (package : LockedPackage) = seq {
+    yield (parents, (package.Location, package.Version))
+    yield!
+      package.PrivatePackages
       |> Map.toSeq
-      |> Seq.filter (fun (k, v) -> before.Packages |> Map.containsKey k |> not)
+      |> Seq.collect (fun (k, v) -> flattenLockedPackage (parents @ [ k ]) v)
+  }
+
+  let private flattenLock (lock : Lock) = seq {
+    for (package, lockedPackage) in lock.Packages |> Map.toSeq do
+      yield! flattenLockedPackage [ package ] lockedPackage
+  }
+
+  let showDiff (before : Lock) (after : Lock) : string =
+    let beforeFlat =
+      before
+      |> flattenLock
+      |> Map.ofSeq
+
+    let afterFlat =
+      after
+      |> flattenLock
+      |> Map.ofSeq
+
+    let additions =
+      afterFlat
+      |> Map.toSeq
+      |> Seq.filter (fun (k, v) -> beforeFlat |> Map.containsKey k |> not)
       |> Seq.distinct
 
     let removals =
-      before.Packages
+      beforeFlat
       |> Map.toSeq
-      |> Seq.filter (fun (k, v) -> after.Packages |> Map.containsKey k |> not)
+      |> Seq.filter (fun (k, v) -> afterFlat |> Map.containsKey k |> not)
       |> Seq.distinct
 
     let changes =
-      before.Packages
+      afterFlat
       |> Map.toSeq
       |> Seq.choose (fun (k, v) ->
-        after.Packages
+        beforeFlat
         |> Map.tryFind k
         |> Option.bind (fun y ->
           if y <> v
@@ -59,28 +82,28 @@ module Lock =
       "Added: ";
       (
         additions
-        |> Seq.map (fun (k, v) ->
-          "  " + (PackageIdentifier.show k) +
-          " -> " + (LockedPackage.show v)
+        |> Seq.map (fun (k, (l, v)) ->
+          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+          " -> " + (PackageLocation.show l) + "@" + (Version.show v)
         )
         |> String.concat "\n"
       );
       "Removed: ";
       (
         removals
-        |> Seq.map (fun (k, v) ->
-          "  " + (PackageIdentifier.show k) +
-          " -> " + (LockedPackage.show v)
+        |> Seq.map (fun (k, (l, v)) ->
+          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+          " -> " + (PackageLocation.show l) + "@" + (Version.show v)
         )
         |> String.concat "\n"
       );
       "Changed: ";
       (
         changes
-        |> Seq.map (fun (p, before, after) ->
-          "  " + (PackageIdentifier.show p) +
-          " " + (LockedPackage.show before) +
-          " -> " + (LockedPackage.show after)
+        |> Seq.map (fun (k, (bl, bv), (al, av)) ->
+          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+          " " + (PackageLocation.show bl) + "@" + (Version.show bv) +
+          " -> " + (PackageLocation.show al) + "@" + (Version.show av)
         )
         |> String.concat "\n"
       );
@@ -127,14 +150,6 @@ module Lock =
       |> extractPackages
 
     { ManifestHash = manifestHash; Dependencies = dependencies; Packages = packages }
-
-  let rec private flattenLockedPackage (parents : PackageIdentifier list) (package : LockedPackage) = seq {
-    yield (parents, (package.Location, package.Version))
-    yield!
-      package.PrivatePackages
-      |> Map.toSeq
-      |> Seq.collect (fun (k, v) -> flattenLockedPackage (parents @ [ k ]) v)
-  }
 
   let private quote x = "\"" + x + "\""
 
