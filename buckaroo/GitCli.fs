@@ -4,16 +4,16 @@ open System
 open System.Text
 open Buckaroo.Console
 
-type GitCli (console : ConsoleManager) = 
+type GitCli (console : ConsoleManager) =
   let nl = System.Environment.NewLine
 
   let runBash command = async {
-    let rt = 
+    let rt =
       (
         "Running bash "
         |> RichOutput.text
         |> RichOutput.foreground ConsoleColor.Gray
-      ) + 
+      ) +
       (
         command
         |> RichOutput.text
@@ -146,7 +146,7 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.RemoteRefs (url : String) = async {
-      let! output = runBash("git --no-pager ls-remote --ht " + url)
+      let! output = runBash("git --no-pager ls-remote --heads --tags " + url)
       return
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
         |> Seq.choose (fun x ->
