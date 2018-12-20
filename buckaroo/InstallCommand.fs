@@ -199,23 +199,23 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
   then
     System.Console.WriteLine ("Installing: " + installPath)
 
-    let installFromGit url revision hint = async {
-      do! gitManager.FetchCommit url revision (hintToBranch hint)
+    let installFromGit url revision = async {
+      do! gitManager.FetchCommit url revision
       do! gitManager.CopyFromCache url revision installPath
     }
 
     match location with
     | GitHub gitHub ->
       let url = PackageLocation.gitHubUrl gitHub.Package
-      do! installFromGit url gitHub.Revision gitHub.Hint
+      do! installFromGit url gitHub.Revision
     | BitBucket bitBucket ->
       let url = PackageLocation.bitBucketUrl bitBucket.Package
-      do! installFromGit url bitBucket.Revision bitBucket.Hint
+      do! installFromGit url bitBucket.Revision
     | PackageLocation.Git git ->
-      do! installFromGit git.Url git.Revision git.Hint
+      do! installFromGit git.Url git.Revision
     | GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
-      do! installFromGit url gitLab.Revision gitLab.Hint
+      do! installFromGit url gitLab.Revision
     | PackageLocation.Http http ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache

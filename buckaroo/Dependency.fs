@@ -1,23 +1,23 @@
 namespace Buckaroo
 
-type Dependency = { 
-  Package : PackageIdentifier; 
-  Constraint : Constraint; 
+type Dependency = {
+  Package : PackageIdentifier;
+  Constraint : Constraint;
   Targets : Target list option
 }
 
-module Dependency = 
+module Dependency =
 
   open FParsec
 
-  let satisfies (dependency : Dependency) (atom : Atom) = 
-    atom.Package = dependency.Package && atom.Version |> Constraint.satisfies dependency.Constraint
+  let satisfies (dependency : Dependency) (atom : Atom) =
+    atom.Package = dependency.Package && atom.Versions |> Constraint.satisfiesSet dependency.Constraint
 
-  let show (x : Dependency) = 
-    (PackageIdentifier.show x.Package) + "@" + Constraint.show x.Constraint + 
+  let show (x : Dependency) =
+    (PackageIdentifier.show x.Package) + "@" + Constraint.show x.Constraint +
       (
-        x.Targets 
-        |> Option.map (fun xs -> "[ " + (xs |> Seq.map Target.show |> String.concat " ") + " ]") 
+        x.Targets
+        |> Option.map (fun xs -> "[ " + (xs |> Seq.map Target.show |> String.concat " ") + " ]")
         |> Option.defaultValue ""
       )
 
@@ -25,11 +25,11 @@ module Dependency =
     let! p = PackageIdentifier.parser
     do! CharParsers.skipString "@"
     let! c = Constraint.parser
-    return 
+    return
       { Package = p; Constraint = c; Targets = None }
   }
 
-  let parse (x : string) : Result<Dependency, string> = 
+  let parse (x : string) : Result<Dependency, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(errorMsg, _, _) -> Result.Error errorMsg

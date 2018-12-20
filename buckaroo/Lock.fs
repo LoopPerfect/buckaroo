@@ -171,10 +171,10 @@ module Lock =
       |> Map.toSeq
       |> Seq.collect (fun (k, v) -> flattenLockedPackage [ k ] v)
       |> Seq.map(fun x ->
-        let (parents, (location, version)) = x
+        let (parents, (location, versions)) = x
         "[" + (lockKey parents) + "]\n" +
-        "versions = [ " +
-        (version
+        "versions = [" +
+        (versions
           |> Set.toSeq
           |> Seq.map Version.show
           |> Seq.map (fun x ->"\"" + x + "\"")
@@ -281,13 +281,6 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    let! version =
-      x
-      |> Toml.get "version"
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
-
     return
       PackageLocation.GitHub
         {
@@ -303,13 +296,6 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    let! version =
-      x
-      |> Toml.get "version"
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
-
     return
       PackageLocation.BitBucket
         {
@@ -324,13 +310,6 @@ module Lock =
       |> Toml.get "revision"
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-
-    let! version =
-      x
-      |> Toml.get "version"
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
 
     return
       PackageLocation.GitLab
