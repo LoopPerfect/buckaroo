@@ -71,7 +71,7 @@ let parse (x : string) =
 
 
 let compareFieldIn toml field x =
-  toml                   
+  toml
     |> Result.bind (get field)
     |> Result.bind asString
     |> Result.map (fun y -> x = y)
@@ -83,3 +83,6 @@ let rec compareTable table fields =
     | Result.Ok true -> compareTable table xs
     | _ -> false
   | [] -> true
+
+let formatDateTime (x : System.DateTime) = 
+  x.ToString("yyyy-MM-dd'T'HH:mm:ss")

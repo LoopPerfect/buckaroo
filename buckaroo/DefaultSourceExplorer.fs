@@ -21,7 +21,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
         |> Seq.map (fun t -> t.Revision)
         |> Seq.distinct
-        |> Seq.map (fun x -> (Hint.Default, x))
         |> AsyncSeq.ofSeq
     | Buckaroo.Version.Branch branch ->
       let! refs = gitManager.FetchRefs url
@@ -31,7 +30,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       yield!
         branches
         |> Seq.filter (fun x -> x.Name = branch)
-        |> Seq.map (fun x -> (Hint.Branch x.Name, x.Revision))
+        |> Seq.map (fun x -> x.Revision)
         |> AsyncSeq.ofSeq
 
       do! gitManager.FetchBranch url branch
@@ -39,11 +38,10 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       yield!
         commits
         |> Seq.except (branches |> Seq.map (fun x -> x.Revision))
-        |> Seq.map (fun x -> (Hint.Branch branch, x))
         |> AsyncSeq.ofSeq
 
     | Buckaroo.Version.Revision r ->
-      yield (Hint.Default, r)
+      yield r
     | Buckaroo.Version.Tag tag ->
       let! refs = gitManager.FetchRefs url
       yield!
@@ -52,7 +50,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         |> Seq.filter (fun t -> t.Name = tag)
         |> Seq.map (fun t -> t.Revision)
         |> Seq.distinct
-        |> Seq.map (fun x -> (Hint.Default, x))
         |> AsyncSeq.ofSeq
     | Buckaroo.Version.Latest -> ()
   }
@@ -62,10 +59,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageSource.Git git ->
       yield!
         fetchLocationsFromGit git.Uri version
-        |> AsyncSeq.map (fun (hint, revision) ->
+        |> AsyncSeq.map (fun revision ->
           PackageLocation.Git {
             Url = git.Uri;
-            Hint = hint;
             Revision = revision;
           }
         )
@@ -199,7 +195,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageLocation.GitLab gitLab ->
       GitLabApi.fetchFile gitLab.Package gitLab.Revision path
     | PackageLocation.Git git ->
-      gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
+      gitManager.FetchFile git.Url git.Revision path None
     | PackageLocation.Http http ->
       extractFileFromHttp http path
 
@@ -235,10 +231,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         let url = PackageLocation.gitHubUrl gitHub
         yield!
           fetchLocationsFromGit url version
-          |> AsyncSeq.map (fun (hint, revision) ->
+          |> AsyncSeq.map (fun revision ->
             PackageLocation.GitHub {
               Package = gitHub;
-              Hint = hint;
               Revision = revision;
             }
           )
@@ -246,10 +241,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         let url = PackageLocation.bitBucketUrl bitBucket
         yield!
           fetchLocationsFromGit url version
-          |> AsyncSeq.map (fun (hint, revision) ->
+          |> AsyncSeq.map (fun revision ->
             PackageLocation.BitBucket {
               Package = bitBucket;
-              Hint = hint;
               Revision = revision;
             }
           )
@@ -257,10 +251,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         let url = PackageLocation.gitLabUrl gitLab
         yield!
           fetchLocationsFromGit url version
-          |> AsyncSeq.map (fun (hint, revision) ->
+          |> AsyncSeq.map (fun revision ->
             PackageLocation.GitLab {
               Package = gitLab;
-              Hint = hint;
               Revision = revision;
             }
           )
