@@ -28,6 +28,7 @@ module Lock =
           |> String.concat "\n"
         )
       f x 0
+
   let rec private flattenLockedPackage (parents : PackageIdentifier list) (package : LockedPackage) = seq {
     yield (parents, (package.Location, package.Version))
     yield!
