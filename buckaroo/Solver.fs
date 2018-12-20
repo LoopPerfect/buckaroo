@@ -78,7 +78,7 @@ module Solver =
   let private lockToHints (lock : Lock) =
     lock.Packages
     |> Map.toSeq
-    |> Seq.map (fun (k, v) -> ({ Package = k; Version = v.Version }, v.Location))
+    |> Seq.map (fun (k, v) -> ({ Package = k; Versions = v.Versions }, v.Location))
 
   let private mergeLocations (a : Map<AdhocPackageIdentifier, PackageSource>) (b : Map<AdhocPackageIdentifier, PackageSource>) =
     let folder state next = result {
@@ -124,7 +124,7 @@ module Solver =
   let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
     // Solution.visited will filter out any hints that we already tried in Solver.step
     for (atom, location) in state.Hints do
-      yield (atom.Package, (location, Set [atom.Version]))
+      yield (atom.Package, (location, atom.Versions))
 
     let unsatisfied = findUnsatisfied state.Solution state.Constraints
 

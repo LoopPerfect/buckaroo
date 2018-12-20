@@ -63,7 +63,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageLocation.Http http ->
       extractFileFromHttp http path
 
-
   let branchPriority branch =
     match branch with
     | "master" -> 0
@@ -77,15 +76,19 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     let branches = refs |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
 
     let allRefs = seq {
-
       yield! tags |> Seq.collect (fun x -> seq {
         let rev = x.Revision
-        yield (rev, GitVersion.Tag x.Name)
+        yield (rev, Version.Git (GitVersion.Tag x.Name))
+
+        match SemVer.parse x.Name with
+        | Result.Ok semVer ->
+          yield (rev, Version.SemVer semVer)
+        | _ -> ()
       })
 
       yield! branches |> Seq.collect (fun x -> seq {
         let rev = x.Revision
-        yield (rev, GitVersion.Branch x.Name)
+        yield (rev, Version.Git (GitVersion.Branch x.Name))
       })
     }
 
@@ -94,7 +97,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         |> Seq.groupBy (fun (r, _) -> r)
         |> Seq.map(fun (revision, aliases) ->
           (revision, aliases
-            |> Seq.map (fun (r, x) -> Version.Git x)
+            |> Seq.map (fun (_, x) -> x)
             |> Set
             |> Set.add (Version.Git (GitVersion.Revision revision))
         ))
@@ -106,34 +109,31 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         |> Set.toSeq
         |> Seq.map Version.show
         |> String.concat ", "
-        |> (fun x -> "VersionGroup { " + x + "}")
+        |> (fun x -> "VersionGroup {" + x + "}")
       )
 
     yield! all |> AsyncSeq.ofSeq
 
-    //let mutable revisionMap = Map.ofSeq all
+    System.Console.WriteLine ("git-version-fetcher: " + url + "\n" + "exploring individual branches now")
+    let mutable revisionMap = Map.ofSeq all
+    for branch in branches do
+      System.Console.WriteLine ("git-version-fetcher: " + url + "\n" + "exploring branch: " + branch.Name)
+      let b = GitVersion.Branch branch.Name
+      let! commits = gitManager.FetchCommits url branch.Name
+      for commit in commits |> Seq.tail do
 
-    // for branch in branches do
-    //   let b = GitVersion.Branch branch.Name
-    //   let! commits = gitManager.FetchCommits url branch.Name
-    //   for commit in commits |> Seq.tail do
+        match revisionMap.ContainsKey commit with
+        | false ->
+          revisionMap <- revisionMap
+        |> Map.add commit (Set[Version.Git (GitVersion.Revision commit)])
+        | true -> ()
 
-    //     match revisionMap.ContainsKey commit with
-    //     | false ->
-    //       revisionMap <- revisionMap
-    //         |> Map.add commit (Set[Version.Git (GitVersion.Revision commit)])
-    //     | true -> ()
-
-    //     let versions = revisionMap.Item commit
-    //     let newVersions = versions |> Set.add (Version.Git b)
-    //     revisionMap <- revisionMap
-    //       |> Map.add commit newVersions
-
-    //     yield (commit, revisionMap.Item commit)
+        let versions = revisionMap.Item commit
+        let newVersions = versions |> Set.add (Version.Git b)
+        revisionMap <- revisionMap
+          |> Map.add commit newVersions
+        yield (commit, revisionMap.Item commit)
   }
-
-
-
 
   interface ISourceExplorer with
 

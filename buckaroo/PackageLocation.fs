@@ -11,26 +11,14 @@ type HttpLocation = {
   Sha256 : string;
 }
 
-type Hint =
-| Branch of string
-| Tag of string
-| Default
-
-module Hint =
-  let fromVersion (v : Version) =
-    match v with
-    | _ -> Hint.Default
-
 type GitLocation = {
   Url : string;
-  Hint : Hint;
   Revision : Revision;
 }
 
 // GitHub is different to Git because we can switch HTTPS & SSH easily
 type HostedGitLocation = {
   Package : AdhocPackageIdentifier;
-  Hint : Hint;
   Revision : Revision;
 }
 
@@ -42,11 +30,6 @@ type PackageLocation =
 | GitLab of HostedGitLocation
 
 module PackageLocation =
-
-  let hintToBranch (hint : Hint) =
-    match hint with
-    | Branch b -> Option.Some b
-    | _ -> Option.None
 
   let gitHubUrl (x : AdhocPackageIdentifier) =
     if Environment.GetEnvironmentVariable "BUCKAROO_GITHUB_SSH" |> isNull
