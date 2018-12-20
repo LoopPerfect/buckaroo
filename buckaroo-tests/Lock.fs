@@ -32,7 +32,7 @@ let ``Lock.parse works correctly 2`` () =
       "";
       "[lock.\"abc/def\"]";
       "url = \"https://www.abc.com/def.zip\"";
-      "version = \"1.2.3\"";
+      "versions = [\"1.2.3\"]";
       "sha256 = \"aabbccddee\"";
     ]
     |> String.concat "\n"
@@ -81,12 +81,12 @@ let ``Lock.parse works correctly 3`` () =
       "";
       "[lock.\"abc/def\"]";
       "url = \"https://www.abc.com/def.zip\"";
-      "version = \"1.2.3\"";
+      "versions = [\"1.2.3\"]";
       "sha256 = \"aabbccddee\"";
       "";
       "[lock.\"abc/def\".lock.\"ijk/xyz\"]";
       "url = \"https://www.ijk.com/xyz.zip\"";
-      "version = \"1\"";
+      "versions = [\"1\"]";
       "sha256 = \"aabbccddee\"";
       "";
     ]

@@ -27,15 +27,21 @@ let ``Version.compare works correctly`` () =
   let input = [
     (Version.Git(GitVersion.Branch "master"));
     (Version.Git(GitVersion.Tag "v1.0.0"));
+    (Version.SemVer SemVer.zero);
+    (Version.Git(GitVersion.Tag "v1.0.1"));
+    (Version.SemVer {SemVer.zero with Patch = 1});
     (Version.Git(GitVersion.Branch "develop"));
     (Version.Git(GitVersion.Revision "aabbccddee"));
   ]
 
   let expected = [
+    (Version.Git(GitVersion.Revision "aabbccddee"));
     (Version.Git(GitVersion.Tag "v1.0.0"));
+    (Version.Git(GitVersion.Tag "v1.0.1"));
+    (Version.SemVer SemVer.zero);
+    (Version.SemVer {SemVer.zero with Patch = 1});
     (Version.Git(GitVersion.Branch "master"));
     (Version.Git(GitVersion.Branch "develop"));
-    (Version.Git(GitVersion.Revision "aabbccddee"));
   ]
 
   let actual = input |> List.sortWith Version.compare

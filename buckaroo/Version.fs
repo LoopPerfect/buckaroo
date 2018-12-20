@@ -17,27 +17,22 @@ module Version =
   open FParsec
 
   // score returns ranks version by the likelyhood of change.
-  let score v =
+  let private score v =
     match v with
-    | Git(Revision _) -> 0
-    | SemVer _ -> 1
-    | Git(Tag _) -> 2
-    | Git(Branch _) -> 3
+    | Git (Revision _) -> 0
+    | Git (Tag _) -> 1
+    | SemVer _ -> 2
+    | Git (Branch "master") -> 4
+    | Git (Branch "develop") -> 5
+    | Git (Branch _) -> 3
 
   let compare (x : Version) (y : Version) =
-    match (x, y) with
-    | (SemVer i, SemVer j) -> SemVer.compare i j
-    | (Git(Tag i), Git(Tag j)) -> System.String.Compare(i, j)
-    | (Git(Branch i), Git(Branch j)) ->
-      match (i, j) with
-      | ("master", "master") -> 0
-      | ("master", _) -> -1
-      | (_, "master") -> 1
-      | ("develop", "develop") -> 0
-      | ("develop", _) -> -1
-      | (_, "develop") -> 1
-      | (p, q) -> System.String.Compare(p, q)
-    | _ -> (score x).CompareTo(score y) |> System.Math.Sign
+    match (score x - score y, x, y) with
+    | (0, Version.SemVer i, Version.SemVer j) -> SemVer.compare i j
+    | (0, Git(Tag i), Git(Tag j)) -> System.String.Compare(i, j)
+    | (0, Git(Branch i), Git(Branch j)) -> System.String.Compare(i, j)
+    | (0, Git(Revision i), Git(Revision j)) -> System.String.Compare(i, j)
+    | (c, _, _) -> c
 
   let rec show (v : Version) : string =
     match v with
