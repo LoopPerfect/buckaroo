@@ -6,7 +6,7 @@ let main argv =
     let session = Guid.NewGuid() |> string
     let input = argv |> String.concat " "
 
-    let! telemetry = 
+    let! telemetry =
       Buckaroo.Telemetry.postCommand session input
       |> Async.Catch
       |> Async.Ignore
@@ -14,16 +14,16 @@ let main argv =
 
     let! exitCode = async {
       try
-        match Buckaroo.Command.parse input with 
-        | Result.Ok command -> 
+        match Buckaroo.Command.parse input with
+        | Result.Ok (command, loggingLevel) ->
           do!
-            command 
-            |> Buckaroo.Command.runCommand 
+            command
+            |> Buckaroo.Command.runCommand loggingLevel
           return 0
-        | Result.Error error -> 
+        | Result.Error error ->
           Console.WriteLine error
           return 1
-      with error -> 
+      with error ->
         Console.WriteLine error
         return 1
     }
