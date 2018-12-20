@@ -98,34 +98,34 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
 
-let writeReceipt (installPath : string) location = async {
+let writeReceipt (installPath : string) (location : PackageLocation) = async {
   System.Console.WriteLine ("writing receipt: " + installPath)
   let receipt =
     "[receipt]\n" +
     "path = \"" + installPath + "\"\n" +
     "lastUpdated = \"" + System.DateTime.Now.ToUniversalTime().ToString() + "\"\n" +
     match location with
-    | Git g ->
+    | PackageLocation.Git g ->
       "type = \"git\"\n" +
       "url = \"" + g.Url + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
-    | Http h ->
+    | PackageLocation.Http h ->
       "type = \"http\"\n" +
       "url = \"" + h.Url + "\"\n" +
       "sha256 = \"" + (h.Sha256) + "\"\n" +
       "stripPrefix = \"" + (h.StripPrefix |> Option.defaultValue("")) + "\"\n" +
       "archiveType = \"" + (h.Type |> Option.map string |> Option.defaultValue "zip") + "\"\n"
-    | GitHub g ->
+    | PackageLocation.GitHub g ->
       "type = \"github\"\n" +
       "owner = \""+ g.Package.Owner + "\"\n" +
       "project = \"" + g.Package.Project + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
-    | GitLab g ->
+    | PackageLocation.GitLab g ->
       "type = \"gitlab\"\n" +
       "owner = \""+ g.Package.Owner + "\"\n" +
       "project = \"" + g.Package.Project + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
-    | BitBucket b ->
+    | PackageLocation.BitBucket b ->
       "type = \"bitbucket\"\n" +
       "owner = \""+ b.Package.Owner + "\"\n" +
       "project = \"" + b.Package.Project + "\"\n" +
@@ -136,7 +136,7 @@ let writeReceipt (installPath : string) location = async {
   return ()
 }
 
-let compareReceipt installPath location = async {
+let private compareReceipt (installPath: string) (location: PackageLocation) = async {
   let receiptPath = getReceiptPath installPath
   let! exists = Files.exists receiptPath
   return!
@@ -161,26 +161,26 @@ let compareReceipt installPath location = async {
               |> Result.bind Toml.asString
 
           match (t, location) with
-          | (Result.Ok "git", Git g) -> Toml.compareTable oldReceipt [
+          | (Result.Ok "git", PackageLocation.Git g) -> Toml.compareTable oldReceipt [
               ("url", g.Url);
               ("revision", g.Revision);
             ]
-          | (Result.Ok "github", GitHub g) -> Toml.compareTable oldReceipt [
+          | (Result.Ok "github", PackageLocation.GitHub g) -> Toml.compareTable oldReceipt [
               ("owner", g.Package.Owner);
               ("project", g.Package.Project);
               ("revision", g.Revision);
             ]
-          | (Result.Ok "bitbucket", BitBucket g) -> Toml.compareTable oldReceipt [
+          | (Result.Ok "bitbucket", PackageLocation.BitBucket g) -> Toml.compareTable oldReceipt [
               ("owner", g.Package.Owner);
               ("project", g.Package.Project);
               ("revision", g.Revision);
             ]
-          | (Result.Ok "gitlab", GitLab g) -> Toml.compareTable oldReceipt [
+          | (Result.Ok "gitlab", PackageLocation.GitLab g) -> Toml.compareTable oldReceipt [
               ("owner", g.Package.Owner);
               ("project", g.Package.Project);
               ("revision", g.Revision);
             ]
-          | (Result.Ok "http", Http h) -> Toml.compareTable oldReceipt [
+          | (Result.Ok "http", PackageLocation.Http h) -> Toml.compareTable oldReceipt [
               ("url", h.Url);
               ("sha256", h.Sha256);
               ("stripPrefix", h.StripPrefix |> Option.defaultValue("") );
@@ -211,12 +211,12 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     | BitBucket bitBucket ->
       let url = PackageLocation.bitBucketUrl bitBucket.Package
       do! installFromGit url bitBucket.Revision bitBucket.Hint
-    | Git git ->
+    | PackageLocation.Git git ->
       do! installFromGit git.Url git.Revision git.Hint
     | GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
       do! installFromGit url gitLab.Revision gitLab.Hint
-    | Http http ->
+    | PackageLocation.Http http ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache
       if discoveredHash <> http.Sha256
@@ -227,8 +227,6 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
       do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
       do! Files.mkdirp installPath
       do! Archive.extractTo pathToCache installPath http.StripPrefix
-    | _ ->
-      new Exception("Unsupported location type") |> raise
     do! writeReceipt installPath location
   else System.Console.WriteLine (installPath + " is up-to-date")
 }

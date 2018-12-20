@@ -1,6 +1,6 @@
 namespace Buckaroo
 
-type Command = 
+type Command =
 | Start
 | Help
 | Init
@@ -13,7 +13,7 @@ type Command =
 | RemoveDependencies of List<PackageIdentifier>
 | ShowVersions of PackageIdentifier
 
-module Command = 
+module Command =
 
   open System
   open System.IO
@@ -99,8 +99,8 @@ module Command =
     return ShowVersions project
   }
 
-  let parser = 
-    listDependenciesParser 
+  let parser =
+    listDependenciesParser
     <|> resolveParser
     <|> upgradeParser
     <|> addDependenciesParser
@@ -112,7 +112,7 @@ module Command =
     <|> helpParser
     <|> startParser
 
-  let parse (x : string) : Result<Command, string> = 
+  let parse (x : string) : Result<Command, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
@@ -130,11 +130,16 @@ module Command =
   let showVersions (context : Tasks.TaskContext) (package : PackageIdentifier) = async {
     let sourceExplorer = context.SourceExplorer
 
-    let! versions = 
+    let! versions =
       sourceExplorer.FetchVersions Map.empty package
       |> AsyncSeq.toListAsync
-    for v in versions do
-      Version.show v |> Console.WriteLine
+
+    for versions in versions do
+      versions
+        |> VersionedSource.getVersionSet
+        |> Set.toSeq
+        |> Seq.map Version.show
+        |> Console.WriteLine
     return ()
   }
 
@@ -142,16 +147,16 @@ module Command =
     let sourceExplorer = context.SourceExplorer
 
     let! manifest = Tasks.readManifest "."
-    let newManifest = { 
-      manifest with 
-        Dependencies = 
-          manifest.Dependencies 
-          |> Seq.append dependencies 
+    let newManifest = {
+      manifest with
+        Dependencies =
+          manifest.Dependencies
+          |> Seq.append dependencies
           |> Set.ofSeq;
     }
-    if manifest = newManifest 
+    if manifest = newManifest
     then return ()
-    else 
+    else
       let! maybeLock = async {
         if File.Exists(Constants.LockFileName)
         then
@@ -160,9 +165,9 @@ module Command =
         else
           return None
       }
-      let! resolution = Solver.solve sourceExplorer newManifest ResolutionStyle.Quick maybeLock 
+      let! resolution = Solver.solve sourceExplorer newManifest ResolutionStyle.Quick maybeLock
       match resolution with
-      | Resolution.Ok solution -> 
+      | Resolution.Ok solution ->
         do! Tasks.writeManifest newManifest
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
         do! InstallCommand.task context
@@ -172,7 +177,7 @@ module Command =
   }
 
   let upgrade context = async {
-    // TODO: Roll-back on failure! 
+    // TODO: Roll-back on failure!
     do! ResolveCommand.task context ResolutionStyle.Upgrading
     do! InstallCommand.task context
   }
@@ -184,13 +189,13 @@ module Command =
       use sw = File.CreateText(path)
       sw.Write(Manifest.zero |> Manifest.show)
       System.Console.WriteLine("Wrote " + ManifestFileName)
-    else 
+    else
       new Exception("There is already a manifest in this directory") |> raise
   }
 
   let runCommand command = async {
     let! context = Tasks.getContext
-    do! 
+    do!
       match command with
       | Start -> StartCommand.task
       | Init -> init

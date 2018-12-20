@@ -2,17 +2,11 @@ namespace Buckaroo
 
 open FSharp.Control
 
-type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) = 
+type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
 
   let log (x : string) = System.Console.WriteLine(x)
 
-  interface ISourceExplorer with 
-
-    member this.FetchLocations locations package version = asyncSeq {
-      log("Fetching locations for " + (PackageIdentifier.show package) + "@" + (Version.show version) + "... ")
-      yield! sourceExplorer.FetchLocations locations package version 
-    }
-
+  interface ISourceExplorer with
     member this.FetchManifest location = async {
       log("Fetching manifest for " + (PackageLocation.show location) + "... ")
       return! sourceExplorer.FetchManifest location
@@ -23,7 +17,9 @@ type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
       return! sourceExplorer.FetchLock location
     }
 
-    member this.FetchVersions locations package = asyncSeq {
-      log("Fetching versions for " + (PackageIdentifier.show package) + "... ")
-      yield! sourceExplorer.FetchVersions locations package
-    }
+
+    member this.FetchVersions locations package =
+      sourceExplorer.FetchVersions locations package
+
+    member this.FetchLocation source =
+      sourceExplorer.FetchLocation source

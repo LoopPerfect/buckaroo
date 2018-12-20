@@ -2,94 +2,73 @@ namespace Buckaroo
 
 open Buckaroo.Git
 
-type Version =
-| SemVerVersion of SemVer
-| Branch of Branch
+type GitVersion =
 | Revision of Revision
+| Branch of Branch
 | Tag of Tag
-| Latest // When we download from HTTP, version is always latest
+
+type Version =
+| Git of GitVersion
+| SemVer of SemVer
+
 
 module Version =
 
   open FParsec
 
-  let compare (x : Version) (y : Version) =
-    let score v =
-      match v with
-      | SemVerVersion _ -> 0
-      | Tag _ -> 1
-      | Branch _ -> 2
-      | Revision _ -> 3
-      | Latest _ -> 4
-
-    match (x, y) with
-    | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
-    | (Tag i, Tag j) -> System.String.Compare(i, j)
-    | (Branch i, Branch j) ->
-      match (i, j) with
-      | ("master", "master") -> 0
-      | ("master", _) -> -1
-      | (_, "master") -> 1
-      | ("develop", "develop") -> 0
-      | ("develop", _) -> -1
-      | (_, "develop") -> 1
-      | (p, q) -> System.String.Compare(p, q)
-    | _ -> (score x).CompareTo(score y) |> System.Math.Sign
-
-  let compareSpecificity (x : Version) (y : Version) =
-    let score v =
-      match v with
-      | Latest _ -> 0
-      | Revision _ -> 1
-      | Tag _ -> 2
-      | SemVerVersion _ -> 3
-      | Branch _ -> 4
-
-    match (x, y) with
-    | (Tag i, Tag j) -> System.String.Compare(i, j)
-    | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
-    | (Branch i, Branch j) ->
-      match (i, j) with
-      | ("master", "master") -> 0
-      | ("master", _) -> -1
-      | (_, "master") -> 1
-      | ("develop", "develop") -> 0
-      | ("develop", _) -> -1
-      | (_, "develop") -> 1
-      | (p, q) -> System.String.Compare(p, q)
-    | _ -> (score x).CompareTo(score y) |> System.Math.Sign
-
-  let show (v : Version) : string =
+  // score returns ranks version by the likelyhood of change.
+  let score v =
     match v with
-    | Latest -> "latest"
-    | SemVerVersion semVer -> SemVer.show semVer
-    | Branch branch -> "branch=" + branch
-    | Revision revision -> "revision=" + revision
-    | Tag tag -> "tag=" + tag
+    | Git(Revision _) -> 0
+    | SemVer _ -> 1
+    | Git(Tag _) -> 2
+    | Git(Branch _) -> 3
+
+  let compare (x : Version) (y : Version) =
+    match (x, y) with
+    | (SemVer i, SemVer j) -> SemVer.compare i j
+    | (Git(Tag i), Git(Tag j)) -> System.String.Compare(i, j)
+    | (Git(Branch i), Git(Branch j)) ->
+      match (i, j) with
+      | ("master", "master") -> 0
+      | ("master", _) -> -1
+      | (_, "master") -> 1
+      | ("develop", "develop") -> 0
+      | ("develop", _) -> -1
+      | (_, "develop") -> 1
+      | (p, q) -> System.String.Compare(p, q)
+    | _ -> (score x).CompareTo(score y) |> System.Math.Sign
+
+  let rec show (v : Version) : string =
+    match v with
+    | SemVer semVer -> SemVer.show semVer
+    | Git(Branch branch) -> "branch=" + branch
+    | Git(Revision revision) -> "revision=" + revision
+    | Git(Tag tag) -> "tag=" + tag
 
   let identifierParser = CharParsers.regex @"[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){2,64}"
 
   let tagVersionParser = parse {
     do! CharParsers.skipString "tag="
     let! tag = Git.branchOrTagNameParser
-    return Tag tag
+    return Version.Git (GitVersion.Tag tag)
   }
 
   let branchVersionParser = parse {
     do! CharParsers.skipString "branch="
     let! branch = Git.branchOrTagNameParser
-    return Branch branch
+    return Version.Git (GitVersion.Branch branch)
   }
 
   let revisionVersionParser = parse {
     do! CharParsers.skipString "revision="
     let! revision = identifierParser
-    return Revision revision
+    return Version.Git (GitVersion.Revision revision)
   }
 
   let semVerVersionParser = parse {
     let! semVer = SemVer.parser
-    return SemVerVersion semVer
+    return Version.SemVer semVer
   }
 
   let parser =

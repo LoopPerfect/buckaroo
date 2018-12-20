@@ -14,19 +14,15 @@ type Contingency =
 | Other
 
 
-
-
-
 #nowarn "40"
 
 module Constraint =
   let rec contingencyOf constraints =
     match constraints with
-    | Exactly (Version.Branch _) -> Set [Contingency.Branch]
-    | Exactly (Version.Revision _) -> Set [Contingency.Revision]
-    | Exactly (Version.SemVerVersion _) -> Set [Contingency.Revision]
-    | Exactly (Version.Tag _) -> Set [Contingency.Revision]
-    | Exactly Latest -> Set [Other]
+    | Exactly (Version.Git(GitVersion.Branch _)) -> Set [Contingency.Branch]
+    | Exactly (Version.Git(GitVersion.Revision _)) -> Set [Contingency.Revision]
+    | Exactly (Version.SemVer _) -> Set [Contingency.Revision]
+    | Exactly (Version.Git(GitVersion.Tag _)) -> Set [Contingency.Revision]
     | Complement c -> contingencyOf c
     | Any c -> c |> List.map contingencyOf |> Set.unionMany
     | All c -> c |> List.map contingencyOf |> Set.unionMany
@@ -46,19 +42,26 @@ module Constraint =
 
   let rec satisfies (c : Constraint) (v : Version) : bool =
     match c with
-    | Exactly u -> v = u
+    | Exactly u -> u = v
     | Complement x -> satisfies x v |> not
     | Any xs -> xs |> Seq.exists(fun c -> satisfies c v)
     | All xs -> xs |> Seq.forall(fun c -> satisfies c v)
+
+  let rec satisfiesSet (c : Constraint) (v : Set<Version>) : bool =
+    match c with
+    | Exactly u -> v |> Set.toSeq |> Seq.exists(fun x -> x = u)
+    | Complement x -> satisfiesSet x v |> not
+    | Any xs -> xs |> Seq.exists(fun c -> satisfiesSet c v)
+    | All xs -> xs |> Seq.forall(fun c -> satisfiesSet c v)
 
   let rec agreesWith (c : Constraint) (v : Version) : bool =
     match c with
     | Exactly u ->
       match (v, u) with
-      | (Version.SemVerVersion x, Version.SemVerVersion y) -> x = y
-      | (Version.Branch x, Version.Branch y) -> x = y
-      | (Version.Revision x, Version.Revision y) -> x = y
-      | (Version.Tag x, Version.Tag y) -> x = y
+      | (Version.SemVer x, Version.SemVer y) -> x = y
+      | (Version.Git(GitVersion.Branch x), Version.Git(GitVersion.Branch y)) -> x = y
+      | (Version.Git(GitVersion.Revision x), Version.Git(GitVersion.Revision y)) -> x = y
+      | (Version.Git(GitVersion.Tag x), Version.Git(GitVersion.Tag y)) -> x = y
       | _ -> true
     | Complement x -> agreesWith x v |> not
     | Any xs -> xs |> Seq.exists(fun c -> agreesWith c v)
@@ -66,7 +69,7 @@ module Constraint =
 
   let rec compare (x : Constraint) (y : Constraint) : int =
     match (x, y) with
-    | (Exactly u, Exactly v) -> Version.compareSpecificity u v
+    | (Exactly u, Exactly v) -> Version.compare u v
     | (Any xs, y) ->
       xs
       |> Seq.map (fun x -> compare x y)
