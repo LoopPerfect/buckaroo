@@ -1,8 +1,9 @@
 namespace Buckaroo
 
 open Tasks
+open Console
 
-type Command = 
+type Command =
 | Start
 | Help
 | Init
@@ -14,11 +15,18 @@ type Command =
 | AddDependencies of List<Dependency>
 | RemoveDependencies of List<PackageIdentifier>
 
-module Command = 
+module Command =
 
   open System
   open System.IO
   open FParsec
+
+  let verboseParser : Parser<bool, Unit> = parse {
+    let! maybeSkip =
+      CharParsers.skipString "--verbose"
+      |> Primitives.opt
+    return Option.isSome maybeSkip
+  }
 
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
@@ -90,25 +98,31 @@ module Command =
     return RemoveDependencies deps
   }
 
-  let parser = 
-    resolveParser
-    <|> upgradeParser
-    <|> addDependenciesParser
-    <|> removeDependenciesParser
-    <|> installParser
-    <|> quickstartParser
-    <|> initParser
-    <|> versionParser
-    <|> helpParser
-    <|> startParser
+  let parser = parse {
+    let! command =
+      resolveParser
+      <|> upgradeParser
+      <|> addDependenciesParser
+      <|> removeDependenciesParser
+      <|> installParser
+      <|> quickstartParser
+      <|> initParser
+      <|> versionParser
+      <|> helpParser
+      <|> startParser
 
-  let parse (x : string) : Result<Command, string> = 
+    let! isVerbose = verboseParser
+
+    return (command, if isVerbose then LoggingLevel.Trace else LoggingLevel.Info)
+  }
+
+  let parse (x : string) =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
 
   let upgrade context = async {
-    // TODO: Roll-back on failure! 
+    // TODO: Roll-back on failure!
     do! ResolveCommand.task context ResolutionStyle.Upgrading
     do! InstallCommand.task context
   }
@@ -120,14 +134,14 @@ module Command =
       use sw = File.CreateText(path)
       sw.Write(Manifest.zero |> Manifest.show)
       context.Console.Write("Wrote " + Constants.ManifestFileName)
-    else 
+    else
       new Exception("There is already a manifest in this directory") |> raise
   }
 
-  let runCommand command = async {
-    let! context = Tasks.getContext
+  let runCommand loggingLevel command = async {
+    let! context = Tasks.getContext loggingLevel
 
-    do! 
+    do!
       match command with
       | Start -> StartCommand.task context
       | Init -> init context

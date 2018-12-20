@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <DefineConstants>OS_WINDOWS</DefineConstants>
@@ -22,6 +21,7 @@
     <Compile Include="Lock.fs" />
     <Compile Include="Paths.fs" />
     <Compile Include="Git.fs" />
+    <Compile Include="Command.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
