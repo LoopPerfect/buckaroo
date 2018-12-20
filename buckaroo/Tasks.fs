@@ -35,7 +35,7 @@ let getContext loggingLevel = async {
       else new GitCli(consoleManager) :> IGit
 
   let gitManager = new GitManager(git, cachePath)
-  let sourceExplorer = new DefaultSourceExplorer(downloadManager, gitManager)
+  let sourceExplorer = new DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
 
   return {
     Console = consoleManager;

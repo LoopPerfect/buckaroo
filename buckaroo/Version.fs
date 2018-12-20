@@ -76,3 +76,11 @@ module Version =
     match run parser x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(errorMsg, _, _) -> Result.Error errorMsg
+
+
+  let showSet (x : Set<Version>) =
+    x
+    |> Set.toSeq
+    |> Seq.map show
+    |> String.concat ", "
+    |> (fun x -> "{" + x + "}")

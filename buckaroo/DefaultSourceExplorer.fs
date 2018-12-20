@@ -3,9 +3,9 @@ namespace Buckaroo
 open FSharp.Control
 open Buckaroo.PackageLocation
 open Buckaroo.Constraint
-open System.Collections.Generic
+open Buckaroo.Console
 
-type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) =
+type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
@@ -98,24 +98,25 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             |> Set.add (Version.Git (GitVersion.Revision revision))
         ))
 
-    System.Console.WriteLine ("git-version-fetcher: " + url + "\n" + "discovered following advertised versions:\n")
+    console.Write("git-version-fetcher: " + url + "\n" + "discovered following advertised versions:\n", LoggingLevel.Trace)
     for (_, versions) in all do
-      System.Console.WriteLine (
+      console.Write (
         versions
         |> Set.toSeq
         |> Seq.map Version.show
         |> String.concat ", "
-        |> (fun x -> "VersionGroup {" + x + "}")
+        |> (fun x -> "VersionGroup {" + x + "}"),
+        LoggingLevel.Trace
       )
 
     yield! all
       |> Seq.sortWith (fun (_, x) (_, y) -> -Version.compare x.MaximumElement y.MaximumElement)
       |> AsyncSeq.ofSeq
 
-    System.Console.WriteLine ("git-version-fetcher: " + url + "\n" + "exploring individual branches now")
+    console.Write("git-version-fetcher: " + url + "\n" + "exploring individual branches now", LoggingLevel.Trace)
     let mutable revisionMap = Map.ofSeq all
     for branch in branches do
-      System.Console.WriteLine ("git-version-fetcher: " + url + "\n" + "exploring branch: " + branch.Name)
+      console.Write("git-version-fetcher: " + url + "\n" + "exploring branch: " + branch.Name, LoggingLevel.Trace)
       let b = GitVersion.Branch branch.Name
       let! commits = gitManager.FetchCommits url branch.Name
       for commit in commits |> Seq.tail do

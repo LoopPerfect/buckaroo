@@ -122,32 +122,6 @@ module Command =
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
 
-  let listDependencies = async {
-    let! manifest = Tasks.readManifest "."
-    manifest.Dependencies
-    |> Seq.distinct
-    |> Seq.map Dependency.show
-    |> String.concat "\n"
-    |> Console.WriteLine
-    return ()
-  }
-
-  let showVersions (context : Tasks.TaskContext) (package : PackageIdentifier) = async {
-    let sourceExplorer = context.SourceExplorer
-
-    let! versions =
-      sourceExplorer.FetchVersions Map.empty package
-      |> AsyncSeq.toListAsync
-
-    for versions in versions do
-      versions
-        |> VersionedSource.getVersionSet
-        |> Set.toSeq
-        |> Seq.map Version.show
-        |> Console.WriteLine
-    return ()
-  }
-
   let add (context : Tasks.TaskContext) dependencies = async {
     let sourceExplorer = context.SourceExplorer
 

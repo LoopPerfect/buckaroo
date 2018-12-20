@@ -95,8 +95,8 @@ module Lock =
       (
         additions
         |> Seq.map (fun (k, (l, v)) ->
-          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ")// +
-          //" -> " + (PackageLocation.show l) + "@" + (Version.show v)
+          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+          " -> " + (PackageLocation.show l) + "@" + (Version.showSet v)
         )
         |> String.concat "\n"
       );
@@ -104,8 +104,8 @@ module Lock =
       (
         removals
         |> Seq.map (fun (k, (l, v)) ->
-          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ")// +
-          //" -> " + (PackageLocation.show l) + "@" + (Version.show v)
+          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+          " -> " + (PackageLocation.show l) + "@" + (Version.showSet v)
         )
         |> String.concat "\n"
       );
@@ -114,8 +114,8 @@ module Lock =
         changes
         |> Seq.map (fun (k, (bl, bv), (al, av)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " " + (PackageLocation.show bl) + "@" //+ (Version.show bv)// +
-          //" -> " + (PackageLocation.show al) + "@" + (Version.show av)
+          " " + (PackageLocation.show bl) + "@" + (Version.showSet bv) +
+          " -> " + (PackageLocation.show al) + "@" + (Version.showSet av)
         )
         |> String.concat "\n"
       );
