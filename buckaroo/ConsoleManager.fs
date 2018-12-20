@@ -3,8 +3,8 @@ module Buckaroo.Console
 open System
 open Buckaroo.RichOutput
 
+[<CustomComparison>]
 [<CustomEquality>]
-[<CustomComparisonAttribute>]
 type LoggingLevel =
   | Trace
   | Debug
@@ -26,18 +26,17 @@ type LoggingLevel =
     | Debug -> 1
     | Info -> 2
 
-  interface IComparable<LoggingLevel> with
-    member this.CompareTo (other : LoggingLevel) =
+  interface IComparable with
+    override this.CompareTo obj =
       let score x =
         match x with
         | Trace -> 0
         | Debug -> 1
         | Info -> 2
-      (score this) - (score other)
 
-  interface IComparable with
-    override this.CompareTo other =
-      (this :> IComparable<LoggingLevel>).CompareTo (other :?> LoggingLevel)
+      match obj with
+      | :? LoggingLevel as other -> (score this) - (score other)
+      | _ -> 0
 
 
 type OutputCategory =
