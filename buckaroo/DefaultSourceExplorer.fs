@@ -3,6 +3,7 @@ namespace Buckaroo
 open FSharp.Control
 open Buckaroo.PackageLocation
 open Buckaroo.Constraint
+open System.Collections.Generic
 
 type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) =
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
@@ -107,7 +108,9 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
         |> (fun x -> "VersionGroup {" + x + "}")
       )
 
-    yield! all |> AsyncSeq.ofSeq
+    yield! all
+      |> Seq.sortWith (fun (_, x) (_, y) -> -Version.compare x.MaximumElement y.MaximumElement)
+      |> AsyncSeq.ofSeq
 
     System.Console.WriteLine ("git-version-fetcher: " + url + "\n" + "exploring individual branches now")
     let mutable revisionMap = Map.ofSeq all
