@@ -23,16 +23,20 @@ module Lock =
         let indent = "-" |> String.replicate depth
         let indent2 = "-" |> String.replicate (depth + 1)
         indent + (Version.show x.Versions.MinimumElement) + "@" + (PackageLocation.show x.Location) +
-        (if x.Versions.Count = 1
-         then ""
-         else
-           indent2 + "aka: " +
-           (x.Versions
-            |> Set.toSeq
-            |> Seq.tail
-            |> Seq.map Version.show
-            |> String.concat ", "
-            |> (fun x -> "{" + x + "}"))) +
+        (
+          if x.Versions.Count = 1
+          then ""
+          else
+            indent2 + "aka: " +
+            (
+              x.Versions
+              |> Set.toSeq
+              |> Seq.tail
+              |> Seq.map Version.show
+              |> String.concat ", "
+              |> (fun x -> "{" + x + "}")
+            )
+        ) +
         (
           x.PrivatePackages
           |> Map.toSeq
@@ -137,7 +141,7 @@ module Lock =
         |> Map.tryFind p
         |> Option.map (fun (rv, _) ->
           rv.Manifest.Targets
-          |> Seq.map (fun t -> { Package = p; Target = t})
+          |> Seq.map (fun t -> { Package = p; Target = t })
         )
         |> Option.defaultValue Seq.empty
       )
@@ -166,11 +170,13 @@ module Lock =
   let private quote x = "\"" + x + "\""
 
   let private lockKey parents =
-    parents |> Seq.map (PackageIdentifier.show >> quote >> ((+) "lock.")) |> String.concat "."
+    parents
+    |> Seq.map (PackageIdentifier.show >> quote >> ((+) "lock."))
+    |> String.concat "."
 
   let toToml (lock : Lock) =
     (
-       "manifest = \"" + lock.ManifestHash + "\"\n\n"
+      "manifest = \"" + lock.ManifestHash + "\"\n\n"
     ) +
     (
       lock.Dependencies
@@ -188,13 +194,13 @@ module Lock =
       |> Seq.map(fun x ->
         let (parents, (location, versions)) = x
         "[" + (lockKey parents) + "]\n" +
-        "versions = [" +
+        "versions = [ " +
         (versions
           |> Set.toSeq
           |> Seq.map Version.show
           |> Seq.map (fun x ->"\"" + x + "\"")
           |> String.concat ", ") +
-        "]\n" +
+        " ]\n" +
         match location with
         | Git git ->
           "git = \"" + git.Url + "\"\n" +

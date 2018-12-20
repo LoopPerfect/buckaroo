@@ -3,6 +3,7 @@ open FSharpx.Collections
 
 open Buckaroo.Tasks
 open Buckaroo.RichOutput
+open Console
 
 module Solver =
 
@@ -275,7 +276,7 @@ module Solver =
             log(string error)
             yield Resolution.Error error
 
-        // We've run out of versions to try
+    // We've run out of versions to try
     yield Resolution.Error (new System.Exception("No more versions to try! "))
   }
 
@@ -305,7 +306,8 @@ module Solver =
 
     let state = {
       Solution = Solution.empty;
-      Constraints = Set.unionMany [manifest.Dependencies; manifest.PrivateDependencies]
+      Constraints =
+        Set.unionMany [ manifest.Dependencies; manifest.PrivateDependencies ]
         |> constraintsOf
       Depth = 0;
       Visited = Set.empty;
@@ -316,8 +318,12 @@ module Solver =
     let resolutions =
       step context strategy state
 
-    return
+    let result =
       resolutions
       |> solutionCollector
       |> Option.defaultValue (Set.empty |> Resolution.Conflict)
+
+    context.Console.Write(string result, LoggingLevel.Trace)
+
+    return result
   }
