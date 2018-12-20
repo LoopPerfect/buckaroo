@@ -5,6 +5,7 @@ open System.IO
 open System.Security.Cryptography
 open System.Text.RegularExpressions
 open FSharpx.Control
+open FSharp.Control
 
 
 type CloneRequest =
@@ -76,30 +77,30 @@ type GitManager (git : IGit, cacheDirectory : string) =
 
   member this.FetchCommit (url : string) (commit : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
-    let operations = [
-      fun () -> async { return () };
-      fun () -> async {
-        let! branchHint = this.getBranchHint targetDirectory
-        do! git.FetchBranch targetDirectory branchHint
-      };
-      fun () -> git.Unshallow targetDirectory;
-    ]
+    let operations = asyncSeq {
+      yield async { return () };
+      let! branchHint = this.getBranchHint targetDirectory
+      yield git.FetchBranch targetDirectory branchHint
+
+      if branchHint <> "master" then
+        yield
+          git.FetchBranch targetDirectory "master"
+          |> Async.Catch
+          |> Async.Ignore
+
+      yield git.Unshallow targetDirectory;
+    }
 
     let! success =
-      let rec loop =
-        function
-          | [] -> async { return false }
-          | op::ops -> async {
-            do! op()
-            let! success = git.HasCommit targetDirectory commit
-            return!
-              match success with
-              | true -> async { return true }
-              | false -> loop ops
-          }
-      loop operations
+      operations
+      |> AsyncSeq.mapAsync(id)
+      |> AsyncSeq.mapAsync(fun _ -> git.HasCommit targetDirectory commit)
+      |> AsyncSeq.skipWhile(not)
+      |> AsyncSeq.take(1)
+      |> AsyncSeq.lastOrDefault(false)
+
     if not success then
-      raise <| new Exception("failed to find fetch: " + url + " " + commit)
+      raise <| new Exception("failed to fetch: " + url + " " + commit)
   }
   member this.FetchBranch (url : string) (branch : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
