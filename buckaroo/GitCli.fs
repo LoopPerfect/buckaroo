@@ -2,11 +2,24 @@ namespace Buckaroo
 
 open System
 open System.Text
+open Buckaroo.Console
 
-type GitCli () =
+type GitCli (console : ConsoleManager) =
   let nl = System.Environment.NewLine
 
   let runBash command = async {
+    let rt =
+      (
+        "Running bash "
+        |> RichOutput.text
+        |> RichOutput.foreground ConsoleColor.Gray
+      ) +
+      (
+        command
+        |> RichOutput.text
+        |> RichOutput.foreground ConsoleColor.White
+      )
+    console.Write (rt, LoggingLevel.Debug)
     let stdout = new StringBuilder()
     do!
       Bash.runBashSync command (stdout.Append >> ignore) ignore

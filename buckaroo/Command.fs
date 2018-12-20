@@ -1,25 +1,33 @@
 namespace Buckaroo
 
+open Tasks
+open Console
+open FSharp.Control
+
 type Command =
 | Start
 | Help
 | Init
-| ListDependencies
+| Version
 | Resolve
 | Install
 | Upgrade
 | Quickstart
 | AddDependencies of List<Dependency>
 | RemoveDependencies of List<PackageIdentifier>
-| ShowVersions of PackageIdentifier
 
 module Command =
 
   open System
   open System.IO
-  open FSharp.Control
   open FParsec
-  open Buckaroo.Constants
+
+  let verboseParser : Parser<bool, Unit> = parse {
+    let! maybeSkip =
+      CharParsers.skipString "--verbose"
+      |> Primitives.opt
+    return Option.isSome maybeSkip
+  }
 
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
@@ -40,11 +48,11 @@ module Command =
     return Help
   }
 
-  let listDependenciesParser : Parser<Command, Unit> = parse {
+  let versionParser = parse {
     do! CharParsers.spaces
-    do! CharParsers.skipString "list"
+    do! CharParsers.skipString "version"
     do! CharParsers.spaces
-    return ListDependencies
+    return Command.Version
   }
 
   let resolveParser = parse {
@@ -91,28 +99,25 @@ module Command =
     return RemoveDependencies deps
   }
 
-  let showVersionsParser = parse {
-    do! CharParsers.spaces
-    do! CharParsers.skipString "show-versions"
-    do! CharParsers.spaces1
-    let! project = PackageIdentifier.parser
-    return ShowVersions project
+  let parser = parse {
+    let! command =
+      resolveParser
+      <|> upgradeParser
+      <|> addDependenciesParser
+      <|> removeDependenciesParser
+      <|> installParser
+      <|> quickstartParser
+      <|> initParser
+      <|> versionParser
+      <|> helpParser
+      <|> startParser
+
+    let! isVerbose = verboseParser
+
+    return (command, if isVerbose then LoggingLevel.Trace else LoggingLevel.Info)
   }
 
-  let parser =
-    listDependenciesParser
-    <|> resolveParser
-    <|> upgradeParser
-    <|> addDependenciesParser
-    <|> removeDependenciesParser
-    <|> installParser
-    <|> quickstartParser
-    <|> showVersionsParser
-    <|> initParser
-    <|> helpParser
-    <|> startParser
-
-  let parse (x : string) : Result<Command, string> =
+  let parse (x : string) =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
@@ -165,7 +170,7 @@ module Command =
         else
           return None
       }
-      let! resolution = Solver.solve sourceExplorer newManifest ResolutionStyle.Quick maybeLock
+      let! resolution = Solver.solve context newManifest ResolutionStyle.Quick maybeLock
       match resolution with
       | Resolution.Ok solution ->
         do! Tasks.writeManifest newManifest
@@ -182,30 +187,32 @@ module Command =
     do! InstallCommand.task context
   }
 
-  let init = async {
-    let path = ManifestFileName
+  let init context = async {
+    let path = Constants.ManifestFileName
     if File.Exists(path) |> not
     then
       use sw = File.CreateText(path)
       sw.Write(Manifest.zero |> Manifest.show)
-      System.Console.WriteLine("Wrote " + ManifestFileName)
+      context.Console.Write("Wrote " + Constants.ManifestFileName)
     else
       new Exception("There is already a manifest in this directory") |> raise
   }
 
-  let runCommand command = async {
-    let! context = Tasks.getContext
+  let runCommand loggingLevel command = async {
+    let! context = Tasks.getContext loggingLevel
+
     do!
       match command with
-      | Start -> StartCommand.task
-      | Init -> init
-      | Help -> HelpCommand.task
-      | ListDependencies -> listDependencies
+      | Start -> StartCommand.task context
+      | Init -> init context
+      | Help -> HelpCommand.task context
+      | Version -> VersionCommand.task context
       | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
       | Upgrade -> upgrade context
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
-      | AddDependencies dependencies -> add context dependencies
+      | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
-      | ShowVersions project -> showVersions context project
+
+    do! context.Console.Flush()
   }

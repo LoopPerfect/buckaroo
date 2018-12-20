@@ -1,41 +1,45 @@
 module Buckaroo.ResolveCommand
 
 open System
+open Buckaroo.RichOutput
 
 let task (context : Tasks.TaskContext) resolutionStyle = async {
-  let sourceExplorer = context.SourceExplorer
-  
+  let log (x : RichOutput) = context.Console.Write x
+
   let! maybeLock = Tasks.readLockIfPresent
 
   let resolveStart = DateTime.Now
-  "Resolve start: " + (string resolveStart) |> Console.WriteLine
+  (text "Resolve start: ") + (string resolveStart |> text |> foreground ConsoleColor.Cyan) |> log
 
   let! manifest = Tasks.readManifest "."
-  "Resolving dependencies... " |> Console.WriteLine
-  let! resolution = Solver.solve sourceExplorer manifest resolutionStyle maybeLock 
+  "Resolving dependencies... " |> text |> log
+
+  let! resolution = Solver.solve context manifest resolutionStyle maybeLock 
 
   let resolveEnd = DateTime.Now
-  "Resolve end: " + (string resolveEnd) |> Console.WriteLine
+  (text "Resolve end: ") + (string resolveEnd |> text |> foreground ConsoleColor.Cyan) |> log
 
-  "Resolve time: " + (string (resolveEnd - resolveStart)) |> Console.WriteLine
+  (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan) |> log
 
   match resolution with
   | Resolution.Conflict x -> 
-    "Conflict! " |> Console.WriteLine
-    x |> Console.WriteLine
+    "Conflict! " |> text |> foreground ConsoleColor.Red |> log
+    x |> string |> text |> log 
+
     return ()
   | Resolution.Error e -> 
-    "Error! " |> Console.WriteLine
-    e |> Console.WriteLine
+    "Error! " |> text |> foreground ConsoleColor.Red |> log
+    e |> string |> text |> log 
+
     return ()
   | Resolution.Ok solution -> 
-    "Success! " |> Console.WriteLine
+    "Success! " |> text |> foreground ConsoleColor.Green |> log
     let lock = Lock.fromManifestAndSolution manifest solution
     do! async {
       try
         let! previousLock = Tasks.readLock
         let diff = Lock.showDiff previousLock lock 
-        Console.WriteLine(diff)
+        diff |> text |> log
       with _ -> 
         ()
     }

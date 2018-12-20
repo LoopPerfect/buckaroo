@@ -4,11 +4,6 @@ open FSharp.Control
 open Buckaroo.PackageLocation
 open Buckaroo.Constraint
 
-
-type LocationFragment =
-| GitFragment of Revision * Set<Version>
-| VersionFragment of Version * HttpPackageSource
-
 type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) =
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip

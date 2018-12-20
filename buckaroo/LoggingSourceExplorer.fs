@@ -1,10 +1,11 @@
 namespace Buckaroo
 
 open FSharp.Control
+open Buckaroo.Console
 
-type LoggingSourceExplorer (sourceExplorer : ISourceExplorer) =
+type LoggingSourceExplorer (console : ConsoleManager, sourceExplorer : ISourceExplorer) =
 
-  let log (x : string) = System.Console.WriteLine(x)
+  let log (x : string) = console.Write x
 
   interface ISourceExplorer with
     member this.FetchManifest location = async {
