@@ -147,7 +147,6 @@ module Solver =
     yield!
       state.Hints
       |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
-      |> AsyncSeq.filter (fun (atom, location) -> state.Visited.Contains(atom.Package, location) |> not)
       |> AsyncSeq.map (fun (atom, location) ->
         (atom.Package, (location, atom.Versions)))
 
