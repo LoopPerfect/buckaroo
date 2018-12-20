@@ -4,135 +4,135 @@ open Xunit
 open Buckaroo
 
 [<Fact>]
-let ``Lock.parse works correctly 1`` () = 
-  let actual = 
+let ``Lock.parse works correctly 1`` () =
+  let actual =
     [
-      "manifest = \"aabbccddee\""; 
+      "manifest = \"aabbccddee\"";
     ]
     |> String.concat "\n"
     |> Lock.parse
-  
+
   let expected = {
-    ManifestHash = "aabbccddee"; 
-    Dependencies = Set.empty; 
-    Packages = Map.empty; 
+    ManifestHash = "aabbccddee";
+    Dependencies = Set.empty;
+    Packages = Map.empty;
   }
-  
+
   Assert.Equal(Result.Ok expected, actual)
 
 [<Fact>]
-let ``Lock.parse works correctly 2`` () = 
-  let actual = 
+let ``Lock.parse works correctly 2`` () =
+  let actual =
     [
-      "manifest = \"aabbccddee\""; 
-      ""; 
-      "[[dependency]]"; 
+      "manifest = \"aabbccddee\"";
+      "";
+      "[[dependency]]";
       "package = \"abc/def\"";
-      "target = \"//:def\""; 
-      ""; 
+      "target = \"//:def\"";
+      "";
       "[lock.\"abc/def\"]";
-      "url = \"https://www.abc.com/def.zip\""; 
-      "version = \"1.2.3\""; 
-      "sha256 = \"aabbccddee\""; 
+      "url = \"https://www.abc.com/def.zip\"";
+      "version = \"1.2.3\"";
+      "sha256 = \"aabbccddee\"";
     ]
     |> String.concat "\n"
     |> Lock.parse
-  
+
   let expected = {
-    ManifestHash = "aabbccddee"; 
-    Dependencies = 
+    ManifestHash = "aabbccddee";
+    Dependencies =
       [
         {
-          Package = PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" }; 
+          Package = PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" };
           Target = {
-            Folders = []; 
-            Name = "def"; 
+            Folders = [];
+            Name = "def";
           }
         }
       ]
-      |> Set.ofSeq; 
-    Packages = 
+      |> Set.ofSeq;
+    Packages =
       Map.empty
-      |> Map.add 
-        (PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" }) 
+      |> Map.add
+        (PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" })
         {
-          Version = Version.SemVerVersion { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }; 
+          Versions = Set [Version.SemVer { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }];
           Location = PackageLocation.Http {
-            Url = "https://www.abc.com/def.zip"; 
-            StripPrefix = None; 
-            Type = None; 
-            Sha256 = "aabbccddee"; 
+            Url = "https://www.abc.com/def.zip";
+            StripPrefix = None;
+            Type = None;
+            Sha256 = "aabbccddee";
           };
-          PrivatePackages = Map.empty; 
-        }; 
+          PrivatePackages = Map.empty;
+        };
   }
-  
+
   Assert.Equal(Result.Ok expected, actual)
 
 [<Fact>]
-let ``Lock.parse works correctly 3`` () = 
-  let actual = 
+let ``Lock.parse works correctly 3`` () =
+  let actual =
     [
-      "manifest = \"aabbccddee\""; 
-      ""; 
-      "[[dependency]]"; 
+      "manifest = \"aabbccddee\"";
+      "";
+      "[[dependency]]";
       "package = \"abc/def\"";
-      "target = \"//:def\""; 
-      ""; 
+      "target = \"//:def\"";
+      "";
       "[lock.\"abc/def\"]";
-      "url = \"https://www.abc.com/def.zip\""; 
-      "version = \"1.2.3\""; 
-      "sha256 = \"aabbccddee\""; 
-      ""; 
-      "[lock.\"abc/def\".lock.\"ijk/xyz\"]"; 
-      "url = \"https://www.ijk.com/xyz.zip\""; 
-      "version = \"1\""; 
-      "sha256 = \"aabbccddee\""; 
-      ""; 
+      "url = \"https://www.abc.com/def.zip\"";
+      "version = \"1.2.3\"";
+      "sha256 = \"aabbccddee\"";
+      "";
+      "[lock.\"abc/def\".lock.\"ijk/xyz\"]";
+      "url = \"https://www.ijk.com/xyz.zip\"";
+      "version = \"1\"";
+      "sha256 = \"aabbccddee\"";
+      "";
     ]
     |> String.concat "\n"
     |> Lock.parse
-  
+
   let expected = {
-    ManifestHash = "aabbccddee"; 
-    Dependencies = 
+    ManifestHash = "aabbccddee";
+    Dependencies =
       [
         {
-          Package = PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" }; 
+          Package = PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" };
           Target = {
-            Folders = []; 
-            Name = "def"; 
+            Folders = [];
+            Name = "def";
           }
         }
       ]
-      |> Set.ofSeq; 
-    Packages = 
+      |> Set.ofSeq;
+    Packages =
       Map.empty
-      |> Map.add 
-        (PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" }) 
+      |> Map.add
+        (PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" })
         {
-          Version = Version.SemVerVersion { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }; 
+          Versions = Set [Version.SemVer { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }];
           Location = PackageLocation.Http {
-            Url = "https://www.abc.com/def.zip"; 
-            StripPrefix = None; 
-            Type = None; 
-            Sha256 = "aabbccddee"; 
+            Url = "https://www.abc.com/def.zip";
+            StripPrefix = None;
+            Type = None;
+            Sha256 = "aabbccddee";
           };
-          PrivatePackages = 
+          PrivatePackages =
             Map.empty
-            |> Map.add 
-              (PackageIdentifier.Adhoc { Owner = "ijk"; Project = "xyz" }) 
+            |> Map.add
+              (PackageIdentifier.Adhoc { Owner = "ijk"; Project = "xyz" })
               {
-                Version = Version.SemVerVersion { SemVer.zero with Major = 1; }; 
+                Versions = Set [Version.SemVer { SemVer.zero with Major = 1; }];
                 Location = PackageLocation.Http {
-                  Url = "https://www.ijk.com/xyz.zip"; 
-                  StripPrefix = None; 
-                  Type = None; 
-                  Sha256 = "aabbccddee"; 
+                  Url = "https://www.ijk.com/xyz.zip";
+                  StripPrefix = None;
+                  Type = None;
+                  Sha256 = "aabbccddee";
                 };
-                PrivatePackages = Map.empty; 
-              }; 
-        }; 
+                PrivatePackages = Map.empty;
+              };
+        };
   }
-  
+
   Assert.Equal(Result.Ok expected, actual)
