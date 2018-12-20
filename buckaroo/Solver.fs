@@ -140,14 +140,16 @@ module Solver =
 
   let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
 
+    let unsatisfied =
+      findUnsatisfied state.Solution state.Constraints
+      |> set
+
     yield!
       state.Hints
-        |> AsyncSeq.filter(fun (atom, location) -> state.Visited.Contains(atom.Package, location))
-        |> AsyncSeq.map (fun (atom, location) ->
-          (atom.Package, (location, atom.Versions)))
-
-
-    let unsatisfied = findUnsatisfied state.Solution state.Constraints
+      |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
+      |> AsyncSeq.filter (fun (atom, location) -> state.Visited.Contains(atom.Package, location) |> not)
+      |> AsyncSeq.map (fun (atom, location) ->
+        (atom.Package, (location, atom.Versions)))
 
     for package in unsatisfied do
       let acceptable =
@@ -194,6 +196,11 @@ module Solver =
           strategy sourceExplorer state
           |> AsyncSeq.filter (fun (package, (location, _)) ->
             Set.contains (package, location) state.Visited |> not)
+          |> AsyncSeq.filter (fun (package, (location, _)) ->
+            match state.Solution.Resolutions |> Map.tryFind package with
+            | Some (rv, s) -> rv.Location = location
+            | None -> true
+          )
 
         for (package, (location, versions)) in atomsToExplore do
           try
