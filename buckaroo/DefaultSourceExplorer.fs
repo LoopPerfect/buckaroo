@@ -59,7 +59,7 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageLocation.GitLab gitLab ->
       GitLabApi.fetchFile gitLab.Package gitLab.Revision path
     | PackageLocation.Git git ->
-      gitManager.FetchFile git.Url git.Revision path (hintToBranch git.Hint)
+      gitManager.FetchFile git.Url git.Revision path
     | PackageLocation.Http http ->
       extractFileFromHttp http path
 
@@ -160,7 +160,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             VersionedSource.Git
               (PackageLocation.BitBucket{
                 Revision = rev
-                Hint = Hint.Default
                 Package = bb
               }, vs))
         | PackageIdentifier.GitHub gh ->
@@ -170,7 +169,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             VersionedSource.Git
               (PackageLocation.GitHub{
                 Revision = rev
-                Hint = Hint.Default
                 Package = gh
               }, vs))
         | PackageIdentifier.GitLab gl ->
@@ -180,7 +178,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             VersionedSource.Git
               (PackageLocation.GitLab{
                 Revision = rev
-                Hint = Hint.Default
                 Package = gl
               }, vs))
         | PackageIdentifier.Adhoc adhoc ->
@@ -196,7 +193,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
             VersionedSource.Git
               (PackageLocation.Git{
                 Revision = rev
-                Hint = Hint.Default
                 Url = g.Uri
               }, vs))
           | PackageSource.Http h -> asyncSeq {

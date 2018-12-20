@@ -58,11 +58,8 @@ type GitManager (git : IGit, cacheDirectory : string) =
         replyChannel.Reply(task)
   })
 
-  member private this.getBranchHint (targetDirectory : string) (hint: Option<Branch>) = async {
-    return!
-      match hint with
-      | None -> this.DefaultBranch targetDirectory
-      | Some b -> async { return b }
+  member private this.getBranchHint (targetDirectory : string)= async {
+    return! this.DefaultBranch targetDirectory
   }
   member this.Clone (url : string) : Async<string> = async {
     let! res = mailboxProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
@@ -77,12 +74,12 @@ type GitManager (git : IGit, cacheDirectory : string) =
       do! git.CheckoutTo (cloneFolderName gitUrl) revision installPath
   }
 
-  member this.FetchCommit (url : string) (commit : string) (hint : Option<Branch>) : Async<Unit> = async {
+  member this.FetchCommit (url : string) (commit : string) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
     let operations = [
       fun () -> async { return () };
       fun () -> async {
-        let! branchHint = this.getBranchHint targetDirectory hint
+        let! branchHint = this.getBranchHint targetDirectory
         do! git.FetchBranch targetDirectory branchHint
       };
       fun () -> git.Unshallow targetDirectory;
@@ -118,10 +115,10 @@ type GitManager (git : IGit, cacheDirectory : string) =
       refsCache <- refsCache |> Map.add url refs
       return refs
   }
-  member this.FetchFile (url : string) (revision : Revision) (file : string) (hint : Option<Branch>) : Async<string> =
+  member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> =
     async {
       let! targetDirectory = this.Clone(url)
-      do! this.FetchCommit url revision hint
+      do! this.FetchCommit url revision
       return! git.FetchFile targetDirectory revision file
     }
 
