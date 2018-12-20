@@ -29,8 +29,8 @@ let ``Constraint.satisfies works correctly`` () =
   let v = Version.Git(GitVersion.Revision "aabbccddee")
   let w = Version.Git(GitVersion.Tag "rc1")
   let c = Constraint.Exactly v
-  Assert.True(Constraint.satisfies c v)
-  Assert.False(Constraint.satisfies c w)
+  Assert.True(Constraint.satisfies c (set [ v ]))
+  Assert.False(Constraint.satisfies c (set [ w ]))
 
 [<Fact>]
 let ``Constraint.agreesWith works correctly`` () =

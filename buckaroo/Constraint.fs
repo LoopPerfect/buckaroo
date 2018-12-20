@@ -38,19 +38,12 @@ module Constraint =
   let complement (c : Constraint) : Constraint =
     Complement c
 
-  let rec satisfies (c : Constraint) (v : Version) : bool =
+  let rec satisfies (c : Constraint) (v : Set<Version>) : bool =
     match c with
-    | Exactly u -> u = v
+    | Exactly u -> v |> Set.toSeq |> Seq.exists(fun x -> x = u)
     | Complement x -> satisfies x v |> not
     | Any xs -> xs |> Seq.exists(fun c -> satisfies c v)
     | All xs -> xs |> Seq.forall(fun c -> satisfies c v)
-
-  let rec satisfiesSet (c : Constraint) (v : Set<Version>) : bool =
-    match c with
-    | Exactly u -> v |> Set.toSeq |> Seq.exists(fun x -> x = u)
-    | Complement x -> satisfiesSet x v |> not
-    | Any xs -> xs |> Seq.exists(fun c -> satisfiesSet c v)
-    | All xs -> xs |> Seq.forall(fun c -> satisfiesSet c v)
 
   let rec agreesWith (c : Constraint) (v : Version) : bool =
     match c with

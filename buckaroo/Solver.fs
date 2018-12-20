@@ -85,7 +85,7 @@ module Solver =
       |> Set.toSeq
       |> Seq.map (fun package ->
         (package,
-         Constraint.satisfiesSet
+         Constraint.satisfies
            (Constraint.All (dependencies.[package] |> Set.toList ))
            (fst solution.Resolutions.[package]).Versions ))
       |> Seq.filter(snd >> not)
@@ -154,7 +154,7 @@ module Solver =
     for package in unsatisfied do
       let acceptable =
         VersionedSource.getVersionSet
-        >> (Constraint.satisfiesSet (Constraint.All (state.Constraints.[package] |> Set.toList)))
+        >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
       for versionedSource in sourceExplorer.FetchVersions state.Locations package do
         if acceptable versionedSource then
           let! versionedLocation = sourceExplorer.FetchLocation versionedSource
@@ -168,7 +168,7 @@ module Solver =
     for package in unsatisfied do
       let acceptable =
         VersionedSource.getVersionSet
-        >> (Constraint.satisfiesSet (Constraint.All (state.Constraints.[package] |> Set.toList)))
+        >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
       for versionedSource in sourceExplorer.FetchVersions state.Locations package do
         if acceptable versionedSource then
           let! versionedLocation = sourceExplorer.FetchLocation versionedSource
