@@ -40,6 +40,19 @@ module Solver =
     |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
     |> Map.ofSeq
 
+  let mergeConstraints (a: Constraints) (b: Constraints) =
+    Seq.append
+      (a |> Map.keys)
+      (b |> Map.keys)
+    |> Seq.map (fun k -> (k, ()))
+    |> Map.ofSeq
+    |> Map.map (fun k _ ->
+      Set.union
+        (a.TryFind(k) |> Option.defaultValue(Set[]))
+        (b.TryFind(k) |> Option.defaultValue(Set[]))
+    )
+
+
   let rec versionSearchCost (v : Version) : int =
     match v with
     | Version.SemVer _-> 0
@@ -125,9 +138,13 @@ module Solver =
       |> Seq.fold folder (Result.Ok b)
 
   let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
-    // Solution.visited will filter out any hints that we already tried in Solver.step
-    for (atom, location) in state.Hints do
-      yield (atom.Package, (location, atom.Versions))
+
+    yield!
+      state.Hints
+        |> AsyncSeq.filter(fun (atom, location) -> state.Visited.Contains(atom.Package, location))
+        |> AsyncSeq.map (fun (atom, location) ->
+          (atom.Package, (location, atom.Versions)))
+
 
     let unsatisfied = findUnsatisfied state.Solution state.Constraints
 
@@ -253,6 +270,9 @@ module Solver =
                             state.Solution.Resolutions
                             |> Map.add package (resolvedVersion, privatePackagesSolution)
                       };
+                    // Note: union will favour kvp from the second map
+                    // however, this is a private resoluton and we can resolve independently
+                    // TODO: introduce strict / hybrid mode where we can tweak this behaviour
                     Constraints =
                       Map.union
                         state.Constraints
