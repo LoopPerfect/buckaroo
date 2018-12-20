@@ -1,7 +1,7 @@
 namespace Buckaroo
 
 type ResolvedVersion = {
-  Version : Version;
+  Versions : Set<Version>;
   Location : PackageLocation;
   Manifest : Manifest;
 }
@@ -9,7 +9,14 @@ type ResolvedVersion = {
 module ResolvedVersion =
 
   let isCompatible (x : ResolvedVersion) (y : ResolvedVersion) : bool =
-    x.Location = y.Location || x.Version = y.Version
+    x.Location = y.Location || x.Versions = y.Versions
 
   let show x =
-    Version.show x.Version + "(" + PackageLocation.show x.Location + ")"
+    "ResolvedVersion {\n" +
+    "  Versions = " +
+    (x.Versions
+      |> Set.toSeq
+      |> Seq.map Version.show
+      |> String.concat ", "
+      |> (fun x -> "{ " + x + "}")) +
+    "\n  Location = " + PackageLocation.show x.Location

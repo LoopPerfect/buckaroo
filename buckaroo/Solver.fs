@@ -57,6 +57,22 @@ module Solver =
     yield! Set.difference
       (dependencies |> Map.keys |> Set.ofSeq)
       (solution.Resolutions |> Map.keys  |> Set.ofSeq)
+
+    let maybeSatisfied =
+      Set.intersect
+        (dependencies |> Map.keys |> Set.ofSeq)
+        (solution.Resolutions |> Map.keys  |> Set.ofSeq)
+
+    yield!
+      maybeSatisfied
+      |> Set.toSeq
+      |> Seq.map (fun package ->
+        (package,
+         Constraint.satisfiesSet
+           (Constraint.All (dependencies.[package] |> Set.toList ))
+           (fst solution.Resolutions.[package]).Versions ))
+      |> Seq.filter(snd >> not)
+      |> Seq.map fst
   }
 
   let private lockToHints (lock : Lock) =
@@ -174,7 +190,7 @@ module Solver =
             }
 
             let resolvedVersion = {
-              Version = versions.MaximumElement;
+              Versions = versions;
               Location = location;
               Manifest = manifest;
             }
