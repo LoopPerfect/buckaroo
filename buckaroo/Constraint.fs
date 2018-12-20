@@ -12,7 +12,6 @@ type VersionType =
 | SemVer
 | Revision
 
-
 #nowarn "40"
 
 module Constraint =
