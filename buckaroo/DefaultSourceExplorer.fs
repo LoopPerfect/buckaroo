@@ -4,8 +4,17 @@ open FSharp.Control
 open Buckaroo.PackageLocation
 open Buckaroo.Constraint
 open Buckaroo.Console
+open FSharpx
+
+
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
+  let toOptional x = x |> Async.Catch |> Async.map(Choice.toOption)
+  let fromCache url revision path =
+    gitManager.FetchFile url revision path |> toOptional
+  let oneOf (x, y) = Async.Choice [x; y] |> Async.map(Option.get)
+  let cacheOrGit (f: string->string->Async<string>, url:string, rev:string, path: string) =
+    oneOf (fromCache url rev path, f rev path |> toOptional)
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
@@ -49,13 +58,17 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let fetchFile location path =
     match location with
     | PackageLocation.BitBucket bitBucket ->
-      BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
+      let url = PackageLocation.gitHubUrl bitBucket.Package
+      cacheOrGit (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
     | PackageLocation.GitHub gitHub ->
-      GitHubApi.fetchFile gitHub.Package gitHub.Revision path
+      let url = PackageLocation.gitHubUrl gitHub.Package
+      cacheOrGit (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
     | PackageLocation.GitLab gitLab ->
-      GitLabApi.fetchFile gitLab.Package gitLab.Revision path
+      let url = PackageLocation.gitLabUrl gitLab.Package
+      cacheOrGit (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
     | PackageLocation.Git git ->
-      gitManager.FetchFile git.Url git.Revision path
+      let url = git.Url
+      cacheOrGit(gitManager.FetchFile git.Url, url, git.Revision, path)
     | PackageLocation.Http http ->
       extractFileFromHttp http path
 
@@ -135,7 +148,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   }
 
   interface ISourceExplorer with
-
     member this.FetchLocation versionedSource =
       match versionedSource with
       | VersionedSource.Git (g, vs) -> async { return (g, vs) }
@@ -149,7 +161,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             Sha256 = hash
           }, vs)
         }
-
     member this.FetchVersions locations package =
       match package with
         | PackageIdentifier.BitBucket bb ->
@@ -214,7 +225,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             new System.Exception(errorMessage)
             |> raise
       }
-
     member this.FetchLock location =
       async {
         let! content = fetchFile location Constants.LockFileName
