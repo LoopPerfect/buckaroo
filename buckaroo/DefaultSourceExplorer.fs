@@ -1,8 +1,6 @@
 namespace Buckaroo
 
 open FSharp.Control
-open Buckaroo.PackageLocation
-open Buckaroo.Constraint
 open Buckaroo.Console
 open FSharpx
 
@@ -12,9 +10,13 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let toOptional x = x |> Async.Catch |> Async.map(Choice.toOption)
   let fromCache url revision path =
     gitManager.FetchFile url revision path |> toOptional
-  let oneOf (x, y) = Async.Choice [x; y] |> Async.map(Option.get)
-  let cacheOrGit (f: string->string->Async<string>, url:string, rev:string, path: string) =
-    oneOf (fromCache url rev path, f rev path |> toOptional)
+
+  let cacheOrGit (f: string->string->Async<string>, url:string, rev:string, path: string) = async {
+    let! cached = fromCache url rev path
+    match cached with
+    | Some data -> return data
+    | None -> return! f rev path
+  }
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
