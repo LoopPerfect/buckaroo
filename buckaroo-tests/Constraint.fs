@@ -14,11 +14,25 @@ let dropError<'T, 'E> (x : Result<'T, 'E>) =
 let ``Constraint.parse works correctly`` () =
   let cases = [
     ("*", Constraint.wildcard |> Some);
-    ("revision=aabbccddee",  Version.Git(GitVersion.Revision "aabbccddee") |> Exactly |> Some);
+    ("revision=aabbccddee", "aabbccddee" |> Version.Revision |> Exactly |> Some);
     ("!*", Constraint.wildcard |> Constraint.Complement |> Some);
-    ("any(branch=master)", Some(Any [Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("any(revision=aabbccddee branch=master)", Some(Any [Exactly (Version.Git(GitVersion.Revision "aabbccddee")); Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("all(*)", Some(All [Constraint.wildcard]));
+    ("any(branch=master)", Some (Any [Exactly (Version.Branch "master")]));
+    ("any(revision=aabbccddee branch=master)", Some (Any [Exactly (Version.Revision "aabbccddee"); Exactly (Version.Branch "master")]));
+    ("all(*)", Some (All [Constraint.wildcard]));
+    (
+      "all(branch=master !revision=aabbccddee)",
+      Some (All [Exactly (Version.Branch "master"); Complement (Exactly (Version.Revision "aabbccddee"))])
+    );
+    (
+      "all(branch=master !any(revision=aabbccddee branch=develop))",
+      Some (All [
+        Exactly (Version.Branch "master");
+        Complement (Any([
+          Exactly (Version.Revision "aabbccddee");
+          Exactly (Version.Branch "develop");
+        ]))
+      ])
+    );
     ("", None);
   ]
   for (input, expected) in cases do
@@ -45,15 +59,15 @@ let ``Constraint.agreesWith works correctly`` () =
 [<Fact>]
 let ``Constraint.compare works correctly`` () =
   let input = [
-    (Constraint.Exactly <| Version.Git(GitVersion.Branch "master"));
-    (Constraint.Exactly <| Version.Git(GitVersion.Tag "v1.0.0"));
+    (Constraint.Exactly <| Version.Branch "master");
+    (Constraint.Exactly <| Version.Tag "v1.0.0");
     (Constraint.wildcard);
-    (Constraint.Exactly <| Version.Git(GitVersion.Revision "aabbccddee"));
+    (Constraint.Exactly <| Version.Revision "aabbccddee");
   ]
   let expected = [
-    (Constraint.Exactly <| Version.Git(GitVersion.Revision "aabbccddee"));
-    (Constraint.Exactly <| Version.Git(GitVersion.Tag "v1.0.0"));
-    (Constraint.Exactly <| Version.Git(GitVersion.Branch "master"));
+    (Constraint.Exactly <| Version.Revision "aabbccddee");
+    (Constraint.Exactly <| Version.Tag "v1.0.0");
+    (Constraint.Exactly <| Version.Branch "master");
     (Constraint.wildcard);
   ]
   let actual = input |> List.sortWith Constraint.compare
