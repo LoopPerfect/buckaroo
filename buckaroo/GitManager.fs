@@ -7,9 +7,8 @@ open System.Text.RegularExpressions
 open FSharpx.Control
 open FSharp.Control
 
-
 type CloneRequest =
-  | CloneRequest of string * AsyncReplyChannel<Async<string>>
+| CloneRequest of string * AsyncReplyChannel<Async<string>>
 
 type GitManager (git : IGit, cacheDirectory : string) =
 

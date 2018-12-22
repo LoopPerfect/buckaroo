@@ -100,23 +100,23 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
 
-let writeReceipt (installPath : string) (location : PackageLocation) = async {
+let writeReceipt (installPath : string) (packageLock : PackageLock) = async {
   let receipt =
     "last_updated = " + (Toml.formatDateTime <| System.DateTime.Now.ToUniversalTime()) + "\n" +
-    match location with
-    | PackageLocation.Git g ->
+    match packageLock with
+    | PackageLock.Git g ->
       "git = \"" + g.Url + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
-    | PackageLocation.Http h ->
-      "url = \"" + h.Url + "\"\n" +
-      "sha256 = \"" + (h.Sha256) + "\"\n" +
+    | PackageLock.Http (http, sha256) ->
+      "url = \"" + http.Url + "\"\n" +
+      "sha256 = \"" + (sha256) + "\"\n" +
       (
-        h.StripPrefix
+        http.StripPrefix
         |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n")
         |> Option.defaultValue("")
       ) +
       (
-        h.Type
+        http.Type
         |> Option.map (fun x -> "archive_type = \"" + (string x) + "\"\n")
         |> Option.defaultValue ""
       )
@@ -148,7 +148,7 @@ let compareReceipt (context : TaskContext) installPath location = async {
       content
       |> Toml.parse
       |> Result.mapError Toml.TomlError.show
-      |> Result.bind PackageLocation.fromToml
+      |> Result.bind PackageLock.fromToml
     match maybePackageLocation with
     | Result.Ok receiptLocation ->
       if receiptLocation = location
@@ -167,7 +167,7 @@ let compareReceipt (context : TaskContext) installPath location = async {
     return false
 }
 
-let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
+let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLock) = async {
   let log x =
     x
     |> RichOutput.text
@@ -198,18 +198,18 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     | BitBucket bitBucket ->
       let url = PackageLocation.bitBucketUrl bitBucket.Package
       do! installFromGit url bitBucket.Revision
-    | PackageLocation.Git git ->
+    | PackageLock.Git git ->
       do! installFromGit git.Url git.Revision
     | GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
       do! installFromGit url gitLab.Revision
-    | PackageLocation.Http http ->
+    | PackageLock.Http (http, sha256) ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache
-      if discoveredHash <> http.Sha256
+      if discoveredHash <> sha256
       then
         return
-          new Exception("Hash mismatch for " + http.Url + "! Expected " + http.Sha256 + "but found " + discoveredHash)
+          new Exception("Hash mismatch for " + http.Url + "! Expected " + sha256 + "but found " + discoveredHash)
           |> raise
       do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
       do! Files.mkdirp installPath

@@ -6,24 +6,9 @@ type Constraint =
 | Any of List<Constraint>
 | All of List<Constraint>
 
-type VersionType =
-| Branch
-| Tag
-| SemVer
-| Revision
-
 #nowarn "40"
 
 module Constraint =
-  let rec contingencyOf constraints =
-    match constraints with
-    | Exactly (Version.Git(GitVersion.Branch _)) -> Set [VersionType.Branch]
-    | Exactly (Version.Git(GitVersion.Revision _)) -> Set [VersionType.Revision]
-    | Exactly (Version.SemVer _) -> Set [VersionType.Revision]
-    | Exactly (Version.Git(GitVersion.Tag _)) -> Set [VersionType.Revision]
-    | Complement c -> contingencyOf c
-    | Any c -> c |> List.map contingencyOf |> Set.unionMany
-    | All c -> c |> List.map contingencyOf |> Set.unionMany
 
   open FParsec
 

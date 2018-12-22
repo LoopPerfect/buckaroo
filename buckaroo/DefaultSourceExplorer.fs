@@ -1,12 +1,12 @@
 namespace Buckaroo
 
 open FSharp.Control
-open Buckaroo.PackageLocation
+open Buckaroo.PackageLock
 open Buckaroo.Constraint
 open Buckaroo.Console
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
-  let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
+  let extractFileFromHttp (source : HttpLocation) (sha : string) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
       return raise (new System.Exception("Only zip is currently supported"))
@@ -48,16 +48,16 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchFile location path =
     match location with
-    | PackageLocation.BitBucket bitBucket ->
+    | PackageLock.BitBucket bitBucket ->
       BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
-    | PackageLocation.GitHub gitHub ->
+    | PackageLock.GitHub gitHub ->
       GitHubApi.fetchFile gitHub.Package gitHub.Revision path
-    | PackageLocation.GitLab gitLab ->
+    | PackageLock.GitLab gitLab ->
       GitLabApi.fetchFile gitLab.Package gitLab.Revision path
-    | PackageLocation.Git git ->
+    | PackageLock.Git git ->
       gitManager.FetchFile git.Url git.Revision path
-    | PackageLocation.Http http ->
-      extractFileFromHttp http path
+    | PackageLock.Http (http, sha256) ->
+      extractFileFromHttp http sha256 path
 
   let branchPriority branch =
     match branch with
@@ -136,71 +136,128 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   interface ISourceExplorer with
 
-    member this.FetchLocation versionedSource =
-      match versionedSource with
-      | VersionedSource.Git (g, vs) -> async { return (g, vs) }
-      | VersionedSource.Http (h, vs) -> async {
-          let! path = downloadManager.DownloadToCache h.Url
-          let! hash = Files.sha256 path
-          return (PackageLocation.Http {
-            Url = h.Url
-            StripPrefix = h.StripPrefix
-            Type = h.Type
-            Sha256 = hash
-          }, vs)
-        }
+    member this.LockLocation packageLocation = async {
+      match packageLocation with
+      | PackageLocation.GitHub gitHub ->
+        return PackageLock.GitHub gitHub
+      | PackageLocation.Git g ->
+        // TODO: Verify that the commit actually exists
+        return PackageLock.Git g
+      | PackageLocation.Http h ->
+        let! path = downloadManager.DownloadToCache h.Url
+        let! hash = Files.sha256 path
 
-    member this.FetchVersions locations package =
-      match package with
-        | PackageIdentifier.BitBucket bb ->
-          let url = PackageLocation.bitBucketUrl bb
-          fetchVersionsFromGit url
-            |> AsyncSeq.map (fun (rev, vs) ->
-            VersionedSource.Git
-              (PackageLocation.BitBucket{
-                Revision = rev
-                Package = bb
-              }, vs))
-        | PackageIdentifier.GitHub gh ->
-          let url = PackageLocation.gitHubUrl gh
-          fetchVersionsFromGit url
-            |> AsyncSeq.map (fun (rev, vs) ->
-            VersionedSource.Git
-              (PackageLocation.GitHub{
-                Revision = rev
-                Package = gh
-              }, vs))
-        | PackageIdentifier.GitLab gl ->
-          let url = PackageLocation.gitLabUrl gl
-          fetchVersionsFromGit url
-            |> AsyncSeq.map (fun (rev, vs) ->
-            VersionedSource.Git
-              (PackageLocation.GitLab{
-                Revision = rev
-                Package = gl
-              }, vs))
-        | PackageIdentifier.Adhoc adhoc ->
-          let (_, source) =
-            locations
-            |> Map.toSeq
-            |> Seq.find (fun (p, _) -> p = adhoc)
+        return
+          PackageLock.Http
+            (
+              {
+                Url = h.Url;
+                StripPrefix = h.StripPrefix;
+                Type = h.Type;
+              },
+              hash
+            )
+    }
 
-          match source with
-          | PackageSource.Git g ->
-            fetchVersionsFromGit g.Uri
-            |> AsyncSeq.map (fun (rev, vs) ->
-            VersionedSource.Git
-              (PackageLocation.Git{
-                Revision = rev
-                Url = g.Uri
-              }, vs))
-          | PackageSource.Http h -> asyncSeq {
-            yield! h
-            |> Map.toSeq
-            |> Seq.map (fun (version, source) ->
-               VersionedSource.Http (source, Set[version]))
-            |> AsyncSeq.ofSeq
-          }
+    member this.FetchLocations locations package versionConstraint =
+
+      let fetchLocationsForVersion (version : Version) = asyncSeq {
+        match package with
+        | PackageIdentifier.GitHub gitHub ->
+          let gitUrl = PackageLocation.gitHubUrl gitHub
+          match version with
+          | Version.Git (Branch branch) ->
+            let! refs = gitManager.FetchRefs gitUrl
+            yield!
+              refs
+              |> Seq.filter (fun t -> t.Name = branch)
+              |> Seq.choose (fun r ->
+                match r.Type with
+                | RefType.Branch -> Some r.Revision
+                | RefType.Tag -> None
+              )
+              |> Seq.map (fun r -> PackageLocation.GitHub {
+                Package = gitHub;
+                Revision = r;
+              })
+              |> AsyncSeq.ofSeq
+
+            let! commits = gitManager.FetchCommits gitUrl branch
+            yield!
+              commits
+              |> Seq.map (fun r -> PackageLocation.GitHub {
+                Package = gitHub;
+                Revision = r;
+              })
+              |> AsyncSeq.ofSeq
+          | Version.Git (Tag tag) ->
+            let! refs = gitManager.FetchRefs gitUrl
+            yield!
+              refs
+              |> Seq.filter (fun t -> t.Name = tag)
+              |> Seq.choose (fun r ->
+                match r.Type with
+                | RefType.Branch -> None
+                | RefType.Tag -> Some r.Revision
+              )
+              |> Seq.map (fun r -> PackageLocation.GitHub {
+                Package = gitHub;
+                Revision = r;
+              })
+              |> AsyncSeq.ofSeq
+        // TODO: All cases!
+        ()
+      }
+
+      let rec loop (versionConstraint : Constraint) = asyncSeq {
+        match versionConstraint with
+        | Complement c ->
+          let! complement =
+            loop c
+            |> AsyncSeq.map fst
+            |> AsyncSeq.fold (fun s x -> Set.add x s) Set.empty
+
+          yield!
+            loop (Constraint.All [])
+            |> AsyncSeq.filter (fun (location, _) -> complement |> Set.contains location |> not)
+        | Any xs ->
+          yield!
+            xs
+            |> List.distinct
+            |> List.map loop
+            |> AsyncSeq.mergeAll
+            |> AsyncSeq.distinctUntilChanged
+        | All xs ->
+          let combine (xs : Set<PackageLocation * Set<Version>>) (ys : Set<PackageLocation * Set<Version>>) =
+            xs
+            |> Seq.choose (fun (location, versions) ->
+              let matchingVersions =
+                ys
+                |> Seq.filter (fst >> (=) location)
+                |> Seq.collect snd
+                |> Seq.toList
+
+              match matchingVersions with
+              | [] -> None
+              | vs -> Some (location, versions |> Set.union (set vs))
+            )
+            |> Set.ofSeq
+
+          // TODO: add all versions stream for empty case
+          yield!
+            xs
+            |> List.distinct
+            |> List.map (loop >> (AsyncSeq.scan (fun s x -> Set.add x s) Set.empty))
+            |> List.reduce (AsyncSeq.combineLatestWith combine)
+            |> AsyncSeq.concatSeq
+            |> AsyncSeq.distinctUntilChanged
+        | Exactly v ->
+          yield!
+            fetchLocationsForVersion v
+            |> AsyncSeq.map (fun location -> (location, Set.singleton v))
+      }
+      loop versionConstraint
+
     member this.FetchManifest location =
       async {
         let! content = fetchFile location Constants.ManifestFileName

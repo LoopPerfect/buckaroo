@@ -57,12 +57,18 @@ let ``Lock.parse works correctly 2`` () =
         (PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" })
         {
           Versions = Set [Version.SemVer { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }];
-          Location = PackageLocation.Http {
-            Url = "https://www.abc.com/def.zip";
-            StripPrefix = None;
-            Type = None;
-            Sha256 = "aabbccddee";
-          };
+          Location =
+            (
+              PackageLock.Http
+                (
+                  {
+                    Url = "https://www.abc.com/def.zip";
+                    StripPrefix = None;
+                    Type = None;
+                  },
+                  "aabbccddee"
+                )
+            );
           PrivatePackages = Map.empty;
         };
   }
@@ -112,24 +118,33 @@ let ``Lock.parse works correctly 3`` () =
         (PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" })
         {
           Versions = Set [Version.SemVer { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }];
-          Location = PackageLocation.Http {
-            Url = "https://www.abc.com/def.zip";
-            StripPrefix = None;
-            Type = None;
-            Sha256 = "aabbccddee";
-          };
+          Location =
+            (
+              PackageLock.Http
+                (
+                  ({
+                    Url = "https://www.abc.com/def.zip";
+                    StripPrefix = None;
+                    Type = None;
+                  }),
+                  "aabbccddee"
+                )
+            );
           PrivatePackages =
             Map.empty
             |> Map.add
               (PackageIdentifier.Adhoc { Owner = "ijk"; Project = "xyz" })
               {
-                Versions = Set [Version.SemVer { SemVer.zero with Major = 1; }];
-                Location = PackageLocation.Http {
-                  Url = "https://www.ijk.com/xyz.zip";
-                  StripPrefix = None;
-                  Type = None;
-                  Sha256 = "aabbccddee";
-                };
+                Versions = Set.singleton (Version.SemVer { SemVer.zero with Major = 1; });
+                Location =
+                  (PackageLock.Http (
+                    ({
+                      Url = "https://www.ijk.com/xyz.zip";
+                      StripPrefix = None;
+                      Type = None;
+                    }),
+                    "aabbccddee"
+                  ));
                 PrivatePackages = Map.empty;
               };
         };

@@ -37,9 +37,9 @@ module Version =
   let rec show (v : Version) : string =
     match v with
     | SemVer semVer -> SemVer.show semVer
-    | Git(Branch branch) -> "branch=" + branch
-    | Git(Revision revision) -> "revision=" + revision
-    | Git(Tag tag) -> "tag=" + tag
+    | Git (Branch branch) -> "branch=" + branch
+    | Git (Revision revision) -> "revision=" + revision
+    | Git (Tag tag) -> "tag=" + tag
 
   let identifierParser = CharParsers.regex @"[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){2,64}"
 

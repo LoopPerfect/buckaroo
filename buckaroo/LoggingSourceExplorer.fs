@@ -9,12 +9,12 @@ type LoggingSourceExplorer (console : ConsoleManager, sourceExplorer : ISourceEx
 
   interface ISourceExplorer with
     member this.FetchManifest location = async {
-      log("Fetching manifest for " + (PackageLocation.show location) + "... ")
+      log("Fetching manifest for " + (PackageLock.show location) + "... ")
       return! sourceExplorer.FetchManifest location
     }
 
     member this.FetchLock location = async {
-      log("Fetching lock for " + (PackageLocation.show location) + "... ")
+      log("Fetching lock for " + (PackageLock.show location) + "... ")
       return! sourceExplorer.FetchLock location
     }
 
@@ -22,5 +22,5 @@ type LoggingSourceExplorer (console : ConsoleManager, sourceExplorer : ISourceEx
     member this.FetchVersions locations package =
       sourceExplorer.FetchVersions locations package
 
-    member this.FetchLocation source =
-      sourceExplorer.FetchLocation source
+    member this.LockLocation source =
+      sourceExplorer.LockLocation source

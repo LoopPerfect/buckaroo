@@ -14,18 +14,16 @@ module Solver =
 
   type Constraints = Map<PackageIdentifier, Set<Constraint>>
 
-  type Hints = AsyncSeq<LocatedAtom>
-
   type SolverState = {
     Solution : Solution;
     Constraints : Constraints;
     Depth : int;
-    Visited : Set<PackageIdentifier * PackageLocation>;
+    Visited : Set<PackageIdentifier * PackageLock>;
     Locations : Map<AdhocPackageIdentifier, PackageSource>;
-    Hints : AsyncSeq<LocatedAtom>;
+    Hints : AsyncSeq<Atom * PackageLock>;
   }
 
-  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<PackageIdentifier * VersionedLocation>
+  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<PackageIdentifier * (PackageLocation * Set<Version>)>
 
   let private withTimeout timeout action =
     async {
@@ -35,7 +33,6 @@ module Solver =
 
   let constraintsOf (ds: Set<Dependency>) =
     ds
-    |> Set.toSeq
     |> Seq.map (fun x -> (x.Package, x.Constraint))
     |> Seq.groupBy fst
     |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
@@ -52,7 +49,6 @@ module Solver =
         (a.TryFind(k) |> Option.defaultValue(Set[]))
         (b.TryFind(k) |> Option.defaultValue(Set[]))
     )
-
 
   let rec versionSearchCost (v : Version) : int =
     match v with
@@ -138,41 +134,47 @@ module Solver =
       |> Map.toSeq
       |> Seq.fold folder (Result.Ok b)
 
-  let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
+  // TODO: Re-enable
+  // let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
 
-    let unsatisfied =
-      findUnsatisfied state.Solution state.Constraints
-      |> set
+  //   let unsatisfied =
+  //     findUnsatisfied state.Solution state.Constraints
+  //     |> set
 
-    yield!
-      state.Hints
-      |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
-      |> AsyncSeq.filter (fun (atom, location) -> state.Visited.Contains(atom.Package, location) |> not)
-      |> AsyncSeq.map (fun (atom, location) ->
-        (atom.Package, (location, atom.Versions)))
+  //   yield!
+  //     state.Hints
+  //     |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
+  //     |> AsyncSeq.filter (fun (atom, location) -> state.Visited.Contains(atom.Package, location) |> not)
+  //     |> AsyncSeq.map (fun (atom, location) ->
+  //       (atom.Package, (location, atom.Versions)))
 
-    for package in unsatisfied do
-      let acceptable =
-        VersionedSource.getVersionSet
-        >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
-      for versionedSource in sourceExplorer.FetchVersions state.Locations package do
-        if acceptable versionedSource then
-          let! versionedLocation = sourceExplorer.FetchLocation versionedSource
-          yield (package, versionedLocation)
+  //   for package in unsatisfied do
+  //     let acceptable =
+  //       VersionedSource.getVersionSet
+  //       >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
+  //     for versionedSource in sourceExplorer.FetchVersions state.Locations package do
+  //       if acceptable versionedSource then
+  //         let! versionedLocation = sourceExplorer.FetchLocation versionedSource
+  //         yield (package, versionedLocation)
 
-  }
+  // }
 
   let upgradeSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
     let unsatisfied = findUnsatisfied state.Solution state.Constraints
 
     for package in unsatisfied do
-      let acceptable =
-        VersionedSource.getVersionSet
-        >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
-      for versionedSource in sourceExplorer.FetchVersions state.Locations package do
-        if acceptable versionedSource then
-          let! versionedLocation = sourceExplorer.FetchLocation versionedSource
-          yield (package, versionedLocation)
+      let constraints =
+        state.Constraints
+        |> Map.tryFind package
+        |> Option.defaultValue Set.empty
+        |> Seq.toList
+        |> Constraint.All
+
+      let locationsAndVersions =
+        sourceExplorer.FetchLocations state.Locations package constraints
+
+      for location in locationsAndVersions do
+        yield (package, location)
   }
 
   let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
@@ -188,34 +190,39 @@ module Solver =
       (x |> RichOutput.text)
       |> context.Console.Write
 
-    if findUnsatisfied state.Solution state.Constraints |> Seq.isEmpty
+    let unsatisfied =
+      findUnsatisfied state.Solution state.Constraints
+
+    if Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution
       else
         let atomsToExplore =
           strategy sourceExplorer state
-          |> AsyncSeq.filter (fun (package, (location, _)) ->
+          |> AsyncSeq.mapAsync (fun (package, (location, versions)) -> async {
+            let! packageLock = sourceExplorer.LockLocation location
+            return (package, (packageLock, versions))
+          })
+          |> AsyncSeq.filter (fun (package, (location, versions)) ->
             Set.contains (package, location) state.Visited |> not)
-          |> AsyncSeq.filter (fun (package, (location, _)) ->
+          |> AsyncSeq.filter (fun (package, (packageLock, versions)) ->
             match state.Solution.Resolutions |> Map.tryFind package with
-            | Some (rv, s) -> rv.Location = location
+            | Some (rv, _) -> rv.Lock = packageLock
             | None -> true
           )
 
-        for (package, (location, versions)) in atomsToExplore do
+        for (package, (packageLock, versions)) in atomsToExplore do
           try
-            log("Exploring " + (PackageIdentifier.show package) + " -> " + (PackageLocation.show location) + "...")
+            log("Exploring " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
 
             // We pre-emptively grab the lock
             let! lockTask =
-              sourceExplorer.FetchLock location
+              sourceExplorer.FetchLock packageLock
               |> Async.StartChild
 
             log("Fetching manifest... ")
 
-            let! manifest = sourceExplorer.FetchManifest location
-
-            log("Got manifest " + (string manifest))
+            let! manifest = sourceExplorer.FetchManifest packageLock
 
             let! mergedLocations = async {
               return
@@ -226,7 +233,7 @@ module Solver =
 
             let resolvedVersion = {
               Versions = versions;
-              Location = location;
+              Lock = packageLock;
               Manifest = manifest;
             }
 
@@ -237,13 +244,13 @@ module Solver =
                   yield!
                     lock
                     |> lockToHints
-                    |> Seq.filter (fun (atom, location) ->
-                      Set.contains (atom.Package, location) state.Visited |> not &&
+                    |> Seq.filter (fun (atom, packageLock) ->
+                      Set.contains (atom.Package, packageLock) state.Visited |> not &&
                       state.Solution.Resolutions |> Map.containsKey atom.Package |> not
                     )
                     |> AsyncSeq.ofSeq
                 with error ->
-                  log("Could not fetch buckaroo.lock.toml for " + (PackageLocation.show location))
+                  log("Could not fetch buckaroo.lock.toml for " + (string packageLock))
                   log(string error)
                   ()
               }
@@ -289,7 +296,7 @@ module Solver =
                     Depth = state.Depth + 1;
                     Visited =
                       state.Visited
-                      |> Set.add (package, location);
+                      |> Set.add (package, packageLock);
                     Locations = mergedLocations;
                     Hints =
                       state.Hints
@@ -299,7 +306,7 @@ module Solver =
                 yield! step context strategy nextState
               })
           with error ->
-            log("Error exploring " + (PackageLocation.show location) + "...")
+            log("Error exploring " + (string packageLock) + "...")
             log(string error)
             yield Resolution.Error error
 
@@ -328,7 +335,8 @@ module Solver =
 
     let strategy =
       match style with
-      | Quick -> quickSearchStrategy
+      // | Quick -> quickSearchStrategy
+      | Quick -> upgradeSearchStrategy // TODO
       | Upgrading -> upgradeSearchStrategy
 
     let state = {
