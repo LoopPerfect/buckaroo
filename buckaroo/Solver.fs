@@ -171,7 +171,7 @@ module Solver =
         |> Constraint.All
 
       let locationsAndVersions =
-        sourceExplorer.FetchLocations state.Locations package constraints
+        SourceExplorer.fetchLocationsForConstraint sourceExplorer state.Locations package constraints
 
       for location in locationsAndVersions do
         yield (package, location)
