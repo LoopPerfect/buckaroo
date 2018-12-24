@@ -160,57 +160,87 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
       yield! fetchRevisionsFromGitSemVer gitUrl semVer
   }
 
+  let fetchVersionsFromGit gitUrl = asyncSeq {
+    let! refs = gitManager.FetchRefs gitUrl
+
+    // Sem-vers
+    yield!
+      refs
+      |> Seq.choose (fun ref ->
+        match (ref.Type, SemVer.parse ref.Name) with
+        | (RefType.Tag, Result.Ok semVer) -> Some (Version.SemVer semVer)
+        | _ -> None
+      )
+      |> AsyncSeq.ofSeq
+
+    // Tags
+    yield!
+      refs
+      |> Seq.choose (fun ref ->
+        match ref.Type with
+        | RefType.Tag -> Some (Version.Git (GitVersion.Tag ref.Name))
+        | _ -> None
+      )
+      |> AsyncSeq.ofSeq
+
+    // Default branch
+    let! gitPath = gitManager.Clone gitUrl
+    let! defaultBranch = gitManager.DefaultBranch gitPath
+    yield Version.Git (GitVersion.Branch defaultBranch)
+
+    // Branches
+    yield!
+      refs
+      |> Seq.choose (fun ref ->
+        match ref.Type with
+        | RefType.Branch ->
+          if ref.Name <> defaultBranch
+          then
+            Some (Version.Git (GitVersion.Branch ref.Name))
+          else
+            None
+        | _ -> None
+      )
+      |> AsyncSeq.ofSeq
+
+    // TODO: Revisions
+  }
+
+
   interface ISourceExplorer with
 
     member this.FetchVersions locations package = asyncSeq {
       match package with
       | PackageIdentifier.GitHub gitHub ->
-        let gitUrl = PackageLocation.gitHubUrl gitHub
-
-        let! refs = gitManager.FetchRefs gitUrl
-
-        // Sem-vers
-
-        // Tags
-        yield!
-          refs
-          |> Seq.choose (fun ref ->
-            match ref.Type with
-            | RefType.Tag -> Some (Version.Git (GitVersion.Tag ref.Name))
-            | _ -> None
-          )
-          |> AsyncSeq.ofSeq
-
-        // Default branch
-        let! gitPath = gitManager.Clone gitUrl
-        let! defaultBranch = gitManager.DefaultBranch gitPath
-        yield Version.Git (GitVersion.Branch defaultBranch)
-
-        // Branches
-        yield!
-          refs
-          |> Seq.choose (fun ref ->
-            match ref.Type with
-            | RefType.Branch ->
-              if ref.Name <> defaultBranch
-              then
-                Some (Version.Git (GitVersion.Branch ref.Name))
-              else
-                None
-            | _ -> None
-          )
-          |> AsyncSeq.ofSeq
-
-        // Revisions?
+        yield! fetchVersionsFromGit (PackageLocation.gitHubUrl gitHub)
+      | PackageIdentifier.GitLab gitLab ->
+        yield! fetchVersionsFromGit (PackageLocation.gitLabUrl gitLab)
+      | PackageIdentifier.BitBucket bitBucket ->
+        yield! fetchVersionsFromGit (PackageLocation.bitBucketUrl bitBucket)
+      | PackageIdentifier.Adhoc adhoc ->
+        match locations |> Map.tryFind adhoc with
+        | Some (PackageSource.Git git) ->
+          yield! fetchVersionsFromGit git.Uri
+        | Some (PackageSource.Http versions) ->
+          yield!
+            versions
+            |> Map.toSeq
+            |> Seq.map fst
+            |> Seq.distinct
+            |> AsyncSeq.ofSeq
+        | _ -> ()
     }
 
     member this.LockLocation packageLocation = async {
+      // TODO: Verify that Git commit actually exists
       match packageLocation with
       | PackageLocation.GitHub gitHub ->
-        // do! gitManager.FetchCommit // TODO
         return PackageLock.GitHub gitHub
+      | PackageLocation.BitBucket bitBucket ->
+        return PackageLock.BitBucket bitBucket
+      | PackageLocation.GitLab gitLab ->
+        return PackageLock.GitLab gitLab
       | PackageLocation.Git g ->
-        // TODO: Verify that the commit actually exists
         return PackageLock.Git g
       | PackageLocation.Http h ->
         let! path = downloadManager.DownloadToCache h.Url
@@ -260,6 +290,22 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
               Revision = revision;
             }
           )
+      | PackageIdentifier.Adhoc adhoc ->
+        match locations |> Map.tryFind adhoc with
+        | Some (PackageSource.Git git) ->
+          yield!
+            fetchRevisionsFromGitVersion git.Uri version
+            |> AsyncSeq.map (fun revision ->
+              PackageLocation.Git {
+                Url = git.Uri;
+                Revision = revision;
+              }
+            )
+        | Some (PackageSource.Http versions) ->
+          match versions |> Map.tryFind version with
+          | Some location -> yield PackageLocation.Http location
+          | None -> ()
+        | _ -> ()
     }
 
     member this.FetchManifest location =
