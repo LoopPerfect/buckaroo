@@ -76,7 +76,8 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.DefaultBranch (gitPath : string) = async {
-      return! runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
+      let! result = runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
+      return result.Trim()
     }
 
     member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
@@ -131,7 +132,7 @@ type GitCli (console : ConsoleManager) =
       let gitDir = repository
       let command =
         "git --git-dir=" + gitDir +
-        " fetch origin " + commit + ":"+commit
+        " fetch origin " + commit
       do!
         runBash(command)
         |> Async.Ignore

@@ -66,51 +66,51 @@ module PackageLocation =
 
   let fromToml toml = result {
     match toml |> Toml.tryGet "git" with
-    | Some gitToml -> 
-      let! git = 
-        gitToml 
+    | Some gitToml ->
+      let! git =
+        gitToml
         |> Toml.asString
         |> Result.mapError Toml.TomlError.show
 
-      let! revision = 
+      let! revision =
         toml
         |> Toml.get "revision"
         |> Result.bind Toml.asString
         |> Result.mapError Toml.TomlError.show
 
       return PackageLocation.Git { Url = git; Revision = revision }
-    | None -> 
-      match toml |> Toml.tryGet "package" with 
-      | Some tomlPackage -> 
-        let! package = 
+    | None ->
+      match toml |> Toml.tryGet "package" with
+      | Some tomlPackage ->
+        let! package =
           tomlPackage
           |> Toml.asString
           |> Result.mapError Toml.TomlError.show
           |> Result.bind PackageIdentifier.parse
-        
-        let! revision = 
+
+        let! revision =
           toml
           |> Toml.get "revision"
           |> Result.bind Toml.asString
           |> Result.mapError Toml.TomlError.show
 
-        match package with 
-        | PackageIdentifier.Adhoc _ -> 
+        match package with
+        | PackageIdentifier.Adhoc _ ->
           return! Result.Error "Expected a hosted-git package"
-        | PackageIdentifier.GitHub x -> 
+        | PackageIdentifier.GitHub x ->
           return PackageLocation.GitHub { Package = x; Revision = revision }
-        | PackageIdentifier.BitBucket x -> 
+        | PackageIdentifier.BitBucket x ->
           return PackageLocation.BitBucket { Package = x; Revision = revision }
-        | PackageIdentifier.GitLab x -> 
+        | PackageIdentifier.GitLab x ->
           return PackageLocation.GitLab { Package = x; Revision = revision }
-      | None -> 
-        let! url = 
+      | None ->
+        let! url =
           toml
           |> Toml.get "url"
           |> Result.bind Toml.asString
           |> Result.mapError Toml.TomlError.show
 
-        let! sha256 = 
+        let! sha256 =
           toml
           |> Toml.get "sha256"
           |> Result.bind Toml.asString
@@ -133,7 +133,7 @@ module PackageLocation =
           |> Option.map (Result.map Option.Some)
           |> Option.defaultValue (Result.Ok Option.None)
 
-        return 
-         PackageLocation.Http 
+        return
+         PackageLocation.Http
          { Url = url; Sha256 = sha256; StripPrefix = stripPrefix; Type = archiveType }
   }

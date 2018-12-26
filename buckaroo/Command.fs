@@ -2,6 +2,7 @@ namespace Buckaroo
 
 open Tasks
 open Console
+open FSharp.Control
 
 type Command =
 | Start
@@ -129,6 +130,39 @@ module Command =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
+
+  let add (context : Tasks.TaskContext) dependencies = async {
+    let sourceExplorer = context.SourceExplorer
+
+    let! manifest = Tasks.readManifest "."
+    let newManifest = {
+      manifest with
+        Dependencies =
+          manifest.Dependencies
+          |> Seq.append dependencies
+          |> Set.ofSeq;
+    }
+    if manifest = newManifest
+    then return ()
+    else
+      let! maybeLock = async {
+        if File.Exists(Constants.LockFileName)
+        then
+          let! lock = Tasks.readLock
+          return Some lock
+        else
+          return None
+      }
+      let! resolution = Solver.solve context newManifest ResolutionStyle.Quick maybeLock
+      match resolution with
+      | Resolution.Ok solution ->
+        do! Tasks.writeManifest newManifest
+        do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
+        do! InstallCommand.task context
+      | _ -> ()
+      System.Console.WriteLine ("Success. ")
+      return ()
+  }
 
   let upgrade context = async {
     // TODO: Roll-back on failure!

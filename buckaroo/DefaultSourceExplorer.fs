@@ -2,86 +2,10 @@ namespace Buckaroo
 
 open FSharp.Control
 open Buckaroo.PackageLocation
+open Buckaroo.Constraint
+open Buckaroo.Console
 
-type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitManager) =
-
-  let branchPriority branch =
-    match branch with
-    | "master" -> 0
-    | "develop" -> 1
-    | _ -> 2
-
-  let fetchLocationsFromGit (url : string) (version : Version) = asyncSeq {
-    match version with
-    | Buckaroo.SemVerVersion semVer ->
-      let! refs = gitManager.FetchRefs url
-      yield!
-        refs
-        |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
-        |> Seq.filter (fun t -> SemVer.parse t.Name = Result.Ok semVer)
-        |> Seq.map (fun t -> t.Revision)
-        |> Seq.distinct
-        |> AsyncSeq.ofSeq
-    | Buckaroo.Version.Branch branch ->
-      let! refs = gitManager.FetchRefs url
-      let  branches =
-        refs
-        |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
-      yield!
-        branches
-        |> Seq.filter (fun x -> x.Name = branch)
-        |> Seq.map (fun x -> x.Revision)
-        |> AsyncSeq.ofSeq
-
-      do! gitManager.FetchBranch url branch
-      let! commits = gitManager.FetchCommits url branch
-      yield!
-        commits
-        |> Seq.except (branches |> Seq.map (fun x -> x.Revision))
-        |> AsyncSeq.ofSeq
-
-    | Buckaroo.Version.Revision r ->
-      yield r
-    | Buckaroo.Version.Tag tag ->
-      let! refs = gitManager.FetchRefs url
-      yield!
-        refs
-        |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
-        |> Seq.filter (fun t -> t.Name = tag)
-        |> Seq.map (fun t -> t.Revision)
-        |> Seq.distinct
-        |> AsyncSeq.ofSeq
-    | Buckaroo.Version.Latest -> ()
-  }
-
-  let fetchLocationsFromPackageSource (source : PackageSource) (version : Buckaroo.Version) = asyncSeq {
-    match source with
-    | PackageSource.Git git ->
-      yield!
-        fetchLocationsFromGit git.Uri version
-        |> AsyncSeq.map (fun revision ->
-          PackageLocation.Git {
-            Url = git.Uri;
-            Revision = revision;
-          }
-        )
-    | PackageSource.Http httpSources ->
-      match httpSources |> Map.tryFind version with
-      | None ->
-        raise (new System.SystemException ("version:" + (string version) + "not found"))
-      | Some http ->
-        let! path = downloadManager.DownloadToCache http.Url
-        let! hash = Files.sha256 path
-        yield
-          PackageLocation.Http
-          {
-            Url = http.Url;
-            StripPrefix = http.StripPrefix;
-            Type = http.Type;
-            Sha256 = hash;
-          }
-  }
-
+type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
@@ -122,70 +46,6 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
       streamReader.ReadToEndAsync() |> Async.AwaitTask
   }
 
-  let fetchVersionsFromGit (url : string) = asyncSeq {
-    let! refs = gitManager.FetchRefs url
-
-    // Tags and sem-vers
-    let tags = refs |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
-    let branches = refs |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
-
-    yield!
-      tags
-      |> Seq.collect (fun tag -> seq {
-        match SemVer.parse tag.Name with
-        | Result.Ok semVer ->
-          yield semVer |> Version.SemVerVersion
-          ()
-        | Result.Error _ ->
-          ()
-        yield tag.Name |> Version.Tag
-      })
-      |> Seq.sortWith (fun x y ->
-        match (x, y) with
-        | (SemVerVersion i, SemVerVersion j) -> SemVer.compare i j
-        | (SemVerVersion _, Version.Tag _) -> -1
-        | (Version.Tag _, SemVerVersion _) -> 1
-        | (Version.Tag i, Version.Tag j) -> System.String.Compare(i, j)
-        | _ -> 0
-      )
-      |> AsyncSeq.ofSeq
-
-    // Branches
-    yield!
-      branches
-      |> Seq.map (fun x -> x.Name)
-      |> Seq.sortBy branchPriority
-      |> Seq.map Version.Branch
-      |> AsyncSeq.ofSeq
-
-    // Tag Revisions
-    yield!
-      tags
-      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Revision)
-      |> AsyncSeq.ofSeq
-
-    // Branch Revisions
-    yield!
-      branches
-      |> Seq.map (fun x -> Buckaroo.Version.Revision x.Revision)
-      |> AsyncSeq.ofSeq
-
-    let alreadyYielded =
-      branches
-      |> Seq.map (fun x -> x.Revision)
-      |> Seq.append (tags |> Seq.map (fun x -> x.Revision))
-      |> Set.ofSeq
-
-    // All Revisions
-    for branch in branches do
-      let! commits = gitManager.FetchCommits url branch.Name
-      yield!
-        commits
-        |> Seq.except alreadyYielded
-        |> Seq.map (fun x -> Buckaroo.Version.Revision x)
-        |> AsyncSeq.ofSeq
-  }
-
   let fetchFile location path =
     match location with
     | PackageLocation.BitBucket bitBucket ->
@@ -195,80 +55,152 @@ type DefaultSourceExplorer (downloadManager : DownloadManager, gitManager : GitM
     | PackageLocation.GitLab gitLab ->
       GitLabApi.fetchFile gitLab.Package gitLab.Revision path
     | PackageLocation.Git git ->
-      gitManager.FetchFile git.Url git.Revision path None
+      gitManager.FetchFile git.Url git.Revision path
     | PackageLocation.Http http ->
       extractFileFromHttp http path
 
+  let branchPriority branch =
+    match branch with
+    | "master" -> 0
+    | "develop" -> 1
+    | _ -> 2
+
+  let fetchVersionsFromGit url = asyncSeq {
+    let! refs = gitManager.FetchRefs url
+
+    let tags = refs |> Seq.choose (fun x -> match x.Type with | RefType.Tag -> Some(x) | _ -> None)
+    let branches = refs |> Seq.choose (fun x -> match x.Type with | RefType.Branch -> Some(x) | _ -> None)
+
+    let allRefs = seq {
+      yield! tags |> Seq.collect (fun x -> seq {
+        let rev = x.Revision
+        yield (rev, Version.Git (GitVersion.Tag x.Name))
+
+        match SemVer.parse x.Name with
+        | Result.Ok semVer ->
+          yield (rev, Version.SemVer semVer)
+        | _ -> ()
+      })
+
+      yield! branches |> Seq.collect (fun x -> seq {
+        let rev = x.Revision
+        yield (rev, Version.Git (GitVersion.Branch x.Name))
+      })
+    }
+
+    let all =
+      allRefs
+        |> Seq.groupBy (fun (r, _) -> r)
+        |> Seq.map(fun (revision, aliases) ->
+          (revision, aliases
+            |> Seq.map (fun (_, x) -> x)
+            |> Set
+            |> Set.add (Version.Git (GitVersion.Revision revision))
+        ))
+
+    console.Write("git-version-fetcher: " + url + "\n" + "discovered following advertised versions:\n", LoggingLevel.Trace)
+    for (_, versions) in all do
+      console.Write (
+        versions
+        |> Set.toSeq
+        |> Seq.map Version.show
+        |> String.concat ", "
+        |> (fun x -> "VersionGroup {" + x + "}"),
+        LoggingLevel.Trace
+      )
+
+    yield! all
+      |> Seq.sortWith (fun (_, x) (_, y) -> -Version.compare x.MaximumElement y.MaximumElement)
+      |> AsyncSeq.ofSeq
+
+    console.Write("git-version-fetcher: " + url + "\n" + "exploring individual branches now", LoggingLevel.Trace)
+    let mutable revisionMap = Map.ofSeq all
+    for branch in branches do
+      console.Write("git-version-fetcher: " + url + "\n" + "exploring branch: " + branch.Name, LoggingLevel.Trace)
+      let b = GitVersion.Branch branch.Name
+      let! commits = gitManager.FetchCommits url branch.Name
+      for commit in commits |> Seq.tail do
+
+        match revisionMap.ContainsKey commit with
+        | false ->
+          revisionMap <- revisionMap
+        |> Map.add commit (Set[Version.Git (GitVersion.Revision commit)])
+        | true -> ()
+
+        let versions = revisionMap.Item commit
+        let newVersions = versions |> Set.add (Version.Git b)
+        revisionMap <- revisionMap
+          |> Map.add commit newVersions
+        yield (commit, revisionMap.Item commit)
+  }
+
   interface ISourceExplorer with
+
+    member this.FetchLocation versionedSource =
+      match versionedSource with
+      | VersionedSource.Git (g, vs) -> async { return (g, vs) }
+      | VersionedSource.Http (h, vs) -> async {
+          let! path = downloadManager.DownloadToCache h.Url
+          let! hash = Files.sha256 path
+          return (PackageLocation.Http {
+            Url = h.Url
+            StripPrefix = h.StripPrefix
+            Type = h.Type
+            Sha256 = hash
+          }, vs)
+        }
 
     member this.FetchVersions locations package =
       match package with
-      | PackageIdentifier.BitBucket bitBucket ->
-        let url = PackageLocation.bitBucketUrl bitBucket
-        fetchVersionsFromGit url
-      | PackageIdentifier.GitHub gitHub ->
-        let url = PackageLocation.gitHubUrl gitHub
-        fetchVersionsFromGit url
-      | PackageIdentifier.GitLab gitLab ->
-        let url = PackageLocation.gitLabUrl gitLab
-        fetchVersionsFromGit url
-      | PackageIdentifier.Adhoc adhoc ->
-        let (_, source) =
-          locations
-          |> Map.toSeq
-          |> Seq.find (fun (p, _) -> p = adhoc)
+        | PackageIdentifier.BitBucket bb ->
+          let url = PackageLocation.bitBucketUrl bb
+          fetchVersionsFromGit url
+            |> AsyncSeq.map (fun (rev, vs) ->
+            VersionedSource.Git
+              (PackageLocation.BitBucket{
+                Revision = rev
+                Package = bb
+              }, vs))
+        | PackageIdentifier.GitHub gh ->
+          let url = PackageLocation.gitHubUrl gh
+          fetchVersionsFromGit url
+            |> AsyncSeq.map (fun (rev, vs) ->
+            VersionedSource.Git
+              (PackageLocation.GitHub{
+                Revision = rev
+                Package = gh
+              }, vs))
+        | PackageIdentifier.GitLab gl ->
+          let url = PackageLocation.gitLabUrl gl
+          fetchVersionsFromGit url
+            |> AsyncSeq.map (fun (rev, vs) ->
+            VersionedSource.Git
+              (PackageLocation.GitLab{
+                Revision = rev
+                Package = gl
+              }, vs))
+        | PackageIdentifier.Adhoc adhoc ->
+          let (_, source) =
+            locations
+            |> Map.toSeq
+            |> Seq.find (fun (p, _) -> p = adhoc)
 
-        match source with
-        | PackageSource.Git g -> fetchVersionsFromGit g.Uri
-        | PackageSource.Http h -> asyncSeq {
-          for (v, _) in h |> Map.toSeq do
-            yield v
-        }
-
-    member this.FetchLocations locations package version = asyncSeq {
-      match package with
-      | PackageIdentifier.GitHub gitHub ->
-        let url = PackageLocation.gitHubUrl gitHub
-        yield!
-          fetchLocationsFromGit url version
-          |> AsyncSeq.map (fun revision ->
-            PackageLocation.GitHub {
-              Package = gitHub;
-              Revision = revision;
-            }
-          )
-      | PackageIdentifier.BitBucket bitBucket ->
-        let url = PackageLocation.bitBucketUrl bitBucket
-        yield!
-          fetchLocationsFromGit url version
-          |> AsyncSeq.map (fun revision ->
-            PackageLocation.BitBucket {
-              Package = bitBucket;
-              Revision = revision;
-            }
-          )
-      | PackageIdentifier.GitLab gitLab ->
-        let url = PackageLocation.gitLabUrl gitLab
-        yield!
-          fetchLocationsFromGit url version
-          |> AsyncSeq.map (fun revision ->
-            PackageLocation.GitLab {
-              Package = gitLab;
-              Revision = revision;
-            }
-          )
-      | PackageIdentifier.Adhoc adhoc ->
-        match locations |> Map.tryFind adhoc with
-        | Some source ->
-          yield! fetchLocationsFromPackageSource source version
-        | None ->
-          let message =
-            "No location specified for " +
-            (PackageIdentifier.show package) + "@" + (Version.show version)
-
-          return new System.Exception(message) |> raise
-    }
-
+          match source with
+          | PackageSource.Git g ->
+            fetchVersionsFromGit g.Uri
+            |> AsyncSeq.map (fun (rev, vs) ->
+            VersionedSource.Git
+              (PackageLocation.Git{
+                Revision = rev
+                Url = g.Uri
+              }, vs))
+          | PackageSource.Http h -> asyncSeq {
+            yield! h
+            |> Map.toSeq
+            |> Seq.map (fun (version, source) ->
+               VersionedSource.Http (source, Set[version]))
+            |> AsyncSeq.ofSeq
+          }
     member this.FetchManifest location =
       async {
         let! content = fetchFile location Constants.ManifestFileName

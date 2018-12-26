@@ -100,21 +100,21 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
 
-let writeReceipt (installPath : string) location = async {
+let writeReceipt (installPath : string) (location : PackageLocation) = async {
   let receipt =
     "last_updated = " + (Toml.formatDateTime <| System.DateTime.Now.ToUniversalTime()) + "\n" +
     match location with
-    | Git g ->
+    | PackageLocation.Git g ->
       "git = \"" + g.Url + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
-    | Http h ->
+    | PackageLocation.Http h ->
       "url = \"" + h.Url + "\"\n" +
       "sha256 = \"" + (h.Sha256) + "\"\n" +
       (
-        h.StripPrefix 
-        |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n") 
+        h.StripPrefix
+        |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n")
         |> Option.defaultValue("")
-      ) + 
+      ) +
       (
         h.Type
         |> Option.map (fun x -> "archive_type = \"" + (string x) + "\"\n")
@@ -131,7 +131,7 @@ let writeReceipt (installPath : string) location = async {
     | BitBucket b ->
       let package = PackageIdentifier.GitHub b.Package
       "package = \"" + (PackageIdentifier.show package) + "\"\n" +
-      "revision = \"" + b.Revision + "\"\n" 
+      "revision = \"" + b.Revision + "\"\n"
 
   let receiptPath = getReceiptPath installPath
   do! Files.writeFile receiptPath receipt
@@ -144,20 +144,20 @@ let compareReceipt (context : TaskContext) installPath location = async {
   then
     context.Console.Write("Reading receipt at " + receiptPath, LoggingLevel.Trace)
     let! content = Files.readFile receiptPath
-    let maybePackageLocation = 
-      content 
+    let maybePackageLocation =
+      content
       |> Toml.parse
       |> Result.mapError Toml.TomlError.show
       |> Result.bind PackageLocation.fromToml
-    match maybePackageLocation with 
-    | Result.Ok receiptLocation -> 
+    match maybePackageLocation with
+    | Result.Ok receiptLocation ->
       if receiptLocation = location
       then
         return true
       else
         context.Console.Write("Outdated receipt at " + installPath, LoggingLevel.Trace)
         return false
-    | Result.Error error -> 
+    | Result.Error error ->
       context.Console.Write(error, LoggingLevel.Debug)
       context.Console.Write("Invalid receipt at " + receiptPath + "; it will be deleted. ", LoggingLevel.Info)
       do! Files.delete receiptPath
@@ -168,12 +168,12 @@ let compareReceipt (context : TaskContext) installPath location = async {
 }
 
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLocation) = async {
-  let log x = 
+  let log x =
     x
     |> RichOutput.text
     |> context.Console.Write
 
-  let logSuccess x = 
+  let logSuccess x =
     x
     |> RichOutput.text
     |> RichOutput.foreground ConsoleColor.Green
@@ -187,7 +187,7 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     log("Installing " + installPath + "... ")
 
     let installFromGit url revision = async {
-      do! gitManager.FetchCommit url revision None
+      do! gitManager.FetchCommit url revision
       do! gitManager.CopyFromCache url revision installPath
     }
 
@@ -198,12 +198,12 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     | BitBucket bitBucket ->
       let url = PackageLocation.bitBucketUrl bitBucket.Package
       do! installFromGit url bitBucket.Revision
-    | Git git ->
+    | PackageLocation.Git git ->
       do! installFromGit git.Url git.Revision
     | GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
       do! installFromGit url gitLab.Revision
-    | Http http ->
+    | PackageLocation.Http http ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache
       if discoveredHash <> http.Sha256
@@ -217,7 +217,7 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     log ("Writing installation receipt for " + installPath + "... ")
     do! writeReceipt installPath location
     logSuccess ("Installed " + installPath)
-  else 
+  else
     logSuccess (installPath + " is already up-to-date")
 }
 
@@ -325,10 +325,10 @@ let rec private installPackages (context : Tasks.TaskContext) (root : string) (p
 
   // Install packages
   for (package, lockedPackage) in packages |> Map.toSeq do
-    let installPath = 
-      Path.Combine(root, packageInstallPath [] package) 
+    let installPath =
+      Path.Combine(root, packageInstallPath [] package)
       |> Paths.normalize
-    
+
     let childParents = (parents @ [ package ])
 
     // Install child package sources

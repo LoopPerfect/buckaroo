@@ -1,7 +1,9 @@
 namespace Buckaroo
+open FSharpx.Collections
 
 open Buckaroo.Tasks
 open Buckaroo.RichOutput
+open Console
 
 module Solver =
 
@@ -10,20 +12,20 @@ module Solver =
 
   type LocatedAtom = Atom * PackageLocation
 
-  type Constraints = Set<Dependency>
+  type Constraints = Map<PackageIdentifier, Set<Constraint>>
 
   type Hints = AsyncSeq<LocatedAtom>
 
   type SolverState = {
     Solution : Solution;
-    Constraints : Set<Dependency>;
+    Constraints : Constraints;
     Depth : int;
-    Visited : Set<LocatedAtom>;
+    Visited : Set<PackageIdentifier * PackageLocation>;
     Locations : Map<AdhocPackageIdentifier, PackageSource>;
     Hints : AsyncSeq<LocatedAtom>;
   }
 
-  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<LocatedAtom>
+  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<PackageIdentifier * VersionedLocation>
 
   let private withTimeout timeout action =
     async {
@@ -31,13 +33,33 @@ module Solver =
       return! child
     }
 
-  let versionSearchCost (v : Version) : int =
+  let constraintsOf (ds: Set<Dependency>) =
+    ds
+    |> Set.toSeq
+    |> Seq.map (fun x -> (x.Package, x.Constraint))
+    |> Seq.groupBy fst
+    |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
+    |> Map.ofSeq
+
+  let mergeConstraints (a: Constraints) (b: Constraints) =
+    Seq.append
+      (a |> Map.keys)
+      (b |> Map.keys)
+    |> Seq.map (fun k -> (k, ()))
+    |> Map.ofSeq
+    |> Map.map (fun k _ ->
+      Set.union
+        (a.TryFind(k) |> Option.defaultValue(Set[]))
+        (b.TryFind(k) |> Option.defaultValue(Set[]))
+    )
+
+
+  let rec versionSearchCost (v : Version) : int =
     match v with
-    | Version.Revision _ -> 1
-    | Version.Latest -> 2
-    | Version.Tag _ -> 3
-    | Version.SemVerVersion _ -> 4
-    | Version.Branch _ -> 5
+    | Version.SemVer _-> 0
+    | Version.Git(GitVersion.Tag _) -> 1
+    | Version.Git(GitVersion.Branch _)  -> 2
+    | Version.Git(GitVersion.Revision _)  -> 3
 
   let rec constraintSearchCost (c : Constraint) : int =
     match c with
@@ -48,34 +70,32 @@ module Solver =
       xs |> Seq.map constraintSearchCost |> Seq.append [ 0 ] |> Seq.max
     | Constraint.Complement _ -> 6
 
-  let findConflicts (solution : Solution) (dependencies : Constraints) = seq {
-    for dependency in dependencies do
-      match solution.Resolutions |> Map.tryFind dependency.Package with
-      | Some (resolvedVersion, _) ->
-        if resolvedVersion.Version |> Constraint.agreesWith dependency.Constraint |> not
-        then
-          yield (dependency, resolvedVersion.Version)
-      | None -> ()
-  }
-
   let findUnsatisfied (solution : Solution) (dependencies : Constraints) = seq {
-    for dependency in dependencies do
-      match solution.Resolutions |> Map.tryFind dependency.Package with
-      | Some _ -> ()
-      | None -> yield dependency
-  }
+    yield! Set.difference
+      (dependencies |> Map.keys |> Set.ofSeq)
+      (solution.Resolutions |> Map.keys  |> Set.ofSeq)
 
-  let agreesWith (dependencies : Constraints) (atom : Atom) =
-    dependencies
-    |> Seq.exists (fun dependency ->
-      dependency.Package = atom.Package &&
-      atom.Version |> Constraint.agreesWith dependency.Constraint |> not)
-    |> not
+    let maybeSatisfied =
+      Set.intersect
+        (dependencies |> Map.keys |> Set.ofSeq)
+        (solution.Resolutions |> Map.keys  |> Set.ofSeq)
+
+    yield!
+      maybeSatisfied
+      |> Set.toSeq
+      |> Seq.map (fun package ->
+        (package,
+         Constraint.satisfies
+           (Constraint.All (dependencies.[package] |> Set.toList ))
+           (fst solution.Resolutions.[package]).Versions ))
+      |> Seq.filter(snd >> not)
+      |> Seq.map fst
+  }
 
   let private lockToHints (lock : Lock) =
     lock.Packages
     |> Map.toSeq
-    |> Seq.map (fun (k, v) -> ({ Package = k; Version = v.Version }, v.Location))
+    |> Seq.map (fun (k, v) -> ({ Package = k; Versions = v.Versions }, v.Location))
 
   let private mergeLocations (a : Map<AdhocPackageIdentifier, PackageSource>) (b : Map<AdhocPackageIdentifier, PackageSource>) =
     let folder state next = result {
@@ -119,38 +139,40 @@ module Solver =
       |> Seq.fold folder (Result.Ok b)
 
   let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
+
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
-      |> Seq.toList
-      |> List.sortWith (fun x y -> Constraint.compare x.Constraint y.Constraint)
+      |> set
 
-    for (atom, location) in state.Hints do
-      if unsatisfied |> Seq.exists (fun x -> Dependency.satisfies x atom)
-      then
-        yield (atom, location)
+    yield!
+      state.Hints
+      |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
+      |> AsyncSeq.filter (fun (atom, location) -> state.Visited.Contains(atom.Package, location) |> not)
+      |> AsyncSeq.map (fun (atom, location) ->
+        (atom.Package, (location, atom.Versions)))
 
-    for dependency in unsatisfied do
-      let package = dependency.Package
-      for version in sourceExplorer.FetchVersions state.Locations package do
-        if version |> Constraint.satisfies dependency.Constraint then
-          let atom = { Package = package; Version = version }
-          for location in sourceExplorer.FetchLocations state.Locations package version do
-            yield (atom, location)
+    for package in unsatisfied do
+      let acceptable =
+        VersionedSource.getVersionSet
+        >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
+      for versionedSource in sourceExplorer.FetchVersions state.Locations package do
+        if acceptable versionedSource then
+          let! versionedLocation = sourceExplorer.FetchLocation versionedSource
+          yield (package, versionedLocation)
+
   }
 
   let upgradeSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
-    let unsatisfied =
-      findUnsatisfied state.Solution state.Constraints
-      |> Seq.toList
-      |> List.sortWith (fun x y -> Constraint.compare x.Constraint y.Constraint)
+    let unsatisfied = findUnsatisfied state.Solution state.Constraints
 
-    for dependency in unsatisfied do
-      let package = dependency.Package
-      for version in sourceExplorer.FetchVersions state.Locations package do
-        if version |> Constraint.satisfies dependency.Constraint then
-          let atom = { Package = package; Version = version }
-          for location in sourceExplorer.FetchLocations state.Locations package version do
-            yield (atom, location)
+    for package in unsatisfied do
+      let acceptable =
+        VersionedSource.getVersionSet
+        >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
+      for versionedSource in sourceExplorer.FetchVersions state.Locations package do
+        if acceptable versionedSource then
+          let! versionedLocation = sourceExplorer.FetchLocation versionedSource
+          yield (package, versionedLocation)
   }
 
   let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
@@ -159,31 +181,30 @@ module Solver =
 
     let log (x : string) =
       (
-        "[" + (string state.Depth) + "] " 
-        |> RichOutput.text 
+        "[" + (string state.Depth) + "] "
+        |> RichOutput.text
         |> RichOutput.foreground System.ConsoleColor.DarkGray
-      ) + 
+      ) +
       (x |> RichOutput.text)
       |> context.Console.Write
 
-    let conflicts =
-      findConflicts state.Solution state.Constraints
-      |> Seq.toList
-
-    if conflicts |> Seq.isEmpty
-    then
-      if findUnsatisfied state.Solution state.Constraints |> Seq.isEmpty
+    if findUnsatisfied state.Solution state.Constraints |> Seq.isEmpty
       then
         yield Resolution.Ok state.Solution
       else
         let atomsToExplore =
           strategy sourceExplorer state
-          |> AsyncSeq.distinctUntilChanged
-          |> AsyncSeq.filter (fun (atom, location) -> Set.contains (atom, location) state.Visited |> not)
+          |> AsyncSeq.filter (fun (package, (location, _)) ->
+            Set.contains (package, location) state.Visited |> not)
+          |> AsyncSeq.filter (fun (package, (location, _)) ->
+            match state.Solution.Resolutions |> Map.tryFind package with
+            | Some (rv, s) -> rv.Location = location
+            | None -> true
+          )
 
-        for (atom, location) in atomsToExplore do
+        for (package, (location, versions)) in atomsToExplore do
           try
-            log("Exploring " + (Atom.show atom) + " -> " + (PackageLocation.show location) + "...")
+            log("Exploring " + (PackageIdentifier.show package) + " -> " + (PackageLocation.show location) + "...")
 
             // We pre-emptively grab the lock
             let! lockTask =
@@ -204,7 +225,7 @@ module Solver =
             }
 
             let resolvedVersion = {
-              Version = atom.Version;
+              Versions = versions;
               Location = location;
               Manifest = manifest;
             }
@@ -217,9 +238,8 @@ module Solver =
                     lock
                     |> lockToHints
                     |> Seq.filter (fun (atom, location) ->
-                      Set.contains (atom, location) state.Visited |> not &&
-                      state.Solution.Resolutions |> Map.containsKey atom.Package |> not &&
-                      atom |> agreesWith state.Constraints
+                      Set.contains (atom.Package, location) state.Visited |> not &&
+                      state.Solution.Resolutions |> Map.containsKey atom.Package |> not
                     )
                     |> AsyncSeq.ofSeq
                 with error ->
@@ -235,7 +255,7 @@ module Solver =
                 Visited = Set.empty;
                 Hints = state.Hints;
                 Depth = state.Depth + 1;
-                Constraints = manifest.PrivateDependencies;
+                Constraints = constraintsOf manifest.PrivateDependencies
               }
 
             let privatePackagesSolutions =
@@ -256,16 +276,20 @@ module Solver =
                         state.Solution with
                           Resolutions =
                             state.Solution.Resolutions
-                            |> Map.add atom.Package (resolvedVersion, privatePackagesSolution)
+                            |> Map.add package (resolvedVersion, privatePackagesSolution)
                       };
+                    // Note: union will favour kvp from the second map
+                    // however, this is a private resoluton and we can resolve independently
+                    // TODO: introduce strict / hybrid mode where we can tweak this behaviour
                     Constraints =
-                      state.Constraints
-                      |> Set.ofSeq
-                      |> Set.union manifest.Dependencies;
+                      Map.union
+                        state.Constraints
+                        (constraintsOf manifest.Dependencies)
+
                     Depth = state.Depth + 1;
                     Visited =
                       state.Visited
-                      |> Set.add (atom, location);
+                      |> Set.add (package, location);
                     Locations = mergedLocations;
                     Hints =
                       state.Hints
@@ -275,17 +299,12 @@ module Solver =
                 yield! step context strategy nextState
               })
           with error ->
-            log("Error exploring " + (Atom.show atom) + "@" + (PackageLocation.show location) + "...")
+            log("Error exploring " + (PackageLocation.show location) + "...")
             log(string error)
             yield Resolution.Error error
 
-        // We've run out of versions to try
-        yield Resolution.Error (new System.Exception("No more versions to try! "))
-    else
-      yield
-        conflicts
-        |> Set.ofSeq
-        |> Resolution.Conflict
+    // We've run out of versions to try
+    yield Resolution.Error (new System.Exception("No more versions to try! "))
   }
 
   let solutionCollector resolutions =
@@ -315,9 +334,8 @@ module Solver =
     let state = {
       Solution = Solution.empty;
       Constraints =
-        manifest.Dependencies
-        |> Seq.append manifest.PrivateDependencies
-        |> Set.ofSeq;
+        Set.unionMany [ manifest.Dependencies; manifest.PrivateDependencies ]
+        |> constraintsOf
       Depth = 0;
       Visited = Set.empty;
       Locations = manifest.Locations;
@@ -327,8 +345,12 @@ module Solver =
     let resolutions =
       step context strategy state
 
-    return
+    let result =
       resolutions
       |> solutionCollector
       |> Option.defaultValue (Set.empty |> Resolution.Conflict)
+
+    context.Console.Write(string result, LoggingLevel.Trace)
+
+    return result
   }

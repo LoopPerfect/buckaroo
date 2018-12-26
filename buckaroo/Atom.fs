@@ -1,8 +1,8 @@
 namespace Buckaroo
 
-type Atom = { Package : PackageIdentifier; Version : Version }
+type Atom = { Package : PackageIdentifier; Versions : Set<Version> }
 
-module Atom = 
+module Atom =
 
-  let show (a : Atom) : string = 
-    PackageIdentifier.show a.Package + "@" + Version.show a.Version
+  let show (a : Atom) : string =
+    PackageIdentifier.show a.Package + "@" + Version.show a.Versions.MinimumElement

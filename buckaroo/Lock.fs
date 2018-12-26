@@ -1,7 +1,7 @@
 namespace Buckaroo
 
 type LockedPackage = {
-  Version : Version;
+  Versions : Set<Version>;
   Location : PackageLocation;
   PrivatePackages : Map<PackageIdentifier, LockedPackage>;
 }
@@ -18,9 +18,25 @@ module Lock =
 
   module LockedPackage =
     let show (x : LockedPackage) =
+
       let rec f (x : LockedPackage) (depth : int) =
         let indent = "-" |> String.replicate depth
-        indent + (Version.show x.Version) + "@" + (PackageLocation.show x.Location) +
+        let indent2 = "-" |> String.replicate (depth + 1)
+        indent + (Version.show x.Versions.MinimumElement) + "@" + (PackageLocation.show x.Location) +
+        (
+          if x.Versions.Count = 1
+          then ""
+          else
+            indent2 + "aka: " +
+            (
+              x.Versions
+              |> Set.toSeq
+              |> Seq.tail
+              |> Seq.map Version.show
+              |> String.concat ", "
+              |> (fun x -> "{" + x + "}")
+            )
+        ) +
         (
           x.PrivatePackages
           |> Map.toSeq
@@ -30,7 +46,7 @@ module Lock =
       f x 0
 
   let rec private flattenLockedPackage (parents : PackageIdentifier list) (package : LockedPackage) = seq {
-    yield (parents, (package.Location, package.Version))
+    yield (parents, (package.Location, package.Versions))
     yield!
       package.PrivatePackages
       |> Map.toSeq
@@ -84,7 +100,7 @@ module Lock =
         additions
         |> Seq.map (fun (k, (l, v)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " -> " + (PackageLocation.show l) + "@" + (Version.show v)
+          " -> " + (PackageLocation.show l) + "@" + (Version.showSet v)
         )
         |> String.concat "\n"
       );
@@ -93,7 +109,7 @@ module Lock =
         removals
         |> Seq.map (fun (k, (l, v)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " -> " + (PackageLocation.show l) + "@" + (Version.show v)
+          " -> " + (PackageLocation.show l) + "@" + (Version.showSet v)
         )
         |> String.concat "\n"
       );
@@ -102,8 +118,8 @@ module Lock =
         changes
         |> Seq.map (fun (k, (bl, bv), (al, av)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " " + (PackageLocation.show bl) + "@" + (Version.show bv) +
-          " -> " + (PackageLocation.show al) + "@" + (Version.show av)
+          " " + (PackageLocation.show bl) + "@" + (Version.showSet bv) +
+          " -> " + (PackageLocation.show al) + "@" + (Version.showSet av)
         )
         |> String.concat "\n"
       );
@@ -125,7 +141,7 @@ module Lock =
         |> Map.tryFind p
         |> Option.map (fun (rv, _) ->
           rv.Manifest.Targets
-          |> Seq.map (fun t -> { Package = p; Target = t})
+          |> Seq.map (fun t -> { Package = p; Target = t })
         )
         |> Option.defaultValue Seq.empty
       )
@@ -137,7 +153,7 @@ module Lock =
       |> Seq.map (fun (k, (rv, s)) ->
         let lockedPackage = {
           Location = rv.Location;
-          Version = rv.Version;
+          Versions = rv.Versions;
           PrivatePackages = extractPackages s;
         }
 
@@ -154,11 +170,13 @@ module Lock =
   let private quote x = "\"" + x + "\""
 
   let private lockKey parents =
-    parents |> Seq.map (PackageIdentifier.show >> quote >> ((+) "lock.")) |> String.concat "."
+    parents
+    |> Seq.map (PackageIdentifier.show >> quote >> ((+) "lock."))
+    |> String.concat "."
 
   let toToml (lock : Lock) =
     (
-       "manifest = \"" + lock.ManifestHash + "\"\n\n"
+      "manifest = \"" + lock.ManifestHash + "\"\n\n"
     ) +
     (
       lock.Dependencies
@@ -174,9 +192,15 @@ module Lock =
       |> Map.toSeq
       |> Seq.collect (fun (k, v) -> flattenLockedPackage [ k ] v)
       |> Seq.map(fun x ->
-        let (parents, (location, version)) = x
+        let (parents, (location, versions)) = x
         "[" + (lockKey parents) + "]\n" +
-        "version = \"" + (Version.show version) + "\"\n" +
+        "versions = [ " +
+        (versions
+          |> Set.toSeq
+          |> Seq.map Version.show
+          |> Seq.map (fun x ->"\"" + x + "\"")
+          |> String.concat ", ") +
+        " ]\n" +
         match location with
         | Git git ->
           "git = \"" + git.Url + "\"\n" +
@@ -278,13 +302,6 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    let! version =
-      x
-      |> Toml.get "version"
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
-
     return
       PackageLocation.GitHub
         {
@@ -299,13 +316,6 @@ module Lock =
       |> Toml.get "revision"
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-
-    let! version =
-      x
-      |> Toml.get "version"
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
 
     return
       PackageLocation.BitBucket
@@ -322,13 +332,6 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    let! version =
-      x
-      |> Toml.get "version"
-      |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
-
     return
       PackageLocation.GitLab
         {
@@ -338,12 +341,17 @@ module Lock =
   }
 
   let rec private tomlTableToLockedPackage packageIdentifier x = result {
-    let! version =
+    let! versions =
       x
-      |> Toml.get "version"
+      |> Toml.get "versions"
+      |> Result.bind (Toml.asArray)
+      |> Result.map (Toml.items)
+      |> Result.map (List.map Toml.asString)
+      |> Result.bind Result.all
       |> Result.mapError Toml.TomlError.show
-      |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
-      |> Result.bind Version.parse
+      |> Result.map (List.map Version.parse)
+      |> Result.bind Result.all
+      |> Result.map Set.ofList
 
     let! location =
       match packageIdentifier with
@@ -383,7 +391,7 @@ module Lock =
       |> Result.map Map.ofSeq
 
     return {
-      Version = version;
+      Versions = versions;
       Location = location;
       PrivatePackages = privatePackages;
     }
