@@ -11,7 +11,6 @@ type Version =
 | Git of GitVersion
 | SemVer of SemVer
 
-
 module Version =
 
   open FParsec

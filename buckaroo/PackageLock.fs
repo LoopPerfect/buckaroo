@@ -15,6 +15,14 @@ module PackageLock =
 
   open Buckaroo.Result
 
+  let toLocation (x : PackageLock) : PackageLocation =
+    match x with
+    | Http (location, sha256) -> PackageLocation.Http location
+    | Git git -> PackageLocation.Git git
+    | GitHub git -> PackageLocation.GitHub git
+    | BitBucket git -> PackageLocation.BitBucket git
+    | GitLab git -> PackageLocation.GitLab git
+
   let show (x : PackageLock) =
     match x with
     | Git g -> g.Url + "#" + g.Revision

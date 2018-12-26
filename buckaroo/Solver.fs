@@ -1,9 +1,9 @@
 namespace Buckaroo
-open FSharpx.Collections
 
+open FSharpx.Collections
 open Buckaroo.Tasks
 open Buckaroo.RichOutput
-open Console
+open Buckaroo.Console
 
 module Solver =
 
@@ -134,30 +134,32 @@ module Solver =
       |> Map.toSeq
       |> Seq.fold folder (Result.Ok b)
 
-  // TODO: Re-enable
-  // let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
+  let quickSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
+    let unsatisfied =
+      findUnsatisfied state.Solution state.Constraints
+      |> Set.ofSeq
 
-  //   let unsatisfied =
-  //     findUnsatisfied state.Solution state.Constraints
-  //     |> set
+    yield!
+      state.Hints
+      |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
+      |> AsyncSeq.map (fun (atom, lock) ->
+        (atom.Package, (PackageLock.toLocation lock, atom.Versions))
+      )
 
-  //   yield!
-  //     state.Hints
-  //     |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
-  //     |> AsyncSeq.filter (fun (atom, location) -> state.Visited.Contains(atom.Package, location) |> not)
-  //     |> AsyncSeq.map (fun (atom, location) ->
-  //       (atom.Package, (location, atom.Versions)))
+    for package in unsatisfied do
+      let constraints =
+        state.Constraints
+        |> Map.tryFind package
+        |> Option.defaultValue Set.empty
+        |> Seq.toList
+        |> Constraint.All
 
-  //   for package in unsatisfied do
-  //     let acceptable =
-  //       VersionedSource.getVersionSet
-  //       >> (Constraint.satisfies (Constraint.All (state.Constraints.[package] |> Set.toList)))
-  //     for versionedSource in sourceExplorer.FetchVersions state.Locations package do
-  //       if acceptable versionedSource then
-  //         let! versionedLocation = sourceExplorer.FetchLocation versionedSource
-  //         yield (package, versionedLocation)
+      let locationsAndVersions =
+        SourceExplorer.fetchLocationsForConstraint sourceExplorer state.Locations package constraints
 
-  // }
+      for (location, version) in locationsAndVersions do
+        yield (package, (location, version))
+  }
 
   let upgradeSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
     let unsatisfied = findUnsatisfied state.Solution state.Constraints
@@ -335,8 +337,7 @@ module Solver =
 
     let strategy =
       match style with
-      // | Quick -> quickSearchStrategy
-      | Quick -> upgradeSearchStrategy // TODO
+      | Quick -> quickSearchStrategy
       | Upgrading -> upgradeSearchStrategy
 
     let state = {

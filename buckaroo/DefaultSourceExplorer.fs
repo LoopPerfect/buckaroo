@@ -1,8 +1,6 @@
 namespace Buckaroo
 
 open FSharp.Control
-open Buckaroo.PackageLock
-open Buckaroo.Constraint
 open Buckaroo.Console
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
@@ -107,45 +105,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
           None
       )
       |> AsyncSeq.ofSeq
-  }
-
-  let fetchAllRevisionsFromGit url = asyncSeq {
-    let! refs = gitManager.FetchRefs url
-
-    // Sem-vers
-    yield!
-      refs
-      |> Seq.choose (fun ref ->
-        match ref.Type with
-        | RefType.Tag ->
-          match SemVer.parse ref.Name with
-          | Result.Ok semVer -> Some (ref.Revision, Version.SemVer semVer)
-          | _ -> None
-        | _ -> None
-      )
-      |> AsyncSeq.ofSeq
-
-    // Tags
-    yield!
-      refs
-      |> Seq.choose (fun ref ->
-        match ref.Type with
-        | RefType.Tag -> Some (ref.Revision, Version.Git (Tag ref.Name))
-        | _ -> None
-      )
-      |> AsyncSeq.ofSeq
-
-    // Branches
-    yield!
-      refs
-      |> Seq.choose (fun ref ->
-        match ref.Type with
-        | RefType.Branch -> Some (ref.Revision, Version.Git (Branch ref.Name))
-        | _ -> None
-      )
-      |> AsyncSeq.ofSeq
-
-    // TODO: Go deeper!
   }
 
   let fetchRevisionsFromGitVersion (gitUrl : string) (version : Version) = asyncSeq {
