@@ -58,12 +58,31 @@ module SourceExplorer =
               |> AsyncSeq.map (fun location -> (location, Set.singleton version))
             )
         else
+          let! complement =
+            xs
+            |> Seq.choose (fun x ->
+              match x with
+              | Complement c -> Some c
+              | _ -> None
+            )
+            |> Seq.toList
+            |> Constraint.Any
+            |> loop
+            |> AsyncSeq.map fst
+            |> AsyncSeq.fold (fun s x -> Set.add x s) Set.empty
+
           yield!
             xs
+            |> List.filter (fun x ->
+              match x with
+              | Complement _ -> false
+              | _ -> true
+            )
             |> List.distinct
             |> List.map (loop >> (AsyncSeq.scan (fun s x -> Set.add x s) Set.empty))
             |> List.reduce (AsyncSeq.combineLatestWith combine)
             |> AsyncSeq.concatSeq
+            |> AsyncSeq.filter (fun (location, _) -> Set.contains location complement |> not)
             |> AsyncSeq.distinctUntilChanged
       | Exactly version ->
         yield!

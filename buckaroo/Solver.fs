@@ -316,7 +316,7 @@ module Solver =
 
   let solutionCollector resolutions =
     resolutions
-    |> AsyncSeq.take 2048
+    |> AsyncSeq.take (1024 * 16)
     |> AsyncSeq.filter (fun x ->
       match x with
       | Ok _ -> true

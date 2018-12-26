@@ -191,6 +191,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     // Branches
     yield!
       refs
+      |> Seq.sortBy (fun x -> branchPriority x.Name)
       |> Seq.choose (fun ref ->
         match ref.Type with
         | RefType.Branch ->
@@ -203,7 +204,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
       )
       |> AsyncSeq.ofSeq
 
-    // TODO: Revisions
+    // TODO: Revisions?
   }
 
 

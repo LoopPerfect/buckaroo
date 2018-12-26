@@ -2,9 +2,9 @@ namespace Buckaroo
 
 type Constraint =
 | Exactly of Version
-| Complement of Constraint
 | Any of List<Constraint>
 | All of List<Constraint>
+| Complement of Constraint
 
 #nowarn "40"
 
