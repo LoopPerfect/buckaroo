@@ -61,7 +61,7 @@ let ``Constraint.agreesWith works correctly`` () =
 [<Fact>]
 let ``Constraint.compare works correctly`` () =
   let input = [
-    (Constraint.Exactly <| Version.Git(GitVersion.Branch("master")));
+    (Constraint.Exactly <| Version.Git(GitVersion.Branch "master"));
     (Constraint.Exactly <| Version.Git(GitVersion.Tag "v1.0.0"));
     (Constraint.wildcard);
     (Constraint.Exactly <| Version.Git(GitVersion.Revision "aabbccddee"));

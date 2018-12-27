@@ -1,10 +1,9 @@
 namespace Buckaroo
 
 open FSharp.Control
+open Buckaroo.PackageLocation
+open Buckaroo.Constraint
 open Buckaroo.Console
-open FSharpx
-
-
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
   let toOptional x = x |> Async.Catch |> Async.map(Choice.toOption)
@@ -17,6 +16,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     | Some data -> return data
     | None -> return! f rev path
   }
+
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
@@ -150,6 +150,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   }
 
   interface ISourceExplorer with
+
     member this.FetchLocation versionedSource =
       match versionedSource with
       | VersionedSource.Git (g, vs) -> async { return (g, vs) }
@@ -163,6 +164,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             Sha256 = hash
           }, vs)
         }
+
     member this.FetchVersions locations package =
       match package with
         | PackageIdentifier.BitBucket bb ->

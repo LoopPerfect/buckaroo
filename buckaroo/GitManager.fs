@@ -6,8 +6,6 @@ open System.Security.Cryptography
 open System.Text.RegularExpressions
 open FSharpx.Control
 open FSharp.Control
-open FSharpx
-
 
 type CloneRequest =
   | CloneRequest of string * AsyncReplyChannel<Async<string>>
