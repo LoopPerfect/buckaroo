@@ -1,9 +1,8 @@
 namespace Buckaroo
 
 open FSharp.Control
-open Buckaroo.PackageLocation
-open Buckaroo.Constraint
 open Buckaroo.Console
+open FSharpx
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
   let toOptional x = x |> Async.Catch |> Async.map(Choice.toOption)
