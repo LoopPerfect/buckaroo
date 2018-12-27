@@ -14,11 +14,27 @@ let dropError<'T, 'E> (x : Result<'T, 'E>) =
 let ``Constraint.parse works correctly`` () =
   let cases = [
     ("*", Constraint.wildcard |> Some);
-    ("revision=aabbccddee",  Version.Git(GitVersion.Revision "aabbccddee") |> Exactly |> Some);
+    ("revision=aabbccddee", Version.Git(GitVersion.Revision "aabbccddee") |> Exactly |> Some);
     ("!*", Constraint.wildcard |> Constraint.Complement |> Some);
-    ("any(branch=master)", Some(Any [Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("any(revision=aabbccddee branch=master)", Some(Any [Exactly (Version.Git(GitVersion.Revision "aabbccddee")); Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("all(*)", Some(All [Constraint.wildcard]));
+    ("any(branch=master)", Some (Any [Exactly (Version.Git(GitVersion.Branch "master"))]));
+    ("any(revision=aabbccddee branch=master)", Some (Any [
+      Exactly (Version.Git(GitVersion.Revision "aabbccddee"));
+      Exactly (Version.Git(GitVersion.Branch "master"))]));
+    ("all(*)", Some (All [Constraint.wildcard]));
+    (
+      "all(branch=master !revision=aabbccddee)",
+      Some (All [Exactly (Version.Git(GitVersion.Branch "master")); Complement (Exactly (Version.Git(GitVersion.Revision "aabbccddee")))])
+    );
+    (
+      "all(branch=master !any(revision=aabbccddee branch=develop))",
+      Some (All [
+        Exactly (Version.Git(GitVersion.Branch "master"));
+        Complement (Any([
+          Exactly (Version.Git(GitVersion.Revision "aabbccddee"));
+          Exactly (Version.Git(GitVersion.Branch "develop"));
+        ]))
+      ])
+    );
     ("", None);
   ]
   for (input, expected) in cases do
