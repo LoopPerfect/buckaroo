@@ -1,4 +1,7 @@
 namespace Buckaroo
+open System.Data
+open System.Data
+open System.Data
 
 type Constraint =
 | Exactly of Version
@@ -84,6 +87,42 @@ module Constraint =
           |> Seq.map (fun x -> show x)
           |> String.concat " ") +
         ")"
+
+  let rec simplify (c : Constraint) : Constraint =
+    let iterate c =
+      match c with
+      | Complement (Complement x) -> x
+      | Constraint.All [ x ] -> x
+      | Constraint.All xs ->
+        xs
+        |> Seq.collect (fun x ->
+          match x with
+          | All xs -> xs
+          | _ -> [ x ]
+        )
+        |> Seq.sort
+        |> Seq.distinct
+        |> Seq.toList
+        |> Constraint.All
+      | Constraint.Any [ x ] -> x
+      | Constraint.Any xs ->
+        xs
+        |> Seq.collect (fun x ->
+          match x with
+          | Any xs -> xs
+          | _ -> [ x ]
+        )
+        |> Seq.sort
+        |> Seq.distinct
+        |> Seq.toList
+        |> Constraint.Any
+      | _ -> c
+    let next = iterate c
+    if next = c
+    then
+      c
+    else
+      simplify next
 
   let wildcardParser = parse {
     do! CharParsers.skipString "*"

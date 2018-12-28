@@ -16,7 +16,7 @@ type ISourceExplorer =
 module SourceExplorer =
   let fetchLocationsForConstraint (sourceExplorer : ISourceExplorer) locations package versionConstraint =
     let rec loop (versionConstraint : Constraint) = asyncSeq {
-      match versionConstraint with
+      match Constraint.simplify versionConstraint with
       | Complement c ->
         let! complement =
           loop c
