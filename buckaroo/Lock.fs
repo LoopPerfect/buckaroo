@@ -2,7 +2,7 @@ namespace Buckaroo
 
 type LockedPackage = {
   Versions : Set<Version>;
-  Location : PackageLocation;
+  Location : PackageLock;
   PrivatePackages : Map<PackageIdentifier, LockedPackage>;
 }
 
@@ -22,7 +22,7 @@ module Lock =
       let rec f (x : LockedPackage) (depth : int) =
         let indent = "-" |> String.replicate depth
         let indent2 = "-" |> String.replicate (depth + 1)
-        indent + (Version.show x.Versions.MinimumElement) + "@" + (PackageLocation.show x.Location) +
+        indent + (Version.show x.Versions.MinimumElement) + "@" + (PackageLock.show x.Location) +
         (
           if x.Versions.Count = 1
           then ""
@@ -100,7 +100,7 @@ module Lock =
         additions
         |> Seq.map (fun (k, (l, v)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " -> " + (PackageLocation.show l) + "@" + (Version.showSet v)
+          " -> " + (PackageLock.show l) + "@" + (Version.showSet v)
         )
         |> String.concat "\n"
       );
@@ -109,7 +109,7 @@ module Lock =
         removals
         |> Seq.map (fun (k, (l, v)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " -> " + (PackageLocation.show l) + "@" + (Version.showSet v)
+          " -> " + (PackageLock.show l) + "@" + (Version.showSet v)
         )
         |> String.concat "\n"
       );
@@ -118,8 +118,8 @@ module Lock =
         changes
         |> Seq.map (fun (k, (bl, bv), (al, av)) ->
           "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " " + (PackageLocation.show bl) + "@" + (Version.showSet bv) +
-          " -> " + (PackageLocation.show al) + "@" + (Version.showSet av)
+          " " + (PackageLock.show bl) + "@" + (Version.showSet bv) +
+          " -> " + (PackageLock.show al) + "@" + (Version.showSet av)
         )
         |> String.concat "\n"
       );
@@ -152,7 +152,7 @@ module Lock =
       |> Map.toSeq
       |> Seq.map (fun (k, (rv, s)) ->
         let lockedPackage = {
-          Location = rv.Location;
+          Location = rv.Lock;
           Versions = rv.Versions;
           PrivatePackages = extractPackages s;
         }
@@ -205,9 +205,9 @@ module Lock =
         | Git git ->
           "git = \"" + git.Url + "\"\n" +
           "revision = \"" + git.Revision + "\"\n"
-        | Http http ->
+        | Http (http, sha256) ->
           "url = \"" + http.Url + "\"\n" +
-          "sha256 = \"" + (http.Sha256) + "\"\n" +
+          "sha256 = \"" + (sha256) + "\"\n" +
           (http.Type |> Option.map (fun x -> "type = \"" + (ArchiveType.show x) + "\"\n") |> Option.defaultValue "") +
           (http.StripPrefix |> Option.map (fun x -> "strip_prefix = \"" + x + "\"\n") |> Option.defaultValue "")
         | GitHub gitHub ->
@@ -250,12 +250,11 @@ module Lock =
       |> Option.map (Result.map Option.Some)
       |> Option.defaultValue (Result.Ok Option.None)
 
-    return PackageLocation.Http {
+    return PackageLock.Http ({
       Url = url;
       StripPrefix = stripPrefix;
       Type = archiveType;
-      Sha256 = sha256;
-    }
+    }, sha256)
   }
 
   let private tomlTableToGitLocation x = result {
@@ -271,7 +270,7 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
-    return PackageLocation.Git {
+    return PackageLock.Git {
       Url = uri;
       Revision = revision
     }
@@ -303,7 +302,7 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
     return
-      PackageLocation.GitHub
+      PackageLock.GitHub
         {
           Package = packageIdentifier;
           Revision = revision;
@@ -318,7 +317,7 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
     return
-      PackageLocation.BitBucket
+      PackageLock.BitBucket
         {
           Package = packageIdentifier;
           Revision = revision;
@@ -333,7 +332,7 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
     return
-      PackageLocation.GitLab
+      PackageLock.GitLab
         {
           Package = packageIdentifier;
           Revision = revision;

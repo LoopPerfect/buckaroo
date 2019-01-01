@@ -9,7 +9,7 @@ open FSharp.Control
 open FSharpx
 
 type CloneRequest =
-  | CloneRequest of string * AsyncReplyChannel<Async<string>>
+| CloneRequest of string * AsyncReplyChannel<Async<string>>
 
 type GitManager (git : IGit, cacheDirectory : string) =
 
