@@ -58,19 +58,19 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchFile location path =
     match location with
-    | PackageLocation.BitBucket bitBucket ->
+    | PackageLock.BitBucket bitBucket ->
       let url = PackageLocation.gitHubUrl bitBucket.Package
       cacheOrGit (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
-    | PackageLocation.GitHub gitHub ->
+    | PackageLock.GitHub gitHub ->
       let url = PackageLocation.gitHubUrl gitHub.Package
       cacheOrGit (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
-    | PackageLocation.GitLab gitLab ->
+    | PackageLock.GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
       cacheOrGit (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
-    | PackageLocation.Git git ->
+    | PackageLock.Git git ->
       let url = git.Url
       cacheOrGit(gitManager.FetchFile git.Url, url, git.Revision, path)
-    | PackageLocation.Http http ->
+    | PackageLock.Http (http, _) ->
       extractFileFromHttp http path
 
   let branchPriority branch =
