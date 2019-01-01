@@ -6,6 +6,7 @@ open System.Security.Cryptography
 open System.Text.RegularExpressions
 open FSharpx.Control
 open FSharp.Control
+open FSharpx
 
 type CloneRequest =
 | CloneRequest of string * AsyncReplyChannel<Async<string>>
@@ -111,7 +112,24 @@ type GitManager (git : IGit, cacheDirectory : string) =
     match refsCache |> Map.tryFind url with
     | Some refs -> return refs
     | None ->
-      let! refs = git.RemoteRefs url
+      let cacheDir = cloneFolderName url
+      let! refs =
+        Async.Parallel
+          (
+            (git.RemoteRefs url
+              |> Async.Catch
+              |> Async.map(Choice.toOption >> Option.defaultValue([]))),
+            (git.RemoteRefs cacheDir
+              |> Async.Catch
+              |> Async.map(Choice.toOption >> Option.defaultValue([])))
+          )
+        |> Async.map(fun (a, b) ->
+          if a.Length = 0 && b.Length = 0 then
+            raise <| new SystemException("no internet connection and cache empty")
+          else if a.Length > 0
+          then a
+          else b
+        )
       refsCache <- refsCache |> Map.add url refs
       return refs
   }

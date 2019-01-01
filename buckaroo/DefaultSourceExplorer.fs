@@ -2,9 +2,21 @@ namespace Buckaroo
 
 open FSharp.Control
 open Buckaroo.Console
+open FSharpx
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
-  let extractFileFromHttp (source : HttpLocation) (sha : string) (filePath : string) = async {
+  let toOptional x = x |> Async.Catch |> Async.map(Choice.toOption)
+  let fromCache url revision path =
+    gitManager.FetchFile url revision path |> toOptional
+
+  let cacheOrGit (f: string->string->Async<string>, url:string, rev:string, path: string) = async {
+    let! cached = fromCache url rev path
+    match cached with
+    | Some data -> return data
+    | None -> return! f rev path
+  }
+
+  let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
       return raise (new System.Exception("Only zip is currently supported"))
@@ -46,16 +58,20 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchFile location path =
     match location with
-    | PackageLock.BitBucket bitBucket ->
-      BitBucketApi.fetchFile bitBucket.Package bitBucket.Revision path
-    | PackageLock.GitHub gitHub ->
-      GitHubApi.fetchFile gitHub.Package gitHub.Revision path
-    | PackageLock.GitLab gitLab ->
-      GitLabApi.fetchFile gitLab.Package gitLab.Revision path
-    | PackageLock.Git git ->
-      gitManager.FetchFile git.Url git.Revision path
-    | PackageLock.Http (http, sha256) ->
-      extractFileFromHttp http sha256 path
+    | PackageLocation.BitBucket bitBucket ->
+      let url = PackageLocation.gitHubUrl bitBucket.Package
+      cacheOrGit (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
+    | PackageLocation.GitHub gitHub ->
+      let url = PackageLocation.gitHubUrl gitHub.Package
+      cacheOrGit (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
+    | PackageLocation.GitLab gitLab ->
+      let url = PackageLocation.gitLabUrl gitLab.Package
+      cacheOrGit (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
+    | PackageLocation.Git git ->
+      let url = git.Url
+      cacheOrGit(gitManager.FetchFile git.Url, url, git.Revision, path)
+    | PackageLocation.Http http ->
+      extractFileFromHttp http path
 
   let branchPriority branch =
     match branch with
@@ -281,7 +297,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             new System.Exception(errorMessage)
             |> raise
       }
-
     member this.FetchLock location =
       async {
         let! content = fetchFile location Constants.LockFileName

@@ -15,6 +15,7 @@ type Command =
 | Quickstart
 | AddDependencies of List<Dependency>
 | RemoveDependencies of List<PackageIdentifier>
+| ShowCompletions
 
 module Command =
 
@@ -99,6 +100,13 @@ module Command =
     return RemoveDependencies deps
   }
 
+  let showCompletionsParser : Parser<Command, Unit> = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "show-completions"
+    do! CharParsers.spaces
+    return ShowCompletions
+  }
+
   let parser = parse {
     let! command =
       resolveParser
@@ -110,6 +118,7 @@ module Command =
       <|> initParser
       <|> versionParser
       <|> helpParser
+      <|> showCompletionsParser
       <|> startParser
 
     let! isVerbose = verboseParser
@@ -187,6 +196,7 @@ module Command =
       | Quickstart -> QuickstartCommand.task context
       | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
+      | ShowCompletions -> ShowCompletions.task context
 
     do! context.Console.Flush()
   }

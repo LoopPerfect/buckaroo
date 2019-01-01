@@ -8,7 +8,7 @@ let fetchFile (package : AdhocPackageIdentifier) (commit : Revision) (file : str
   then
     return raise <| new ArgumentException("GitHub API requires full length commit hashes")
   else
-    let url = 
+    let url =
       "https://raw.githubusercontent.com/" + package.Owner + "/" + package.Project + "/" + commit + "/" + file
     return! Http.AsyncRequestString(url)
 }

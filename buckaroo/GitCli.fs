@@ -6,7 +6,6 @@ open Buckaroo.Console
 
 type GitCli (console : ConsoleManager) =
   let nl = System.Environment.NewLine
-
   let runBash command = async {
     let rt =
       (
