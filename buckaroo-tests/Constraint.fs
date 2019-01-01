@@ -16,11 +16,12 @@ let ``Constraint.parse works correctly`` () =
     ("*", Constraint.wildcard |> Some);
     ("revision=aabbccddee", Version.Git(GitVersion.Revision "aabbccddee") |> Exactly |> Some);
     ("!*", Constraint.wildcard |> Constraint.Complement |> Some);
-    ("any(branch=master)", Some (Any [Exactly (Version.Git(GitVersion.Branch "master"))]));
+    ("any(branch=master)", Some(Any [Exactly (Version.Git(GitVersion.Branch "master"))]));
+    ("any(any(branch=master))", Some(Any [ Any [Exactly (Version.Git(GitVersion.Branch "master"))]]));
     ("any(revision=aabbccddee branch=master)", Some (Any [
       Exactly (Version.Git(GitVersion.Revision "aabbccddee"));
       Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("all(*)", Some (All [Constraint.wildcard]));
+    ("all(*)", Some(All [Constraint.wildcard]));
     (
       "all(branch=master !revision=aabbccddee)",
       Some (All [Exactly (Version.Git(GitVersion.Branch "master")); Complement (Exactly (Version.Git(GitVersion.Revision "aabbccddee")))])
@@ -74,3 +75,19 @@ let ``Constraint.compare works correctly`` () =
   ]
   let actual = input |> List.sortWith Constraint.compare
   Assert.Equal<List<Constraint>>(expected, actual)
+
+[<Fact>]
+let ``Constraint.simplify works correctly`` () =
+  let cases = [
+    ("!!revision=aabbccddee", "revision=aabbccddee");
+    ("any(any(revision=aabbccddee))", "revision=aabbccddee");
+    ("all(all(revision=aabbccddee))", "revision=aabbccddee");
+    ("any(all(revision=aabbccddee))", "revision=aabbccddee");
+    ("all(any(revision=aabbccddee))", "revision=aabbccddee");
+    ("any(branch=master any(revision=aabbccddee))", "any(revision=aabbccddee branch=master)");
+  ]
+  for (input, expected) in cases do
+    let actual =
+      Constraint.parse input
+      |> Result.map Constraint.simplify
+    Assert.Equal(Constraint.parse expected, actual)
