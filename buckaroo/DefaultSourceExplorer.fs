@@ -90,16 +90,19 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchRevisionsFromGitBranch url branch = asyncSeq {
     let! refs = gitManager.FetchRefs url
-    let branchRef =
+    let maybeBranchRef =
       refs
-      |> Seq.find (fun ref -> ref.Type = RefType.Branch && ref.Name = branch)
+      |> Seq.tryFind (fun ref -> ref.Type = RefType.Branch && ref.Name = branch)
 
-    yield! AsyncSeq.ofSeq [branchRef.Revision]
-
-    let! commits = gitManager.FetchCommits url branchRef.Revision
-    yield!
-      commits
-      |> AsyncSeq.ofSeq
+    match maybeBranchRef with
+    | Some branchRef ->
+      yield branchRef.Revision
+      let! commits = gitManager.FetchCommits url branchRef.Revision
+      yield!
+        commits
+        |> AsyncSeq.ofSeq
+    | None ->
+      raise <| new System.Exception("Branch not found")
   }
 
   let fetchRevisionsFromGitSemVer url semVer = asyncSeq {

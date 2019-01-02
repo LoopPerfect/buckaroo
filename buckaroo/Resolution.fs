@@ -67,10 +67,13 @@ module Resolution =
         |> String.concat " "
       )
     | Error e -> "Error! " + e.Message
+    | Failure (package, c, e) -> "Error! " + c.ToString() + "cannot be satisfied for " + package.ToString() + " because: " + e.ToString()
     | Ok solution -> "Success! " + (Solution.show solution)
 
   let merge (a : Resolution) (b : Resolution) : Resolution =
     match (a, b) with
+    | (Failure (x, y, z), _) -> Failure (x, y, z)
+    | (_, Failure (x, y, z)) -> Failure (x, y, z)
     | (Conflict c, _) -> Conflict c
     | (_, Conflict c) -> Conflict c
     | (Error e, _) -> Error e

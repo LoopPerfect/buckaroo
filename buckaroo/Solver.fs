@@ -24,7 +24,15 @@ module Solver =
     Hints : AsyncSeq<Atom * PackageLock>;
   }
 
-  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * (PackageLocation * Set<Version>), PackageIdentifier * Constraint * System.Exception>>
+
+  type SearchStrategyError =
+  | Other of System.Exception
+  | NotSatisfiable of PackageIdentifier * Constraint * System.Exception
+  | NoLocationAvaiable of PackageIdentifier * Constraint
+
+  type LocatedVersionSet = PackageLocation * Set<Version>
+
+  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
 
   let private withTimeout timeout action =
     async {
@@ -41,8 +49,12 @@ module Solver =
         isEmpty <- false
         yield Result.Ok (package, candidate)
       if isEmpty then
-        raise <| new System.SystemException "no versions available for (package, constraint)"
-    with e -> yield Result.Error (package, constraints ,e)
+        match package with
+        | PackageIdentifier.Adhoc _ -> ()
+        | _ ->
+          yield Result.Error (NotSatisfiable (package, constraints, new System.Exception "no versions found"))
+    with e ->
+      yield Result.Error (NotSatisfiable (package, constraints , e))
   }
 
   let constraintsOf (ds: Set<Dependency>) =
@@ -241,12 +253,15 @@ module Solver =
         for x in atomsToExplore do
           match x with
           | Result.Error e ->
-            context.Console.Error (e.ToString(), LoggingLevel.Info)
-            // Package + Constraint is unresolvable
-            // we need to skip every branch that requires Package + Constraint
-            yield Resolution.Failure e
+            match e with
+            | NotSatisfiable (x, y, z) ->
+              // Package + Constraint is unresolvable
+              // we need to skip every branch that requires Package + Constraint
+              yield Resolution.Failure (x, y, z)
+            | NoLocationAvaiable (p, c)  ->
+              yield Resolution.Error (new System.Exception ("no location found for: " + p.ToString() + "that could satisfy: " + c.ToString()))
           | Result.Ok (package, (packageLock, versions)) ->
-            //try
+            try
               log("Exploring (" + state.Depth.ToString() + ") " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
 
               // We pre-emptively grab the lock
@@ -339,43 +354,54 @@ module Solver =
 
                   yield! step context strategy nextState
                 })
-                |> AsyncSeq.takeWhile(fun resolution ->
+                |> AsyncSeq.map(fun resolution ->
                   match resolution with
-                  | Resolution.Failure (ident, All xs, error) ->
+                  | Resolution.Failure (ident, All xs, e) ->
                     if xs |> List.forall state.Constraints.[ident].Contains
                     then
-                      log("###############superfailure#################################")
-                      raise <| error
+                      log("######### FATAL ERROR " + e.ToString())
+                      resolution
                     else
-                      log("###############superend#####################################")
-                      false
-                  | Resolution.Failure (ident, c, error) ->
+                      log("######### recoverig from fatal error " + e.ToString())
+                      Resolution.Error e
+                  | Resolution.Failure (ident, c, e) ->
                     if state.Constraints.[ident].Contains c
                     then
-                      log("failure#################################")
-                      raise <| error
+                      log("######### FATAL ERROR " + e.ToString())
+                      resolution
                     else
-
-                      log("end#####################################")
-                      false
+                      log("######### recoverig from fatal error " + e.ToString())
+                      Resolution.Error e
+                  | x -> x
+                )
+                |> AsyncSeq.takeWhileInclusive(fun resolution ->
+                  match resolution with
+                  | Resolution.Failure (_,_, e) ->
+                    log("######### backtracking due to failure " + e.ToString())
+                    false
                   | _ -> true
                 )
 
-            //with error ->
-            //  log("Error exploring " + (string packageLock) + "...")
-            //  log(string error)
-            //  yield Resolution.Error error
+            with error ->
+              log("Error exploring " + (string packageLock) + "...")
+              log(string error)
+              yield Resolution.Error error
 
     // We've run out of versions to try
-    yield Resolution.Error (new System.Exception("No more versions to try! "))
+    //yield Resolution.Error (new System.Exception("No more versions to try! "))
   }
 
   let solutionCollector resolutions =
     resolutions
     |> AsyncSeq.take (1024)
+    |> AsyncSeq.takeWhileInclusive (fun x ->
+      match x with
+      | Failure _ -> false
+      | _ -> true)
     |> AsyncSeq.filter (fun x ->
       match x with
       | Ok _ -> true
+      | Failure _ -> true
       | _ -> false
     )
     |> AsyncSeq.take 1
