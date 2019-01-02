@@ -238,13 +238,15 @@ module Solver =
             | _ -> true)
 
 
-        for x in atomsToExplore |> AsyncSeq.takeWhile (fun x -> Result.isOk x) do
+        for x in atomsToExplore do
           match x with
           | Result.Error e ->
             context.Console.Error (e.ToString(), LoggingLevel.Info)
-            yield Resolution.Error (new System.SystemException "blub")
+            // Package + Constraint is unresolvable
+            // we need to skip every branch that requires Package + Constraint
+            yield Resolution.Failure e
           | Result.Ok (package, (packageLock, versions)) ->
-            try
+            //try
               log("Exploring (" + state.Depth.ToString() + ") " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
 
               // We pre-emptively grab the lock
@@ -337,10 +339,32 @@ module Solver =
 
                   yield! step context strategy nextState
                 })
-            with error ->
-              log("Error exploring " + (string packageLock) + "...")
-              log(string error)
-              yield Resolution.Error error
+                |> AsyncSeq.takeWhile(fun resolution ->
+                  match resolution with
+                  | Resolution.Failure (ident, All xs, error) ->
+                    if xs |> List.forall state.Constraints.[ident].Contains
+                    then
+                      log("###############superfailure#################################")
+                      raise <| error
+                    else
+                      log("###############superend#####################################")
+                      false
+                  | Resolution.Failure (ident, c, error) ->
+                    if state.Constraints.[ident].Contains c
+                    then
+                      log("failure#################################")
+                      raise <| error
+                    else
+
+                      log("end#####################################")
+                      false
+                  | _ -> true
+                )
+
+            //with error ->
+            //  log("Error exploring " + (string packageLock) + "...")
+            //  log(string error)
+            //  yield Resolution.Error error
 
     // We've run out of versions to try
     yield Resolution.Error (new System.Exception("No more versions to try! "))

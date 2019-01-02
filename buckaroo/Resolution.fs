@@ -10,6 +10,7 @@ type ResolutionStyle =
 
 type Resolution =
 | Conflict of Set<Dependency * Version>
+| Failure of PackageIdentifier * Constraint * System.Exception
 | Error of System.Exception
 | Ok of Solution
 
