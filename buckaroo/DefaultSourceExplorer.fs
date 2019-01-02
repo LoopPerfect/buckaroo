@@ -90,13 +90,13 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchRevisionsFromGitBranch url branch = asyncSeq {
     let! refs = gitManager.FetchRefs url
-    yield!
+    let branchRef =
       refs
-      |> Seq.filter (fun ref -> ref.Type = RefType.Branch && ref.Name = branch)
-      |> Seq.map (fun ref -> ref.Revision)
-      |> AsyncSeq.ofSeq
+      |> Seq.find (fun ref -> ref.Type = RefType.Branch && ref.Name = branch)
 
-    let! commits = gitManager.FetchCommits url branch
+    yield! AsyncSeq.ofSeq [branchRef.Revision]
+
+    let! commits = gitManager.FetchCommits url branchRef.Revision
     yield!
       commits
       |> AsyncSeq.ofSeq
