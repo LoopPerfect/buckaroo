@@ -8,8 +8,20 @@ type ResolutionStyle =
 | Quick
 | Upgrading
 
+type NotSatisfiable = {
+  Package : PackageIdentifier
+  Constraint : Constraint
+  Msg : string
+} with
+  override this.ToString () =
+    (string this.Constraint) +
+    " cannot be satisfied for " + (string this.Package) +
+    " because: " + this.Msg
+
+
 type Resolution =
 | Conflict of Set<Dependency * Version>
+| Failure of NotSatisfiable
 | Error of System.Exception
 | Ok of Solution
 
@@ -66,14 +78,17 @@ module Resolution =
         |> String.concat " "
       )
     | Error e -> "Error! " + e.Message
+    | Failure f -> f.ToString()
     | Ok solution -> "Success! " + (Solution.show solution)
 
   let merge (a : Resolution) (b : Resolution) : Resolution =
     match (a, b) with
-    | (Conflict c, _) -> Conflict c
-    | (_, Conflict c) -> Conflict c
-    | (Error e, _) -> Error e
-    | (_, Error e) -> Error e
+    | (Failure _, _) -> a
+    | (_, Failure _) -> b
+    | (Conflict _, _) -> a
+    | (_, Conflict _) -> b
+    | (Error _, _) -> a
+    | (_, Error _) -> b
     | (Ok x, Ok y) ->
       match Solution.merge x y with
       | Result.Ok z -> Ok z

@@ -59,7 +59,7 @@ let ``Lock.parse works correctly 2`` () =
           Versions = Set [Version.SemVer { SemVer.zero with Major = 1; Minor = 2; Patch = 3 }];
           Location =
             (
-              PackageLock.Http
+              Buckaroo.PackageLock.Http
                 (
                   {
                     Url = "https://www.abc.com/def.zip";

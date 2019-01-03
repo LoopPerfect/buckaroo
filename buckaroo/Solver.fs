@@ -2,7 +2,6 @@ namespace Buckaroo
 
 open FSharpx.Collections
 open Buckaroo.Tasks
-open Buckaroo.RichOutput
 open Buckaroo.Console
 
 module Solver =
@@ -23,7 +22,13 @@ module Solver =
     Hints : AsyncSeq<Atom * PackageLock>;
   }
 
-  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<PackageIdentifier * (PackageLocation * Set<Version>)>
+  type SearchStrategyError =
+  | NotSatisfiable of NotSatisfiable
+  | NoLocationAvaiable of PackageIdentifier * Constraint
+
+  type LocatedVersionSet = PackageLocation * Set<Version>
+
+  type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
 
   let private withTimeout timeout action =
     async {
@@ -31,40 +36,42 @@ module Solver =
       return! child
     }
 
+  let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
+    let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
+    let mutable isEmpty = true
+
+    try
+      for candidate in candidatesToExplore do
+        isEmpty <- false
+        yield Result.Ok (package, candidate)
+
+      if isEmpty then
+        match package with
+        | PackageIdentifier.Adhoc _ -> ()
+        | _ ->
+          yield Result.Error (
+            NotSatisfiable {
+              Package = package;
+              Constraint = constraints;
+              Msg = "no versions found"
+            }
+          )
+    with e ->
+      yield Result.Error (
+        NotSatisfiable {
+          Package = package;
+          Constraint = constraints;
+          Msg = e.Message
+        }
+      )
+  }
+
   let constraintsOf (ds: Set<Dependency>) =
     ds
     |> Seq.map (fun x -> (x.Package, x.Constraint))
     |> Seq.groupBy fst
     |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
     |> Map.ofSeq
-
-  let mergeConstraints (a: Constraints) (b: Constraints) =
-    Seq.append
-      (a |> Map.keys)
-      (b |> Map.keys)
-    |> Seq.map (fun k -> (k, ()))
-    |> Map.ofSeq
-    |> Map.map (fun k _ ->
-      Set.union
-        (a.TryFind(k) |> Option.defaultValue(Set[]))
-        (b.TryFind(k) |> Option.defaultValue(Set[]))
-    )
-
-  let rec versionSearchCost (v : Version) : int =
-    match v with
-    | Version.SemVer _-> 0
-    | Version.Git(GitVersion.Tag _) -> 1
-    | Version.Git(GitVersion.Branch _)  -> 2
-    | Version.Git(GitVersion.Revision _)  -> 3
-
-  let rec constraintSearchCost (c : Constraint) : int =
-    match c with
-    | Constraint.Exactly v -> versionSearchCost v
-    | Constraint.Any xs ->
-      xs |> Seq.map constraintSearchCost |> Seq.append [ 9 ] |> Seq.min
-    | Constraint.All xs ->
-      xs |> Seq.map constraintSearchCost |> Seq.append [ 0 ] |> Seq.max
-    | Constraint.Complement _ -> 6
 
   let findUnsatisfied (solution : Solution) (dependencies : Constraints) = seq {
     yield! Set.difference
@@ -143,7 +150,7 @@ module Solver =
       state.Hints
       |> AsyncSeq.filter (fun (atom, _) -> unsatisfied |> Set.contains atom.Package)
       |> AsyncSeq.map (fun (atom, lock) ->
-        (atom.Package, (PackageLock.toLocation lock, atom.Versions))
+        Result.Ok (atom.Package, (PackageLock.toLocation lock, atom.Versions))
       )
 
     for package in unsatisfied do
@@ -154,11 +161,8 @@ module Solver =
         |> Seq.toList
         |> Constraint.All
 
-      let locationsAndVersions =
-        SourceExplorer.fetchLocationsForConstraint sourceExplorer state.Locations package constraints
+      yield! fetchCandidatesForConstraint sourceExplorer state.Locations package constraints
 
-      for (location, version) in locationsAndVersions do
-        yield (package, (location, version))
   }
 
   let upgradeSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
@@ -172,12 +176,45 @@ module Solver =
         |> Seq.toList
         |> Constraint.All
 
-      let locationsAndVersions =
-        SourceExplorer.fetchLocationsForConstraint sourceExplorer state.Locations package constraints
-
-      for location in locationsAndVersions do
-        yield (package, location)
+      yield! fetchCandidatesForConstraint sourceExplorer state.Locations package constraints
   }
+
+  let private candidateToAtom (sourceExplorer : ISourceExplorer) (state: SolverState) (package, (location, versions)) = async {
+    let! packageLock = sourceExplorer.LockLocation location
+    return (package, (packageLock, versions))
+  }
+
+  let private filterAtom state (package, (packageLock, _)) = (
+    (Set.contains (package, packageLock) state.Visited |> not) &&
+    (match state.Solution.Resolutions |> Map.tryFind package with
+      | Some (rv, _) -> rv.Lock = packageLock
+      | None -> true)
+  )
+
+  let private recoverOrFail state log resolutions =
+    resolutions
+    |> AsyncSeq.map (fun resolution ->
+        match resolution with
+        | Resolution.Failure f ->
+          if state.Constraints.ContainsKey f.Package &&
+            match f.Constraint with
+            | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
+            | x -> state.Constraints.[f.Package].Contains x
+          then resolution
+          else
+            log("trying different resolution to workaround: " + f.ToString())
+            // we backtracked far enough, we can proceed normally...
+            // TODO: remember f.Package + f.Constraint always fails
+            Resolution.Error (new System.Exception (f.ToString()))
+        | x -> x
+    )
+    |> AsyncSeq.takeWhileInclusive (fun resolution ->
+      match resolution with
+      | Resolution.Failure f ->
+        log("backtracking due to failure " + f.ToString())
+        false
+      | _ -> true
+    )
 
   let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
 
@@ -201,127 +238,145 @@ module Solver =
       else
         let atomsToExplore =
           strategy sourceExplorer state
-          |> AsyncSeq.mapAsync (fun (package, (location, versions)) -> async {
-            let! packageLock = sourceExplorer.LockLocation location
-            return (package, (packageLock, versions))
-          })
-          |> AsyncSeq.filter (fun (package, (location, versions)) ->
-            Set.contains (package, location) state.Visited |> not)
-          |> AsyncSeq.filter (fun (package, (packageLock, versions)) ->
-            match state.Solution.Resolutions |> Map.tryFind package with
-            | Some (rv, _) -> rv.Lock = packageLock
-            | None -> true
+          |> AsyncSeq.mapAsync (fun x ->
+            match x with
+            | Result.Ok candidate ->
+              candidate
+              |> candidateToAtom sourceExplorer state
+              |> fun x -> async {
+                let! result = x;
+                return Result.Ok result; }
+            | Result.Error e -> async { return Result.Error e }
           )
+          |> AsyncSeq.filter (fun x ->
+            match x with
+            | Result.Ok atom -> filterAtom state atom
+            | _ -> true)
 
-        for (package, (packageLock, versions)) in atomsToExplore do
-          try
-            log("Exploring " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
 
-            // We pre-emptively grab the lock
-            let! lockTask =
-              sourceExplorer.FetchLock packageLock
-              |> Async.StartChild
+        for x in atomsToExplore do
+          match x with
+          | Result.Error e ->
+            match e with
+            | NotSatisfiable x ->
+              // Package + Constraint is unresolvable
+              // we need to skip every branch that requires Package + Constraint
+              yield Resolution.Failure x
+            | NoLocationAvaiable (p, c)  ->
+              yield Resolution.Error (new System.Exception ("no location found for: " + p.ToString() + "that could satisfy: " + c.ToString()))
+          | Result.Ok (package, (packageLock, versions)) ->
+            try
+              log("Exploring (" + state.Depth.ToString() + ") " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
 
-            log("Fetching manifest... ")
+              // We pre-emptively grab the lock
+              let! lockTask =
+                sourceExplorer.FetchLock packageLock
+                |> Async.StartChild
 
-            let! manifest = sourceExplorer.FetchManifest packageLock
+              log("Fetching manifest... ")
 
-            let! mergedLocations = async {
-              return
-                match mergeLocations state.Locations manifest.Locations with
-                | Result.Ok xs -> xs
-                | Result.Error e -> raise (new System.Exception(e.ToString()))
-            }
+              let! manifest = sourceExplorer.FetchManifest packageLock
 
-            let resolvedVersion = {
-              Versions = versions;
-              Lock = packageLock;
-              Manifest = manifest;
-            }
-
-            let freshHints =
-              asyncSeq {
-                try
-                  let! lock = lockTask
-                  yield!
-                    lock
-                    |> lockToHints
-                    |> Seq.filter (fun (atom, packageLock) ->
-                      Set.contains (atom.Package, packageLock) state.Visited |> not &&
-                      state.Solution.Resolutions |> Map.containsKey atom.Package |> not
-                    )
-                    |> AsyncSeq.ofSeq
-                with error ->
-                  log("Could not fetch buckaroo.lock.toml for " + (string packageLock))
-                  log(string error)
-                  ()
+              let! mergedLocations = async {
+                return
+                  match mergeLocations state.Locations manifest.Locations with
+                  | Result.Ok xs -> xs
+                  | Result.Error e -> raise (new System.Exception(e.ToString()))
               }
 
-            let privatePackagesSolverState =
-              {
-                Solution = Solution.empty;
-                Locations = Map.empty;
-                Visited = Set.empty;
-                Hints = state.Hints;
-                Depth = state.Depth + 1;
-                Constraints = constraintsOf manifest.PrivateDependencies
+              let resolvedVersion = {
+                Versions = versions;
+                Lock = packageLock;
+                Manifest = manifest;
               }
 
-            let privatePackagesSolutions =
-              step context strategy privatePackagesSolverState
-              |> AsyncSeq.choose (fun resolution ->
-                match resolution with
-                | Resolution.Ok solution -> Some solution
-                | _ -> None
-              )
-
-            yield!
-              privatePackagesSolutions
-              |> AsyncSeq.collect (fun privatePackagesSolution -> asyncSeq {
-                let nextState = {
-                  state with
-                    Solution =
-                      {
-                        state.Solution with
-                          Resolutions =
-                            state.Solution.Resolutions
-                            |> Map.add package (resolvedVersion, privatePackagesSolution)
-                      };
-                    // Note: union will favour kvp from the second map
-                    // however, this is a private resoluton and we can resolve independently
-                    // TODO: introduce strict / hybrid mode where we can tweak this behaviour
-                    Constraints =
-                      Map.union
-                        state.Constraints
-                        (constraintsOf manifest.Dependencies)
-
-                    Depth = state.Depth + 1;
-                    Visited =
-                      state.Visited
-                      |> Set.add (package, packageLock);
-                    Locations = mergedLocations;
-                    Hints =
-                      state.Hints
-                      |> AsyncSeq.append freshHints;
+              let freshHints =
+                asyncSeq {
+                  try
+                    let! lock = lockTask
+                    yield!
+                      lock
+                      |> lockToHints
+                      |> Seq.filter (fun (atom, packageLock) ->
+                        Set.contains (atom.Package, packageLock) state.Visited |> not &&
+                        state.Solution.Resolutions |> Map.containsKey atom.Package |> not
+                      )
+                      |> AsyncSeq.ofSeq
+                  with error ->
+                    log("Could not fetch buckaroo.lock.toml for " + (string packageLock))
+                    log(string error)
+                    ()
                 }
 
-                yield! step context strategy nextState
-              })
-          with error ->
-            log("Error exploring " + (string packageLock) + "...")
-            log(string error)
-            yield Resolution.Error error
+              let privatePackagesSolverState =
+                {
+                  Solution = Solution.empty;
+                  Locations = Map.empty;
+                  Visited = Set.empty;
+                  Hints = state.Hints;
+                  Depth = state.Depth + 1;
+                  Constraints = constraintsOf manifest.PrivateDependencies
+                }
 
-    // We've run out of versions to try
-    yield Resolution.Error (new System.Exception("No more versions to try! "))
+              let privatePackagesSolutions =
+                step context strategy privatePackagesSolverState
+                |> AsyncSeq.choose (fun resolution ->
+                  match resolution with
+                  | Resolution.Ok solution -> Some solution
+                  | _ -> None
+                )
+
+              yield!
+                privatePackagesSolutions
+                |> AsyncSeq.collect (fun privatePackagesSolution -> asyncSeq {
+                  let nextState = {
+                    state with
+                      Solution =
+                        {
+                          state.Solution with
+                            Resolutions =
+                              state.Solution.Resolutions
+                              |> Map.add package (resolvedVersion, privatePackagesSolution)
+                        };
+                      // Note: union will favour kvp from the second map
+                      // however, this is a private resoluton and we can resolve independently
+                      // TODO: introduce strict / hybrid mode where we can tweak this behaviour
+                      Constraints =
+                        Map.union
+                          state.Constraints
+                          (constraintsOf manifest.Dependencies)
+
+                      Depth = state.Depth + 1;
+                      Visited =
+                        state.Visited
+                        |> Set.add (package, packageLock);
+                      Locations = mergedLocations;
+                      Hints =
+                        state.Hints
+                        |> AsyncSeq.append freshHints;
+                  }
+
+                  yield! step context strategy nextState
+                })
+                |> recoverOrFail state log
+
+            with error ->
+              log("Error exploring " + (string packageLock) + "...")
+              log(string error)
+              yield Resolution.Error error
   }
 
   let solutionCollector resolutions =
     resolutions
-    |> AsyncSeq.take (1024 * 16)
+    |> AsyncSeq.take (1024)
+    |> AsyncSeq.takeWhileInclusive (fun x ->
+      match x with
+      | Failure _ -> false
+      | _ -> true)
     |> AsyncSeq.filter (fun x ->
       match x with
       | Ok _ -> true
+      | Failure _ -> true
       | _ -> false
     )
     |> AsyncSeq.take 1

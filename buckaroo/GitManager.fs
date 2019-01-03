@@ -142,9 +142,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
 
   member this.FetchCommits (url : string) (branch : Branch) = async {
     let! targetDirectory = this.Clone(url)
-    do!
-      git.FetchBranch targetDirectory branch
-      |> Async.Ignore
+    do! git.FetchBranch targetDirectory branch
     return! git.FetchCommits targetDirectory branch
   }
 

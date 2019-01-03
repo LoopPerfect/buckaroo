@@ -1,7 +1,4 @@
 namespace Buckaroo
-open System.Data
-open System.Data
-open System.Data
 
 type Constraint =
 | Exactly of Version
