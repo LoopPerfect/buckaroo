@@ -1,9 +1,7 @@
 namespace Buckaroo
 
-open FSharpx.Control.Async
 open FSharpx.Collections
 open Buckaroo.Tasks
-open Buckaroo.RichOutput
 open Buckaroo.Console
 
 module Solver =
@@ -46,6 +44,7 @@ module Solver =
       for candidate in candidatesToExplore do
         isEmpty <- false
         yield Result.Ok (package, candidate)
+
       if isEmpty then
         match package with
         | PackageIdentifier.Adhoc _ -> ()
@@ -73,34 +72,6 @@ module Solver =
     |> Seq.groupBy fst
     |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
     |> Map.ofSeq
-
-  let mergeConstraints (a: Constraints) (b: Constraints) =
-    Seq.append
-      (a |> Map.keys)
-      (b |> Map.keys)
-    |> Seq.map (fun k -> (k, ()))
-    |> Map.ofSeq
-    |> Map.map (fun k _ ->
-      Set.union
-        (a.TryFind(k) |> Option.defaultValue(Set[]))
-        (b.TryFind(k) |> Option.defaultValue(Set[]))
-    )
-
-  let rec versionSearchCost (v : Version) : int =
-    match v with
-    | Version.SemVer _-> 0
-    | Version.Git(GitVersion.Tag _) -> 1
-    | Version.Git(GitVersion.Branch _)  -> 2
-    | Version.Git(GitVersion.Revision _)  -> 3
-
-  let rec constraintSearchCost (c : Constraint) : int =
-    match c with
-    | Constraint.Exactly v -> versionSearchCost v
-    | Constraint.Any xs ->
-      xs |> Seq.map constraintSearchCost |> Seq.append [ 9 ] |> Seq.min
-    | Constraint.All xs ->
-      xs |> Seq.map constraintSearchCost |> Seq.append [ 0 ] |> Seq.max
-    | Constraint.Complement _ -> 6
 
   let findUnsatisfied (solution : Solution) (dependencies : Constraints) = seq {
     yield! Set.difference
@@ -222,7 +193,7 @@ module Solver =
 
   let private recoverOrFail state log resolutions =
     resolutions
-    |> AsyncSeq.map(fun resolution ->
+    |> AsyncSeq.map (fun resolution ->
         match resolution with
         | Resolution.Failure f ->
           if state.Constraints.ContainsKey f.Package &&
@@ -237,7 +208,7 @@ module Solver =
             Resolution.Error (new System.Exception (f.ToString()))
         | x -> x
     )
-    |> AsyncSeq.takeWhileInclusive(fun resolution ->
+    |> AsyncSeq.takeWhileInclusive (fun resolution ->
       match resolution with
       | Resolution.Failure f ->
         log("backtracking due to failure " + f.ToString())

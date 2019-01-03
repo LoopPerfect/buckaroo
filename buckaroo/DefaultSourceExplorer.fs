@@ -5,7 +5,8 @@ open Buckaroo.Console
 open FSharpx
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
-  let toOptional x = x |> Async.Catch |> Async.map(Choice.toOption)
+  let toOptional = Async.Catch >> (Async.map Choice.toOption)
+
   let fromCache url revision path =
     gitManager.FetchFile url revision path |> toOptional
 
@@ -81,13 +82,12 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchRevisionsFromGitTag url tag = asyncSeq {
     let! refs = gitManager.FetchRefs url
-    let maybeTagRef =
-      refs
-      |> Seq.tryFind (fun ref -> ref.Type = RefType.Tag && ref.Name = tag)
 
-    match maybeTagRef with
-    | Some ref -> yield ref.Revision
-    | None -> ()
+    yield!
+      refs
+      |> Seq.filter (fun ref -> ref.Type = RefType.Tag && ref.Name = tag)
+      |> Seq.map (fun ref -> ref.Revision)
+      |> AsyncSeq.ofSeq
   }
 
   let fetchRevisionsFromGitBranch url branch = asyncSeq {
@@ -99,6 +99,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     match maybeBranchRef with
     | Some branchRef ->
       yield branchRef.Revision
+
       let! commits = gitManager.FetchCommits url branchRef.Revision
       yield!
         commits
@@ -108,6 +109,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchRevisionsFromGitSemVer url semVer = asyncSeq {
     let! refs = gitManager.FetchRefs url
+
     yield!
       refs
       |> Seq.choose (fun ref ->
@@ -301,6 +303,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             new System.Exception(errorMessage)
             |> raise
       }
+
     member this.FetchLock location =
       async {
         let! content = fetchFile location Constants.LockFileName
