@@ -220,7 +220,30 @@ module Solver =
       | None -> true)
   )
 
-
+  let private recoverOrFail state log resolutions =
+    resolutions
+    |> AsyncSeq.map(fun resolution ->
+        match resolution with
+        | Resolution.Failure f ->
+          if state.Constraints.ContainsKey f.Package &&
+            match f.Constraint with
+            | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
+            | x -> state.Constraints.[f.Package].Contains x
+          then resolution
+          else
+            log("trying different resolution to workaround: " + f.ToString())
+            // we backtracked far enough, we can proceed normally...
+            // TODO: remember f.Package + f.Constraint always fails
+            Resolution.Error (new System.Exception (f.ToString()))
+        | x -> x
+    )
+    |> AsyncSeq.takeWhileInclusive(fun resolution ->
+      match resolution with
+      | Resolution.Failure f ->
+        log("backtracking due to failure " + f.ToString())
+        false
+      | _ -> true
+    )
 
   let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
 
@@ -364,29 +387,7 @@ module Solver =
 
                   yield! step context strategy nextState
                 })
-                |> AsyncSeq.map(fun resolution ->
-                  match resolution with
-                  | Resolution.Failure f ->
-                    if state.Constraints.ContainsKey f.Package &&
-                      match f.Constraint with
-                      | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
-                      | x -> state.Constraints.[f.Package].Contains x
-                    then
-                      resolution
-                    else
-                      log("trying different resolution to workaround: " + f.ToString())
-                      // we backtracked far enough, we can proceed normally...
-                      // TODO: remember f.Package + f.Constraint always fails
-                      Resolution.Error (new System.Exception (f.ToString()))
-                  | x -> x
-                )
-                |> AsyncSeq.takeWhileInclusive(fun resolution ->
-                  match resolution with
-                  | Resolution.Failure f ->
-                    log("backtracking due to failure " + f.ToString())
-                    false
-                  | _ -> true
-                )
+                |> recoverOrFail state log
 
             with error ->
               log("Error exploring " + (string packageLock) + "...")

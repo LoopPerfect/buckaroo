@@ -14,8 +14,8 @@ type NotSatisfiable = {
   Msg : string
 } with
   override this.ToString () =
-    this.Constraint.ToString() +
-    " cannot be satisfied for " + this.Package.ToString() +
+    (string this.Constraint) +
+    " cannot be satisfied for " + (string this.Package) +
     " because: " + this.Msg
 
 
