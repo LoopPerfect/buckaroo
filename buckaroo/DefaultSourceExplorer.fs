@@ -87,7 +87,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
     match maybeTagRef with
     | Some ref -> yield ref.Revision
-    | None -> raise <| new System.Exception("Tag \"" + tag + "\" not found")
+    | None -> ()
   }
 
   let fetchRevisionsFromGitBranch url branch = asyncSeq {
@@ -103,8 +103,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
       yield!
         commits
         |> AsyncSeq.ofSeq
-    | None ->
-      raise <| new System.Exception("Branch \"" + branch + "\" not found")
+    | None -> ()
   }
 
   let fetchRevisionsFromGitSemVer url semVer = asyncSeq {
