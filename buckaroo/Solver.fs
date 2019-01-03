@@ -24,10 +24,8 @@ module Solver =
     Hints : AsyncSeq<Atom * PackageLock>;
   }
 
-
   type SearchStrategyError =
-  | Other of System.Exception
-  | NotSatisfiable of PackageIdentifier * Constraint * System.Exception
+  | NotSatisfiable of NotSatisfiable
   | NoLocationAvaiable of PackageIdentifier * Constraint
 
   type LocatedVersionSet = PackageLocation * Set<Version>
@@ -52,9 +50,21 @@ module Solver =
         match package with
         | PackageIdentifier.Adhoc _ -> ()
         | _ ->
-          yield Result.Error (NotSatisfiable (package, constraints, new System.Exception "no versions found"))
+          yield Result.Error (
+            NotSatisfiable {
+              Package = package;
+              Constraint = constraints;
+              Msg = "no versions found"
+            }
+          )
     with e ->
-      yield Result.Error (NotSatisfiable (package, constraints , e))
+      yield Result.Error (
+        NotSatisfiable {
+          Package = package;
+          Constraint = constraints;
+          Msg = e.Message
+        }
+      )
   }
 
   let constraintsOf (ds: Set<Dependency>) =
@@ -254,10 +264,10 @@ module Solver =
           match x with
           | Result.Error e ->
             match e with
-            | NotSatisfiable (x, y, z) ->
+            | NotSatisfiable x ->
               // Package + Constraint is unresolvable
               // we need to skip every branch that requires Package + Constraint
-              yield Resolution.Failure (x, y, z)
+              yield Resolution.Failure x
             | NoLocationAvaiable (p, c)  ->
               yield Resolution.Error (new System.Exception ("no location found for: " + p.ToString() + "that could satisfy: " + c.ToString()))
           | Result.Ok (package, (packageLock, versions)) ->
@@ -356,28 +366,23 @@ module Solver =
                 })
                 |> AsyncSeq.map(fun resolution ->
                   match resolution with
-                  | Resolution.Failure (ident, All xs, e) ->
-                    if xs |> List.forall state.Constraints.[ident].Contains
+                  | Resolution.Failure f ->
+                    if state.Constraints.ContainsKey f.Package &&
+                      match f.Constraint with
+                      | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
+                      | x -> state.Constraints.[f.Package].Contains x
                     then
-                      log("######### FATAL ERROR " + e.ToString())
                       resolution
                     else
-                      log("######### recoverig from fatal error " + e.ToString())
-                      Resolution.Error e
-                  | Resolution.Failure (ident, c, e) ->
-                    if state.Constraints.[ident].Contains c
-                    then
-                      log("######### FATAL ERROR " + e.ToString())
-                      resolution
-                    else
-                      log("######### recoverig from fatal error " + e.ToString())
-                      Resolution.Error e
+                      log("trying different resolution to workaround: " + f.ToString())
+                      // we backtracked far enough, we can proceed normally...
+                      Resolution.Error (new System.Exception (f.ToString()))
                   | x -> x
                 )
                 |> AsyncSeq.takeWhileInclusive(fun resolution ->
                   match resolution with
-                  | Resolution.Failure (_,_, e) ->
-                    log("######### backtracking due to failure " + e.ToString())
+                  | Resolution.Failure f ->
+                    log("backtracking due to failure " + f.ToString())
                     false
                   | _ -> true
                 )
@@ -386,9 +391,6 @@ module Solver =
               log("Error exploring " + (string packageLock) + "...")
               log(string error)
               yield Resolution.Error error
-
-    // We've run out of versions to try
-    //yield Resolution.Error (new System.Exception("No more versions to try! "))
   }
 
   let solutionCollector resolutions =

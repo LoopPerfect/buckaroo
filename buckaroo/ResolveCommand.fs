@@ -22,9 +22,9 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
   (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan) |> log
 
   match resolution with
-  | Resolution.Failure (package, c, e) ->
+  | Resolution.Failure f ->
     "Error! " |> text |> foreground ConsoleColor.Red |> log
-    c.ToString() + " for " + package.ToString() + " coudn't be satisfied because: " + e.Message
+    f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
     |> string |> text |> log
   | Resolution.Conflict x ->
     "Conflict! " |> text |> foreground ConsoleColor.Red |> log
