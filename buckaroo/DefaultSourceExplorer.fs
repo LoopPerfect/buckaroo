@@ -81,11 +81,13 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchRevisionsFromGitTag url tag = asyncSeq {
     let! refs = gitManager.FetchRefs url
-    yield!
+    let maybeTagRef =
       refs
-      |> Seq.filter (fun ref -> ref.Type = RefType.Tag && ref.Name = tag)
-      |> Seq.map (fun ref -> ref.Revision)
-      |> AsyncSeq.ofSeq
+      |> Seq.tryFind (fun ref -> ref.Type = RefType.Tag && ref.Name = tag)
+
+    match maybeTagRef with
+    | Some ref -> yield ref.Revision
+    | None -> raise <| new System.Exception("Tag \"" + tag + "\" not found")
   }
 
   let fetchRevisionsFromGitBranch url branch = asyncSeq {
@@ -102,7 +104,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         commits
         |> AsyncSeq.ofSeq
     | None ->
-      raise <| new System.Exception("Branch not found")
+      raise <| new System.Exception("Branch \"" + branch + "\" not found")
   }
 
   let fetchRevisionsFromGitSemVer url semVer = asyncSeq {
