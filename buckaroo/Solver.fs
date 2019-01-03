@@ -376,6 +376,7 @@ module Solver =
                     else
                       log("trying different resolution to workaround: " + f.ToString())
                       // we backtracked far enough, we can proceed normally...
+                      // TODO: remember f.Package + f.Constraint always fails
                       Resolution.Error (new System.Exception (f.ToString()))
                   | x -> x
                 )
