@@ -90,16 +90,24 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchRevisionsFromGitBranch url branch = asyncSeq {
     let! refs = gitManager.FetchRefs url
-    yield!
+
+    let maybeHead =
       refs
       |> Seq.filter (fun ref -> ref.Type = RefType.Branch && ref.Name = branch)
       |> Seq.map (fun ref -> ref.Revision)
-      |> AsyncSeq.ofSeq
+      |> Seq.tryHead
 
-    let! commits = gitManager.FetchCommits url branch
-    yield!
-      commits
-      |> AsyncSeq.ofSeq
+    match maybeHead with
+    | Some head ->
+      yield head
+
+      let! commits = gitManager.FetchCommits url branch
+      yield!
+        commits
+        |> AsyncSeq.ofSeq
+    | None ->
+      // If there is no head then the branch does not exist and we are done.
+      ()
   }
 
   let fetchRevisionsFromGitSemVer url semVer = asyncSeq {
