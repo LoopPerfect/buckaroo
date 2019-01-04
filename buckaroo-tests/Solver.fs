@@ -276,3 +276,31 @@ let ``Solver picks package that satisfies all constraints`` () =
 
   Assert.Equal ("3", getLockedRev "b" solution)
   ()
+
+
+[<Fact>]
+let ``Solver deduces that a package satisfies all constraints`` () =
+
+  let root = manifest [
+    ("a", Exactly (br "a"))
+    ("b", Exactly (br "b"))
+  ]
+
+  let spec = [
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [("b", Exactly (br "a"))])
+    (package "b",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 2; br "b"],
+      manifest [])
+  ]
+
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
+
+  Assert.Equal ("2", getLockedRev "b" solution)
+  ()
