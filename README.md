@@ -1,5 +1,7 @@
 <p align="center">
+  
 ![Alt text](www/logo-medium.png?raw=true "Buckaroo")
+
 </p>
 
 # buckaroo
