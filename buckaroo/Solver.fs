@@ -338,13 +338,18 @@ module Solver =
                               state.Solution.Resolutions
                               |> Map.add package (resolvedVersion, privatePackagesSolution)
                         };
-                      // Note: union will favour kvp from the second map
-                      // however, this is a private resoluton and we can resolve independently
-                      // TODO: introduce strict / hybrid mode where we can tweak this behaviour
+
                       Constraints =
-                        Map.union
+                        manifest.Dependencies
+                        |> Seq.fold
+                          (fun m (dep : Dependency) ->
+                            Map.insertWith
+                              Set.union
+                              dep.Package
+                              (Set[dep.Constraint])
+                              m)
                           state.Constraints
-                          (constraintsOf manifest.Dependencies)
+
 
                       Depth = state.Depth + 1;
                       Visited =
