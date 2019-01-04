@@ -1,4 +1,6 @@
-![Alt text](www/logo-medium.png?raw=true "Buckaroo")
+<p align="center">
+  <img src="www/logo-medium.png?raw=true" alt="Buckaroo" />
+</p>
 
 # buckaroo
 
