@@ -126,7 +126,9 @@ let ``Solver handles simple case`` () =
     (package "a",
       Set[ver 1; br "a"],
       manifest [("b", Exactly (ver 1) )])
-    (package "b", Set[ver 1; br "a"], manifest [])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
   ]
 
   let root = manifest [("a", Exactly (br "a") )]
@@ -136,4 +138,108 @@ let ``Solver handles simple case`` () =
 
   Assert.Equal ("2", getLockedRev "a" solution)
   Assert.Equal ("1", getLockedRev "b" solution)
+  ()
+
+[<Fact>]
+let ``Solver can backtrack to resolve simple conflicts`` () =
+  let spec = [
+    (package "a",
+      Set[ver 2; br "a"],
+      manifest [("b", Exactly (ver 2) )])
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [("b", Exactly (ver 1) )])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+  ]
+
+  let root = manifest [("a", Exactly (br "a") )]
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
+
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("1", getLockedRev "b" solution)
+  ()
+
+
+[<Fact>]
+let ``Solver can compute version intersections`` () =
+
+  let root = manifest [
+    ("a", Exactly (ver 1) )
+    ("b", Exactly (ver 1) )
+  ]
+  let spec = [
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [("b", Exactly (br "a") )])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+  ]
+
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
+
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("1", getLockedRev "b" solution)
+  ()
+
+[<Fact>]
+let ``Solver can compute intersection of branches`` () =
+
+  let root = manifest [
+    ("a", All [Exactly (br "b"); Exactly (br "a")])
+  ]
+
+  let spec = [
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "a",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "a",
+      Set[ver 3; br "a"; br "b"],
+      manifest [])
+  ]
+
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
+
+  Assert.Equal ("3", getLockedRev "a" solution)
+  ()
+
+[<Fact>]
+let ``Solver picks package that satisfies all constraints`` () =
+
+  let root = manifest [
+    ("a", Exactly (br "a"))
+    ("b", Exactly (br "a"))
+  ]
+
+  let spec = [
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [("b", Exactly (br "b"))])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 2; br "b"],
+      manifest [])
+    (package "b",
+      Set[ver 3; br "a"; br "b"],
+      manifest [])
+  ]
+
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
+
+  Assert.Equal ("3", getLockedRev "b" solution)
   ()
