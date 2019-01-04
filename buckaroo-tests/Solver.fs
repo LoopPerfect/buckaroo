@@ -34,15 +34,15 @@ type TestingSourceExplorer (manifestSpec : List<PackageIdentifier * Set<Version>
         match package with
         | (Adhoc a) ->
           yield! manifestSpec
-            |> List.filter (fun (p, vs, _) -> p = package && vs |> Set.contains version)
-            |> List.map(fun (_, vs,_) -> vs)
-            |> List.collect(Set.toList)
-            |> List.choose(fun x ->
+            |> Seq.filter (fun (p, vs, _) -> p = package && vs |> Set.contains version)
+            |> Seq.map(fun (_, vs, _) -> vs)
+            |> Seq.collect(Set.toList)
+            |> Seq.choose(fun x ->
                 match x with
                 | Version.Git (GitVersion.Revision r) -> Some r
                 | SemVer v -> Some (v.Major.ToString())
                 | _ -> None)
-            |> List.map(fun r ->
+            |> Seq.map(fun r ->
                 PackageLocation.GitHub {
                   Package = { Owner = a.Owner; Project = a.Project };
                   Revision = r
@@ -116,6 +116,11 @@ let getLockedRev (p : string) (r: Resolution) =
     | _ -> ""
   | _ -> ""
 ()
+
+let isOk (r: Resolution) =
+  match r with
+  | Ok _ -> true
+  | _ -> false
 
 [<Fact>]
 let ``Solver handles simple case`` () =
@@ -215,17 +220,45 @@ let ``Solver can compute intersection of branches`` () =
   ()
 
 [<Fact>]
-let ``Solver picks package that satisfies all constraints`` () =
+let ``Solver fails if package cant satisfy all constraints`` () =
 
   let root = manifest [
     ("a", Exactly (br "a"))
-    ("b", Exactly (br "a"))
+    ("b", Exactly (br "b"))
   ]
 
   let spec = [
     (package "a",
       Set[ver 1; br "a"],
-      manifest [("b", Exactly (br "b"))])
+      manifest [("b", Exactly (br "a"))])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 2; br "b"],
+      manifest [])
+  ]
+
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
+
+  Assert.False (isOk solution)
+  ()
+
+
+[<Fact>]
+let ``Solver picks package that satisfies all constraints`` () =
+
+  let root = manifest [
+    ("a", Exactly (br "a"))
+    ("b", Exactly (br "b"))
+  ]
+
+  let spec = [
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [("b", Exactly (br "a"))])
     (package "b",
       Set[ver 1; br "a"],
       manifest [])
