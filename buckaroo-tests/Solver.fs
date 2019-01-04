@@ -12,46 +12,42 @@ let package name = PackageIdentifier.Adhoc {
   Project = name
 }
 
-let branch b = Version.Git (GitVersion.Branch b)
+let br b = Version.Git (GitVersion.Branch b)
 let rev (x : int) = Version.Git(GitVersion.Revision (x.ToString()))
 let ver (x : int) = Version.SemVer {SemVer.zero with Major = x}
 
-type TestingSourceExplorer (manifestSpec : List<PackageIdentifier * Version * Manifest>) =
+type TestingSourceExplorer (manifestSpec : List<PackageIdentifier * Set<Version> * Manifest>) =
 
   interface ISourceExplorer with
     member this.FetchVersions (_ : PackageSources) (package: PackageIdentifier) : AsyncSeq<Version>  = asyncSeq {
-
       yield!
         manifestSpec
           |> Seq.choose (fun (p, v, _) ->
             if p = package
-            then Some v
+            then Some (v |> Set.toSeq |> Seq.sortDescending)
             else None)
+          |> Seq.collect (id)
           |> AsyncSeq.ofSeq
     }
 
     member this.FetchLocations (_: PackageSources) (package: PackageIdentifier) (version: Version) : AsyncSeq<PackageLocation> = asyncSeq {
-        match package, version with
-        | (Adhoc a, SemVer v) ->
-          yield PackageLocation.GitHub {
-            Package = { Owner = a.Owner; Project = a.Project };
-            Revision = v.Major.ToString()
-          }
-        | (Adhoc a, _) ->
+        match package with
+        | (Adhoc a) ->
           yield! manifestSpec
-            |> List.filter (fun (p, _, _) -> p = package )
-            |> List.map(fun (_, v,_) -> v)
+            |> List.filter (fun (p, vs, _) -> p = package && vs |> Set.contains version)
+            |> List.map(fun (_, vs,_) -> vs)
+            |> List.collect(Set.toList)
             |> List.choose(fun x ->
                 match x with
-                | SemVer v -> Some v
+                | Version.Git (GitVersion.Revision r) -> Some r
+                | SemVer v -> Some (v.Major.ToString())
                 | _ -> None)
-            |> List.map(fun v ->
+            |> List.map(fun r ->
                 PackageLocation.GitHub {
                   Package = { Owner = a.Owner; Project = a.Project };
-                  Revision = v.Major.ToString()
+                  Revision = r
                 })
             |> AsyncSeq.ofSeq
-
         | _ -> raise <| new System.SystemException "package not found"
     }
 
@@ -69,7 +65,7 @@ type TestingSourceExplorer (manifestSpec : List<PackageIdentifier * Version * Ma
         match lock with
         | PackageLock.GitHub g ->
           manifestSpec
-          |> List.filter (fun (p, v, _) -> p = package g.Package.Project && v = (g.Revision.ToString() |> int |> ver))
+          |> List.filter (fun (p, v, _) -> p = package g.Package.Project && v.Contains(g.Revision.ToString() |> int |> ver))
           |> List.map (fun (_, _, m) -> m)
           |> List.tryHead
         | _ -> None
@@ -87,9 +83,9 @@ type TestingSourceExplorer (manifestSpec : List<PackageIdentifier * Version * Ma
     }
 
 
-let dep (p : string, vs : List<Version>) : Buckaroo.Dependency = {
+let dep (p : string, c: Constraint) : Buckaroo.Dependency = {
     Package = package p;
-    Constraint = Any ( vs |> List.map (Exactly));
+    Constraint = c;
     Targets = None
 }
 
@@ -98,7 +94,7 @@ let manifest xs = {
     with Dependencies = xs |> List.map dep |> Set.ofList
 }
 
-type ManifestSpec = List<PackageIdentifier * Version * Manifest>
+type ManifestSpec = List<PackageIdentifier * Set<Version> * Manifest>
 
 let solve (manifests : ManifestSpec) style root =
     let console = new ConsoleManager(LoggingLevel.Debug);
@@ -111,28 +107,33 @@ let solve (manifests : ManifestSpec) style root =
 
     Buckaroo.Solver.solve context root style None
 
-let inSolution (r: Resolution) (p : string, v : int) =
+let getLockedRev (p : string) (r: Resolution) =
   match r with
   | Ok solution ->
     let (resolved, _) = solution.Resolutions.[package p]
-    System.Console.WriteLine resolved
-    resolved.Versions |> Set.contains (rev v)
-  | _ -> false
+    match resolved.Lock with
+    | PackageLock.GitHub g -> g.Revision
+    | _ -> ""
+  | _ -> ""
 ()
 
 [<Fact>]
 let ``Solver handles simple case`` () =
   let spec = [
-    (package "a", ver 2, manifest [("b", [ver 1])])
-    (package "a", ver 1, manifest [("b", [ver 1])])
-    (package "b", ver 1, manifest [])
+    (package "a",
+      Set[ver 2; br "a"],
+      manifest [("b", Exactly (ver 1) )])
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [("b", Exactly (ver 1) )])
+    (package "b", Set[ver 1; br "a"], manifest [])
   ]
 
-  let root = manifest [("a", [branch ""])]
-  let r = solve spec ResolutionStyle.Quick root
-          |> Async.RunSynchronously
+  let root = manifest [("a", Exactly (br "a") )]
+  let solution =
+    solve spec ResolutionStyle.Quick root
+      |> Async.RunSynchronously
 
-  Assert.True (("a", 2) |> inSolution r)
-  Assert.True (("b", 1) |> inSolution r)
-
+  Assert.Equal ("2", getLockedRev "a" solution)
+  Assert.Equal ("1", getLockedRev "b" solution)
   ()
