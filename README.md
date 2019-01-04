@@ -1,4 +1,4 @@
-![Alt text](www/logo.png?raw=true "Buckaroo")
+![Alt text](www/logo-medium.png?raw=true "Buckaroo")
 
 # buckaroo
 
