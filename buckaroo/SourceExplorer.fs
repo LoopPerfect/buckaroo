@@ -93,6 +93,18 @@ module SourceExplorer =
         yield!
           sourceExplorer.FetchLocations locations package version
           |> AsyncSeq.map (fun location -> (location, Set.singleton version))
+      | Range r ->
+        yield!
+          sourceExplorer.FetchVersions locations package
+          |> AsyncSeq.choose (fun version ->
+            match version with
+            | SemVer v -> Some v
+            | _ -> None)
+          |> AsyncSeq.filter(Constraint.withinRange r)
+          |> AsyncSeq.map(Version.SemVer)
+          |> AsyncSeq.collect(fun version ->
+            sourceExplorer.FetchLocations locations package version
+            |> AsyncSeq.map(fun l -> (l, Set.singleton version)))
     }
 
     loop versionConstraint
