@@ -93,15 +93,7 @@ module SourceExplorer =
       | Exactly version ->
         yield!
           sourceExplorer.FetchLocations locations package version
-          |> AsyncSeq.map (fun location ->
-            let extra =
-              match location with
-              | PackageLocation.GitHub g -> Set [Version.Git (GitVersion.Revision g.Revision)]
-              | PackageLocation.Git g -> Set [Version.Git (GitVersion.Revision g.Revision)]
-              | PackageLocation.GitLab g -> Set [Version.Git (GitVersion.Revision g.Revision)]
-              | PackageLocation.BitBucket g -> Set [Version.Git (GitVersion.Revision g.Revision)]
-              | _ -> Set.empty
-            (location, extra |> Set.add version))
+          |> AsyncSeq.map (fun location -> (location, Set.singleton version))
     }
 
     loop versionConstraint

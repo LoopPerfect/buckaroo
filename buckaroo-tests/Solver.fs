@@ -393,7 +393,6 @@ let ``Solver uses lockfile as hint in Quick`` () =
     ])
   ]
 
-
   let root = manifest [("a", Exactly (br "a") )]
   let solution =
     solve
@@ -430,7 +429,6 @@ let ``Solver doesnt use lockfile as hint in Upgrade`` () =
       ("b", 1, Set[ver 1; br "a"])
     ])
   ]
-
 
   let root = manifest [("a", Exactly (br "a") )]
   let solution =
