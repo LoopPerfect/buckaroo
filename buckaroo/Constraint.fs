@@ -5,6 +5,13 @@ type RangeTypes =
 | MinorRange
 | PatchRange
 
+type RangeComparatorTypes =
+| LTE
+| LT
+| GT
+| GTE
+| DASH
+
 type SemVerRange = {
   Min : SemVer;
   Max : SemVer;
@@ -158,28 +165,22 @@ module Constraint =
   }
 
 
-  let majorRangeParser = parse {
-    do! CharParsers.skipString "^"
-    return MajorRange
+  let symbolParser<'T> (token : string, symbol : 'T) = parse {
+    do! CharParsers.skipString token
+    return symbol
   }
 
-  let minorRangeParser = parse {
-    do! CharParsers.skipString "~"
-    return MinorRange
-  }
-
-  let patchRangeParser = parse {
-    do! CharParsers.skipString "+"
-    return PatchRange
-  }
-
-  let rangeTypeParser = majorRangeParser <|> minorRangeParser <|> patchRangeParser
+  let rangeTypeParser = choice [
+    symbolParser("^", MajorRange)
+    symbolParser("~", MinorRange)
+    symbolParser("+", PatchRange)
+  ]
 
   let rangeParser = parse {
     let! rangeType = rangeTypeParser
     let! version = SemVer.parser
     return
-      Constraint.Range (
+      Range (
         match rangeType with
         | MajorRange -> {
             Min = version;
@@ -194,6 +195,45 @@ module Constraint =
             Max = { version with Patch = version.Patch+1; Increment = 0 }
         }
       )
+  }
+  let rangeComparatorParser = choice [
+    symbolParser("<=", LTE)
+    symbolParser(">=", GTE)
+    symbolParser("<", LT)
+    symbolParser(">", GT)
+    symbolParser("-", DASH)
+  ]
+
+  let customRangeParser = parse {
+    let! v1 = SemVer.parser
+    let! comparator = rangeComparatorParser
+    let! v2 = SemVer.parser
+
+    return
+      match comparator with
+      | LT -> Range {
+          Min = v1;
+          Max = v2;
+        }
+      | GT -> Range {
+          Min = v2;
+          Max = v1;
+        }
+      | LTE -> Range {
+          Min = v1;
+          Max = {v2 with Increment = v2.Increment+1};
+        }
+      | GTE -> Range {
+          Min = v2;
+          Max = {v1 with Increment = v1.Increment+1};
+        }
+      | DASH ->
+        let a = if v1 < v2 then v1 else v2
+        let b = if v1 >= v2 then v1 else v2
+        Range {
+          Min = a;
+          Max = {b with Increment = b.Increment+1};
+        }
   }
 
   let exactlyParser = parse {
@@ -227,13 +267,15 @@ module Constraint =
       return All elements
     }
 
-    return!
+    return! choice [
       wildcardParser
-      <|> rangeParser
-      <|> exactlyParser
-      <|> complementParser
-      <|> anyParser
-      <|> allParser
+      rangeParser
+      attempt(customRangeParser)
+      exactlyParser
+      complementParser
+      anyParser
+      allParser
+    ]
   }
   let parse (x : string) : Result<Constraint, string> =
     match run (parser .>> CharParsers.eof) x with

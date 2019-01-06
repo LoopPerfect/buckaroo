@@ -36,22 +36,46 @@ let ``Constraint.parse works correctly`` () =
         ]))
       ])
     );
-    ("", None);
+    ("", None)
     ("1.0.0", Some (Exactly (Version.SemVer {
       SemVer.zero with Major = 1
-    })))
+    })));
     ("^1.0.0", Some (Range {
       Min = {SemVer.zero with Major = 1};
       Max = {SemVer.zero with Major = 2}
-    }))
+    }));
     ("~1.0.0", Some (Range {
       Min = {SemVer.zero with Major = 1};
       Max = {SemVer.zero with Major = 1; Minor = 1}
-    }))
+    }));
     ("+1.0.0", Some (Range {
       Min = {SemVer.zero with Major = 1};
       Max = {SemVer.zero with Major = 1; Patch = 1}
-    }))
+    }));
+    ("1.0.0 < 1.2.3", Some (Range {
+      Min = {SemVer.zero with Major = 1};
+      Max = {SemVer.zero with Major = 1; Minor = 2; Patch = 3}
+    }));
+    ("1.0.0 <= 1.2.3", Some (Range {
+      Min = {SemVer.zero with Major = 1};
+      Max = {SemVer.zero with Major = 1; Minor = 2; Patch = 3; Increment = 1}
+    }));
+    ("1.2.3 > 1.0.0", Some (Range {
+      Min = {SemVer.zero with Major = 1};
+      Max = {SemVer.zero with Major = 1; Minor = 2; Patch = 3}
+    }));
+    ("1.2.3 >= 1.0.0", Some (Range {
+      Min = {SemVer.zero with Major = 1};
+      Max = {SemVer.zero with Major = 1; Minor = 2; Patch = 3; Increment = 1}
+    }));
+    ("1.1.3 - 1.0.0", Some (Range {
+      Min = {SemVer.zero with Major = 1};
+      Max = {SemVer.zero with Major = 1; Minor = 1; Patch = 3; Increment = 1}
+    }));
+    ("1.0.0 - 1.1.3", Some (Range {
+      Min = {SemVer.zero with Major = 1};
+      Max = {SemVer.zero with Major = 1; Minor = 1; Patch = 3; Increment = 1}
+    }));
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Constraint.parse input |> dropError)
