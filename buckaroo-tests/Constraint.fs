@@ -72,10 +72,36 @@ let ``Constraint.parse works correctly`` () =
       Min = {SemVer.zero with Major = 1};
       Max = {SemVer.zero with Major = 1; Minor = 1; Patch = 3; Increment = 1}
     }));
-    ("1.0.0 - 1.1.3", Some (Range {
+    ("1.0.0-1.1.3", Some (Range {
       Min = {SemVer.zero with Major = 1};
       Max = {SemVer.zero with Major = 1; Minor = 1; Patch = 3; Increment = 1}
     }));
+    ("all(branch=master ^1.0.0)", Some(All [
+      Exactly (Git (GitVersion.Branch "master"));
+      Range {
+        Min = {
+          Major = 1;
+          Minor = 0;
+          Patch = 0;
+          Increment = 0;};
+        Max = {
+          Major = 2;
+          Minor = 0;
+          Patch = 0;
+          Increment = 0;};}]));
+    // ("all(^1.0.0 branch=master)", Some(All [
+    //   Range {
+    //     Min = {
+    //       Major = 1;
+    //       Minor = 0;
+    //       Patch = 0;
+    //       Increment = 0;};
+    //     Max = {
+    //       Major = 2;
+    //       Minor = 0;
+    //       Patch = 0;
+    //       Increment = 0;}};
+    //   Exactly (Git (GitVersion.Branch "master"))]))
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, Constraint.parse input |> dropError)
