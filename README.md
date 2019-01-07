@@ -114,8 +114,8 @@ Creating a Buckaroo package is really easy!
 
 You will need to create a few files:
 
- * `BUCK` containing a build rule
- * `buckaroo.toml` containing `targets = "<some-build-rule>"`
+ * `BUCK` containing a build rule ([example](https://github.com/buckaroo-pm/hello/blob/master/BUCK#L1))
+ * `buckaroo.toml` containing `targets = [ "<some-build-rule>" ]` ([example](https://github.com/buckaroo-pm/hello/blob/master/buckaroo.toml))
 
 Push these to GitHub, then install as follows:
 
