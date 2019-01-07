@@ -30,6 +30,7 @@ module SourceExplorer =
         yield!
           xs
           |> List.distinct
+          |> List.sortDescending
           |> List.map loop
           |> AsyncSeq.mergeAll
           |> AsyncSeq.distinctUntilChanged

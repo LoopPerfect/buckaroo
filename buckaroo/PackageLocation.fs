@@ -55,3 +55,11 @@ module PackageLocation =
       "https://gitlab.com/" + x.Owner + "/" + x.Project + ".git"
     else
       "ssh://git@gitlab.com:" + x.Owner + "/" + x.Project + ".git"
+
+  let versionSetFromLocation location =
+    match location with
+    | PackageLocation.GitHub g -> Set [Version.Git (GitVersion.Revision g.Revision)]
+    | PackageLocation.Git g -> Set [Version.Git (GitVersion.Revision g.Revision)]
+    | PackageLocation.GitLab g -> Set [Version.Git (GitVersion.Revision g.Revision)]
+    | PackageLocation.BitBucket g -> Set [Version.Git (GitVersion.Revision g.Revision)]
+    | _ -> Set.empty
