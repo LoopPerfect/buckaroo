@@ -37,7 +37,7 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
  * Live at head! Move fast by depending directly on Git branches, but in a controlled way
  * Blazing fast resolution using clever heuristics
  * Version equivalency checks to reduce dependency conflicts
- * TOML configuration files for convenient editting by computers and humans
+ * TOML configuration files for convenient editing by computers and humans
 
 
 ## Installation
