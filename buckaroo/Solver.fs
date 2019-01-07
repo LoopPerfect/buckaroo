@@ -382,8 +382,7 @@ module Solver =
       match x with
       | Ok _ -> true
       | Failure _ -> true
-      | _ -> false
-    )
+      | _ -> false)
     |> AsyncSeq.take 1
     |> AsyncSeq.toListAsync
     |> Async.RunSynchronously

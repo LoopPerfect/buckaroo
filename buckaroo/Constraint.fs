@@ -1,7 +1,26 @@
 namespace Buckaroo
 
+type RangeType =
+| Major // ^1.2.3 in NPM
+| Minor // ~1.2.3 in NPM
+| Patch // Our own invention!
+
+type RangeComparatorTypes =
+| LTE
+| LT
+| GT
+| GTE
+  with
+    override this.ToString () =
+      match this with
+      | LTE -> "<="
+      | LT -> "<"
+      | GT -> ">"
+      | GTE -> ">="
+
 type Constraint =
 | Exactly of Version
+| Range of RangeComparatorTypes * SemVer
 | Any of List<Constraint>
 | All of List<Constraint>
 | Complement of Constraint
@@ -23,29 +42,40 @@ module Constraint =
   let complement (c : Constraint) : Constraint =
     Complement c
 
-  let rec satisfies (c : Constraint) (v : Set<Version>) : bool =
+  let isWithinRange (c, v) (candidate : SemVer) =
     match c with
-    | Exactly u -> v |> Set.toSeq |> Seq.exists(fun x -> x = u)
-    | Complement x -> satisfies x v |> not
-    | Any xs -> xs |> Seq.exists(fun c -> satisfies c v)
-    | All xs -> xs |> Seq.forall(fun c -> satisfies c v)
+    | LTE ->
+      candidate <= v
+    | LT ->
+      candidate < v
+    | GT ->
+      candidate > v
+    | GTE ->
+      candidate >= v
 
-  let rec agreesWith (c : Constraint) (v : Version) : bool =
+  let rec satisfies (c : Constraint) (vs : Set<Version>) : bool =
     match c with
-    | Exactly u ->
-      match (v, u) with
-      | (Version.SemVer x, Version.SemVer y) -> x = y
-      | (Version.Git(GitVersion.Branch x), Version.Git(GitVersion.Branch y)) -> x = y
-      | (Version.Git(GitVersion.Revision x), Version.Git(GitVersion.Revision y)) -> x = y
-      | (Version.Git(GitVersion.Tag x), Version.Git(GitVersion.Tag y)) -> x = y
-      | _ -> true
-    | Complement x -> agreesWith x v |> not
-    | Any xs -> xs |> Seq.exists(fun c -> agreesWith c v)
-    | All xs -> xs |> Seq.forall(fun c -> agreesWith c v)
-
+    | Exactly u -> vs |> Set.toSeq |> Seq.exists(fun x -> x = u)
+    | Complement x -> satisfies x vs |> not
+    | Any xs -> xs |> Seq.exists(fun c -> satisfies c vs)
+    | All xs -> xs |> Seq.forall(fun c -> satisfies c vs)
+    | Range (op, v) ->
+      vs
+      |> Set.toSeq
+      |> Seq.exists (fun x ->
+        match x with
+        | SemVer semVer -> semVer |> isWithinRange (op, v)
+        | _ -> false
+      )
   let rec compare (x : Constraint) (y : Constraint) : int =
     match (x, y) with
     | (Exactly u, Exactly v) -> Version.compare u v
+    | (Range (_, u), Range (_, v)) ->
+      Version.compare (Version.SemVer u) (Version.SemVer v)
+    | (Range (_, v), Exactly b) ->
+      Version.compare (Version.SemVer v) b
+    | (Exactly a, Range (_, v)) ->
+      Version.compare a (Version.SemVer v)
     | (Any xs, y) ->
       xs
       |> Seq.map (fun x -> compare x y)
@@ -84,6 +114,7 @@ module Constraint =
           |> Seq.map (fun x -> show x)
           |> String.concat " ") +
         ")"
+    | Range (op, v) -> (string op) + (string v)
 
   let rec simplify (c : Constraint) : Constraint =
     let iterate c =
@@ -126,7 +157,59 @@ module Constraint =
     return All []
   }
 
+  let symbolParser<'T> (token : string, symbol : 'T) = parse {
+    do! CharParsers.skipString token
+    return symbol
+  }
+
+  let rangeTypeParser = choice [
+    symbolParser ("^", Major)
+    symbolParser ("~", Minor)
+    symbolParser ("+", Patch)
+  ]
+
+  let rangeToConstraint rangeType semVer =
+    let max =
+      match rangeType with
+      | Major ->
+        { SemVer.zero with Major = semVer.Major + 1; }
+      | Minor ->
+        { SemVer.zero with Major = semVer.Major; Minor = semVer.Minor + 1 }
+      | Patch ->
+        { semVer with Patch = semVer.Patch + 1; Increment = 0 }
+    Constraint.All
+      [
+        Constraint.Range (GTE, semVer);
+        Constraint.Range (LT, max);
+      ]
+
+  let rangeParser = parse {
+    let! rangeType = rangeTypeParser
+    let! semVer = SemVer.parser
+
+    return rangeToConstraint rangeType semVer
+  }
+
+  let rangeComparatorParser = choice [
+    symbolParser ("<=", LTE)
+    symbolParser (">=", GTE)
+    symbolParser ("<", LT)
+    symbolParser (">", GT)
+  ]
+
+  let customRangeParser = parse {
+    let! comparator = rangeComparatorParser
+    let! semVer = SemVer.parser
+
+    return Constraint.Range (comparator, semVer)
+  }
+
   let exactlyParser = parse {
+    let! version = Version.parser
+    return Exactly version
+  }
+
+  let Parser = parse {
     let! version = Version.parser
     return Exactly version
   }
@@ -135,6 +218,7 @@ module Constraint =
     let complementParser = parse {
       do! CharParsers.skipString "!"
       let! c = parser
+
       return Complement c
     }
 
@@ -142,6 +226,7 @@ module Constraint =
       do! CharParsers.skipString "any("
       let! elements = CharParsers.spaces1 |> Primitives.sepBy parser
       do! CharParsers.skipString ")"
+
       return Any elements
     }
 
@@ -149,17 +234,20 @@ module Constraint =
       do! CharParsers.skipString "all("
       let! elements = CharParsers.spaces1 |> Primitives.sepBy parser
       do! CharParsers.skipString ")"
+
       return All elements
     }
 
-    return!
+    return! choice [
       wildcardParser
-      <|> exactlyParser
-      <|> complementParser
-      <|> anyParser
-      <|> allParser
+      rangeParser
+      attempt (customRangeParser)
+      exactlyParser
+      complementParser
+      anyParser
+      allParser
+    ]
   }
-
   let parse (x : string) : Result<Constraint, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
