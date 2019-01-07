@@ -23,16 +23,22 @@ $ buck run :my-app
 
 ## Why Buckaroo?
 
-Package managers like Yarn and Cargo have shown how productive developers can be when they can leverage an ecosystem of projects that are easily integrated together. Buckaroo fills this gap for C++.
+Package managers like Yarn and Cargo have shown how productive developers can be when they can esaily integrate a large ecosystem of projects. Buckaroo fills this gap for C++.
 
 C++ has unique requirements, so Buckaroo is a highly sophisticated piece of software.
 
 Some features at a glance:
 
  * Pull dependencies directly from GitHub, BitBucket, GitLab, hosted Git and HTTP
+ * Fully reproducible builds and dependency resolution
+ * Completely decentralized - there is no central server or publishing process
  * Allows any build configuration (even on a package-by-package basis)
  * Private and public dependencies to avoid "dependency hell"
- * Multiple libraries per package
+ * Multiple libraries per package, so tools like Lerna are unnecessary
+ * Pull individual packages out of mono-repos
+ * Live at head! Move fast by depending directly on Git branches, but in a controlled way
+ * Blazing fast resolution using clever heuristics
+ * TOML configuration files for convenient editting by computers and humans
 
 
 ## Installation
