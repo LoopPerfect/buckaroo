@@ -39,6 +39,71 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
  * Version equivalency checks to reduce dependency conflicts
  * TOML configuration files for convenient editing by computers and humans
 
+## Key Commands
+
+### Init
+
+```bash=
+$ buckaroo init
+```
+
+Create a Buckaroo manifest in the current working directory.
+
+### Resolve
+
+```bash=
+$ buckaroo resolve
+```
+
+Generates a fresh lock-file from the existing manifest.
+
+### Install
+
+```bash=
+$ buckaroo install
+```
+
+Installs the packages as described in the current lock-file.
+
+### Add
+
+```bash=
+$ buckaroo add <package>@<version>...
+```
+
+Adds the given package(s) to the current manifest, updates the lock-file and installs it to the packages folder.
+
+If no satisfactory resolution can be found then nothing is changed.
+
+### Upgrade
+
+```bash=
+$ buckaroo upgrade [ <package> [ @<version> ] ]
+```
+
+Upgrades the given package(s) to the highest version that meets the constraints in the manifest.
+Optionally, a version can be specified to move the package to.
+
+If no packages are specified, then all are upgraded.
+
+### Remove
+
+```bash=
+$ buckaroo remove <package>...
+```
+
+Removes an existing package from the manifest, updates the lock-file and deletes it from the packages folder.
+
+If no satisfactory resolution can be found then nothing is changed.
+
+### Version
+
+```bash=
+$ buckaroo version
+```
+
+Displays the version of this installation of Buckaroo.
+
 
 ## Installation
 
@@ -97,16 +162,16 @@ int main() {
 }
 ```
 
----
-🚨
 
-If your C++ compiler does not default to C++ 14, then you will need to add this to your `.buckconfig` file:
+> 🚨
+>
+> If your C++ compiler does not default to C++ 14, then you will need to add this to your `.buckconfig` file:
 
-```ini=
+> ```ini=
 [cxx]
   cxxflags = -std=c++14
 ```
----
+
 
 ## Creating a Package
 
@@ -124,3 +189,31 @@ $ buckaroo add github.com/<org>/<project>@branch=master
 ```
 
 You can also look at our [demo package](github.com/buckaroo-pm/hello) or the many [official packages](https://github.com/buckaroo-pm).
+
+## Buckaroo Macros
+
+Buckaroo will install some macros for use in your build scripts. If you have used quickstart, then you do not need to set this up.
+
+However, if you need something more custom, this is how they work:
+
+```python=
+# Load the macros
+load('//:buckaroo_macros.bzl', 'buckaroo_cell', 'buckaroo_deps', 'buckaroo_deps_from_package')
+
+# Or just load the one you need
+# load('//:buckaroo_macros.bzl', 'buckaroo_deps')
+
+# buckaroo_deps gives you all list of all dependencies in buckaroo.toml
+# This is the function you will use most of the time.
+all_deps = buckaroo_deps()
+# [ 'buckaroo.github.buckaroo-pm.hello//:hello' ]
+
+# buckaroo_cell gives you the cell name for a give package
+hello_cell = buckaroo_cell('github.com/buckaroo-pm/hello')
+# 'buckaroo.github.buckaroo-pm.hello'
+
+# buckaroo_deps_from_package gives you all deps for a given package
+# Unlike most package managers, Buckaroo supports multiple projects per package!
+hello_deps = buckaroo_deps_from_package('github.com/buckaroo-pm/hello')
+# [ 'buckaroo.github.buckaroo-pm.hello//:hello' ]
+```
