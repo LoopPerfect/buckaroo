@@ -21,11 +21,25 @@ $ buckaroo add github.com/buckaroo-pm/boost-thread
 $ buck run :my-app
 ```
 
+## Why Buckaroo?
+
+Package managers like Yarn and Cargo have shown how productive developers can be when they can leverage an ecosystem of projects that are easily integrated together. Buckaroo fills this gap for C++.
+
+C++ has unique requirements, so Buckaroo is a highly sophisticated piece of software.
+
+Some features at a glance:
+
+ * Pull dependencies directly from GitHub, BitBucket, GitLab, hosted Git and HTTP
+ * Allows any build configuration (even on a package-by-package basis)
+ * Private and public dependencies to avoid "dependency hell"
+ * Multiple libraries per package
+
+
 ## Installation
 
 ### Portable (All Platforms)
 
-Buckaroo is shipped as a self-contained executable, so all you need to do is download the bundle from the [release page](https://github.com/LoopPerfect/buckaroo/releases).
+Buckaroo is shipped as a self-contained executable, so all you need to do is download the bundle from the [releases page](https://github.com/LoopPerfect/buckaroo/releases).
 
 For example:
 
@@ -33,32 +47,4 @@ For example:
 $ wget https://github.com/LoopPerfect/buckaroo/releases/download/buckaroo-redux-alpha-6/buckaroo-linux -O buckaroo
 $ chmod +x ./buckaroo
 $ ./buckaroo
-```
-
-### macOS
-
-
-
-```bash=
-dotnet restore ./buckaroo
-dotnet build ./buckaroo
-dotnet run --project ./buckaroo-cli
-dotnet test
-```
-
-## Releases
-
-Releases are bundled using [Warp](https://github.com/dgiagio/warp):
-
-```bash=
-wget -O warp-packer https://github.com/dgiagio/warp/releases/download/v0.3.0/macos-x64.warp-packer
-./warp-packer
-```
-
-To create a release for macOS:
-
-```bash=
-dotnet publish ./buckaroo-cli/ -c Release -r osx-x64
-./warp-packer --arch macos-x64 --exec buckaroo-cli --input_dir ./buckaroo-cli/bin/Release/netcoreapp2.1/osx-x64 --output buckaroo-macos
-./buckaroo-macos
 ```
