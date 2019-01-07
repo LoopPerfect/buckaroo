@@ -8,6 +8,10 @@ The decentralized C++ package manager.
 
 [![](https://img.shields.io/travis/LoopPerfect/buckaroo/buckaroo-redux.svg)](https://travis-ci.org/LoopPerfect/buckaroo)
 
+## Why Buckaroo?
+
+Package managers like Yarn and Cargo have shown how productive developers can be when they can easily integrate a large ecosystem of projects. Buckaroo fills this gap for C++.
+
 The Buckaroo workflow looks like this:
 
 ```bash=
@@ -15,15 +19,11 @@ The Buckaroo workflow looks like this:
 $ buckaroo init
 
 # Install dependencies
-$ buckaroo add github.com/buckaroo-pm/boost-thread
+$ buckaroo add github.com/buckaroo-pm/boost-thread@1.6.4
 
 # Run your code
 $ buck run :my-app
 ```
-
-## Why Buckaroo?
-
-Package managers like Yarn and Cargo have shown how productive developers can be when they can easily integrate a large ecosystem of projects. Buckaroo fills this gap for C++.
 
 C++ has unique requirements, so Buckaroo is a highly sophisticated piece of software.
 
