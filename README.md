@@ -25,6 +25,8 @@ $ buckaroo add github.com/buckaroo-pm/boost-thread@1.6.4
 $ buck run :my-app
 ```
 
+### Features
+
 C++ has unique requirements, so Buckaroo is a highly sophisticated piece of software.
 
  * Pull dependencies directly from GitHub, BitBucket, GitLab, hosted Git and HTTP
