@@ -2,7 +2,7 @@
   <img src="www/logo-medium.png?raw=true" alt="Buckaroo" />
 </p>
 
-# buckaroo
+# Buckaroo
 
 The decentralized C++ package manager.
 
