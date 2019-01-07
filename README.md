@@ -163,12 +163,14 @@ int main() {
 ```
 
 
-| 🚨 WARNING: If your C++ compiler does not default to C++ 14, then you will need to add this to your `.buckconfig` file: |
-| ```ini=
+### 🚨 WARNING 
+
+If your C++ compiler does not default to C++ 14, then you will need to add this to your `.buckconfig` file: 
+
+```ini=
 [cxx]
   cxxflags = -std=c++14
-``` |
-| --- |
+```
 
 ## Creating a Package
 
