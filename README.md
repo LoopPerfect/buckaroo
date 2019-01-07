@@ -98,7 +98,7 @@ int main() {
 ```
 
 ---
-🚨 Note!
+🚨
 
 If your C++ compiler does not default to C++ 14, then you will need to add this to your `.buckconfig` file:
 
