@@ -9,6 +9,15 @@ module SemVer =
 
   let zero : SemVer = { Major = 0; Minor = 0; Patch = 0; Increment = 0 }
 
+  let create (major, minor, patch, increment) =
+    {
+      zero with
+        Major = major;
+        Minor = minor;
+        Patch = patch;
+        Increment = increment;
+    }
+
   let compare (x : SemVer) (y : SemVer) =
     match x.Major.CompareTo y.Major with
     | 0 ->
@@ -49,7 +58,7 @@ module SemVer =
     let! minor = segment |> Primitives.opt
     let! patch = segment |> Primitives.opt
     let! increment = segment |> Primitives.opt
-    do! CharParsers.spaces
+
     return {
       Major = major;
       Minor = minor |> Option.defaultValue 0;
@@ -57,7 +66,19 @@ module SemVer =
       Increment = increment |> Option.defaultValue 0
     }
   }
+
+  let private onlySemVerParser = parse {
+    do! CharParsers.spaces
+
+    let! semVer = parser
+
+    do! CharParsers.spaces
+    do! CharParsers.eof
+
+    return semVer
+  }
+
   let parse (x : string) : Result<SemVer, String> =
-    match run (parser .>> CharParsers.eof) x with
+    match run onlySemVerParser x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(errorMsg, _, _) -> Result.Error errorMsg
