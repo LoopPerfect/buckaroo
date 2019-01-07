@@ -7,15 +7,15 @@ open System
 let task (context : TaskContext) = async {
   let log (x : string) = context.Console.Write(x)
 
-  let logBash (x : string) = 
-    x 
-    |> text 
-    |> foreground ConsoleColor.Green 
+  let logBash (x : string) =
+    x
+    |> text
+    |> foreground ConsoleColor.Green
     |> context.Console.Write
 
-  let logUrl (x : string) = 
-    x 
-    |> text 
+  let logUrl (x : string) =
+    x
+    |> text
     |> foreground ConsoleColor.Cyan
     |> background ConsoleColor.Black
     |> context.Console.Write
@@ -49,7 +49,7 @@ let task (context : TaskContext) = async {
   log("Displays this message. ")
   log("")
   log("For more information, visit: ")
-  logUrl("https://buckaroo.readthedocs.io/")
+  logUrl("https://github.com/LoopPerfect/buckaroo")
 
   do! context.Console.Flush()
 }
