@@ -120,7 +120,7 @@ You will need to create a few files:
 Push these to GitHub, then install as follows:
 
 ```bash=
-$ buckaroo add github.com/<org>/<project>
+$ buckaroo add github.com/<org>/<project>@branch=master
 ```
 
 You can also look at our [demo package](github.com/buckaroo-pm/hello) or the many [official packages](https://github.com/buckaroo-pm).
