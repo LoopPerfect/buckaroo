@@ -23,7 +23,7 @@ $ buck run :my-app
 
 ## Why Buckaroo?
 
-Package managers like Yarn and Cargo have shown how productive developers can be when they can esaily integrate a large ecosystem of projects. Buckaroo fills this gap for C++.
+Package managers like Yarn and Cargo have shown how productive developers can be when they can easily integrate a large ecosystem of projects. Buckaroo fills this gap for C++.
 
 C++ has unique requirements, so Buckaroo is a highly sophisticated piece of software.
 
