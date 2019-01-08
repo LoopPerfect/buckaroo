@@ -25,5 +25,6 @@ deploy:
     secure: Z+IaDd5u9nwMMBWqxrYd5l8igQcBV2EQij0wJA4jr1F78Nd6UrC9d4xuWLr4WI/n
   artifact: buckaroo-windows.exe
   draft: true
+  prerelease: true
   on:
     APPVEYOR_REPO_TAG: true
