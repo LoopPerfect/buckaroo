@@ -70,6 +70,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
   member this.CopyFromCache  (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
     let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git/"))
     if hasGit then
+      do! git.Unshallow installPath
       return! git.Checkout installPath revision
     else
       do! git.CheckoutTo (cloneFolderName gitUrl) revision installPath
