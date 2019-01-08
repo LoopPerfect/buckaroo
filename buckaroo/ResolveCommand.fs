@@ -19,7 +19,7 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
   let resolveEnd = DateTime.Now
   (text "Resolve end: ") + (string resolveEnd |> text |> foreground ConsoleColor.Cyan) |> log
 
-  (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan) |> log
+  (text "Resolve time: ") + (((resolveEnd - resolveStart).TotalSeconds.ToString("N2")) |> string |> text |> foreground ConsoleColor.Cyan) |> log
 
   match resolution with
   | Resolution.Failure f ->

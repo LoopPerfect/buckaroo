@@ -3,41 +3,10 @@ module Buckaroo.Console
 open System
 open Buckaroo.RichOutput
 
-[<CustomComparison>]
-[<CustomEquality>]
 type LoggingLevel =
-  | Trace
-  | Debug
-  | Info
-
-  override this.Equals (obj) =
-    match obj with
-    | :? LoggingLevel as other ->
-      match (this, other) with
-      | (Trace, Trace) -> true
-      | (Debug, Debug) -> true
-      | (Info, Info) -> true
-      | _ -> false
-    | _ -> false
-
-  override this.GetHashCode () =
-    match this with
-    | Trace -> 0
-    | Debug -> 1
-    | Info -> 2
-
-  interface IComparable with
-    override this.CompareTo obj =
-      let score x =
-        match x with
-        | Trace -> 0
-        | Debug -> 1
-        | Info -> 2
-
-      match obj with
-      | :? LoggingLevel as other -> (score this) - (score other)
-      | _ -> 0
-
+| Trace
+| Debug
+| Info
 
 type OutputCategory =
 | Normal
@@ -97,7 +66,6 @@ type ConsoleManager (minimumLoggingLevel : LoggingLevel) =
       let! message = inbox.Receive()
       match message with
       | Output (m, l, c) ->
-        // TODO: Respect minimum logging level
         if l >= minimumLoggingLevel
         then
           match c with
@@ -106,11 +74,12 @@ type ConsoleManager (minimumLoggingLevel : LoggingLevel) =
           | Error -> Console.Error.WriteLine(m)
         ()
       | RichOutput (m, l, c) ->
-        // TODO: Respect minimum logging level
-        match c with
-        | Normal -> renderRichOutput m
-        | Warning -> renderRichOutput m
-        | Error -> renderRichOutput m
+        if l >= minimumLoggingLevel
+        then
+          match c with
+          | Normal -> renderRichOutput m
+          | Warning -> renderRichOutput m
+          | Error -> renderRichOutput m
         ()
       | Input channel ->
         let response = Console.ReadLine()

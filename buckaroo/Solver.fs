@@ -202,7 +202,7 @@ module Solver =
             | x -> state.Constraints.[f.Package].Contains x
           then resolution
           else
-            log("trying different resolution to workaround: " + f.ToString())
+            log("trying different resolution to workaround: " + f.ToString(), LoggingLevel.Info)
             // we backtracked far enough, we can proceed normally...
             // TODO: remember f.Package + f.Constraint always fails
             Resolution.Error (new System.Exception (f.ToString()))
@@ -211,7 +211,7 @@ module Solver =
     |> AsyncSeq.takeWhileInclusive (fun resolution ->
       match resolution with
       | Resolution.Failure f ->
-        log("backtracking due to failure " + f.ToString())
+        log("backtracking due to failure " + f.ToString(), LoggingLevel.Debug)
         false
       | _ -> true
     )
@@ -220,14 +220,14 @@ module Solver =
 
     let sourceExplorer = context.SourceExplorer
 
-    let log (x : string) =
+    let log (x : string, logLevel : LoggingLevel) =
       (
         "[" + (string state.Depth) + "] "
         |> RichOutput.text
         |> RichOutput.foreground System.ConsoleColor.DarkGray
       ) +
       (x |> RichOutput.text)
-      |> context.Console.Write
+      |> fun x -> context.Console.Write (x, logLevel)
 
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
@@ -266,16 +266,19 @@ module Solver =
               yield Resolution.Error (new System.Exception ("no location found for: " + p.ToString() + "that could satisfy: " + c.ToString()))
           | Result.Ok (package, (packageLock, versions)) ->
             try
-              log("Exploring (" + state.Depth.ToString() + ") " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
+              log("Exploring " + (PackageIdentifier.show package), LoggingLevel.Info)
 
               // We pre-emptively grab the lock
               let! lockTask =
                 sourceExplorer.FetchLock packageLock
                 |> Async.StartChild
 
-              log("Fetching manifest... ")
-
+              log("Fetching manifest...", LoggingLevel.Info)
+              let manifestFetchStart = System.DateTime.Now
               let! manifest = sourceExplorer.FetchManifest packageLock
+              let manifestFetchEnd = System.DateTime.Now
+
+              log("Fetched in " + (manifestFetchEnd - manifestFetchStart).TotalSeconds.ToString("N3") + "s", LoggingLevel.Info)
 
               let! mergedLocations = async {
                 return
@@ -290,10 +293,15 @@ module Solver =
                 Manifest = manifest;
               }
 
+              log ("resolved " + (string package).Replace("\n"," ").Replace("\t"," "), LoggingLevel.Info)
+              log ("to " + (Version.showSet versions), LoggingLevel.Info)
+
               let freshHints =
                 asyncSeq {
                   try
+                    log("fetching lockfile for: " + (string package), LoggingLevel.Debug)
                     let! lock = lockTask
+                    log("using lockfile for: " + (string package), LoggingLevel.Info)
                     yield!
                       lock
                       |> lockToHints
@@ -303,8 +311,8 @@ module Solver =
                       )
                       |> AsyncSeq.ofSeq
                   with error ->
-                    log("Could not fetch buckaroo.lock.toml for " + (string packageLock))
-                    log(string error)
+                    log("Could not fetch buckaroo.lock.toml for " + (string packageLock), LoggingLevel.Debug)
+                    log(string error, LoggingLevel.Trace)
                     ()
                 }
 
@@ -361,8 +369,8 @@ module Solver =
                 |> recoverOrFail state log
 
             with error ->
-              log("Error exploring " + (string packageLock) + "...")
-              log(string error)
+              log("Error exploring " + (string packageLock) + "...", LoggingLevel.Debug)
+              log(string error, LoggingLevel.Debug)
               yield Resolution.Error error
   }
 
