@@ -27,7 +27,7 @@ let task (context : TaskContext) = async {
   log("")
   log("Buck, Buck, Buckaroo! \uD83E\uDD20")
   
-  logUrl "https://buckaroo.readthedocs.io/"
+  logUrl "https://buckaroo.pm"
 
   do! context.Console.Flush()
 }

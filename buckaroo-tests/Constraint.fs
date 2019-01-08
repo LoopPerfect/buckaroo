@@ -36,8 +36,33 @@ let ``Constraint.parse works correctly`` () =
         ]))
       ])
     );
-    ("", None);
+    ("", None)
+    ("1.0.0", Some (Exactly (Version.SemVer {
+      SemVer.zero with Major = 1
+    })));
+    (
+      "^1.0.0",
+      Some (Constraint.rangeToConstraint RangeType.Major (SemVer.create (1, 0, 0, 0)))
+    );
+    (
+      "~1.0.0",
+      Some (Constraint.rangeToConstraint RangeType.Minor (SemVer.create (1, 0, 0, 0)))
+    );
+    (
+      "+1.0.0",
+      Some (Constraint.rangeToConstraint RangeType.Patch (SemVer.create (1, 0, 0, 0)))
+    );
+    ("all(branch=master ^1.0.0)", Some (All [
+        Exactly (Git (GitVersion.Branch "master"));
+        Constraint.rangeToConstraint RangeType.Major (SemVer.create (1, 0, 0, 0))
+      ]
+    ));
+    ("all(^1.0.0 branch=master)", Some (All [
+        Constraint.rangeToConstraint RangeType.Major (SemVer.create (1, 0, 0, 0));
+        Exactly (Git (GitVersion.Branch "master"))
+      ]))
   ]
+
   for (input, expected) in cases do
     Assert.Equal(expected, Constraint.parse input |> dropError)
 
@@ -48,16 +73,6 @@ let ``Constraint.satisfies works correctly`` () =
   let c = Constraint.Exactly v
   Assert.True(Constraint.satisfies c (set [ v ]))
   Assert.False(Constraint.satisfies c (set [ w ]))
-
-[<Fact>]
-let ``Constraint.agreesWith works correctly`` () =
-  let v = Version.Git(GitVersion.Revision "aabbccddee")
-  let w = Version.Git(GitVersion.Tag "rc1")
-  let x = Version.Git(GitVersion.Revision "ffgghhiijjkk")
-  let c = Constraint.Exactly v
-  Assert.True(Constraint.agreesWith c v)
-  Assert.True(Constraint.agreesWith c w)
-  Assert.False(Constraint.agreesWith c x)
 
 [<Fact>]
 let ``Constraint.compare works correctly`` () =

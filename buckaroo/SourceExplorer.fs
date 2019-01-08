@@ -30,6 +30,7 @@ module SourceExplorer =
         yield!
           xs
           |> List.distinct
+          |> List.sortDescending
           |> List.map loop
           |> AsyncSeq.mergeAll
           |> AsyncSeq.distinctUntilChanged
@@ -93,6 +94,19 @@ module SourceExplorer =
         yield!
           sourceExplorer.FetchLocations locations package version
           |> AsyncSeq.map (fun location -> (location, Set.singleton version))
+      | Range (op, v) ->
+        yield!
+          sourceExplorer.FetchVersions locations package
+          |> AsyncSeq.choose (fun version ->
+            match version with
+            | SemVer v -> Some v
+            | _ -> None)
+          |> AsyncSeq.filter (Constraint.isWithinRange (op, v))
+          |> AsyncSeq.map (Version.SemVer)
+          |> AsyncSeq.collect (fun version ->
+            sourceExplorer.FetchLocations locations package version
+            |> AsyncSeq.map (fun l -> (l, Set.singleton version))
+          )
     }
 
     loop versionConstraint
