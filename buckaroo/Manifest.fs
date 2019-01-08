@@ -405,3 +405,8 @@ module Manifest =
       )
       |> String.concat "\n"
     )
+
+  let hash manifest =
+    manifest
+    |> toToml
+    |> Hashing.sha256
