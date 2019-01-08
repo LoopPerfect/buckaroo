@@ -2,7 +2,9 @@ module Buckaroo.Tasks
 
 open System
 open System.IO
+open System.Runtime
 open Buckaroo.Console
+open FSharpx
 
 type TaskContext = {
   Console : ConsoleManager;
@@ -10,6 +12,11 @@ type TaskContext = {
   GitManager : GitManager;
   SourceExplorer : ISourceExplorer;
 }
+
+let private isWindows () =
+  InteropServices.RuntimeInformation.OSDescription
+  |> String.toLower
+  |> String.contains "win"
 
 let private getCachePath = async {
   return
@@ -27,7 +34,9 @@ let getContext loggingLevel = async {
   let! cachePath = getCachePath
   let downloadManager = new DownloadManager(consoleManager, cachePath)
 
-  let useLibGit2 = System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null
+  let useLibGit2 =
+    isWindows ()
+    || System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null
 
   let git =
     if useLibGit2
