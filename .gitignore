@@ -287,8 +287,10 @@ __pycache__/
 /cache
 
 warp-packer
+warp-packer.exe
 buckaroo-macos
 buckaroo-linux
+buckaroo-windows.exe
 warp/
 
 fsi.fsx
