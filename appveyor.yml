@@ -26,5 +26,4 @@ deploy:
   artifact: ./warp/buckaroo-windows.exe
   draft: true
   on:
-    branch: master
     APPVEYOR_REPO_TAG: true
