@@ -5,6 +5,8 @@ before_build:
 build_script:
   - ps: dotnet build ./buckaroo
   - ps: dotnet build ./buckaroo-cli
+  # - ps: Set-ExecutionPolicy RemoteSigned
+  - ps: warp-bundle-windows.ps1
 clone_depth: 1
 test_script:
   - ps: dotnet test ./buckaroo-tests
