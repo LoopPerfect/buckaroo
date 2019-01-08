@@ -1,12 +1,19 @@
 version: '1.0.{build}'
 image: Visual Studio 2017
+
 before_build:
   - ps: dotnet --version
-build_script:
+
+  build_script:
   - ps: dotnet build ./buckaroo
   - ps: dotnet build ./buckaroo-cli
-  # - ps: Set-ExecutionPolicy RemoteSigned
   - ps: ./warp-bundle-windows.ps1
-clone_depth: 1
+
+  clone_depth: 1
+
 test_script:
   - ps: dotnet test ./buckaroo-tests
+
+artifacts:
+  - path: ./warp/buckaroo-windows.exe
+    name: buckaroo-windows.exe
