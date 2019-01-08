@@ -99,6 +99,7 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
+      console.Write("\tshallow cloning \"" + url + "\"", LoggingLevel.Info)
       do!
         runBash ("git clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore

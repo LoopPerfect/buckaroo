@@ -7,6 +7,7 @@ type LoggingLevel =
 | Trace
 | Debug
 | Info
+| Silent
 
 type OutputCategory =
 | Normal

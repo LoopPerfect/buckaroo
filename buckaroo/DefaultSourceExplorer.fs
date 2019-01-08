@@ -143,7 +143,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchVersionsFromGit gitUrl = asyncSeq {
     let! refs = gitManager.FetchRefs gitUrl
-
     // Sem-vers
     yield!
       refs

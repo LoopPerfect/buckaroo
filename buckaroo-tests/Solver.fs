@@ -121,11 +121,11 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
 
 let solve (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
     let lockBook = lockBookOf lockBookEntries
-    let console = new ConsoleManager(LoggingLevel.Debug);
+    let console = new ConsoleManager(LoggingLevel.Silent);
     let context : TaskContext = {
       Console = console;
       DownloadManager = DownloadManager(console, "/tmp");
-      GitManager = new GitManager(new GitCli(console), "/tmp");
+      GitManager = new GitManager(console, new GitCli(console), "/tmp");
       SourceExplorer = TestingSourceExplorer(cookBook, lockBook)
     }
 

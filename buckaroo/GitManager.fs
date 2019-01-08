@@ -7,11 +7,12 @@ open System.Text.RegularExpressions
 open FSharpx.Control
 open FSharp.Control
 open FSharpx
+open Console
 
 type CloneRequest =
 | CloneRequest of string * AsyncReplyChannel<Async<string>>
 
-type GitManager (git : IGit, cacheDirectory : string) =
+type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) =
 
   let mutable refsCache = Map.empty
 
@@ -37,7 +38,7 @@ type GitManager (git : IGit, cacheDirectory : string) =
     let folder = sanitizeFilename(url).ToLower() + "-" + hash.Substring(0, 16)
     Path.Combine(cacheDirectory, folder)
 
-  let mailboxProcessor = MailboxProcessor.Start(fun inbox -> async {
+  let mailboxCloneProcessor = MailboxProcessor.Start(fun inbox -> async {
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
     while true do
       let! message = inbox.Receive()
@@ -63,11 +64,11 @@ type GitManager (git : IGit, cacheDirectory : string) =
     return! this.DefaultBranch targetDirectory
   }
   member this.Clone (url : string) : Async<string> = async {
-    let! res = mailboxProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
+    let! res = mailboxCloneProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
     return! res
   }
 
-  member this.CopyFromCache  (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
+  member this.CopyFromCache (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
     let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git/"))
     if hasGit then
       do! git.Unshallow installPath
@@ -113,7 +114,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
     match refsCache |> Map.tryFind url with
     | Some refs -> return refs
     | None ->
+      console.Write("\nfetching refs from " + url, LoggingLevel.Info)
       let cacheDir = cloneFolderName url
+      let startTime = System.DateTime.Now
       let! refs =
         Async.Parallel
           (
@@ -132,6 +135,8 @@ type GitManager (git : IGit, cacheDirectory : string) =
           else b
         )
       refsCache <- refsCache |> Map.add url refs
+      let endTime = System.DateTime.Now
+      console.Write("\tfetched " + (refs|>List.length).ToString() + " refs in " + (endTime-startTime).TotalSeconds.ToString("N3"))
       return refs
   }
   member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> =

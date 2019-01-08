@@ -29,13 +29,11 @@ module Solver =
   type LocatedVersionSet = PackageLocation * Set<Version>
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
-
   let private withTimeout timeout action =
     async {
       let! child = Async.StartChild (action, timeout)
       return! child
     }
-
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
     let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
     let mutable isEmpty = true
@@ -179,11 +177,24 @@ module Solver =
       yield! fetchCandidatesForConstraint sourceExplorer state.Locations package constraints
   }
 
+  let private printManifestInfo log (state: SolverState) (manifest:Manifest) =
+    let newDepCount =
+      manifest.Dependencies
+        |> Seq.filter(fun (x : Dependency) -> state.Constraints.ContainsKey x.Package |> not)
+        |> Seq.length
+
+    if newDepCount > 0 then
+      log("Manifest introduces " +
+        (manifest.Dependencies
+          |> Seq.filter(fun (x : Dependency) -> state.Constraints.ContainsKey x.Package |> not)
+          |> Seq.length
+          |> string) +
+        " new dependencies", LoggingLevel.Info)
+
   let private candidateToAtom (sourceExplorer : ISourceExplorer) (state: SolverState) (package, (location, versions)) = async {
     let! packageLock = sourceExplorer.LockLocation location
     return (package, (packageLock, versions))
   }
-
   let private filterAtom state (package, (packageLock, _)) = (
     (Set.contains (package, packageLock) state.Visited |> not) &&
     (match state.Solution.Resolutions |> Map.tryFind package with
@@ -277,8 +288,8 @@ module Solver =
               let manifestFetchStart = System.DateTime.Now
               let! manifest = sourceExplorer.FetchManifest packageLock
               let manifestFetchEnd = System.DateTime.Now
-
               log("Fetched in " + (manifestFetchEnd - manifestFetchStart).TotalSeconds.ToString("N3") + "s", LoggingLevel.Info)
+              printManifestInfo log state manifest
 
               let! mergedLocations = async {
                 return
