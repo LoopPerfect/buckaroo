@@ -23,7 +23,7 @@ deploy:
   provider: GitHub
   auth_token:
     secure: Z+IaDd5u9nwMMBWqxrYd5l8igQcBV2EQij0wJA4jr1F78Nd6UrC9d4xuWLr4WI/n
-  artifact: ./warp/buckaroo-windows.exe
+  artifact: buckaroo-windows.exe
   draft: true
   on:
     APPVEYOR_REPO_TAG: true
