@@ -4,6 +4,6 @@ dotnet publish ./buckaroo-cli/ -c Release -r win10-x64
 
 md .\warp -ea 0
 
-.\warp-packer.exe --arch windows-x64 --input_dir .\buckaroo-cli\bin\Release\netcoreapp2.1\win10-x64\publish --exec buckaroo-cli --output .\warp\buckaroo-windows.exe
+.\warp-packer.exe --arch windows-x64 --input_dir .\buckaroo-cli\bin\Release\netcoreapp2.1\win10-x64 --exec buckaroo-cli.exe --output .\warp\buckaroo-windows.exe
 
 .\warp\buckaroo-windows.exe
