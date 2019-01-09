@@ -3,15 +3,17 @@ namespace Buckaroo
 open FSharp.Control
 open Buckaroo.Console
 open FSharpx
+open RichOutput
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
+  let log = namespacedLogger console "explorer"
   let toOptional = Async.Catch >> (Async.map Choice.toOption)
 
-  let fromCache url revision path =
+  let fromFileCache url revision path =
     gitManager.FetchFile url revision path |> toOptional
 
-  let cacheOrGit (f: string->string->Async<string>, url:string, rev:string, path: string) = async {
-    let! cached = fromCache url rev path
+  let cacheOrGit (f: string->string->Async<string>, url : string, rev : string, path : string) = async {
+    let! cached = fromFileCache url rev path
     match cached with
     | Some data -> return data
     | None -> return! f rev path
@@ -143,7 +145,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchVersionsFromGit gitUrl = asyncSeq {
     let! refs = gitManager.FetchRefs gitUrl
-
     // Sem-vers
     yield!
       refs
@@ -306,11 +307,20 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
     member this.FetchLock location =
       async {
-        let! content = fetchFile location Constants.LockFileName
+        let! maybeContent = fetchFile location Constants.LockFileName |> Async.Catch |> Async.map(Choice.toOption)
         return
-          match Lock.parse content with
-          | Result.Ok manifest -> manifest
-          | Result.Error errorMessage ->
-            new System.Exception("Invalid " + Constants.LockFileName + " file. \n" + errorMessage)
-            |> raise
+          match maybeContent with
+          | None ->
+            log(
+              (warn "warning ") + (text "Could not fetch ") + (highlight Constants.LockFileName) + (text " from ") +
+              (PackageLock.show location |> highlight) + (warn " 404"), LoggingLevel.Info)
+            raise <| new System.Exception("Could not fetch " + Constants.LockFileName + " file")
+          | Some content ->
+            match Lock.parse content with
+            | Result.Ok manifest -> manifest
+            | Result.Error errorMessage ->
+              log(
+                (warn "warning ") + (text "Could not parse ") + (highlight Constants.LockFileName) + (text " from ") +
+                (PackageLock.show location |> highlight) + (text " ") + (warn errorMessage), LoggingLevel.Info)
+              new System.Exception("Invalid " + Constants.LockFileName + " file") |> raise
       }

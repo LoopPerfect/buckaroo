@@ -3,6 +3,7 @@ namespace Buckaroo
 open FSharpx.Collections
 open Buckaroo.Tasks
 open Buckaroo.Console
+open RichOutput
 
 module Solver =
 
@@ -29,13 +30,11 @@ module Solver =
   type LocatedVersionSet = PackageLocation * Set<Version>
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
-
   let private withTimeout timeout action =
     async {
       let! child = Async.StartChild (action, timeout)
       return! child
     }
-
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
     let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
     let mutable isEmpty = true
@@ -179,11 +178,25 @@ module Solver =
       yield! fetchCandidatesForConstraint sourceExplorer state.Locations package constraints
   }
 
+  let private printManifestInfo log (state: SolverState) (manifest:Manifest) =
+    let newDepCount =
+      manifest.Dependencies
+        |> Seq.filter(fun (x : Dependency) -> state.Constraints.ContainsKey x.Package |> not)
+        |> Seq.length
+
+    if newDepCount > 0 then
+      log(("Manifest introduces " |> text) +
+        (manifest.Dependencies
+          |> Seq.filter(fun (x : Dependency) -> state.Constraints.ContainsKey x.Package |> not)
+          |> Seq.length
+          |> string
+          |> info) +
+        ((" new dependenc" + if newDepCount > 1 then "ies" else "y") |> text), LoggingLevel.Info)
+
   let private candidateToAtom (sourceExplorer : ISourceExplorer) (state: SolverState) (package, (location, versions)) = async {
     let! packageLock = sourceExplorer.LockLocation location
     return (package, (packageLock, versions))
   }
-
   let private filterAtom state (package, (packageLock, _)) = (
     (Set.contains (package, packageLock) state.Visited |> not) &&
     (match state.Solution.Resolutions |> Map.tryFind package with
@@ -202,7 +215,7 @@ module Solver =
             | x -> state.Constraints.[f.Package].Contains x
           then resolution
           else
-            log("trying different resolution to workaround: " + f.ToString())
+            log("trying different resolution to workaround: " + f.ToString()|>text, LoggingLevel.Info)
             // we backtracked far enough, we can proceed normally...
             // TODO: remember f.Package + f.Constraint always fails
             Resolution.Error (new System.Exception (f.ToString()))
@@ -211,7 +224,7 @@ module Solver =
     |> AsyncSeq.takeWhileInclusive (fun resolution ->
       match resolution with
       | Resolution.Failure f ->
-        log("backtracking due to failure " + f.ToString())
+        log("backtracking due to failure " + f.ToString()|>text, LoggingLevel.Debug)
         false
       | _ -> true
     )
@@ -220,22 +233,25 @@ module Solver =
 
     let sourceExplorer = context.SourceExplorer
 
-    let log (x : string) =
-      (
-        "[" + (string state.Depth) + "] "
-        |> RichOutput.text
-        |> RichOutput.foreground System.ConsoleColor.DarkGray
-      ) +
-      (x |> RichOutput.text)
-      |> context.Console.Write
+    let log = namespacedLogger context.Console "solver"
 
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
+      |> Seq.toList
+
 
     if Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution
       else
+        let totalDeps = state.Constraints |> Map.count
+        let satisfiedDepsCount = totalDeps - (unsatisfied |> Seq.length)
+        log( ("resolved " |> text) +
+          (satisfiedDepsCount.ToString() |> highlight) +
+          (subtle "/") +
+          (totalDeps.ToString() |> highlight),
+          LoggingLevel.Info)
+
         let atomsToExplore =
           strategy sourceExplorer state
           |> AsyncSeq.mapAsync (fun x ->
@@ -266,16 +282,22 @@ module Solver =
               yield Resolution.Error (new System.Exception ("no location found for: " + p.ToString() + "that could satisfy: " + c.ToString()))
           | Result.Ok (package, (packageLock, versions)) ->
             try
-              log("Exploring (" + state.Depth.ToString() + ") " + (PackageIdentifier.show package) + " -> " + (string packageLock) + "...")
+              log(("Exploring "|>text) + (PackageIdentifier.showRich package), LoggingLevel.Info)
 
               // We pre-emptively grab the lock
               let! lockTask =
                 sourceExplorer.FetchLock packageLock
                 |> Async.StartChild
 
-              log("Fetching manifest... ")
-
+              log("Fetching manifest ..." |> text, LoggingLevel.Info)
+              let manifestFetchStart = System.DateTime.Now
               let! manifest = sourceExplorer.FetchManifest packageLock
+              let manifestFetchEnd = System.DateTime.Now
+              log((success "success ") +
+                  ("Manifest fetched in " |> text) +
+                  (info ((manifestFetchEnd - manifestFetchStart).TotalSeconds.ToString("N3") + "s")),
+                  LoggingLevel.Info)
+              printManifestInfo log state manifest
 
               let! mergedLocations = async {
                 return
@@ -290,10 +312,21 @@ module Solver =
                 Manifest = manifest;
               }
 
+              let versionSetStr =
+                packageLock
+                |> PackageLock.toLocation
+                |> PackageLocation.versionSetFromLocation
+                |> Set.union versions
+                |> Version.showRichSet
+
+              log ( (success "success ") + (text "Resolved ") + (PackageIdentifier.showRich package) + (subtle " -> ") + versionSetStr, LoggingLevel.Info)
+
               let freshHints =
                 asyncSeq {
                   try
+                    log( (text "fetching lockfile for: ") + (PackageIdentifier.showRich package), LoggingLevel.Debug)
                     let! lock = lockTask
+                    log( (success "success ") + (text "Lockfile for ") + (PackageIdentifier.showRich package) + " fetched", LoggingLevel.Info)
                     yield!
                       lock
                       |> lockToHints
@@ -303,8 +336,7 @@ module Solver =
                       )
                       |> AsyncSeq.ofSeq
                   with error ->
-                    log("Could not fetch buckaroo.lock.toml for " + (string packageLock))
-                    log(string error)
+                    log(string error|>text, LoggingLevel.Debug)
                     ()
                 }
 
@@ -351,7 +383,7 @@ module Solver =
                           state.Constraints
 
 
-                      Depth = state.Depth + 1;
+                      Depth = state.Depth;
                       Visited =
                         state.Visited
                         |> Set.add (package, packageLock);
@@ -366,8 +398,8 @@ module Solver =
                 |> recoverOrFail state log
 
             with error ->
-              log("Error exploring " + (string packageLock) + "...")
-              log(string error)
+              log("Error exploring " + (string packageLock) + "..."|>text, LoggingLevel.Debug)
+              log(string error|>text, LoggingLevel.Debug)
               yield Resolution.Error error
   }
 
