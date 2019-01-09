@@ -8,20 +8,14 @@ open FSharpx.Control
 open FSharp.Control
 open FSharpx
 open Console
+open RichOutput
 
 type CloneRequest =
 | CloneRequest of string * AsyncReplyChannel<Async<string>>
 
 type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) =
 
-  let log (x : string, logLevel : LoggingLevel) =
-    (
-      "[git] "
-      |> RichOutput.text
-      |> RichOutput.foreground System.ConsoleColor.DarkGray
-    ) +
-    (x |> RichOutput.text)
-    |> fun x -> console.Write (x, logLevel)
+  let log = namespacedLogger console "git"
 
   let mutable refsCache = Map.empty
 
@@ -123,7 +117,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
     match refsCache |> Map.tryFind url with
     | Some refs -> return refs
     | None ->
-      log("fetching refs from " + url, LoggingLevel.Info)
+      log( (text "fetching refs from ") + (highlight url), LoggingLevel.Info)
       let cacheDir = cloneFolderName url
       let startTime = System.DateTime.Now
       let! refs =
@@ -145,7 +139,11 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
         )
       refsCache <- refsCache |> Map.add url refs
       let endTime = System.DateTime.Now
-      log("fetched " + (refs|>List.length).ToString() + " refs in " + (endTime-startTime).TotalSeconds.ToString("N3"), LoggingLevel.Info)
+      log((success "success ") +
+          (text "fetched ") +
+          ((refs|>List.length).ToString() |> info) +
+          (text " refs in ") +
+          ((endTime-startTime).TotalSeconds.ToString("N3")|>info), LoggingLevel.Info)
       return refs
   }
   member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> =

@@ -21,10 +21,9 @@ module PackageIdentifier =
     | Adhoc x -> x.Owner + "/" + x.Project
 
   let showRich (id : PackageIdentifier) =
-    let host = text >> (foreground System.ConsoleColor.White)
-    let owner = text >> (foreground System.ConsoleColor.White)
-    let project = text >> (foreground System.ConsoleColor.White)
-    let subtle = text >> (foreground System.ConsoleColor.DarkGray)
+    let host = highlight
+    let owner = highlight
+    let project = highlight
 
     match id with
     | GitHub x -> (host "github.com") + (subtle "/") + (owner x.Owner) + (subtle "/") + (project x.Project)

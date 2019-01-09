@@ -121,3 +121,11 @@ type ConsoleManager (minimumLoggingLevel : LoggingLevel) =
 
   member this.Flush() =
     actor.PostAndAsyncReply(fun channel -> Flush channel)
+
+let namespacedLogger (console : ConsoleManager) (componentName  : string) (x : RichOutput, logLevel : LoggingLevel) =
+    (
+      "[" + componentName + "] "
+      |> RichOutput.text
+      |> RichOutput.foreground System.ConsoleColor.DarkGray
+    ) +
+    x |> fun x -> console.Write (x, logLevel)

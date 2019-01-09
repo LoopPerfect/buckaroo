@@ -41,16 +41,12 @@ module Version =
     | Git (Revision revision) -> "revision=" + revision
     | Git (Tag tag) -> "tag=" + tag
 
-  let subtile x = x |> text |> foreground System.ConsoleColor.DarkGray
-  let highlight x = x |> text |> foreground System.ConsoleColor.White
-
-
   let rec showRich (v : Version) : RichOutput =
     match v with
     | SemVer semVer -> semVer |> string |> highlight
-    | Git (Branch branch) -> (highlight "branch") + (subtile "=")  + (highlight branch)
-    | Git (Revision revision) -> (highlight "revision") + (subtile "=") + (highlight revision)
-    | Git (Tag tag) -> (highlight "tag") + (subtile "=") + (highlight tag)
+    | Git (Branch branch) -> (highlight "branch") + (subtle "=")  + (highlight branch)
+    | Git (Revision revision) -> (highlight "revision") + (subtle "=") + (highlight revision)
+    | Git (Tag tag) -> (highlight "tag") + (subtle "=") + (highlight tag)
 
   let identifierParser = CharParsers.regex @"[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){2,64}"
 
@@ -100,7 +96,7 @@ module Version =
     x
     |> Set.toSeq
     |> Seq.map showRich
-    |> Seq.reduce (fun x y -> x + (subtile ", ") + y)
+    |> Seq.reduce (fun x y -> x + (subtle ", ") + y)
     |> (fun x ->
-      (subtile "{") + x +
-      (subtile "}") )
+      (subtle "{") + x +
+      (subtle "}") )

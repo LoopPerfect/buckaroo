@@ -3,17 +3,11 @@ namespace Buckaroo
 open System
 open System.Text
 open Buckaroo.Console
+open RichOutput
 
 type GitCli (console : ConsoleManager) =
 
-  let log (x : string, logLevel : LoggingLevel) =
-    (
-      "[git] "
-      |> RichOutput.text
-      |> RichOutput.foreground System.ConsoleColor.DarkGray
-    ) +
-    (x |> RichOutput.text)
-    |> fun x -> console.Write (x, logLevel)
+  let log = namespacedLogger console "git"
 
   let nl = System.Environment.NewLine
   let runBash command = async {
@@ -109,7 +103,7 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
-      log("shallow cloning \"" + url + "\"", LoggingLevel.Info)
+      log((text "shallow cloning ") + (highlight url), LoggingLevel.Info)
       do!
         runBash ("git clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore
