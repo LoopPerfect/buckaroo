@@ -6,46 +6,85 @@ open Buckaroo.RichOutput
 let task (context : Tasks.TaskContext) resolutionStyle = async {
   let log (x : RichOutput) = context.Console.Write x
 
-  let! maybeLock = Tasks.readLockIfPresent
+  let logInfo (x : RichOutput) =
+    ("info " |> text |> foreground ConsoleColor.Blue) + x
+    |> log
 
-  let resolveStart = DateTime.Now
-  (text "Resolve start: ") + (string resolveStart |> text |> foreground ConsoleColor.Cyan) |> log
+  let logError (x : RichOutput) =
+    ("error " |> text |> foreground ConsoleColor.Red) + x
+    |> log
+
+  let! maybeLock = async {
+    try
+      return!
+        Tasks.readLockIfPresent
+    with error ->
+      logError ("The existing lock-file is invalid. " |> text)
+      logInfo (
+        (text "Perhaps you want to delete ") +
+        (text "buckaroo.lock.toml" |> foreground ConsoleColor.Magenta) +
+        (text " and try again?")
+      )
+
+      return!
+        raise error
+  }
 
   let! manifest = Tasks.readManifest "."
-  "Resolving dependencies... " |> text |> log
 
-  let! resolution = Solver.solve context manifest resolutionStyle maybeLock
+  let resolve = async {
+    let resolveStart = DateTime.Now
 
-  let resolveEnd = DateTime.Now
-  (text "Resolve end: ") + (string resolveEnd |> text |> foreground ConsoleColor.Cyan) |> log
+    logInfo <| (text "Resolve start: ") + (string resolveStart |> text |> foreground ConsoleColor.Cyan)
 
-  (text "Resolve time: ") + (((resolveEnd - resolveStart).TotalSeconds.ToString("N2")) |> string |> text |> foreground ConsoleColor.Cyan) |> log
+    "Resolving dependencies... " |> text |> logInfo
 
-  match resolution with
-  | Resolution.Failure f ->
-    "Error! " |> text |> foreground ConsoleColor.Red |> log
-    f.Constraint.ToString() + " for " + f.Package.ToString() + " couldn't be satisfied because: " + f.Msg
-    |> string |> text |> log
-  | Resolution.Conflict x ->
-    "Conflict! " |> text |> foreground ConsoleColor.Red |> log
-    x |> string |> text |> log
+    let! resolution = Solver.solve context manifest resolutionStyle maybeLock
 
-    return ()
-  | Resolution.Error e ->
-    "Error! " |> text |> foreground ConsoleColor.Red |> log
-    e |> string |> text |> log
-    return ()
-  | Resolution.Ok solution ->
-    "Success! " |> text |> foreground ConsoleColor.Green |> log
-    let lock = Lock.fromManifestAndSolution manifest solution
-    do! async {
+    let resolveEnd = DateTime.Now
+
+    logInfo <| (text "Resolve end: ") + (string resolveEnd |> text |> foreground ConsoleColor.Cyan)
+    logInfo <| (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan)
+
+    match resolution with
+    | Resolution.Failure f ->
+      "Error! " |> text |> foreground ConsoleColor.Red |> log
+      f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
+      |> string |> text |> log
+    | Resolution.Conflict x ->
+      "Conflict! " |> text |> foreground ConsoleColor.Red |> log
+      x |> string |> text |> log
+
+      return ()
+    | Resolution.Error e ->
+      "Error! " |> text |> foreground ConsoleColor.Red |> log
+      e |> string |> text |> log
+      return ()
+    | Resolution.Ok solution ->
+      "Success! " |> text |> foreground ConsoleColor.Green |> log
+      let lock = Lock.fromManifestAndSolution manifest solution
+
       try
         let! previousLock = Tasks.readLock
         let diff = Lock.showDiff previousLock lock
         diff |> text |> log
       with _ ->
         ()
-    }
-    do! Tasks.writeLock lock
-    return ()
+
+      do! Tasks.writeLock lock
+
+      return ()
+  }
+
+  match maybeLock with
+  | Some lock ->
+    if lock.ManifestHash = Manifest.hash manifest
+    then
+      logInfo <| (text "The existing lock-file is already up-to-date! ")
+
+      return ()
+    else
+    return! resolve
+  | None ->
+    return! resolve
 }
