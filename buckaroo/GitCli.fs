@@ -88,7 +88,13 @@ type GitCli (console : ConsoleManager) =
 
     member this.Unshallow (gitDir : string) = async {
       do!
-        runBash ("git --git-dir=" + gitDir + " fetch --unshallow || true; git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*'")
+        runBash ("git --git-dir=" + gitDir + " fetch --unshallow || true; git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
+        |> Async.Ignore
+    }
+
+    member this.UpdateRefs (gitDir : string) = async {
+      do!
+        runBash ("git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
         |> Async.Ignore
     }
 

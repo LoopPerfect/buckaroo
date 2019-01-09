@@ -20,6 +20,7 @@ type IGit =
   abstract member Clone : string -> string -> Async<Unit>
   abstract member DefaultBranch : string -> Async<string>
   abstract member Unshallow : string -> Async<Unit>
+  abstract member UpdateRefs : string -> Async<Unit>
   abstract member Checkout : string -> string -> Async<Unit>
   abstract member ShallowClone : string -> string -> Async<Unit>
   abstract member FetchBranch : string -> Branch -> Async<Unit>
