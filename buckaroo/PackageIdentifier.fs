@@ -20,10 +20,10 @@ module PackageIdentifier =
     | GitLab x -> "gitlab.com/" + x.Owner + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
-  let showRich (id : PackageIdentifier) = 
-    let host = text >> (foreground System.ConsoleColor.Magenta)
-    let owner = text >> (foreground System.ConsoleColor.Cyan)
-    let project = text >> (foreground System.ConsoleColor.Green)
+  let showRich (id : PackageIdentifier) =
+    let host = text >> (foreground System.ConsoleColor.White)
+    let owner = text >> (foreground System.ConsoleColor.White)
+    let project = text >> (foreground System.ConsoleColor.White)
     let subtle = text >> (foreground System.ConsoleColor.DarkGray)
 
     match id with
@@ -31,7 +31,7 @@ module PackageIdentifier =
     | BitBucket x -> (host "bitbucket.org") + (subtle "/") + x.Owner + (subtle "/") + (project x.Project)
     | GitLab x -> (host "gitlab.com") + (subtle "/") + x.Owner + (subtle "/") + (project x.Project)
     | Adhoc x -> (owner x.Owner) + (subtle "/") + (project x.Project)
-  
+
   let private gitHubIdentifierParser =
     CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z_.\d]|-(?=[a-zA-Z_.\d])){0,38}"
 

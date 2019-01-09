@@ -1,6 +1,7 @@
 namespace Buckaroo
 
 open Buckaroo.Git
+open Buckaroo.RichOutput
 
 type GitVersion =
 | Revision of Revision
@@ -39,6 +40,17 @@ module Version =
     | Git (Branch branch) -> "branch=" + branch
     | Git (Revision revision) -> "revision=" + revision
     | Git (Tag tag) -> "tag=" + tag
+
+  let subtile x = x |> text |> foreground System.ConsoleColor.DarkGray
+  let highlight x = x |> text |> foreground System.ConsoleColor.White
+
+
+  let rec showRich (v : Version) : RichOutput =
+    match v with
+    | SemVer semVer -> semVer |> string |> highlight
+    | Git (Branch branch) -> (highlight "branch") + (subtile "=")  + (highlight branch)
+    | Git (Revision revision) -> (highlight "revision") + (subtile "=") + (highlight revision)
+    | Git (Tag tag) -> (highlight "tag") + (subtile "=") + (highlight tag)
 
   let identifierParser = CharParsers.regex @"[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){2,64}"
 
@@ -83,3 +95,12 @@ module Version =
     |> Seq.map show
     |> String.concat ", "
     |> (fun x -> "{" + x + "}")
+
+  let showRichSet (x : Set<Version>) =
+    x
+    |> Set.toSeq
+    |> Seq.map showRich
+    |> Seq.reduce (fun x y -> x + (subtile ", ") + y)
+    |> (fun x ->
+      (subtile "{") + x +
+      (subtile "}") )
