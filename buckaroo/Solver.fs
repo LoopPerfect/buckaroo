@@ -233,7 +233,11 @@ module Solver =
 
     let log (x : string, logLevel : LoggingLevel) =
       (
-        "[" + (string state.Depth) + "] "
+        "[solver" +
+          (if state.Depth<>0
+           then "-" + (state.Depth+1).ToString()
+           else "" ) +
+          "] "
         |> RichOutput.text
         |> RichOutput.foreground System.ConsoleColor.DarkGray
       ) +
@@ -242,11 +246,16 @@ module Solver =
 
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
+      |> Seq.toList
+
 
     if Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution
       else
+        let totalDeps = state.Constraints |> Map.count
+        let satisfiedDepsCount = totalDeps - (unsatisfied |> Seq.length)
+        log("resolved " + satisfiedDepsCount.ToString()  + " / " + totalDeps.ToString(), LoggingLevel.Info)
         let atomsToExplore =
           strategy sourceExplorer state
           |> AsyncSeq.mapAsync (fun x ->
@@ -370,7 +379,7 @@ module Solver =
                           state.Constraints
 
 
-                      Depth = state.Depth + 1;
+                      Depth = state.Depth;
                       Visited =
                         state.Visited
                         |> Set.add (package, packageLock);

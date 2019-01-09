@@ -14,6 +14,15 @@ type CloneRequest =
 
 type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) =
 
+  let log (x : string, logLevel : LoggingLevel) =
+    (
+      "[git] "
+      |> RichOutput.text
+      |> RichOutput.foreground System.ConsoleColor.DarkGray
+    ) +
+    (x |> RichOutput.text)
+    |> fun x -> console.Write (x, logLevel)
+
   let mutable refsCache = Map.empty
 
   let bytesToHex bytes =
@@ -114,7 +123,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
     match refsCache |> Map.tryFind url with
     | Some refs -> return refs
     | None ->
-      console.Write("\nfetching refs from " + url, LoggingLevel.Info)
+      log("fetching refs from " + url, LoggingLevel.Info)
       let cacheDir = cloneFolderName url
       let startTime = System.DateTime.Now
       let! refs =
@@ -136,7 +145,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
         )
       refsCache <- refsCache |> Map.add url refs
       let endTime = System.DateTime.Now
-      console.Write("\tfetched " + (refs|>List.length).ToString() + " refs in " + (endTime-startTime).TotalSeconds.ToString("N3"))
+      log("fetched " + (refs|>List.length).ToString() + " refs in " + (endTime-startTime).TotalSeconds.ToString("N3"), LoggingLevel.Info)
       return refs
   }
   member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> =
