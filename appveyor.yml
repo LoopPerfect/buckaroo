@@ -1,10 +1,30 @@
 version: '1.0.{build}'
 image: Visual Studio 2017
+
 before_build:
   - ps: dotnet --version
+
 build_script:
   - ps: dotnet build ./buckaroo
   - ps: dotnet build ./buckaroo-cli
+  - ps: ./warp-bundle-windows.ps1
+
 clone_depth: 1
+
 test_script:
   - ps: dotnet test ./buckaroo-tests
+
+artifacts:
+  - path: ./warp/buckaroo-windows.exe
+    name: buckaroo-windows.exe
+
+deploy:
+  description: 'AppVeyor Release'
+  provider: GitHub
+  auth_token:
+    secure: Z+IaDd5u9nwMMBWqxrYd5l8igQcBV2EQij0wJA4jr1F78Nd6UrC9d4xuWLr4WI/n
+  artifact: buckaroo-windows.exe
+  draft: true
+  prerelease: true
+  on:
+    APPVEYOR_REPO_TAG: true

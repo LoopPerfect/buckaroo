@@ -24,7 +24,7 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
   match resolution with
   | Resolution.Failure f ->
     "Error! " |> text |> foreground ConsoleColor.Red |> log
-    f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
+    f.Constraint.ToString() + " for " + f.Package.ToString() + " couldn't be satisfied because: " + f.Msg
     |> string |> text |> log
   | Resolution.Conflict x ->
     "Conflict! " |> text |> foreground ConsoleColor.Red |> log
