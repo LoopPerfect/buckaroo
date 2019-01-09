@@ -7,14 +7,14 @@ open LibGit2Sharp.Handlers
 open FSharpx
 open Buckaroo.Console
 
-type GitLib (console : ConsoleManager) = 
+type GitLib (console : ConsoleManager) =
 
   let rec requestUsername url = async {
     console.Write ("Please enter a username for " + url)
     let! username = console.Read()
     let trimmed = username.Trim()
     if trimmed |> String.length > 0
-    then 
+    then
       console.Write trimmed
       return trimmed
     else
@@ -26,17 +26,17 @@ type GitLib (console : ConsoleManager) =
     let! password = console.ReadSecret()
     let trimmed = password.Trim()
     if trimmed |> String.length > 0
-    then 
+    then
       console.Write trimmed
       return trimmed
     else
       return! requestPassword username url
   }
 
-  let credentialsHandler = new CredentialsHandler(fun url username _ -> 
+  let credentialsHandler = new CredentialsHandler(fun url username _ ->
     (
       async {
-        let! selectedUsername = 
+        let! selectedUsername =
           if username <> null
           then async { return username }
           else requestUsername url
@@ -44,7 +44,7 @@ type GitLib (console : ConsoleManager) =
         let! password = requestPassword selectedUsername url
 
         let credentials = new UsernamePasswordCredentials()
-        
+
         credentials.Username <- selectedUsername
         credentials.Password <- password
 
@@ -117,8 +117,8 @@ type GitLib (console : ConsoleManager) =
       let options = new CloneOptions()
       options.IsBare <- true;
       options.OnTransferProgress <- new LibGit2Sharp.Handlers.TransferProgressHandler(fun p ->
-        let message = 
-          "Cloning " + url + " " + p.ReceivedObjects.ToString() + 
+        let message =
+          "Cloning " + url + " " + p.ReceivedObjects.ToString() +
             "(" + p.IndexedObjects.ToString() + ")" + " / " + p.TotalObjects.ToString()
         console.Write(message, LoggingLevel.Trace)
         true
@@ -153,11 +153,14 @@ type GitLib (console : ConsoleManager) =
       let repo = new Repository (gitDir)
       let options = new FetchOptions()
       options.CredentialsProvider <- credentialsHandler
-      Commands.Fetch(repo, "origin", ["+refs/heads/*:refs/remotes/origin/*"], options, "")
+      Commands.Fetch(repo, "origin", ["+refs/heads/*:refs/heads/*"; "+refs/tags/*:refs/tags/*"], options, "")
     }
+
+    member this.UpdateRefs (gitDir : string) = (this :> IGit).Unshallow gitDir
+
     member this.Checkout (gitDir : string) (revision : string) = async {
       do! Async.SwitchToThreadPool()
-      
+
       let repo = new Repository (gitDir)
       let options = new CheckoutOptions()
 
@@ -174,7 +177,7 @@ type GitLib (console : ConsoleManager) =
       if not exists then
         do! Files.mkdirp installPath
         do! sharedGitClone gitPath installPath
-      do! (this :> IGit).Unshallow installPath // It's a shared repo, unshallow here syncs up the references with the cached repo
+      do! (this :> IGit).UpdateRefs installPath
       return! (this :> IGit).Checkout installPath revision
     }
 
@@ -197,11 +200,11 @@ type GitLib (console : ConsoleManager) =
       let repo = new Repository (repository)
       let filter = new CommitFilter()
       filter.IncludeReachableFrom <- branch
-      return 
+      return
         seq {
           for x in repo.Commits.QueryBy (filter) do
             yield x.Sha
-        } 
+        }
         |> Seq.toList
     }
 

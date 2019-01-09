@@ -80,6 +80,9 @@ type GitManager (git : IGit, cacheDirectory : string) =
     let! targetDirectory = this.Clone(url)
     let operations = asyncSeq {
       yield async { return () };
+
+      yield async { git.UpdateRefs targetDirectory |> ignore }
+
       let! branchHint = this.getBranchHint targetDirectory
       yield git.FetchBranch targetDirectory branchHint
 
