@@ -67,7 +67,6 @@ module Solution =
     f solution 0
 
 module Resolution =
-
   let show resolution =
     match resolution with
     | Conflict xs ->

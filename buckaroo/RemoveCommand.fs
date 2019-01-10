@@ -5,8 +5,8 @@ open Buckaroo.RichOutput
 
 let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = async {
   context.Console.Write(
-    (text "Removing [ ") + 
-    (packages |> Seq.map PackageIdentifier.showRich |> RichOutput.concat (text " ")) + 
+    (text "Removing [ ") +
+    (packages |> Seq.map PackageIdentifier.showRich |> RichOutput.concat (text " ")) +
     " ]... "
   )
 
@@ -15,30 +15,30 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
   let newManifest =
     packages
     |> Seq.fold (fun state next -> Manifest.remove state next) manifest
-  
-  if manifest = newManifest 
+
+  if manifest = newManifest
   then
     context.Console.Write("No changes to be made. " |> text |> foreground ConsoleColor.Green)
   else
     let! maybeLock = Tasks.readLockIfPresent
-    let! resolution = Solver.solve context newManifest ResolutionStyle.Quick maybeLock 
+    let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
 
     match resolution with
-    | Ok solution -> 
+    | Ok solution ->
       let newLock = Lock.fromManifestAndSolution newManifest solution
-      
-      let lock = 
-        maybeLock 
+
+      let lock =
+        maybeLock
         |> Option.defaultValue { newLock with Packages = Map.empty }
-      
+
       context.Console.Write(Lock.showDiff lock newLock)
 
-      let removedPackages = 
+      let removedPackages =
         lock.Packages
         |> Map.toSeq
         |> Seq.filter (fun (package, _) -> newLock.Packages |> Map.containsKey package |> not)
 
-      for (package, _) in removedPackages do 
+      for (package, _) in removedPackages do
         let path = InstallCommand.packageInstallPath [] package
         context.Console.Write("Deleting " + path + "... ")
         Files.deleteDirectoryIfExists path |> ignore
@@ -49,7 +49,7 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
 
       context.Console.Write("Done. " |> text |> foreground ConsoleColor.Green)
 
-    | x -> 
+    | x ->
       context.Console.Write(string x)
       context.Console.Write("No changes were written. " |> text |> foreground ConsoleColor.Green)
 }

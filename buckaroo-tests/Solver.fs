@@ -119,7 +119,7 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
     }
 
 
-let solve (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
+let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
     let lockBook = lockBookOf lockBookEntries
     let console = new ConsoleManager(LoggingLevel.Silent);
     let context : TaskContext = {
@@ -130,7 +130,8 @@ let solve (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
     }
 
     Buckaroo.Solver.solve
-      context root style
+      context partial
+      root style
       (lockBook |> Map.tryFind (packageLock ("root", 0)))
 
 let getLockedRev (p : string) (r: Resolution) =
