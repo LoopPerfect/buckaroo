@@ -11,8 +11,8 @@ type Command =
 | Version
 | Resolve
 | Install
-| Upgrade
 | Quickstart
+| UpgradeDependencies of List<PackageIdentifier>
 | AddDependencies of List<Dependency>
 | RemoveDependencies of List<PackageIdentifier>
 | ShowCompletions
@@ -63,13 +63,6 @@ module Command =
     return Resolve
   }
 
-  let upgradeParser = parse {
-    do! CharParsers.spaces
-    do! CharParsers.skipString "upgrade"
-    do! CharParsers.spaces
-    return Upgrade
-  }
-
   let installParser = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "install"
@@ -92,6 +85,14 @@ module Command =
     return AddDependencies deps
   }
 
+  let upgradeDepenenciesParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "upgrade"
+    do! CharParsers.spaces1
+    let! packages = Primitives.sepEndBy PackageIdentifier.parser CharParsers.spaces1
+    return UpgradeDependencies packages
+  }
+
   let removeDependenciesParser = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "remove"
@@ -110,7 +111,7 @@ module Command =
   let parser = parse {
     let! command =
       resolveParser
-      <|> upgradeParser
+      <|> upgradeDepenenciesParser
       <|> addDependenciesParser
       <|> removeDependenciesParser
       <|> installParser
@@ -153,7 +154,7 @@ module Command =
         else
           return None
       }
-      let! resolution = Solver.solve context newManifest ResolutionStyle.Quick maybeLock
+      let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
       match resolution with
       | Resolution.Ok solution ->
         do! Tasks.writeManifest newManifest
@@ -164,10 +165,28 @@ module Command =
       return ()
   }
 
-  let upgrade context = async {
+  let upgrade context (packages : List<PackageIdentifier>) = async {
     // TODO: Roll-back on failure!
-    do! ResolveCommand.task context ResolutionStyle.Upgrading
-    do! InstallCommand.task context
+    let! maybeLock = async {
+      if File.Exists(Constants.LockFileName)
+      then
+        let! lock = Tasks.readLock
+        let! partial =
+          if packages |> Seq.isEmpty
+          then async { return Solution.empty }
+          else async {
+            let! solution = Solver.fromLock context.SourceExplorer lock
+            return packages |> Set.ofList |> Solver.unlock solution
+          }
+
+        do! ResolveCommand.task context partial ResolutionStyle.Upgrading
+        do! InstallCommand.task context
+        return None
+      else
+        return None
+    }
+
+    return ()
   }
 
   let init context = async {
@@ -190,10 +209,10 @@ module Command =
       | Init -> init context
       | Help -> HelpCommand.task context
       | Version -> VersionCommand.task context
-      | Resolve -> ResolveCommand.task context ResolutionStyle.Quick
-      | Upgrade -> upgrade context
+      | Resolve -> ResolveCommand.task context Solution.empty ResolutionStyle.Quick
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
+      | UpgradeDependencies dependencies -> upgrade context dependencies
       | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
       | ShowCompletions -> ShowCompletions.task context

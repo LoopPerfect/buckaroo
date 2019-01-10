@@ -13,7 +13,6 @@ type Lock = {
 }
 
 module Lock =
-
   open Buckaroo.Result
 
   module LockedPackage =

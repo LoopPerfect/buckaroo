@@ -3,7 +3,7 @@ module Buckaroo.ResolveCommand
 open System
 open Buckaroo.RichOutput
 
-let task (context : Tasks.TaskContext) resolutionStyle = async {
+let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
   let log (x : RichOutput) = context.Console.Write x
 
   let logInfo (x : RichOutput) =
@@ -39,7 +39,7 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
 
     "Resolving dependencies... " |> text |> logInfo
 
-    let! resolution = Solver.solve context manifest resolutionStyle maybeLock
+    let! resolution = Solver.solve context partialSolution manifest resolutionStyle maybeLock
 
     let resolveEnd = DateTime.Now
 
@@ -76,8 +76,8 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
       return ()
   }
 
-  match maybeLock with
-  | Some lock ->
+  match (resolutionStyle, maybeLock) with
+  | (Quick, Some lock) ->
     if lock.ManifestHash = Manifest.hash manifest
     then
       logInfo <| (text "The existing lock-file is already up-to-date! ")
@@ -85,6 +85,6 @@ let task (context : Tasks.TaskContext) resolutionStyle = async {
       return ()
     else
     return! resolve
-  | None ->
+  | (_, _) ->
     return! resolve
 }

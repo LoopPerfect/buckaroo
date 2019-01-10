@@ -4,6 +4,7 @@ open FSharpx.Collections
 open Buckaroo.Tasks
 open Buckaroo.Console
 open RichOutput
+open FSharp.Control
 
 module Solver =
 
@@ -420,7 +421,7 @@ module Solver =
     |> Async.RunSynchronously
     |> List.tryHead
 
-  let solve (context : TaskContext) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
+  let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
     let hints =
       lock
       |> Option.map (lockToHints >> AsyncSeq.ofSeq)
@@ -432,7 +433,7 @@ module Solver =
       | Upgrading -> upgradeSearchStrategy
 
     let state = {
-      Solution = Solution.empty;
+      Solution = partialSolution;
       Constraints =
         Set.unionMany [ manifest.Dependencies; manifest.PrivateDependencies ]
         |> constraintsOf
@@ -453,4 +454,50 @@ module Solver =
     context.Console.Write(string result, LoggingLevel.Trace)
 
     return result
+  }
+
+
+  let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Solution> = async {
+    let rec packageLockToSolution (locked : LockedPackage) : Async<ResolvedVersion * Solution> = async {
+      let! manifest = sourceExplorer.FetchManifest locked.Location
+      let! resolutions =
+        locked.PrivatePackages
+          |> Map.toSeq
+          |> AsyncSeq.ofSeq
+          |> AsyncSeq.mapAsync (fun (k, lock) -> async {
+            let! solution = packageLockToSolution lock
+            return (k, solution)
+          })
+          |> AsyncSeq.toListAsync
+
+      let resolvedVersion : ResolvedVersion = {
+        Versions = locked.Versions;
+        Lock = locked.Location;
+        Manifest = manifest;
+      }
+
+      return (resolvedVersion, { Resolutions = resolutions |> Map.ofSeq })
+    }
+
+    let! resolutions =
+      lock.Packages
+      |> Map.toSeq
+      |> AsyncSeq.ofSeq
+      |> AsyncSeq.mapAsync(fun (package, lockedPakckage) -> async {
+        let! solution = lockedPakckage |> packageLockToSolution
+        return (package, solution)
+      })
+      |> AsyncSeq.toListAsync
+
+    return {
+      Resolutions = resolutions |> Map.ofSeq
+    }
+  }
+
+  let unlock (solution : Solution) (packages : Set<PackageIdentifier>) : Solution = {
+    Resolutions =
+      solution.Resolutions
+        |> Map.toSeq
+        |> Seq.filter (fst >> packages.Contains >> not)
+        |> Map.ofSeq
   }

@@ -7,27 +7,27 @@ open Buckaroo
 
 let task (context : Tasks.TaskContext) dependencies = async {
   context.Console.Write (
-    (text "Adding ") + 
+    (text "Adding ") +
     (
-      dependencies 
-      |> Seq.map Dependency.showRich 
+      dependencies
+      |> Seq.map Dependency.showRich
       |> RichOutput.concat (text " ")
     )
   )
 
   let! manifest = Tasks.readManifest "."
-  let newManifest = { 
-    manifest with 
-      Dependencies = 
-        manifest.Dependencies 
-        |> Seq.append dependencies 
+  let newManifest = {
+    manifest with
+      Dependencies =
+        manifest.Dependencies
+        |> Seq.append dependencies
         |> Set.ofSeq;
   }
 
-  if manifest = newManifest 
-  then 
+  if manifest = newManifest
+  then
     return ()
-  else 
+  else
     let! maybeLock = async {
       if File.Exists(Constants.LockFileName)
       then
@@ -37,15 +37,15 @@ let task (context : Tasks.TaskContext) dependencies = async {
         return None
     }
 
-    let! resolution = Solver.solve context newManifest ResolutionStyle.Quick maybeLock 
-    
+    let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
+
     match resolution with
-    | Resolution.Ok solution -> 
+    | Resolution.Ok solution ->
       do! Tasks.writeManifest newManifest
       do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
       do! InstallCommand.task context
-    | _ -> 
+    | _ ->
       ()
-    
+
   context.Console.Write ("Success. " |> text |> foreground ConsoleColor.Green)
 }
