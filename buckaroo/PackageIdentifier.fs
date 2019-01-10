@@ -38,7 +38,7 @@ module PackageIdentifier =
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner; Project = project }
+    return { Owner = owner.ToLower(); Project = project.ToLower() }
   }
 
   let parseAdhocIdentifier (x : string) : Result<AdhocPackageIdentifier, string> =
@@ -52,7 +52,7 @@ module PackageIdentifier =
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner; Project = project }
+    return { Owner = owner.ToLower(); Project = project.ToLower() }
   }
 
   let parseGitHubIdentifier (x : string) =
@@ -65,7 +65,7 @@ module PackageIdentifier =
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner; Project = project }
+    return { Owner = owner.ToLower(); Project = project.ToLower() }
   }
 
   let parseBitBucketIdentifier (x : string) =
@@ -78,7 +78,7 @@ module PackageIdentifier =
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner; Project = project }
+    return { Owner = owner.ToLower(); Project = project.ToLower() }
   }
 
   let parseGitLabIdentifier (x : string) =
