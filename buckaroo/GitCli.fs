@@ -36,7 +36,7 @@ type GitCli (console : ConsoleManager) =
   member this.LocalTags (repository : String) = async {
     let gitDir = repository
     let command =
-      "--no-pager --git-dir=" + gitDir +
+      "--no-pager -C " + gitDir +
       " tag"
     let! output = runBash(command)
 
@@ -49,7 +49,7 @@ type GitCli (console : ConsoleManager) =
   member this.LocalBranches (repository : String) = async {
     let gitDir = repository
     let command =
-      "git --no-pager --git-dir=" + gitDir +
+      "git --no-pager -C " + gitDir +
       " branch"
     let! output = runBash(command)
 
@@ -69,7 +69,7 @@ type GitCli (console : ConsoleManager) =
 
     member this.HasCommit (gitPath : string) (revision : Revision) = async {
       let command =
-        "git --no-pager --git-dir=" + gitPath +
+        "git --no-pager -C " + gitPath +
         " log " + revision + " --pretty=format:'%H' -n0"
       let! result = runBash(command) |> Async.Catch
       return
@@ -79,7 +79,7 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.DefaultBranch (gitPath : string) = async {
-      let! result = runBash ("git --git-dir=" + gitPath + " symbolic-ref HEAD")
+      let! result = runBash ("git -C " + gitPath + " symbolic-ref HEAD")
       return result.Trim()
     }
 
@@ -92,13 +92,13 @@ type GitCli (console : ConsoleManager) =
 
     member this.Unshallow (gitDir : string) = async {
       do!
-        runBash ("git --git-dir=" + gitDir + " fetch --unshallow || true; git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
+        runBash ("git -C " + gitDir + " fetch --unshallow || true; git -C " + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
         |> Async.Ignore
     }
 
     member this.UpdateRefs (gitDir : string) = async {
       do!
-        runBash ("git --git-dir=" + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
+        runBash ("git -C " + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
         |> Async.Ignore
     }
 
@@ -118,7 +118,7 @@ type GitCli (console : ConsoleManager) =
     member this.FetchBranch (repository : String) (branch : Branch) = async {
       let gitDir = repository
       let command =
-        "git --no-pager --git-dir=" + gitDir +
+        "git --no-pager -C " + gitDir +
         " fetch origin " + branch + ":" + branch
       do!
         runBash(command)
@@ -129,7 +129,7 @@ type GitCli (console : ConsoleManager) =
       do! (this :> IGit).FetchBranch repository branch
       let gitDir = repository
       let command =
-        "git --no-pager --git-dir=" + gitDir +
+        "git --no-pager -C " + gitDir +
         " log " + branch + " --pretty=format:'%H'"
       let! output = runBash(command)
       return
@@ -141,7 +141,7 @@ type GitCli (console : ConsoleManager) =
     member this.FetchCommit (repository : String) (commit : Revision) = async {
       let gitDir = repository
       let command =
-        "git --git-dir=" + gitDir +
+        "git -C " + gitDir +
         " fetch origin " + commit
       do!
         runBash(command)
@@ -151,7 +151,7 @@ type GitCli (console : ConsoleManager) =
     member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
       let gitDir = repository
       let command =
-        "git --git-dir=" + gitDir +
+        "git -C " + gitDir +
         " show " + commit + ":" + path
       return! runBash(command)
     }
