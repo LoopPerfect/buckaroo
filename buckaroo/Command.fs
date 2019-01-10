@@ -173,7 +173,7 @@ module Command =
         let! lock = Tasks.readLock
         let! partial =
           if packages |> Seq.isEmpty
-          then async { return {Resolutions = Map.empty} }
+          then async { return Solution.empty }
           else async {
             let! solution = Solver.fromLock context.SourceExplorer lock
             return packages |> Set.ofList |> Solver.unlock solution

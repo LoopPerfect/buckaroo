@@ -6,6 +6,7 @@ open FSharp.Control
 
 open Buckaroo.Console
 open Buckaroo.Tasks
+open Buckaroo.Tests
 
 type CookBook = List<PackageIdentifier * Set<Version> * Manifest>
 type LockBookEntries = List<(string*int) * List<string*int*Set<Version>>>
@@ -165,7 +166,7 @@ let ``Solver handles simple case`` () =
 
   let root = manifest [("a", Exactly (br "a") )]
   let solution =
-    solve
+    solve Solution.empty
       cookBook [] root
       ResolutionStyle.Quick
       |> Async.RunSynchronously
@@ -190,7 +191,8 @@ let ``Solver can backtrack to resolve simple conflicts`` () =
 
   let root = manifest [("a", Exactly (br "a") )]
   let solution =
-    solve cookBook [] root ResolutionStyle.Quick
+    solve Solution.empty
+      cookBook [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.Equal ("1", getLockedRev "a" solution)
@@ -215,7 +217,9 @@ let ``Solver can compute version intersections`` () =
   ]
 
   let solution =
-    solve spec [] root ResolutionStyle.Quick
+    solve
+      Solution.empty
+      spec [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.Equal ("1", getLockedRev "a" solution)
@@ -242,7 +246,8 @@ let ``Solver can compute intersection of branches`` () =
   ]
 
   let solution =
-    solve spec [] root ResolutionStyle.Quick
+    solve Solution.empty
+      spec [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.Equal ("3", getLockedRev "a" solution)
@@ -269,7 +274,8 @@ let ``Solver fails if package cant satisfy all constraints`` () =
   ]
 
   let solution =
-    solve spec [] root ResolutionStyle.Quick
+    solve Solution.empty
+      spec [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.False (isOk solution)
@@ -300,7 +306,8 @@ let ``Solver picks package that satisfies all constraints`` () =
   ]
 
   let solution =
-    solve spec [] root ResolutionStyle.Quick
+    solve Solution.empty
+      spec [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.Equal ("3", getLockedRev "b" solution)
@@ -328,7 +335,8 @@ let ``Solver deduces that a package can satisfy multiple constraints`` () =
   ]
 
   let solution =
-    solve spec [] root ResolutionStyle.Quick
+    solve Solution.empty
+      spec [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.Equal ("2", getLockedRev "b" solution)
@@ -362,7 +370,8 @@ let ``Solver handles negated constraints also`` () =
   ]
 
   let solution =
-    solve spec [] root ResolutionStyle.Quick
+    solve Solution.empty
+      spec [] root ResolutionStyle.Quick
       |> Async.RunSynchronously
 
   Assert.Equal ("4", getLockedRev "b" solution)
@@ -397,6 +406,7 @@ let ``Solver uses lockfile as hint in Quick`` () =
   let root = manifest [("a", Exactly (br "a") )]
   let solution =
     solve
+      Solution.empty
       cookBook lockBook root
       ResolutionStyle.Quick
       |> Async.RunSynchronously
@@ -434,10 +444,129 @@ let ``Solver doesnt use lockfile as hint in Upgrade`` () =
   let root = manifest [("a", Exactly (br "a") )]
   let solution =
     solve
+      Solution.empty
       cookBook lockBook root
       ResolutionStyle.Upgrading
       |> Async.RunSynchronously
 
   Assert.Equal ("2", getLockedRev "a" solution)
   Assert.Equal ("2", getLockedRev "b" solution)
+  ()
+
+[<Fact>]
+let ``Solver does not upgrade if a complete solution is supplied`` () =
+  let cookBook = [
+    (package "a",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "c",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "c",
+      Set[ver 1; br "a"],
+      manifest [])
+  ]
+
+  let lockBookSpec = [
+    (("root", 0), [
+      ("a", 1, Set[ver 1; br "a"])
+      ("b", 1, Set[ver 1; br "a"])
+      ("c", 1, Set[ver 1; br "a"])
+    ])
+  ]
+
+  let root = manifest [
+    ("a", Exactly (br "a") )
+    ("b", Exactly (br "a") )
+    ("c", Exactly (br "a") )
+  ]
+
+  let lockBook = lockBookOf lockBookSpec
+
+  let rootLock = lockBook |> Map.find (packageLock ("root", 0))
+  let explorer = TestingSourceExplorer(cookBook, lockBook)
+
+  let completeSolution =
+    Solver.fromLock explorer rootLock
+    |> Async.RunSynchronously
+
+
+  let solution =
+    solve
+      completeSolution
+      cookBook lockBookSpec root
+      ResolutionStyle.Upgrading
+      |> Async.RunSynchronously
+
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("1", getLockedRev "b" solution)
+  Assert.Equal ("1", getLockedRev "c" solution)
+  ()
+
+[<Fact>]
+let ``Solver upgrades completes partial solution with latest packages`` () =
+  let cookBook = [
+    (package "a",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "c",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "c",
+      Set[ver 1; br "a"],
+      manifest [])
+  ]
+
+  let lockBookSpec = [
+    (("root", 0), [
+      ("a", 1, Set[ver 1; br "a"])
+      ("b", 1, Set[ver 1; br "a"])
+      ("c", 1, Set[ver 1; br "a"])
+    ])
+  ]
+
+  let root = manifest [
+    ("a", Exactly (br "a") )
+    ("b", Exactly (br "a") )
+    ("c", Exactly (br "a") )
+  ]
+
+  let lockBook = lockBookOf lockBookSpec
+  let rootLock = lockBook |> Map.find (packageLock ("root", 0))
+
+  let explorer = TestingSourceExplorer(cookBook, lockBook)
+  let completeSolution =
+    Solver.fromLock explorer rootLock
+    |> Async.RunSynchronously
+
+  let partialSolution = Set[package "b"] |> Solver.unlock completeSolution
+
+  let solution =
+    solve
+      partialSolution
+      cookBook lockBookSpec root
+      ResolutionStyle.Upgrading
+      |> Async.RunSynchronously
+
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("2", getLockedRev "b" solution)
+  Assert.Equal ("1", getLockedRev "c" solution)
   ()
