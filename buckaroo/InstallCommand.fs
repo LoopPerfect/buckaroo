@@ -297,11 +297,20 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
     |> Seq.append (privateRepositoriesCells |> Map.toSeq)
     |> Map.ofSeq
 
-  let buckarooSection =
+  let buckarooSectionPublic =
     manifest.Dependencies
     |> Seq.map (fun d -> d.Package)
-    |> Seq.append (lockedPackage.PrivatePackages |> Map.toSeq |> Seq.map fst)
+    |> Seq.map (fun package -> (PackageIdentifier.show package, computeCellIdentifier (List.tail parents) package |> INIString))
+
+  let buckarooSectionPrivate =
+    lockedPackage.PrivatePackages
+    |> Map.toSeq
+    |> Seq.map fst
     |> Seq.map (fun package -> (PackageIdentifier.show package, computeCellIdentifier parents package |> INIString))
+
+  let buckarooSection =
+    buckarooSectionPublic
+    |> Seq.append buckarooSectionPrivate
     |> Seq.append [ ("dependencies", dependencies) ]
     |> Seq.distinct
     |> Map.ofSeq
