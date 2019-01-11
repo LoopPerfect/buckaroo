@@ -7,6 +7,26 @@ open Buckaroo.Tasks
 open Buckaroo.RichOutput
 
 let task context (packages : List<PackageIdentifier>) = async {
+  if Seq.isEmpty packages
+  then
+    context.Console.Write (
+      (
+        "info "
+        |> text
+        |> foreground ConsoleColor.Blue
+      ) +
+      "Upgrading all packages... "
+    )
+  else
+    context.Console.Write (
+      (
+        "info "
+        |> text
+        |> foreground ConsoleColor.Blue
+      ) +
+      "Upgrading [ " + (packages |> Seq.map PackageIdentifier.show |> String.concat " ") + " ]... "
+    )
+
   if File.Exists (Constants.LockFileName)
   then
     let! lock = Tasks.readLock
