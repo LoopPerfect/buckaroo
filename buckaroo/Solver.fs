@@ -216,7 +216,7 @@ module Solver =
             | x -> state.Constraints.[f.Package].Contains x
           then resolution
           else
-            log("trying different resolution to workaround: " + f.ToString()|>text, LoggingLevel.Info)
+            log("Trying different resolution to workaround: " + f.ToString()|>text, LoggingLevel.Info)
             // we backtracked far enough, we can proceed normally...
             // TODO: remember f.Package + f.Constraint always fails
             Resolution.Error (new System.Exception (f.ToString()))
@@ -225,7 +225,7 @@ module Solver =
     |> AsyncSeq.takeWhileInclusive (fun resolution ->
       match resolution with
       | Resolution.Failure f ->
-        log("backtracking due to failure " + f.ToString()|>text, LoggingLevel.Debug)
+        log("Backtracking due to failure " + f.ToString() |> text, LoggingLevel.Debug)
         false
       | _ -> true
     )
@@ -247,7 +247,7 @@ module Solver =
       else
         let totalDeps = state.Constraints |> Map.count
         let satisfiedDepsCount = totalDeps - (unsatisfied |> Seq.length)
-        log( ("resolved " |> text) +
+        log( ("Resolved " |> text) +
           (satisfiedDepsCount.ToString() |> highlight) +
           (subtle "/") +
           (totalDeps.ToString() |> highlight),
@@ -280,17 +280,17 @@ module Solver =
               // we need to skip every branch that requires Package + Constraint
               yield Resolution.Failure x
             | NoLocationAvaiable (p, c)  ->
-              yield Resolution.Error (new System.Exception ("no location found for: " + p.ToString() + "that could satisfy: " + c.ToString()))
+              yield Resolution.Error (new System.Exception ("No location found for: " + p.ToString() + " that could satisfy: " + c.ToString()))
           | Result.Ok (package, (packageLock, versions)) ->
             try
-              log(("Exploring "|>text) + (PackageIdentifier.showRich package), LoggingLevel.Info)
+              log(("Exploring " |> text) + (PackageIdentifier.showRich package) + "...", LoggingLevel.Info)
 
               // We pre-emptively grab the lock
               let! lockTask =
                 sourceExplorer.FetchLock packageLock
                 |> Async.StartChild
 
-              log("Fetching manifest ..." |> text, LoggingLevel.Info)
+              log("Fetching manifest..." |> text, LoggingLevel.Info)
               let manifestFetchStart = System.DateTime.Now
               let! manifest = sourceExplorer.FetchManifest packageLock
               let manifestFetchEnd = System.DateTime.Now
@@ -325,9 +325,9 @@ module Solver =
               let freshHints =
                 asyncSeq {
                   try
-                    log( (text "fetching lockfile for: ") + (PackageIdentifier.showRich package), LoggingLevel.Debug)
+                    log( (text "Fetching lock-file for: ") + (PackageIdentifier.showRich package), LoggingLevel.Debug)
                     let! lock = lockTask
-                    log( (success "success ") + (text "Lockfile for ") + (PackageIdentifier.showRich package) + " fetched", LoggingLevel.Info)
+                    log( (success "success ") + (text "Fetched the lock-file for ") + (PackageIdentifier.showRich package)", LoggingLevel.Info)
                     yield!
                       lock
                       |> lockToHints
@@ -399,7 +399,7 @@ module Solver =
                 |> recoverOrFail state log
 
             with error ->
-              log("Error exploring " + (string packageLock) + "..."|>text, LoggingLevel.Debug)
+              log("Error exploring " + (string packageLock) + "..." |> text, LoggingLevel.Debug)
               log(string error|>text, LoggingLevel.Debug)
               yield Resolution.Error error
   }
