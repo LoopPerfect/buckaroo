@@ -1,8 +1,8 @@
 namespace Buckaroo
 
-open Tasks
-open Console
 open FSharp.Control
+open Buckaroo.Console
+open Buckaroo.Tasks
 
 type Command =
 | Start
@@ -22,6 +22,7 @@ module Command =
   open System
   open System.IO
   open FParsec
+  open Buckaroo.RichOutput
 
   let verboseParser : Parser<bool, Unit> = parse {
     let! maybeSkip =
@@ -81,15 +82,22 @@ module Command =
     do! CharParsers.spaces
     do! CharParsers.skipString "add"
     do! CharParsers.spaces1
+
     let! deps = Primitives.sepEndBy1 Dependency.parser CharParsers.spaces1
+
     return AddDependencies deps
   }
 
   let upgradeDepenenciesParser = parse {
-    do! CharParsers.spaces
     do! CharParsers.skipString "upgrade"
-    do! CharParsers.spaces1
-    let! packages = Primitives.sepEndBy PackageIdentifier.parser CharParsers.spaces1
+
+    let! packages =
+      (attempt >> Primitives.many)
+        <| parse {
+          do! CharParsers.spaces1
+          return! PackageIdentifier.parser
+        }
+
     return UpgradeDependencies packages
   }
 
@@ -97,7 +105,8 @@ module Command =
     do! CharParsers.spaces
     do! CharParsers.skipString "remove"
     do! CharParsers.spaces1
-    let! deps = Primitives.sepEndBy1 PackageIdentifier.parser CharParsers.spaces1
+    let! deps = Primitives.sepBy PackageIdentifier.parser CharParsers.spaces1
+    do! CharParsers.spaces
     return RemoveDependencies deps
   }
 
@@ -109,6 +118,8 @@ module Command =
   }
 
   let parser = parse {
+    do! CharParsers.spaces
+
     let! command =
       resolveParser
       <|> upgradeDepenenciesParser
@@ -122,9 +133,15 @@ module Command =
       <|> showCompletionsParser
       <|> startParser
 
+    do! CharParsers.spaces
+
     let! isVerbose = verboseParser
 
-    return (command, if isVerbose then LoggingLevel.Trace else LoggingLevel.Info)
+    do! CharParsers.spaces
+
+    let loggingLevel = if isVerbose then LoggingLevel.Trace else LoggingLevel.Info
+
+    return (command, loggingLevel)
   }
 
   let parse (x : string) =
@@ -133,8 +150,6 @@ module Command =
     | Failure(error, _, _) -> Result.Error error
 
   let add (context : Tasks.TaskContext) dependencies = async {
-    let sourceExplorer = context.SourceExplorer
-
     let! manifest = Tasks.readManifest "."
     let newManifest = {
       manifest with
@@ -143,50 +158,32 @@ module Command =
           |> Seq.append dependencies
           |> Set.ofSeq;
     }
+
     if manifest = newManifest
-    then return ()
+    then
+      return ()
     else
       let! maybeLock = async {
-        if File.Exists(Constants.LockFileName)
+        if File.Exists (Constants.LockFileName)
         then
           let! lock = Tasks.readLock
           return Some lock
         else
           return None
       }
+
       let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
+
       match resolution with
       | Resolution.Ok solution ->
         do! Tasks.writeManifest newManifest
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
         do! InstallCommand.task context
       | _ -> ()
+
       System.Console.WriteLine ("Success. ")
+
       return ()
-  }
-
-  let upgrade context (packages : List<PackageIdentifier>) = async {
-    // TODO: Roll-back on failure!
-    let! maybeLock = async {
-      if File.Exists(Constants.LockFileName)
-      then
-        let! lock = Tasks.readLock
-        let! partial =
-          if packages |> Seq.isEmpty
-          then async { return Solution.empty }
-          else async {
-            let! solution = Solver.fromLock context.SourceExplorer lock
-            return packages |> Set.ofList |> Solver.unlock solution
-          }
-
-        do! ResolveCommand.task context partial ResolutionStyle.Upgrading
-        do! InstallCommand.task context
-        return None
-      else
-        return None
-    }
-
-    return ()
   }
 
   let init context = async {
@@ -212,7 +209,7 @@ module Command =
       | Resolve -> ResolveCommand.task context Solution.empty ResolutionStyle.Quick
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
-      | UpgradeDependencies dependencies -> upgrade context dependencies
+      | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies
       | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
       | ShowCompletions -> ShowCompletions.task context
