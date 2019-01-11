@@ -325,9 +325,9 @@ module Solver =
               let freshHints =
                 asyncSeq {
                   try
-                    log( (text "Fetching lock-file for: ") + (PackageIdentifier.showRich package), LoggingLevel.Debug)
+                    log( (text "Fetching lock-file for ") + (PackageIdentifier.showRich package) + "...", LoggingLevel.Debug)
                     let! lock = lockTask
-                    log( (success "success ") + (text "Fetched the lock-file for ") + (PackageIdentifier.showRich package)", LoggingLevel.Info)
+                    log( (success "success ") + (text "Fetched the lock-file for ") + (PackageIdentifier.showRich package), LoggingLevel.Info)
                     yield!
                       lock
                       |> lockToHints
@@ -400,7 +400,7 @@ module Solver =
 
             with error ->
               log("Error exploring " + (string packageLock) + "..." |> text, LoggingLevel.Debug)
-              log(string error|>text, LoggingLevel.Debug)
+              log(string error |> text, LoggingLevel.Debug)
               yield Resolution.Error error
   }
 
