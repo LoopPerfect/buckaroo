@@ -8,13 +8,33 @@ let private defaultLoggingLevel = LoggingLevel.Info
 
 let private verboseLoggingLevel = LoggingLevel.Trace
 
+let private abcDef = Adhoc { Owner = "abc"; Project = "def" }
+let private ijkXyz = GitHub { Owner = "ijk"; Project = "xyz" }
+
 [<Fact>]
 let ``Command.parse works correctly`` () =
   let cases = [
     (Result.Ok (Command.Init, defaultLoggingLevel), "init");
+    (Result.Ok (Command.Install, defaultLoggingLevel), "   install  ");
     (Result.Ok (Command.Resolve, defaultLoggingLevel), "resolve");
     (Result.Ok (Command.Resolve, verboseLoggingLevel), "resolve --verbose");
+    (Result.Ok (Command.UpgradeDependencies [], defaultLoggingLevel), "upgrade");
+    (Result.Ok (Command.UpgradeDependencies [ abcDef ], defaultLoggingLevel), "upgrade  abc/def");
+    (Result.Ok (Command.UpgradeDependencies [], verboseLoggingLevel), "  upgrade  --verbose  ");
+    (Result.Ok (Command.UpgradeDependencies [ abcDef ], verboseLoggingLevel), "upgrade  abc/def --verbose ");
+
+    (
+      Result.Ok (Command.UpgradeDependencies [ abcDef; ijkXyz ], verboseLoggingLevel),
+      "upgrade  abc/def github.com/ijk/xyz --verbose "
+    );
   ]
 
   for (expected, input) in cases do
-    Assert.Equal(expected, Command.parse input)
+    let actual = Command.parse input
+
+    match actual with
+    | Result.Error error ->
+      System.Console.WriteLine (error + "\nfor \"" + input + "\"")
+    | _ -> ()
+
+    Assert.Equal(expected, actual)
