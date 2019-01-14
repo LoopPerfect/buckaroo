@@ -101,11 +101,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     match maybeBranchRef with
     | Some branchRef ->
       yield branchRef.Revision
-
-      let! commits = gitManager.FetchCommits url branchRef.Revision
-      yield!
-        commits
-        |> AsyncSeq.ofSeq
+      yield! gitManager.FetchCommits url branchRef.Revision
     | None -> ()
   }
 

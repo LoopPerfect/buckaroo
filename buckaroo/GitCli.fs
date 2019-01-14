@@ -4,6 +4,8 @@ open System
 open System.Text
 open Buckaroo.Console
 open RichOutput
+open FSharp.Control
+open FSharpx
 
 type GitCli (console : ConsoleManager) =
 
@@ -115,27 +117,64 @@ type GitCli (console : ConsoleManager) =
         |> Async.Ignore
     }
 
-    member this.FetchBranch (repository : String) (branch : Branch) = async {
+    member this.FetchBranch (repository : String) (branch : Branch) (depth : int) = async {
       let gitDir = repository
+      let depthStr = if depth>0 then "--depth=" + depth.ToString() + " " else ""
       let command =
         "git --no-pager -C " + gitDir +
-        " fetch origin " + branch + ":" + branch
+        " fetch origin " + depthStr + branch + ":" + branch
       do!
         runBash(command)
         |> Async.Ignore
+
+      return depth
     }
 
-    member this.FetchCommits (repository : String) (branch : Branch) : Async<Revision list> = async {
-      do! (this :> IGit).FetchBranch repository branch
-      let gitDir = repository
-      let command =
-        "git --no-pager -C " + gitDir +
-        " log " + branch + " --pretty=format:'%H'"
-      let! output = runBash(command)
-      return
-        output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
-        |> Seq.map (fun x -> x.Trim())
-        |> Seq.toList
+    member this.FetchCommits (repository : String) (branch : Branch) : AsyncSeq<Revision> = asyncSeq {
+
+      yield!
+        [0..10]
+          |> Seq.map (fun i -> 10 * pown 2 i)
+          |> Seq.map( fun depth skip -> async {
+
+              let command =
+                "git --no-pager -C " + repository +
+                " log " + branch + " --pretty=format:'%H'" + " --skip=" + skip.ToString()
+
+              let! output =
+                runBash(command)
+                |> Async.Catch
+                |> Async.map(
+                  fun x ->
+                    match x with
+                    | Choice1Of2 y -> y
+                    | Choice2Of2 _ -> ""
+                  )
+
+              let revs =
+                output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
+                |> Seq.map (fun x -> x.Trim())
+                |> Seq.toList
+
+              let! fetchNext =
+                (this :> IGit).FetchBranch repository branch ((revs|>List.length) + depth)
+                |> Async.Ignore
+                |> Async.StartChild
+              return (revs, fetchNext)
+            })
+          |> AsyncSeq.ofSeq
+          |> AsyncSeq.scanAsync
+              (fun (skip, prev, _) next -> async {
+                let! (nextList, fetchNext) = next skip
+                return (skip + (nextList |> List.length), nextList, fetchNext)
+              })
+              ( 0, List.empty, async { return () } )
+          |> AsyncSeq.collect (fun (_, revs, fetchNext) -> asyncSeq {
+            yield! revs |> AsyncSeq.ofSeq
+            do! fetchNext
+          })
+
+
     }
 
     member this.FetchCommit (repository : String) (commit : Revision) = async {

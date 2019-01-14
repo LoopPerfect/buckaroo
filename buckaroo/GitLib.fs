@@ -6,6 +6,7 @@ open LibGit2Sharp
 open LibGit2Sharp.Handlers
 open FSharpx
 open Buckaroo.Console
+open FSharp.Control
 
 type GitLib (console : ConsoleManager) =
 
@@ -181,12 +182,13 @@ type GitLib (console : ConsoleManager) =
       return! (this :> IGit).Checkout installPath revision
     }
 
-    member this.FetchBranch (repository : String) (branch : Buckaroo.Branch) = async {
+    member this.FetchBranch (repository : String) (branch : Buckaroo.Branch) (_ : int) = async {
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let options = new FetchOptions()
       options.CredentialsProvider <- credentialsHandler
       Commands.Fetch(repo, "origin", [branch + ":" + branch], options, "")
+      return 0;
     }
     member this.FetchCommit (repository : String) (commit : Revision) = async {
       do! Async.SwitchToThreadPool()
@@ -195,7 +197,8 @@ type GitLib (console : ConsoleManager) =
       options.CredentialsProvider <- credentialsHandler
       Commands.Fetch(repo, "origin", [commit + ":" + commit], options, "")
     }
-    member this.FetchCommits (repository : String) (branch : Buckaroo.Branch) : Async<Revision list> = async {
+    member this.FetchCommits (repository : String) (branch : Buckaroo.Branch) : AsyncSeq<Revision> = asyncSeq {
+      do! (this :> IGit).FetchBranch repository branch 0 |> Async.Ignore
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let filter = new CommitFilter()

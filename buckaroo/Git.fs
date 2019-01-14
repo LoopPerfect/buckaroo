@@ -1,5 +1,7 @@
 namespace Buckaroo
 
+open FSharp.Control
+
 type Branch = string
 
 type Revision = string
@@ -23,9 +25,9 @@ type IGit =
   abstract member UpdateRefs : string -> Async<Unit>
   abstract member Checkout : string -> string -> Async<Unit>
   abstract member ShallowClone : string -> string -> Async<Unit>
-  abstract member FetchBranch : string -> Branch -> Async<Unit>
+  abstract member FetchBranch : string -> Branch -> int -> Async<int>
   abstract member RemoteRefs : string -> Async<Ref list>
-  abstract member FetchCommits : string -> Branch -> Async<Revision list>
+  abstract member FetchCommits : string -> Branch -> AsyncSeq<Revision>
   abstract member FetchCommit : string -> Revision -> Async<Unit>
   abstract member HasCommit : string -> Revision -> Async<bool>
   abstract member FetchFile : string -> Revision -> string -> Async<string>
