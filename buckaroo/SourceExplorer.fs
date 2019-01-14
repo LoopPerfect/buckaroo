@@ -10,8 +10,8 @@ type ISourceExplorer =
   abstract member FetchVersions : PackageSources -> PackageIdentifier -> AsyncSeq<Version>
   abstract member FetchLocations : PackageSources -> PackageIdentifier -> Version -> AsyncSeq<PackageLocation>
   abstract member LockLocation : PackageLocation -> Async<PackageLock>
-  abstract member FetchManifest : PackageLock -> Async<Manifest>
-  abstract member FetchLock : PackageLock -> Async<Lock>
+  abstract member FetchManifest : PackageLock * Set<Version> -> Async<Manifest>
+  abstract member FetchLock : PackageLock * Set<Version> -> Async<Lock>
 
 module SourceExplorer =
   let fetchLocationsForConstraint (sourceExplorer : ISourceExplorer) locations package versionConstraint =

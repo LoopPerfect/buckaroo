@@ -11,11 +11,10 @@ open Buckaroo.Console
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =
     match lock.Packages |> Map.tryFind package with
-    | Some lockedPackage -> lockedPackage.Location
+    | Some lockedPackage -> (lockedPackage.Location, lockedPackage.Versions)
     | None ->
       new Exception("Lock file does not contain " + (PackageIdentifier.show package))
       |> raise
-
   return! sourceExplorer.FetchManifest location
 }
 
@@ -232,7 +231,7 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
     packageInstallPath [] package
     |> Paths.normalize
 
-  let! manifest = sourceExplorer.FetchManifest lockedPackage.Location
+  let! manifest = sourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
 
   let repositoriesCells =
     packages
@@ -255,7 +254,7 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
         packages
         |> Map.find dependency.Package
 
-      let! packageManifest = sourceExplorer.FetchManifest lockedPackage.Location
+      let! packageManifest = sourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
 
       let targets =
         dependency.Targets
@@ -272,7 +271,7 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
         lockedPackage.PrivatePackages
         |> Map.find dependency.Package
 
-      let! packageManifest = sourceExplorer.FetchManifest lockedPackage.Location
+      let! packageManifest = sourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
 
       let targets =
         dependency.Targets

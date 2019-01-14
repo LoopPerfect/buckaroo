@@ -102,6 +102,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     | Some branchRef ->
       yield branchRef.Revision
       yield! gitManager.FetchCommits url branchRef.Revision
+      ()
     | None -> ()
   }
 
@@ -287,7 +288,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         | _ -> ()
     }
 
-    member this.FetchManifest location =
+    member this.FetchManifest (location, versions) =
       async {
         let! content = fetchFile location Constants.ManifestFileName
         return
@@ -301,7 +302,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             |> raise
       }
 
-    member this.FetchLock location =
+    member this.FetchLock (location, versions) =
       async {
         let! maybeContent = fetchFile location Constants.LockFileName |> Async.Catch |> Async.map(Choice.toOption)
         return
