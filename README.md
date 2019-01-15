@@ -40,6 +40,7 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
  * Blazing fast resolution using clever heuristics
  * Version equivalency checks to reduce dependency conflicts
  * TOML configuration files for convenient editing by computers and humans
+ * Works offline (with a populated cache)
 
 ## Key Commands
 
