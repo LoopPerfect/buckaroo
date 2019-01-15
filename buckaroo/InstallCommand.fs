@@ -166,7 +166,7 @@ let compareReceipt (context : TaskContext) installPath location = async {
     return false
 }
 
-let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLock) = async {
+let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLock) (versions : Set<Version>) = async {
   let log x =
     x
     |> RichOutput.text
@@ -184,24 +184,33 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
   if isSame = false
   then
     log("Installing " + installPath + "... ")
+    let installFromGit url revision versions = async {
+      let hint =
+        versions
+          |> Set.toSeq
+          |> Seq.choose(fun v ->
+            match v with
+            | Version.Git (GitVersion.Branch hint) -> Some hint
+            | _ -> None)
+          |> Seq.sort
+          |> Seq.tryHead
 
-    let installFromGit url revision = async {
-      do! gitManager.FetchCommit url revision
+      do! gitManager.FindCommit url revision hint
       do! gitManager.CopyFromCache url revision installPath
     }
 
     match location with
     | GitHub gitHub ->
       let url = PackageLocation.gitHubUrl gitHub.Package
-      do! installFromGit url gitHub.Revision
+      do! installFromGit url gitHub.Revision versions
     | BitBucket bitBucket ->
       let url = PackageLocation.bitBucketUrl bitBucket.Package
-      do! installFromGit url bitBucket.Revision
+      do! installFromGit url bitBucket.Revision versions
     | PackageLock.Git git ->
-      do! installFromGit git.Url git.Revision
+      do! installFromGit git.Url git.Revision versions
     | GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
-      do! installFromGit url gitLab.Revision
+      do! installFromGit url gitLab.Revision versions
     | PackageLock.Http (http, sha256) ->
       let! pathToCache = downloadManager.DownloadToCache http.Url
       let! discoveredHash = Files.sha256 pathToCache
@@ -340,7 +349,7 @@ let rec private installPackages (context : Tasks.TaskContext) (root : string) (p
     let childParents = (parents @ [ package ])
 
     // Install child package sources
-    do! installPackageSources context installPath lockedPackage.Location
+    do! installPackageSources context installPath lockedPackage.Location lockedPackage.Versions
 
     // Install child's child (recurse)
     do! installPackages context installPath childParents lockedPackage.PrivatePackages

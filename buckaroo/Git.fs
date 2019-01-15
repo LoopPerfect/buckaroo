@@ -25,10 +25,9 @@ type IGit =
   abstract member UpdateRefs : string -> Async<Unit>
   abstract member Checkout : string -> string -> Async<Unit>
   abstract member ShallowClone : string -> string -> Async<Unit>
-  abstract member FetchBranch : string -> Branch -> int -> Async<int>
+  abstract member FetchBranch : string -> Branch -> int -> Async<Unit>
   abstract member RemoteRefs : string -> Async<Ref list>
   abstract member FetchCommits : string -> Branch -> AsyncSeq<Revision>
-  abstract member FetchCommit : string -> Revision -> Async<Unit>
   abstract member HasCommit : string -> Revision -> Async<bool>
   abstract member FetchFile : string -> Revision -> string -> Async<string>
   abstract member CheckoutTo : string -> Revision -> string -> Async<Unit>

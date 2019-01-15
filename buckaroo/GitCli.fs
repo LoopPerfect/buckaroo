@@ -126,15 +126,12 @@ type GitCli (console : ConsoleManager) =
       do!
         runBash(command)
         |> Async.Ignore
-
-      return depth
     }
 
     member this.FetchCommits (repository : String) (branch : Branch) : AsyncSeq<Revision> = asyncSeq {
-
       yield!
-        [0..10]
-          |> Seq.map (fun i -> 10 * pown 2 i)
+        [0..12]
+          |> Seq.map (fun i -> pown 2 i)
           |> Seq.map( fun depth skip -> async {
 
               let command =
@@ -173,18 +170,6 @@ type GitCli (console : ConsoleManager) =
             yield! revs |> AsyncSeq.ofSeq
             do! fetchNext
           })
-
-
-    }
-
-    member this.FetchCommit (repository : String) (commit : Revision) = async {
-      let gitDir = repository
-      let command =
-        "git -C " + gitDir +
-        " fetch origin " + commit
-      do!
-        runBash(command)
-        |> Async.Ignore
     }
 
     member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
