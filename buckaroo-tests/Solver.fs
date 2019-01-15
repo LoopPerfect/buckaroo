@@ -102,7 +102,7 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
       return x.Value
     }
 
-    member this.FetchManifest (lock : PackageLock) : Async<Manifest> = async {
+    member this.FetchManifest (lock : PackageLock, _: Set<Version>): Async<Manifest> = async {
       let x =
         match lock with
         | PackageLock.GitHub g ->
@@ -115,7 +115,7 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
       return x |> Option.get
     }
 
-    member this.FetchLock (lock : PackageLock) : Async<Lock> = async {
+    member this.FetchLock (lock : PackageLock, _: Set<Version>): Async<Lock> = async {
       return lockBook |> Map.find lock
     }
 
