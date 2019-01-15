@@ -95,14 +95,14 @@ module Constraint =
     | (y, Complement c) ->
       compare c y
 
-  let rec show ( c : Constraint) : string =
+  let rec show (c : Constraint) : string =
     match c with
     | Exactly v -> Version.show v
     | Complement c -> "!" + show c
     | Any xs ->
       "any(" +
       (xs
-        |> Seq.map (fun x -> show x)
+        |> Seq.map show
         |> String.concat " ") +
       ")"
     | All xs ->
@@ -111,7 +111,7 @@ module Constraint =
       else
         "all(" +
         (xs
-          |> Seq.map (fun x -> show x)
+          |> Seq.map show
           |> String.concat " ") +
         ")"
     | Range (op, v) -> (string op) + (string v)

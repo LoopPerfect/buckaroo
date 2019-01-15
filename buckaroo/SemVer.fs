@@ -35,8 +35,10 @@ module SemVer =
       then [ x.Major; x.Minor; x.Patch ]
       else [ x.Major; x.Minor; x.Patch; x.Increment ]
     elements
-      |> Seq.map (fun x -> string x)
+      |> Seq.map string
       |> String.concat "."
+
+  let ToString (x : SemVer) = show x
 
   let integerParser = parse {
     let! digits = CharParsers.digit |> Primitives.many1

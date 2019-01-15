@@ -375,25 +375,32 @@ module Manifest =
               |> Seq.map (fun (version, h) ->
                 "[[location]]\n" +
                 "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
-                "version = \"" + version.ToString() + "\"\n" +
-                "url = \"" + h.Url + "\"" +
+                "version = \"" + (Version.show version) + "\"\n" +
+                "url = \"" + h.Url + "\"\n" +
                 (h.StripPrefix
-                  |> Option.map(fun p -> "strip_prefix = \"" + p + "\"")
+                  |> Option.map(fun p -> "strip_prefix = \"" + p + "\"\n")
                   |> Option.defaultValue("")) +
                 (h.Type
-                  |> Option.map(fun t -> "type = \"" + t.ToString() + "\"")
+                  |> Option.map(fun t -> "type = \"" + t.ToString() + "\"\n")
                   |> Option.defaultValue(""))
               )
               |> String.concat "\n"
       )
       |> String.concat "\n"
-    ) +
+    ) + "\n" +
     (
-      x.Dependencies
-      |> Seq.map (fun x ->
+      Seq.append
+        (x.Dependencies
+          |> Seq.map(fun x -> (false, x)))
+        (x.PrivateDependencies
+          |> Seq.map(fun x -> (true, x)))
+      |> Seq.map (fun (isPrivate, x) ->
         "[[dependency]]\n" +
         "package = \"" + PackageIdentifier.show x.Package + "\"\n" +
         "version = \"" + Constraint.show x.Constraint + "\"\n" +
+        (if isPrivate
+         then "private = true\n"
+         else "") +
         (
           match x.Targets with
           | Some ts ->

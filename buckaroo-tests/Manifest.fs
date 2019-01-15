@@ -5,6 +5,7 @@ open Xunit
 
 open Buckaroo
 open Buckaroo.Tests
+open Buckaroo
 
 [<Fact>]
 let ``Manifest.parse works correctly`` () =
@@ -74,3 +75,37 @@ let ``Manifest.parse works correctly`` () =
   for (input, expected) in cases do
     let actual = Manifest.parse input
     Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``Manifest.toToml roundtrip`` () =
+  let expected : Manifest = {
+    Targets = Set [
+      {Folders=["foo"; "bar"]; Name = "xxx"}
+      {Folders=["foo"; "bar"]; Name = "yyy"}
+    ]
+    Tags = Set ["c++"; "java"; "ml"]
+    Locations = Map.ofSeq [
+      ({Owner = "test"; Project = "test1"}, PackageSource.Http (Map.ofSeq [
+        (Version.SemVer SemVer.zero, {
+          Url = "https://test.com"
+          StripPrefix = Some "prefix"
+          Type = Some ArchiveType.Zip
+        })
+      ]))
+    ]
+    Dependencies = Set [{
+      Targets = Some ([{Folders=["foo"; "bar"]; Name = "xxx"}])
+      Constraint = All [Constraint.Exactly (Version.SemVer SemVer.zero)]
+      Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
+    }]
+    PrivateDependencies = Set [{
+      Targets = Some ([{Folders=["foo"; "bar"]; Name = "yyy"}])
+      Constraint = Any [Constraint.Exactly (Version.SemVer SemVer.zero)]
+      Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
+    }]
+  }
+
+  let actual =  expected |> Manifest.toToml |> Manifest.parse
+
+  Assert.Equal (Result.Ok expected, actual)
