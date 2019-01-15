@@ -107,6 +107,7 @@ let ``Manifest.toToml roundtrip`` () =
   }
 
   let actual = expected |> Manifest.toToml |> Manifest.parse
+  System.Console.WriteLine (expected |> Manifest.toToml)
   match actual with
   | Result.Ok o -> System.Console.WriteLine (o.ToString())
   | Result.Error e -> System.Console.WriteLine (e.ToString())
