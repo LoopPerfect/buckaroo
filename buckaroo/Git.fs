@@ -29,7 +29,7 @@ type IGit =
   abstract member RemoteRefs : string -> Async<Ref list>
   abstract member FetchCommits : string -> Branch -> AsyncSeq<Revision>
   abstract member HasCommit : string -> Revision -> Async<bool>
-  abstract member FetchFile : string -> Revision -> string -> Async<string>
+  abstract member ReadFile : string -> Revision -> string -> Async<string>
   abstract member CheckoutTo : string -> Revision -> string -> Async<Unit>
 
 module Git =

@@ -10,9 +10,9 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let toOptional = Async.Catch >> (Async.map Choice.toOption)
 
   let fromFileCache url revision path =
-    gitManager.FetchFile url revision path |> toOptional
+    gitManager.getFile url revision path |> toOptional
 
-  let cacheOrGit (f: string->string->Async<string>, url : string, rev : string, path : string) = async {
+  let cacheOrApi (f: string->string->Async<string>, url : string, rev : string, path : string) = async {
     let! cached = fromFileCache url rev path
     match cached with
     | Some data -> return data
@@ -63,16 +63,16 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     match location with
     | PackageLock.BitBucket bitBucket ->
       let url = PackageLocation.gitHubUrl bitBucket.Package
-      cacheOrGit (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
+      cacheOrApi (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
     | PackageLock.GitHub gitHub ->
       let url = PackageLocation.gitHubUrl gitHub.Package
-      cacheOrGit (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
+      cacheOrApi (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
     | PackageLock.GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
-      cacheOrGit (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
+      cacheOrApi (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
     | PackageLock.Git git ->
       let url = git.Url
-      cacheOrGit(gitManager.FetchFile git.Url, url, git.Revision, path)
+      cacheOrApi(gitManager.getFile git.Url, url, git.Revision, path)
     | PackageLock.Http (http, _) ->
       extractFileFromHttp http path
 

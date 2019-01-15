@@ -240,7 +240,6 @@ module Solver =
       findUnsatisfied state.Solution state.Constraints
       |> Seq.toList
 
-
     if Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution

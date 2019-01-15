@@ -139,7 +139,7 @@ type GitCli (console : ConsoleManager) =
                 " log " + branch + " --pretty=format:'%H'" + " --skip=" + skip.ToString()
 
               let! output =
-                runBash(command)
+                runBash (command)
                 |> Async.Catch
                 |> Async.map(
                   fun x ->
@@ -154,7 +154,7 @@ type GitCli (console : ConsoleManager) =
                 |> Seq.toList
 
               let! fetchNext =
-                (this :> IGit).FetchBranch repository branch ((revs|>List.length) + depth)
+                (this :> IGit).FetchBranch repository branch <| (List.length revs) + depth
                 |> Async.Ignore
                 |> Async.StartChild
               return (revs, fetchNext)
@@ -172,7 +172,7 @@ type GitCli (console : ConsoleManager) =
           })
     }
 
-    member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
+    member this.ReadFile (repository : String) (commit : Revision) (path : String) = async {
       let gitDir = repository
       let command =
         "git -C " + gitDir +

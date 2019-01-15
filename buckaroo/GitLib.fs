@@ -224,7 +224,7 @@ type GitLib (console : ConsoleManager) =
         |> Seq.toList
     }
 
-    member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
+    member this.ReadFile (repository : String) (commit : Revision) (path : String) = async {
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let blob = repo.Lookup<Commit>(commit)
