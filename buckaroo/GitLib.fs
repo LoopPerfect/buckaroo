@@ -206,7 +206,11 @@ type GitLib (console : ConsoleManager) =
 
     member this.RemoteRefs (url : String) = async {
       do! Async.SwitchToThreadPool()
+      System.Console.WriteLine url
       return Repository.ListRemoteReferences(url)
+        |> Seq.filter(fun ref ->
+          ref.CanonicalName.Contains("refs/tags/") ||
+          ref.CanonicalName.Contains("refs/heads/"))
         |> Seq.map(fun ref ->
           let isTag = ref.CanonicalName.Contains("refs/tags/")
           match isTag with
