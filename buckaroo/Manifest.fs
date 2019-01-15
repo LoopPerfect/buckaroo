@@ -375,19 +375,19 @@ module Manifest =
               |> Seq.map (fun (version, h) ->
                 "[[location]]\n" +
                 "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
-                "version = \"" + version.ToString() + "\"\n" +
-                "url = \"" + h.Url + "\"" +
+                "version = \"" + (Version.show version) + "\"\n" +
+                "url = \"" + h.Url + "\"\n" +
                 (h.StripPrefix
-                  |> Option.map(fun p -> "strip_prefix = \"" + p + "\"")
+                  |> Option.map(fun p -> "strip_prefix = \"" + p + "\"\n")
                   |> Option.defaultValue("")) +
                 (h.Type
-                  |> Option.map(fun t -> "type = \"" + t.ToString() + "\"")
+                  |> Option.map(fun t -> "type = \"" + t.ToString() + "\"\n")
                   |> Option.defaultValue(""))
               )
               |> String.concat "\n"
       )
       |> String.concat "\n"
-    ) +
+    ) + "\n" +
     (
       Seq.append
         (x.Dependencies

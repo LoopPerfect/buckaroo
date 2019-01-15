@@ -81,12 +81,12 @@ let ``Manifest.parse works correctly`` () =
 let ``Manifest.toToml roundtrip`` () =
   let expected : Manifest = {
     Targets = Set [
-      {Folders=["foo"; "bar"]; Name = "//xxx"}
-      {Folders=["foo"; "bar"]; Name = "//yyy"}
+      {Folders=["foo"; "bar"]; Name = "xxx"}
+      {Folders=["foo"; "bar"]; Name = "yyy"}
     ]
-    Tags = Set ["c++"; "java"; "ml" ]
+    Tags = Set ["c++"; "java"; "ml"]
     Locations = Map.ofSeq [
-      ({Owner="Test"; Project="Test1"}, PackageSource.Http (Map.ofSeq [
+      ({Owner = "test"; Project = "test1"}, PackageSource.Http (Map.ofSeq [
         (Version.SemVer SemVer.zero, {
           Url = "https://test.com"
           StripPrefix = Some "prefix"
@@ -95,21 +95,17 @@ let ``Manifest.toToml roundtrip`` () =
       ]))
     ]
     Dependencies = Set [{
-      Targets = Some ([])
-      Constraint = Constraint.Exactly (Version.SemVer SemVer.zero)
+      Targets = Some ([{Folders=["foo"; "bar"]; Name = "xxx"}])
+      Constraint = All [Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
     }]
     PrivateDependencies = Set [{
-      Targets = Some ([])
-      Constraint = Constraint.Exactly (Version.SemVer SemVer.zero)
+      Targets = Some ([{Folders=["foo"; "bar"]; Name = "yyy"}])
+      Constraint = Any [Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
     }]
   }
 
-  let actual = expected |> Manifest.toToml |> Manifest.parse
-  System.Console.WriteLine (expected |> Manifest.toToml)
-  match actual with
-  | Result.Ok o -> System.Console.WriteLine (o.ToString())
-  | Result.Error e -> System.Console.WriteLine (e.ToString())
-  Assert.Equal(Result.Ok expected, actual)
-  ()
+  let actual =  expected |> Manifest.toToml |> Manifest.parse
+
+  Assert.Equal (Result.Ok expected, actual)
