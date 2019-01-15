@@ -45,27 +45,25 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
     while true do
       let! message = inbox.Receive()
-      let (CloneRequest(url, replyChannel)) = message
-      match cloneCache |> Map.tryFind url with
-      | Some task ->
-        replyChannel.Reply(task)
-      | None ->
-        let targetDirectory = cloneFolderName url
-        let task =
-          async {
-            if Directory.Exists targetDirectory |> not
-            then
-              do! git.ShallowClone url targetDirectory
-            return targetDirectory
-          }
-          |> Async.Cache
-        cloneCache <- cloneCache |> Map.add url task
-        replyChannel.Reply(task)
+      match message with
+      | CloneRequest (url, replyChannel) ->
+        match cloneCache |> Map.tryFind url with
+        | Some task ->
+          replyChannel.Reply(task)
+        | None ->
+          let targetDirectory = cloneFolderName url
+          let task =
+            async {
+              if Directory.Exists targetDirectory |> not
+              then
+                do! git.ShallowClone url targetDirectory
+              return targetDirectory
+            }
+            |> Async.Cache
+          cloneCache <- cloneCache |> Map.add url task
+          replyChannel.Reply(task)
   })
 
-  member private this.getBranchHint (targetDirectory : string)= async {
-    return! this.DefaultBranch targetDirectory
-  }
   member this.Clone (url : string) : Async<string> = async {
     let! res = mailboxCloneProcessor.PostAndAsyncReply(fun ch -> CloneRequest(url, ch))
     return! res
@@ -74,26 +72,36 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
   member this.CopyFromCache (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
     let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git/"))
     if hasGit then
-      do! git.Unshallow installPath
+      do! git.UpdateRefs installPath
       return! git.Checkout installPath revision
     else
       do! git.CheckoutTo (cloneFolderName gitUrl) revision installPath
   }
 
-  member this.FetchCommit (url : string) (commit : string) : Async<Unit> = async {
+  member this.FindCommit (url : string) (commit : string) (maybeBranchHint : Option<string>) : Async<Unit> = async {
     let! targetDirectory = this.Clone(url)
     let operations = asyncSeq {
       yield async { return () };
 
       yield async { git.UpdateRefs targetDirectory |> ignore }
 
-      let! branchHint = this.getBranchHint targetDirectory
-      yield git.FetchBranch targetDirectory branchHint
-
-      if branchHint <> "master" then
+      match maybeBranchHint with
+      | Some branch ->
         yield
-          git.FetchBranch targetDirectory "master"
-          |> Async.Catch
+          git.FetchCommits targetDirectory branch
+          |> AsyncSeq.takeWhile ( (<>) commit )
+          |> AsyncSeq.toListAsync
+          |> Async.Ignore
+      | None ->
+        let! defaultBranch = git.DefaultBranch targetDirectory
+        yield
+          AsyncSeq.interleave
+            (if defaultBranch <> "master"
+             then this.FetchCommits targetDirectory "master"
+             else AsyncSeq.ofSeq [])
+            (this.FetchCommits targetDirectory defaultBranch)
+          |> AsyncSeq.takeWhile ( (<>) commit )
+          |> AsyncSeq.toListAsync
           |> Async.Ignore
 
       yield git.Unshallow targetDirectory;
@@ -110,12 +118,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
     if not success then
       raise <| new Exception("failed to fetch: " + url + " " + commit)
   }
-  member this.FetchBranch (url : string) (branch : string) : Async<Unit> = async {
-    let! targetDirectory = this.Clone(url)
-    return!
-      git.FetchBranch targetDirectory branch
-      |> Async.Ignore
-  }
+
   member this.FetchRefs (url : string) = async {
     match refsCache |> Map.tryFind url with
     | Some refs -> return refs
@@ -149,17 +152,16 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
           ((endTime-startTime).TotalSeconds.ToString("N3")|>info), LoggingLevel.Info)
       return refs
   }
-  member this.FetchFile (url : string) (revision : Revision) (file : string) : Async<string> =
+  member this.getFile (url : string) (revision : Revision) (file : string) : Async<string> =
     async {
-      let! targetDirectory = this.Clone(url)
-      do! this.FetchCommit url revision
-      return! git.FetchFile targetDirectory revision file
+      let targetDirectory = cloneFolderName(url)
+      // TODO: preemptivly clone and fetch
+      return! git.ReadFile targetDirectory revision file
     }
 
-  member this.FetchCommits (url : string) (branch : Branch) = async {
+  member this.FetchCommits (url : string) (branch : Branch) = asyncSeq {
     let! targetDirectory = this.Clone(url)
-    do! git.FetchBranch targetDirectory branch
-    return! git.FetchCommits targetDirectory branch
+    yield! git.FetchCommits targetDirectory branch
   }
 
   member this.DefaultBranch (path) = async {

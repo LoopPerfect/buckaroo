@@ -10,13 +10,13 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let toOptional = Async.Catch >> (Async.map Choice.toOption)
 
   let fromFileCache url revision path =
-    gitManager.FetchFile url revision path |> toOptional
+    gitManager.getFile url revision path |> toOptional
 
-  let cacheOrGit (f: string->string->Async<string>, url : string, rev : string, path : string) = async {
+  let cacheOrApi (api, url : string, rev : string, path : string) = async {
     let! cached = fromFileCache url rev path
     match cached with
     | Some data -> return data
-    | None -> return! f rev path
+    | None -> return! api rev path
   }
 
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
@@ -63,16 +63,16 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     match location with
     | PackageLock.BitBucket bitBucket ->
       let url = PackageLocation.gitHubUrl bitBucket.Package
-      cacheOrGit (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
+      cacheOrApi (BitBucketApi.fetchFile bitBucket.Package, url, bitBucket.Revision, path)
     | PackageLock.GitHub gitHub ->
       let url = PackageLocation.gitHubUrl gitHub.Package
-      cacheOrGit (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
+      cacheOrApi (GitHubApi.fetchFile gitHub.Package, url, gitHub.Revision, path)
     | PackageLock.GitLab gitLab ->
       let url = PackageLocation.gitLabUrl gitLab.Package
-      cacheOrGit (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
+      cacheOrApi (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
     | PackageLock.Git git ->
       let url = git.Url
-      cacheOrGit(gitManager.FetchFile git.Url, url, git.Revision, path)
+      cacheOrApi(gitManager.getFile git.Url, url, git.Revision, path)
     | PackageLock.Http (http, _) ->
       extractFileFromHttp http path
 
@@ -101,11 +101,8 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     match maybeBranchRef with
     | Some branchRef ->
       yield branchRef.Revision
-
-      let! commits = gitManager.FetchCommits url branchRef.Revision
-      yield!
-        commits
-        |> AsyncSeq.ofSeq
+      yield! gitManager.FetchCommits url branchRef.Revision
+      ()
     | None -> ()
   }
 
@@ -291,7 +288,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         | _ -> ()
     }
 
-    member this.FetchManifest location =
+    member this.FetchManifest (location, versions) =
       async {
         let! content = fetchFile location Constants.ManifestFileName
         return
@@ -305,7 +302,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             |> raise
       }
 
-    member this.FetchLock location =
+    member this.FetchLock (location, versions) =
       async {
         let! maybeContent = fetchFile location Constants.LockFileName |> Async.Catch |> Async.map(Choice.toOption)
         return

@@ -240,7 +240,6 @@ module Solver =
       findUnsatisfied state.Solution state.Constraints
       |> Seq.toList
 
-
     if Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution
@@ -287,12 +286,12 @@ module Solver =
 
               // We pre-emptively grab the lock
               let! lockTask =
-                sourceExplorer.FetchLock packageLock
+                sourceExplorer.FetchLock (packageLock, versions)
                 |> Async.StartChild
 
               log("Fetching manifest..." |> text, LoggingLevel.Info)
               let manifestFetchStart = System.DateTime.Now
-              let! manifest = sourceExplorer.FetchManifest packageLock
+              let! manifest = sourceExplorer.FetchManifest (packageLock, versions)
               let manifestFetchEnd = System.DateTime.Now
               log((success "success ") +
                   ("Manifest fetched in " |> text) +
@@ -459,7 +458,7 @@ module Solver =
 
   let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Solution> = async {
     let rec packageLockToSolution (locked : LockedPackage) : Async<ResolvedVersion * Solution> = async {
-      let! manifest = sourceExplorer.FetchManifest locked.Location
+      let! manifest = sourceExplorer.FetchManifest (locked.Location, locked.Versions)
       let! resolutions =
         locked.PrivatePackages
           |> Map.toSeq

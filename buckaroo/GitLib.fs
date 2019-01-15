@@ -6,6 +6,7 @@ open LibGit2Sharp
 open LibGit2Sharp.Handlers
 open FSharpx
 open Buckaroo.Console
+open FSharp.Control
 
 type GitLib (console : ConsoleManager) =
 
@@ -92,6 +93,12 @@ type GitLib (console : ConsoleManager) =
 
     return ()
   }
+
+  let isTag (ref: LibGit2Sharp.Reference) =
+    ref.CanonicalName.Contains("refs/tags/")
+
+  let isHead (ref: LibGit2Sharp.Reference) =
+    ref.CanonicalName.Contains("refs/heads/")
 
   member this.Init (directory : string) = async {
     Repository.Init (directory, true) |> ignore
@@ -181,21 +188,16 @@ type GitLib (console : ConsoleManager) =
       return! (this :> IGit).Checkout installPath revision
     }
 
-    member this.FetchBranch (repository : String) (branch : Buckaroo.Branch) = async {
+    member this.FetchBranch (repository : String) (branch : Buckaroo.Branch) (_ : int) = async {
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let options = new FetchOptions()
       options.CredentialsProvider <- credentialsHandler
       Commands.Fetch(repo, "origin", [branch + ":" + branch], options, "")
     }
-    member this.FetchCommit (repository : String) (commit : Revision) = async {
-      do! Async.SwitchToThreadPool()
-      let repo = new Repository (repository)
-      let options = new FetchOptions()
-      options.CredentialsProvider <- credentialsHandler
-      Commands.Fetch(repo, "origin", [commit + ":" + commit], options, "")
-    }
-    member this.FetchCommits (repository : String) (branch : Buckaroo.Branch) : Async<Revision list> = async {
+
+    member this.FetchCommits (repository : String) (branch : Buckaroo.Branch) : AsyncSeq<Revision> = asyncSeq {
+      do! (this :> IGit).FetchBranch repository branch 0
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let filter = new CommitFilter()
@@ -208,27 +210,28 @@ type GitLib (console : ConsoleManager) =
         |> Seq.toList
     }
 
+
     member this.RemoteRefs (url : String) = async {
       do! Async.SwitchToThreadPool()
       return Repository.ListRemoteReferences(url)
+        |> Seq.filter(fun ref -> isHead ref || isTag ref)
         |> Seq.map(fun ref ->
-          let isTag = ref.CanonicalName.Contains("refs/tags/")
-          match isTag with
+          match isTag ref with
           | true -> {
               Type = RefType.Tag
               Revision = ref.TargetIdentifier;
               Name = ref.CanonicalName.Substring("refs/tags/".Length);
             }
           | false -> {
-            Type = RefType.Branch
-            Revision = ref.TargetIdentifier;
-            Name = ref.CanonicalName.Substring("refs/heads/".Length);
+              Type = RefType.Branch
+              Revision = ref.TargetIdentifier;
+              Name = ref.CanonicalName.Substring("refs/heads/".Length);
             }
           )
         |> Seq.toList
     }
 
-    member this.FetchFile (repository : String) (commit : Revision) (path : String) = async {
+    member this.ReadFile (repository : String) (commit : Revision) (path : String) = async {
       do! Async.SwitchToThreadPool()
       let repo = new Repository (repository)
       let blob = repo.Lookup<Commit>(commit)
