@@ -7,6 +7,60 @@ open Buckaroo
 open Buckaroo.BuckConfig
 open Buckaroo.Tasks
 open Buckaroo.Console
+open Buckaroo.RichOutput
+
+type Logger =
+  {
+    Info : string -> Unit
+    Success : string -> Unit
+    Trace : string -> Unit
+    Warning : string -> Unit
+    Error : string -> Unit
+  }
+
+let private createLogger (console : ConsoleManager) =
+  let prefix =
+    "info "
+    |> text
+    |> foreground ConsoleColor.Blue
+
+  let info (x : string) =
+    console.Write (prefix + x, LoggingLevel.Info)
+
+  let prefix =
+    "success "
+    |> text
+    |> foreground ConsoleColor.Green
+
+  let success (x : string) =
+    console.Write (prefix + x, LoggingLevel.Info)
+
+  let trace (x : string) =
+    console.Write (x, LoggingLevel.Trace)
+
+  let prefix =
+    "warning "
+    |> text
+    |> foreground ConsoleColor.Yellow
+
+  let warning (x : string) =
+    console.Write (prefix + x, LoggingLevel.Info)
+
+  let prefix =
+    "error "
+    |> text
+    |> foreground ConsoleColor.Red
+
+  let error (x : string) =
+    console.Write (prefix + x, LoggingLevel.Info)
+
+  {
+    Info = info;
+    Success = success;
+    Trace = trace;
+    Warning = warning;
+    Error = error;
+  }
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =
@@ -15,6 +69,7 @@ let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplore
     | None ->
       new Exception("Lock file does not contain " + (PackageIdentifier.show package))
       |> raise
+
   return! sourceExplorer.FetchManifest location
 }
 
@@ -31,6 +86,7 @@ let private fetchDependencyTargets (lock : Lock) (sourceExplorer : ISourceExplor
             let! manifest = fetchManifestFromLock lock sourceExplorer d.Package
             return manifest.Targets |> Set.toSeq
           }
+
       return
         targets
         |> Seq.map (fun target ->
@@ -38,6 +94,7 @@ let private fetchDependencyTargets (lock : Lock) (sourceExplorer : ISourceExplor
         )
     })
     |> Async.Parallel
+
   return
     targetIdentifiers
     |> Seq.collect id
@@ -136,54 +193,54 @@ let writeReceipt (installPath : string) (packageLock : PackageLock) = async {
   do! Files.writeFile receiptPath receipt
 }
 
-let compareReceipt (context : TaskContext) installPath location = async {
+let private compareReceipt logger installPath location = async {
   let receiptPath = getReceiptPath installPath
 
   if File.Exists receiptPath
   then
-    context.Console.Write("Reading receipt at " + receiptPath, LoggingLevel.Trace)
+    logger.Trace("Reading receipt at " + receiptPath + "...")
+
     let! content = Files.readFile receiptPath
     let maybePackageLocation =
       content
       |> Toml.parse
       |> Result.mapError Toml.TomlError.show
       |> Result.bind PackageLock.fromToml
+
     match maybePackageLocation with
     | Result.Ok receiptLocation ->
       if receiptLocation = location
       then
         return true
       else
-        context.Console.Write("Outdated receipt at " + installPath, LoggingLevel.Trace)
+        logger.Info("The receipt at " + installPath + " is outdated. ")
+
         return false
     | Result.Error error ->
-      context.Console.Write(error, LoggingLevel.Debug)
-      context.Console.Write("Invalid receipt at " + receiptPath + "; it will be deleted. ", LoggingLevel.Info)
+      logger.Trace(error)
+      logger.Warning("Invalid receipt at " + receiptPath + "; it will be deleted. ")
+
       do! Files.delete receiptPath
+
       return false
   else
-    context.Console.Write("No receipt found for " + installPath, LoggingLevel.Trace)
+    logger.Info("No receipt found for " + installPath + "; it will be installed. ")
+
     return false
 }
 
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLock) (versions : Set<Version>) = async {
-  let log x =
-    x
-    |> RichOutput.text
-    |> context.Console.Write
-
-  let logSuccess x =
-    x
-    |> RichOutput.text
-    |> RichOutput.foreground ConsoleColor.Green
-    |> context.Console.Write
+  let logger = createLogger context.Console
 
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
-  let! isSame = compareReceipt context installPath location
-  if isSame = false
+  let! isSame = compareReceipt logger installPath location
+
+  if isSame
   then
-    log("Installing " + installPath + "... ")
+    logger.Success (installPath + " is already up-to-date. ")
+  else
+    logger.Info ("Installing " + installPath + "... ")
     let installFromGit url revision versions = async {
       let hint =
         versions
@@ -222,11 +279,9 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
       do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
       do! Files.mkdirp installPath
       do! Archive.extractTo pathToCache installPath http.StripPrefix
-    log ("Writing installation receipt for " + installPath + "... ")
+    logger.Info ("Writing an installation receipt for " + installPath + "... ")
     do! writeReceipt installPath location
-    logSuccess ("Installed " + installPath)
-  else
-    logSuccess (installPath + " is already up-to-date")
+    logger.Success ("Installed " + installPath)
 }
 
 let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : PackageIdentifier list) lockedPackage packages (pathToCell : string) = async {
@@ -408,15 +463,21 @@ let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Loc
     |> Map.add "buckaroo" buckarooSection
     |> Map.add "repositories" repositoriesSection
 
-  do! Files.mkdirp (Path.Combine(root, ".buckconfig.d"))
-  do! Files.writeFile (Path.Combine(root, ".buckconfig.d", ".buckconfig.buckaroo")) (BuckConfig.render config)
+  do! Files.mkdirp (Path.Combine (root, ".buckconfig.d"))
+  do! Files.writeFile (Path.Combine (root, ".buckconfig.d", ".buckconfig.buckaroo")) (BuckConfig.render config)
 }
 
 let task (context : Tasks.TaskContext) = async {
+  let logger = createLogger context.Console
+
+  logger.Info "Installing packages..."
+
   let! lock = Tasks.readLock
 
   do! installPackages context "." [] lock.Packages
   do! writeTopLevelFiles context "." lock
+
+  logger.Success "The packages folder is now up-to-date. "
 
   return ()
 }
