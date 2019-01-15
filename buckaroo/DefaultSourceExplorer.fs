@@ -12,11 +12,11 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let fromFileCache url revision path =
     gitManager.getFile url revision path |> toOptional
 
-  let cacheOrApi (f: string->string->Async<string>, url : string, rev : string, path : string) = async {
+  let cacheOrApi (api, url : string, rev : string, path : string) = async {
     let! cached = fromFileCache url rev path
     match cached with
     | Some data -> return data
-    | None -> return! f rev path
+    | None -> return! api rev path
   }
 
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {

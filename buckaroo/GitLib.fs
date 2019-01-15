@@ -94,6 +94,12 @@ type GitLib (console : ConsoleManager) =
     return ()
   }
 
+  let isTag (ref: LibGit2Sharp.Reference) =
+    ref.CanonicalName.Contains("refs/tags/")
+
+  let isHead (ref: LibGit2Sharp.Reference) =
+    ref.CanonicalName.Contains("refs/heads/")
+
   member this.Init (directory : string) = async {
     Repository.Init (directory, true) |> ignore
   }
@@ -204,25 +210,22 @@ type GitLib (console : ConsoleManager) =
         |> Seq.toList
     }
 
+
     member this.RemoteRefs (url : String) = async {
       do! Async.SwitchToThreadPool()
-      System.Console.WriteLine url
       return Repository.ListRemoteReferences(url)
-        |> Seq.filter(fun ref ->
-          ref.CanonicalName.Contains("refs/tags/") ||
-          ref.CanonicalName.Contains("refs/heads/"))
+        |> Seq.filter(fun ref -> isHead ref || isTag ref)
         |> Seq.map(fun ref ->
-          let isTag = ref.CanonicalName.Contains("refs/tags/")
-          match isTag with
+          match isTag ref with
           | true -> {
               Type = RefType.Tag
               Revision = ref.TargetIdentifier;
               Name = ref.CanonicalName.Substring("refs/tags/".Length);
             }
           | false -> {
-            Type = RefType.Branch
-            Revision = ref.TargetIdentifier;
-            Name = ref.CanonicalName.Substring("refs/heads/".Length);
+              Type = RefType.Branch
+              Revision = ref.TargetIdentifier;
+              Name = ref.CanonicalName.Substring("refs/heads/".Length);
             }
           )
         |> Seq.toList

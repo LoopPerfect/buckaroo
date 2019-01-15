@@ -119,7 +119,10 @@ type GitCli (console : ConsoleManager) =
 
     member this.FetchBranch (repository : String) (branch : Branch) (depth : int) = async {
       let gitDir = repository
-      let depthStr = if depth>0 then "--depth=" + depth.ToString() + " " else ""
+      let depthStr =
+        if depth > 0
+        then "--depth=" + (string depth) + " "
+        else ""
       let command =
         "git --no-pager -C " + gitDir +
         " fetch origin " + depthStr + branch + ":" + branch
