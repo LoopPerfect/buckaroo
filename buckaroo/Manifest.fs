@@ -389,11 +389,18 @@ module Manifest =
       |> String.concat "\n"
     ) +
     (
-      x.Dependencies
-      |> Seq.map (fun x ->
+      Seq.append
+        (x.Dependencies
+          |> Seq.map(fun x -> (false, x)))
+        (x.PrivateDependencies
+          |> Seq.map(fun x -> (true, x)))
+      |> Seq.map (fun (isPrivate, x) ->
         "[[dependency]]\n" +
         "package = \"" + PackageIdentifier.show x.Package + "\"\n" +
         "version = \"" + Constraint.show x.Constraint + "\"\n" +
+        (if isPrivate
+         then "private = true\n"
+         else "") +
         (
           match x.Targets with
           | Some ts ->
