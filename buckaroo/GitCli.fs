@@ -6,6 +6,7 @@ open Buckaroo.Console
 open RichOutput
 open FSharp.Control
 open FSharpx
+open Bash
 
 type GitCli (console : ConsoleManager) =
 
@@ -132,9 +133,24 @@ type GitCli (console : ConsoleManager) =
       let command =
         "git --no-pager -C " + gitDir +
         " fetch origin " + depthStr + branch + ":" + branch
-      do!
-        runBash command
-        |> Async.Ignore
+
+      try
+        do!
+          runBash command
+          |> Async.Ignore
+      with
+        | :? BashException as error ->
+          if error.ExitCode = 1
+          then
+            // Delete the branch and try again
+            // Seems like commits are cached (TODO: verify this)
+            do!
+              runBash ("git -C " + gitDir + " branch -D " + branch)
+              |> Async.Ignore
+
+            do!
+              runBash command
+              |> Async.Ignore
     }
 
     member this.FetchCommits (repository : String) (branch : Branch) : AsyncSeq<Revision> = asyncSeq {
