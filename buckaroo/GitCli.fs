@@ -12,6 +12,7 @@ type GitCli (console : ConsoleManager) =
   let log = namespacedLogger console "git"
 
   let nl = System.Environment.NewLine
+
   let runBash command = async {
     let rt =
       (
@@ -24,11 +25,15 @@ type GitCli (console : ConsoleManager) =
         |> RichOutput.text
         |> RichOutput.foreground ConsoleColor.White
       )
+
     console.Write (rt, LoggingLevel.Debug)
+
     let stdout = new StringBuilder()
+
     do!
       Bash.runBashSync command (stdout.Append >> ignore) ignore
       |> Async.Ignore
+
     return stdout.ToString()
   }
 
@@ -37,10 +42,9 @@ type GitCli (console : ConsoleManager) =
 
   member this.LocalTags (repository : String) = async {
     let gitDir = repository
-    let command =
-      "--no-pager -C " + gitDir +
-      " tag"
-    let! output = runBash(command)
+    let command = "git --no-pager -C " + gitDir + " tag"
+
+    let! output = runBash command
 
     return
       output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
@@ -53,7 +57,7 @@ type GitCli (console : ConsoleManager) =
     let command =
       "git --no-pager -C " + gitDir +
       " branch"
-    let! output = runBash(command)
+    let! output = runBash command
 
     return
       output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
@@ -73,7 +77,9 @@ type GitCli (console : ConsoleManager) =
       let command =
         "git --no-pager -C " + gitPath +
         " log " + revision + " --pretty=format:'%H' -n0"
-      let! result = runBash(command) |> Async.Catch
+
+      let! result = runBash command |> Async.Catch
+
       return
         match result with
         | Choice1Of2 _ -> true
@@ -127,7 +133,7 @@ type GitCli (console : ConsoleManager) =
         "git --no-pager -C " + gitDir +
         " fetch origin " + depthStr + branch + ":" + branch
       do!
-        runBash(command)
+        runBash command
         |> Async.Ignore
     }
 
@@ -142,7 +148,7 @@ type GitCli (console : ConsoleManager) =
                 " log " + branch + " --pretty=format:'%H'" + " --skip=" + skip.ToString()
 
               let! output =
-                runBash (command)
+                runBash  command
                 |> Async.Catch
                 |> Async.map(
                   fun x ->
@@ -180,11 +186,19 @@ type GitCli (console : ConsoleManager) =
       let command =
         "git -C " + gitDir +
         " show " + commit + ":" + path
-      return! runBash(command)
+      return! runBash command
     }
 
     member this.RemoteRefs (url : String) = async {
+      let cleanUpTag (tag : string) =
+        if tag.EndsWith "^{}"
+        then
+          tag.Substring(0, tag.Length - 3)
+        else
+          tag
+
       let! output = runBash("git --no-pager ls-remote --heads --tags " + url)
+
       return
         output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
         |> Seq.choose (fun x ->
@@ -196,7 +210,9 @@ type GitCli (console : ConsoleManager) =
             | true -> {
                 Type = RefType.Tag;
                 Revision = commit;
-                Name = name.Trim().Substring("refs/tags/".Length)
+                Name =
+                  name.Trim().Substring("refs/tags/".Length)
+                  |> cleanUpTag
               }
             | false -> {
                 Type = RefType.Branch;

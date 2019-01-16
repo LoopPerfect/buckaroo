@@ -31,6 +31,14 @@ module Solution =
     Resolutions = Map.empty;
   }
 
+  let add package (resolvedVersion, privateSolution) solution =
+    {
+      solution with
+        Resolutions =
+          solution.Resolutions
+          |> Map.add package (resolvedVersion, privateSolution)
+    }
+
   type SolutionMergeError =
   | Conflict of PackageIdentifier
 

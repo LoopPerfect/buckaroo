@@ -7,6 +7,7 @@ open FSharp.Control
 open Buckaroo.Console
 open Buckaroo.Tasks
 open Buckaroo.Tests
+open Microsoft.Extensions.DependencyModel
 
 type CookBook = List<PackageIdentifier * Set<Version> * Manifest>
 type LockBookEntries = List<(string*int) * List<string*int*Set<Version>>>
@@ -610,3 +611,37 @@ let ``Solver can handle the simple triangle case`` () =
 
   Assert.Equal ("1", getLockedRev "a" solution)
   Assert.Equal ("1", getLockedRev "b" solution)
+
+[<Fact>]
+let ``findUnsatisfied works for simple cases`` () =
+
+  let solution =
+    Solution.empty
+    |> Solution.add
+      (package "a")
+      (
+        {
+          Versions = set [ ver 1 ]
+          Manifest = manifest []
+          Lock = packageLock ("a", "aabbccdd")
+        },
+        Solution.empty
+      )
+
+  let cases = [
+    (Set.empty, Map.empty);
+
+    (
+      set [ package "b" ],
+      Map.empty
+      |> Map.add (package "a") (set ([ (Exactly (ver 1)) ]))
+      |> Map.add (package "b") (set ([ (Exactly (ver 2)) ]))
+    );
+  ]
+
+  for (expected, input) in cases do
+    let actual =
+      Solver.findUnsatisfied solution input
+      |> Set.ofSeq
+
+    Assert.Equal<Set<PackageIdentifier>> (expected, actual)
