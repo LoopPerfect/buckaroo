@@ -62,7 +62,7 @@ type GitLib (console : ConsoleManager) =
     "  bare = false\n" +
     "  logallrefupdates = true\n" +
     "[remote \"origin\"]\n" +
-    "  url =" + path + "\n"+
+    "  url = " + path + "\n"+
     "  fetch = +refs/heads/*:refs/remotes/origin/*\n"
 
   let sharedGitClone (src : string) (destination : string) = async {
@@ -210,9 +210,9 @@ type GitLib (console : ConsoleManager) =
         |> Seq.toList
     }
 
-
     member this.RemoteRefs (url : String) = async {
-      do! Async.SwitchToThreadPool()
+      do! Async.SwitchToThreadPool ()
+
       return Repository.ListRemoteReferences(url)
         |> Seq.filter(fun ref -> isHead ref || isTag ref)
         |> Seq.map(fun ref ->
@@ -233,8 +233,10 @@ type GitLib (console : ConsoleManager) =
 
     member this.ReadFile (repository : String) (commit : Revision) (path : String) = async {
       do! Async.SwitchToThreadPool()
+
       let repo = new Repository (repository)
       let blob = repo.Lookup<Commit>(commit)
-      let node = blob.[path].Target :?> Blob;
-      return node.GetContentText()
+      let node = blob.[path].Target :?> Blob
+
+      return node.GetContentText ()
     }
