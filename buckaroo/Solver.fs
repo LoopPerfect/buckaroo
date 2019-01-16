@@ -38,16 +38,33 @@ module Solver =
     }
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
     let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
+    let mutable hasCandidates = false
 
     for x in candidatesToExplore do
-      yield
+      yield!
         match x with
-        | Candidate (a,b) -> Result.Ok (package, (a, b))
-        | Unsatisfiable u -> Result.Error (SearchStrategyError.NotSatisfiable {
+        | Candidate (a,b) -> asyncSeq {
+            let! lock = sourceExplorer.LockLocation a
+            do! sourceExplorer.FetchManifest (lock, b) |> Async.Ignore
+            yield Result.Ok (package, (a, b))
+          }
+        | Unsatisfiable u -> asyncSeq {
+          yield
+            Result.Error (SearchStrategyError.NotSatisfiable {
+            Package = package;
+            Constraint = u
+            Msg = "Constraint not satisfiable"
+          })
+        }
+
+      hasCandidates <- true
+
+    if hasCandidates = false then
+      yield Result.Error (SearchStrategyError.NotSatisfiable {
           Package = package;
-          Constraint = u
-          Msg = "Constraint not satisfiable"
-        })
+          Constraint = constraints;
+          Msg = "No Version has a valid manifest"
+      })
   }
 
   let constraintsOf (ds: Set<Dependency>) =
@@ -61,23 +78,25 @@ module Solver =
     yield! Set.difference
       (dependencies |> Map.keys |> Set.ofSeq)
       (solution.Resolutions |> Map.keys  |> Set.ofSeq)
-
-    let maybeSatisfied =
-      Set.intersect
-        (dependencies |> Map.keys |> Set.ofSeq)
-        (solution.Resolutions |> Map.keys  |> Set.ofSeq)
-
-    yield!
-      maybeSatisfied
-      |> Set.toSeq
-      |> Seq.map (fun package ->
-        (package,
-         Constraint.satisfies
-           (Constraint.All (dependencies.[package] |> Set.toList ))
-           (fst solution.Resolutions.[package]).Versions ))
-      |> Seq.filter(snd >> not)
-      |> Seq.map fst
   }
+
+  // let underSpecified (solution : Solution) (dependencies : Constraint) = seq {
+  //   let maybeSatisfied =
+  //     Set.intersect
+  //       (dependencies |> Map.keys |> Set.ofSeq)
+  //       (solution.Resolutions |> Map.keys  |> Set.ofSeq)
+
+  //   yield!
+  //     maybeSatisfied
+  //     |> Set.toSeq
+  //     |> Seq.map (fun package ->
+  //       (package,
+  //        Constraint.satisfies
+  //          (Constraint.All (dependencies.[package] |> Set.toList ))
+  //          (fst solution.Resolutions.[package]).Versions ))
+  //     |> Seq.filter(snd >> not)
+  //     |> Seq.map fst
+  // }
 
   let private lockToHints (lock : Lock) =
     lock.Packages
@@ -194,13 +213,15 @@ module Solver =
     |> AsyncSeq.map (fun resolution ->
         match resolution with
         | Resolution.Failure f ->
+          log("########################################Trying to recover: " + f.ToString()|>text, LoggingLevel.Info)
+
           if state.Constraints.ContainsKey f.Package &&
             match f.Constraint with
             | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
             | x -> state.Constraints.[f.Package].Contains x
           then resolution
           else
-            log("Trying different resolution to workaround: " + f.ToString()|>text, LoggingLevel.Info)
+            log("########################################Trying different resolution to workaround: " + f.ToString()|>text, LoggingLevel.Info)
             // we backtracked far enough, we can proceed normally...
             // TODO: remember f.Package + f.Constraint always fails
             Resolution.Error (new System.Exception (f.ToString()))
@@ -211,6 +232,12 @@ module Solver =
       | Resolution.Failure f ->
         log("Backtracking due to failure " + f.ToString() |> text, LoggingLevel.Debug)
         false
+      | Resolution.Conflict e ->
+        log("#########CONFLICT " + e.ToString() |> text, LoggingLevel.Debug)
+        false
+      | Resolution.Error e ->
+        log("#########  error " + e.ToString() |> text, LoggingLevel.Debug)
+        false
       | _ -> true
     )
 
@@ -218,7 +245,7 @@ module Solver =
 
     let sourceExplorer = context.SourceExplorer
 
-    let log = namespacedLogger context.Console "solver"
+    let log = namespacedLogger context.Console ("solver"+state.Depth.ToString())
 
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
@@ -226,6 +253,9 @@ module Solver =
 
     if Seq.isEmpty unsatisfied
       then
+        log ("#################"|>string|>text, LoggingLevel.Info)
+        log (state.Solution|>string|>text, LoggingLevel.Info)
+        log ("#################"|>string|>text, LoggingLevel.Info)
         yield Resolution.Ok state.Solution
       else
         let totalDeps = state.Constraints |> Map.count
@@ -367,7 +397,7 @@ module Solver =
                           state.Constraints
 
 
-                      Depth = state.Depth;
+                      Depth = state.Depth+1;
                       Visited =
                         state.Visited
                         |> Set.add (package, packageLock);
@@ -376,6 +406,10 @@ module Solver =
                         state.Hints
                         |> AsyncSeq.append freshHints;
                   }
+
+                  log (text "!!!!!!!!!!!!!!!!!!!!!!", LoggingLevel.Trace)
+                  log (nextState.Solution|>string|>text, LoggingLevel.Trace)
+                  log (text "!!!!!!!!!!!!!!!!!!!!!!", LoggingLevel.Trace)
 
                   yield! step context strategy nextState
                 })
