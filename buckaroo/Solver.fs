@@ -12,7 +12,7 @@ module Solver =
   open Buckaroo.Result
 
   [<Literal>]
-  let MaxConsecutiveFailures = 5
+  let MaxConsecutiveFailures = 10
 
   type LocatedAtom = Atom * PackageLocation
 
@@ -42,7 +42,7 @@ module Solver =
     }
 
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
-    let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
+    let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package (Constraint.simplify constraints)
     let mutable hasCandidates = false
     let mutable consecutiveFailures = 0
     for x in candidatesToExplore do
@@ -233,12 +233,12 @@ module Solver =
         |> Map.ofSeq
   }
 
-  let private recoverOrFail state log resolutions =
+  let private recoverOrFail atom state log resolutions =
     resolutions
     |> AsyncSeq.map (fun resolution ->
         match resolution with
         | Resolution.Backtrack (s, f) ->
-          log("trying to recover from: " + resolution.ToString() |> text, LoggingLevel.Info)
+          log("trying to recover from: " + f.ToString() + " [" + atom.ToString() + "]" |> text, LoggingLevel.Info)
           if state.Constraints.ContainsKey f.Package &&
             match f.Constraint with
             | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
@@ -453,8 +453,8 @@ module Solver =
                 privatePackagesSolutions
                 |> AsyncSeq.map(addPrivatePackageSolution newState package resolvedVersion)
                 |> AsyncSeq.collect (step context strategy)
-                |> recoverOrFail newState log
-                |> recoverOrFail state log
+                |> recoverOrFail (packageLock, versions) newState log
+                |> recoverOrFail (packageLock, versions) state log
                 |> AsyncSeq.scan
                      (fun (failures, _) resolution ->
                        match resolution with
