@@ -40,6 +40,7 @@ module SourceExplorer =
     )
 
   let fetchLocationsForConstraint (sourceExplorer : ISourceExplorer) locations package versionConstraint =
+    System.Console.WriteLine (versionConstraint.ToString())
     let rec loop (versionConstraint : Constraint) : AsyncSeq<FetchResult> = asyncSeq {
       match Constraint.simplify versionConstraint with
       | Complement c ->
@@ -151,6 +152,11 @@ module SourceExplorer =
     }
 
     loop versionConstraint
+    |> AsyncSeq.map( fun x ->
+      System.Console.WriteLine (string versionConstraint)
+      System.Console.WriteLine (string x)
+      x
+    )
     |> AsyncSeq.takeWhileInclusive (fun x ->
       match x with
       | Candidate _ -> true
