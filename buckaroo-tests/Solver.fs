@@ -58,8 +58,6 @@ let lockBookOf (entries : LockBookEntries) : LockBook =
   |> Seq.map (fun (l, deps) -> (packageLock l, lock deps))
   |> Map.ofSeq
 
-
-
 type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
   interface ISourceExplorer with
     member this.FetchVersions (_ : PackageSources) (package: PackageIdentifier) : AsyncSeq<Version>  = asyncSeq {
@@ -121,19 +119,19 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
 
 
 let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
-    let lockBook = lockBookOf lockBookEntries
-    let console = new ConsoleManager(LoggingLevel.Silent);
-    let context : TaskContext = {
-      Console = console;
-      DownloadManager = DownloadManager(console, "/tmp");
-      GitManager = new GitManager(console, new GitCli(console), "/tmp");
-      SourceExplorer = TestingSourceExplorer(cookBook, lockBook)
-    }
+  let lockBook = lockBookOf lockBookEntries
+  let console = new ConsoleManager(LoggingLevel.Silent);
+  let context : TaskContext = {
+    Console = console;
+    DownloadManager = DownloadManager(console, "/tmp");
+    GitManager = new GitManager(console, new GitCli(console), "/tmp");
+    SourceExplorer = TestingSourceExplorer(cookBook, lockBook)
+  }
 
-    Buckaroo.Solver.solve
-      context partial
-      root style
-      (lockBook |> Map.tryFind (packageLock ("root", 0)))
+  Buckaroo.Solver.solve
+    context partial
+    root style
+    (lockBook |> Map.tryFind (packageLock ("root", 0)))
 
 let getLockedRev (p : string) (r: Resolution) =
   match r with
@@ -570,3 +568,45 @@ let ``Solver upgrades completes partial solution with latest packages`` () =
   Assert.Equal ("2", getLockedRev "b" solution)
   Assert.Equal ("1", getLockedRev "c" solution)
   ()
+
+[<Fact>]
+let ``Solver can handle the simple triangle case`` () =
+  let cookBook = [
+    (package "a",
+      Set [ver 1],
+      manifest [("b", Exactly (ver 1))])
+    (package "b",
+      Set [ver 1],
+      manifest [])
+  ]
+
+  let lockBookSpec = [
+    (("root", 0), [
+      ("a", 1, Set [ver 1])
+      ("b", 1, Set [ver 1])
+    ])
+  ]
+
+  let root = manifest [
+    ("a", Exactly (ver 1) )
+    ("b", Exactly (ver 1) )
+  ]
+
+  let lockBook = lockBookOf lockBookSpec
+
+  let rootLock = lockBook |> Map.find (packageLock ("root", 0))
+  let explorer = TestingSourceExplorer(cookBook, lockBook)
+
+  let completeSolution =
+    Solver.fromLock explorer rootLock
+    |> Async.RunSynchronously
+
+  let solution =
+    solve
+      completeSolution
+      cookBook lockBookSpec root
+      ResolutionStyle.Upgrading
+      |> Async.RunSynchronously
+
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("1", getLockedRev "b" solution)
