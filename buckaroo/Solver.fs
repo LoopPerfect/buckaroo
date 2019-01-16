@@ -38,32 +38,16 @@ module Solver =
     }
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
     let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
-    let mutable isEmpty = true
 
-    try
-      for candidate in candidatesToExplore do
-        isEmpty <- false
-        yield Result.Ok (package, candidate)
-
-      if isEmpty then
-        match package with
-        | PackageIdentifier.Adhoc _ -> ()
-        | _ ->
-          yield Result.Error (
-            NotSatisfiable {
-              Package = package;
-              Constraint = constraints;
-              Msg = "no versions found"
-            }
-          )
-    with e ->
-      yield Result.Error (
-        NotSatisfiable {
+    for x in candidatesToExplore do
+      yield
+        match x with
+        | Candidate (a,b) -> Result.Ok (package, (a, b))
+        | Unsatisfiable u -> Result.Error (SearchStrategyError.NotSatisfiable {
           Package = package;
-          Constraint = constraints;
-          Msg = e.Message
-        }
-      )
+          Constraint = u
+          Msg = "Constraint not satisfiable"
+        })
   }
 
   let constraintsOf (ds: Set<Dependency>) =
