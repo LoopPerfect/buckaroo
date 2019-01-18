@@ -41,6 +41,7 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
  * Version equivalency checks to reduce dependency conflicts
  * TOML configuration files for convenient editing by computers and humans
  * Works offline (with a populated cache)
+ * Enable Upgrade Bot to keep everything up-to-date with a single click
 
 ## Key Commands
 
