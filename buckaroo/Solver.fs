@@ -11,6 +11,9 @@ module Solver =
   open FSharp.Control
   open Buckaroo.Result
 
+  [<Literal>]
+  let MaxConsecutiveFailures = 5
+
   type LocatedAtom = Atom * PackageLocation
 
   type Constraints = Map<PackageIdentifier, Set<Constraint>>
@@ -22,32 +25,33 @@ module Solver =
     Visited : Set<PackageIdentifier * PackageLock>
     Locations : Map<AdhocPackageIdentifier, PackageSource>
     Hints : AsyncSeq<Atom * PackageLock>
-    Failures: Set<PackageIdentifier * Constraint>
+    Failures: Map<PackageIdentifier, Set<Constraint * Solution>>
   }
 
   type SearchStrategyError =
   | NotSatisfiable of NotSatisfiable
-  | NoLocationAvaiable of PackageIdentifier * Constraint
 
   type LocatedVersionSet = PackageLocation * Set<Version>
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
+
   let private withTimeout timeout action =
     async {
       let! child = Async.StartChild (action, timeout)
       return! child
     }
+
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
     let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
     let mutable hasCandidates = false
     let mutable consecutiveFailures = 0
     for x in candidatesToExplore do
-      if consecutiveFailures > 5 then
+      if consecutiveFailures > MaxConsecutiveFailures then
         yield
           Result.Error (NotSatisfiable {
           Package = package;
           Constraint = constraints
-          Msg = "5 consecutive versions didn't have a valid manifest"
+          Msg = (string MaxConsecutiveFailures) + " consecutive versions didn't have a valid manifest"
         })
       else
         yield!
@@ -109,15 +113,8 @@ module Solver =
   let findUnsatisfied (solution : Solution) (dependencies : Constraints) = seq {
     yield! Set.difference
       (dependencies |> Map.keys |> Set.ofSeq)
-      (solution.Resolutions |> Map.keys  |> Set.ofSeq)
-
-    yield!
-      findConflicts solution dependencies
-
+      (solution.Resolutions |> Map.keys |> Set.ofSeq)
   }
-
-
-
 
   let private lockToHints (lock : Lock) =
     lock.Packages
@@ -239,9 +236,9 @@ module Solver =
   let private recoverOrFail state log resolutions =
     resolutions
     |> AsyncSeq.map (fun resolution ->
-        log("trying to recover from: " + resolution.ToString()|>text, LoggingLevel.Info)
+        log("trying to recover from: " + resolution.ToString() |> text, LoggingLevel.Info)
         match resolution with
-        | Resolution.Failure f ->
+        | Resolution.Backtrack f ->
           if state.Constraints.ContainsKey f.Package &&
             match f.Constraint with
             | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
@@ -251,16 +248,58 @@ module Solver =
             log("Trying different resolution to workaround: " + f.ToString() |> text, LoggingLevel.Info)
             // we backtracked far enough, we can proceed normally...
             // TODO: remember f.Package + f.Constraint always fails
-            Resolution.Error (new System.Exception (f.ToString()))
+            Resolution.Avoid f
         | x -> x
     )
     |> AsyncSeq.takeWhileInclusive (fun resolution ->
       match resolution with
-      | Resolution.Failure f ->
+      | Resolution.Backtrack f ->
         log("Backtracking due to failure " + f.ToString() |> text, LoggingLevel.Debug)
         false
       | _ -> true
     )
+
+  let private mergeConstraints c1 c2 =
+    c2
+    |> Seq.fold
+      (fun m (dep : Dependency) ->
+        Map.insertWith
+          Set.union
+          dep.Package
+          (Set[dep.Constraint])
+          m)
+      c1
+
+  let private extendState (package, packageLock) (freshHints) (manifest: Manifest) (state: SolverState) =
+    let mergedLocations =
+      match mergeLocations state.Locations manifest.Locations with
+      | Result.Ok xs -> xs
+      | Result.Error e -> raise (new System.Exception(e.ToString()))
+
+    let nextConstraints = mergeConstraints state.Constraints manifest.Dependencies
+
+    {state with
+      Constraints = nextConstraints
+      Visited =
+        state.Visited
+        |> Set.add (package, packageLock);
+      Locations = mergedLocations;
+      Hints =
+        state.Hints
+        |> AsyncSeq.append freshHints
+  }
+
+  let private unlockConflicts (state: SolverState) =
+
+    let conflicts =
+      findConflicts state.Solution state.Constraints
+      |> Set.ofSeq
+
+    {
+      state with
+        Solution = unlock state.Solution conflicts
+    }
+
 
   let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
 
@@ -271,12 +310,26 @@ module Solver =
       findUnsatisfied state.Solution state.Constraints
       |> Seq.toList
 
-    if Seq.isEmpty unsatisfied
+    let unsatisfiables =
+      unsatisfied
+      |> List.filter (fun u ->
+        let allConstraints = state.Constraints.[u]
+        let badConstraints = state.Failures.[u] |> Set.map fst
+
+        Set.intersect
+            allConstraints
+            badConstraints
+          |> Set.isEmpty)
+
+    if Seq.isEmpty unsatisfiables |> not
+    then ()
+    elif Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution
       else
         let totalDeps = state.Constraints |> Map.count
         let satisfiedDepsCount = totalDeps - (unsatisfied |> Seq.length)
+
         log( ("Resolved " |> text) +
           (satisfiedDepsCount.ToString() |> highlight) +
           (subtle "/") +
@@ -309,11 +362,29 @@ module Solver =
               // Package + Constraint is unresolvable
               // we need to skip every branch that requires Package + Constraint
               log("failed to retrive valid version for:" + e.ToString() |> text, LoggingLevel.Info)
-              yield Resolution.Failure e
-              yield! loop state atoms
-            | Some (Result.Error (NoLocationAvaiable (p, c))) ->
-              yield Resolution.Error (new System.Exception ("No location found for: " + p.ToString() + " that could satisfy: " + c.ToString()))
-              yield! loop state atoms
+              let nextState = {
+                state with
+                  Failures =
+                    state.Failures
+                    |> Map.insertWith
+                        Set.union e.Package
+                        (Set[e.Constraint, state.Solution])
+              }
+              yield Resolution.Backtrack e
+            // | Some (Result.Error (NoLocationAvaiable (p, c))) ->
+            //   yield Resolution.Error (new System.Exception ("No location found for: " + p.ToString() + " that could satisfy: " + c.ToString()))
+
+            //   let nextState = {
+            //     state with
+            //       Failures =
+            //         state.Failures
+            //         |> Map.insertWith
+            //             Set.union p
+            //             (Set[c, state.Solution])
+
+            //   }
+
+            //   yield! loop nextState atoms
             | Some(Result.Ok (package, (packageLock, versions))) ->
               log(("Exploring " |> text) + (PackageIdentifier.showRich package) + "...", LoggingLevel.Info)
 
@@ -331,13 +402,6 @@ module Solver =
                   (info ((manifestFetchEnd - manifestFetchStart).TotalSeconds.ToString("N3") + "s")),
                   LoggingLevel.Info)
               printManifestInfo log state manifest
-
-              let! mergedLocations = async {
-                return
-                  match mergeLocations state.Locations manifest.Locations with
-                  | Result.Ok xs -> xs
-                  | Result.Error e -> raise (new System.Exception(e.ToString()))
-              }
 
               let resolvedVersion = {
                 Versions = versions;
@@ -391,52 +455,28 @@ module Solver =
                   | _ -> None
                 )
 
+              let newState =
+                state
+                |> extendState (package, packageLock) freshHints manifest
+                |> unlockConflicts
+
+
               yield!
                 privatePackagesSolutions
                 |> AsyncSeq.collect (fun privatePackagesSolution -> asyncSeq {
-
-                  let nextSolution = {
-                    state.Solution with
-                      Resolutions =
-                        state.Solution.Resolutions
-                        |> Map.add package (resolvedVersion, privatePackagesSolution)
-                  }
-
-                  let nextConstraints =
-                    manifest.Dependencies
-                    |> Seq.fold
-                      (fun m (dep : Dependency) ->
-                        Map.insertWith
-                          Set.union
-                          dep.Package
-                          (Set[dep.Constraint])
-                          m)
-                      state.Constraints
-
-                  // TODO: merge versionsets for non-conflicts
-                  //let conflicts =
-                  //  findConflicts nextSolution nextConstraints
-                  //  |> Set.ofSeq
-
-                  //log(conflicts |> string |> text|>RichOutput.foreground System.ConsoleColor.Red, LoggingLevel.Info)
-
                   let nextState = {
-                    state with
-                      Solution = nextSolution //unlock nextSolution conflicts
-                      Constraints = nextConstraints
-
-                      Visited =
-                        state.Visited
-                        |> Set.add (package, packageLock);
-                      Locations = mergedLocations;
-                      Hints =
-                        state.Hints
-                        |> AsyncSeq.append freshHints;
-                  }
+                    newState with
+                      Solution = {
+                        newState.Solution with
+                          Resolutions =
+                            state.Solution.Resolutions
+                            |> Map.add package (resolvedVersion, privatePackagesSolution)
+                  }}
 
                   yield! step context strategy nextState
                 })
-              yield! loop state (atoms |> AsyncSeq.skip 1)
+
+              yield! loop newState (atoms |> AsyncSeq.skip 1)
           }
 
         yield! loop state atomsToExplore |> recoverOrFail state log
@@ -448,12 +488,12 @@ module Solver =
     |> AsyncSeq.take (1024)
     |> AsyncSeq.takeWhileInclusive (fun x ->
       match x with
-      | Failure _ -> false
+      | Backtrack _ -> false
       | _ -> true)
     |> AsyncSeq.filter (fun x ->
       match x with
       | Ok _ -> true
-      | Failure _ -> true
+      | Backtrack _ -> true
       | _ -> false)
     |> AsyncSeq.take 1
     |> AsyncSeq.toListAsync
@@ -480,7 +520,7 @@ module Solver =
       Visited = Set.empty;
       Locations = manifest.Locations;
       Hints = hints;
-      Failures = Set []
+      Failures = Map.empty
     }
 
     let resolutions =
