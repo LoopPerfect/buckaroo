@@ -1,24 +1,24 @@
 namespace Buckaroo
 
 /// A target inside of a Buck cell
-/// For example: 
+/// For example:
 ///  * "//:lib"
 ///  * ":lib"
 ///  * "//path/to/some:lib"
 ///  * "//path/to/some"
 type Target = {
-  Folders : string list; 
-  Name : string; 
+  Folders : string list;
+  Name : string;
 }
 
-module Target = 
+module Target =
 
   open FParsec
 
-  let show (x : Target) : string = 
+  let show (x : Target) : string =
     "//" + (x.Folders |> String.concat "/") + ":" + x.Name
 
-  let segmentParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|-(?=[a-zA-Z.\d])){0,38}"
+  let segmentParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|_|-(?=[a-zA-Z.\d])){0,38}"
 
   let explicitNameParser = parse {
     let slash = CharParsers.skipString "/"
@@ -42,7 +42,7 @@ module Target =
     return! Primitives.choice [ Primitives.attempt explicitNameParser; implicitNameParser ]
   }
 
-  let parse (x : string) : Result<Target, string> = 
+  let parse (x : string) : Result<Target, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error

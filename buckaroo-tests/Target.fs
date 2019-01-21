@@ -34,3 +34,7 @@ let ``Target.parse works correctly`` () =
   let input = "foo:bar"
   let expected = Result.Ok { Folders = [ "foo" ]; Name = "bar" }
   Assert.Equal(expected, Target.parse input)
+
+  let input = "//foo_bar:bar_bar"
+  let expected = Result.Ok { Folders = [ "foo_bar" ]; Name = "bar_bar" }
+  Assert.Equal(expected, Target.parse input)
