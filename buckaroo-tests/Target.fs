@@ -38,3 +38,19 @@ let ``Target.parse works correctly`` () =
   let input = "//foo_bar:bar_bar"
   let expected = Result.Ok { Folders = [ "foo_bar" ]; Name = "bar_bar" }
   Assert.Equal(expected, Target.parse input)
+
+[<Fact>]
+let ``Target.show works correctly`` () =
+  let cases =
+    [
+      "//path/to/some:target"
+      "//:foo"
+    ]
+
+  for case in cases do
+    let actual =
+      case
+      |> Target.parse
+      |> Result.map Target.show
+
+    Assert.Equal(Result.Ok case, actual)
