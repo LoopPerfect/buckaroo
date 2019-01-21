@@ -35,15 +35,22 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
   let resolve = async {
     let resolveStart = DateTime.Now
 
-    logInfo <| (text "Resolve start: ") + (string resolveStart |> text |> foreground ConsoleColor.Cyan)
+    logInfo <| (text "Resolve start: ") + (resolveStart |> Toml.formatDateTime |> text |> foreground ConsoleColor.Cyan)
 
-    "Resolving dependencies... " |> text |> logInfo
+    let styleName =
+      match resolutionStyle with
+      | Quick -> "quick"
+      | Upgrading -> "upgrade"
+      |> text
+      |> foreground ConsoleColor.Cyan
+
+    (text "Resolving dependencies using ") + (styleName) + " strategy... " |> logInfo
 
     let! resolution = Solver.solve context partialSolution manifest resolutionStyle maybeLock
 
     let resolveEnd = DateTime.Now
 
-    logInfo <| (text "Resolve end: ") + (string resolveEnd |> text |> foreground ConsoleColor.Cyan)
+    logInfo <| (text "Resolve end: ") + (resolveEnd |> Toml.formatDateTime |> text |> foreground ConsoleColor.Cyan)
     logInfo <| (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan)
 
     match resolution with

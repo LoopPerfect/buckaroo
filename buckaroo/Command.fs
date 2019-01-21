@@ -9,7 +9,7 @@ type Command =
 | Help
 | Init
 | Version
-| Resolve
+| Resolve of ResolutionStyle
 | Install
 | Quickstart
 | UpgradeDependencies of List<PackageIdentifier>
@@ -61,7 +61,16 @@ module Command =
     do! CharParsers.spaces
     do! CharParsers.skipString "resolve"
     do! CharParsers.spaces
-    return Resolve
+
+    let! strategy =
+      parse {
+        do! CharParsers.skipString "--upgrade"
+
+        return ResolutionStyle.Upgrading
+      }
+      |> Primitives.opt
+
+    return Resolve (strategy |> Option.defaultValue ResolutionStyle.Quick)
   }
 
   let installParser = parse {
@@ -206,7 +215,7 @@ module Command =
       | Init -> init context
       | Help -> HelpCommand.task context
       | Version -> VersionCommand.task context
-      | Resolve -> ResolveCommand.task context Solution.empty ResolutionStyle.Quick
+      | Resolve style -> ResolveCommand.task context Solution.empty style
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
       | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies
