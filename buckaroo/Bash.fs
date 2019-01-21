@@ -6,6 +6,11 @@ open System.Threading.Tasks
 
 type ProgressCallback = string -> Unit
 
+type BashException(command, exitCode) =
+  inherit Exception("The command \"" + command + "\" exited with code " + (string exitCode))
+  member this.Command = command
+  member this.ExitCode = exitCode
+
 let escapeBash (command : string) =
   if command.Contains("\"") || command.Contains("$")
   then
@@ -61,7 +66,7 @@ let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHan
   if p.ExitCode > 0
   then
     return
-      raise <| new Exception("Exit code was " + (string p.ExitCode) + "\n" + "command:\n" + command )
+      raise <| new BashException(command, p.ExitCode)
 
   return p.ExitCode
 }

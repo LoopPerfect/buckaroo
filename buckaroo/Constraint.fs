@@ -57,8 +57,8 @@ module Constraint =
     match c with
     | Exactly u -> vs |> Set.toSeq |> Seq.exists(fun x -> x = u)
     | Complement x -> satisfies x vs |> not
-    | Any xs -> xs |> Seq.exists(fun c -> satisfies c vs)
-    | All xs -> xs |> Seq.forall(fun c -> satisfies c vs)
+    | Any xs -> xs |> Seq.exists (fun c -> satisfies c vs)
+    | All xs -> xs |> Seq.forall (fun c -> satisfies c vs)
     | Range (op, v) ->
       vs
       |> Set.toSeq

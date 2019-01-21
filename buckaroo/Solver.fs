@@ -11,59 +11,77 @@ module Solver =
   open FSharp.Control
   open Buckaroo.Result
 
+  [<Literal>]
+  let MaxConsecutiveFailures = 10
+
   type LocatedAtom = Atom * PackageLocation
 
   type Constraints = Map<PackageIdentifier, Set<Constraint>>
 
   type SolverState = {
-    Solution : Solution;
-    Constraints : Constraints;
-    Depth : int;
-    Visited : Set<PackageIdentifier * PackageLock>;
-    Locations : Map<AdhocPackageIdentifier, PackageSource>;
-    Hints : AsyncSeq<Atom * PackageLock>;
+    Solution : Solution
+    Constraints : Constraints
+    Depth : int
+    Visited : Set<PackageIdentifier * PackageLock>
+    Locations : Map<AdhocPackageIdentifier, PackageSource>
+    Hints : AsyncSeq<Atom * PackageLock>
+    Failures: Map<PackageIdentifier, Set<Constraint>>
   }
 
   type SearchStrategyError =
   | NotSatisfiable of NotSatisfiable
-  | NoLocationAvaiable of PackageIdentifier * Constraint
 
   type LocatedVersionSet = PackageLocation * Set<Version>
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
+
   let private withTimeout timeout action =
     async {
       let! child = Async.StartChild (action, timeout)
       return! child
     }
+
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
-    let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package constraints
-    let mutable isEmpty = true
-
-    try
-      for candidate in candidatesToExplore do
-        isEmpty <- false
-        yield Result.Ok (package, candidate)
-
-      if isEmpty then
-        match package with
-        | PackageIdentifier.Adhoc _ -> ()
-        | _ ->
-          yield Result.Error (
-            NotSatisfiable {
-              Package = package;
-              Constraint = constraints;
-              Msg = "no versions found"
+    let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package (Constraint.simplify constraints)
+    let mutable hasCandidates = false
+    let mutable consecutiveFailures = 0
+    for x in candidatesToExplore do
+      if consecutiveFailures > MaxConsecutiveFailures then
+        yield
+          Result.Error (NotSatisfiable {
+          Package = package;
+          Constraint = constraints
+          Msg = (string MaxConsecutiveFailures) + " consecutive versions didn't have a valid manifest"
+        })
+      else
+        yield!
+          match x with
+          | Candidate (packageLocation, c) -> asyncSeq {
+              try
+                let! lock = sourceExplorer.LockLocation packageLocation
+                do! sourceExplorer.FetchManifest (lock, c) |> Async.Ignore
+                yield Result.Ok (package, (packageLocation, c))
+                hasCandidates <- true
+                consecutiveFailures <- 0
+              with _ ->
+                consecutiveFailures <- consecutiveFailures + 1
+                ()
             }
-          )
-    with e ->
-      yield Result.Error (
-        NotSatisfiable {
+          | Unsatisfiable u -> asyncSeq {
+            yield
+              Result.Error (NotSatisfiable {
+              Package = package;
+              Constraint = u
+              Msg = "Constraint not satisfiable"
+            })
+          }
+
+    if hasCandidates = false then
+      yield Result.Error (NotSatisfiable {
           Package = package;
           Constraint = constraints;
-          Msg = e.Message
-        }
-      )
+          Msg = "No Version we tested had a valid manifest"
+      })
   }
 
   let constraintsOf (ds: Set<Dependency>) =
@@ -73,26 +91,29 @@ module Solver =
     |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
     |> Map.ofSeq
 
+
+  let findConflicts (solution : Solution) (dependencies : Constraints) = seq {
+     let maybeConflict =
+       Set.intersect
+         (dependencies |> Map.keys |> Set.ofSeq)
+         (solution.Resolutions |> Map.keys  |> Set.ofSeq)
+
+     yield!
+       maybeConflict
+       |> Set.toSeq
+       |> Seq.map (fun package ->
+         (package,
+          Constraint.satisfies
+            (Constraint.All (dependencies.[package] |> Set.toList ))
+            (fst solution.Resolutions.[package]).Versions ))
+       |> Seq.filter(snd >> not)
+       |> Seq.map fst
+   }
+
   let findUnsatisfied (solution : Solution) (dependencies : Constraints) = seq {
     yield! Set.difference
       (dependencies |> Map.keys |> Set.ofSeq)
-      (solution.Resolutions |> Map.keys  |> Set.ofSeq)
-
-    let maybeSatisfied =
-      Set.intersect
-        (dependencies |> Map.keys |> Set.ofSeq)
-        (solution.Resolutions |> Map.keys  |> Set.ofSeq)
-
-    yield!
-      maybeSatisfied
-      |> Set.toSeq
-      |> Seq.map (fun package ->
-        (package,
-         Constraint.satisfies
-           (Constraint.All (dependencies.[package] |> Set.toList ))
-           (fst solution.Resolutions.[package]).Versions ))
-      |> Seq.filter(snd >> not)
-      |> Seq.map fst
+      (solution.Resolutions |> Map.keys |> Set.ofSeq)
   }
 
   let private lockToHints (lock : Lock) =
@@ -162,7 +183,6 @@ module Solver =
         |> Constraint.All
 
       yield! fetchCandidatesForConstraint sourceExplorer state.Locations package constraints
-
   }
 
   let upgradeSearchStrategy (sourceExplorer : ISourceExplorer) (state : SolverState) = asyncSeq {
@@ -205,47 +225,154 @@ module Solver =
       | None -> true)
   )
 
-  let private recoverOrFail state log resolutions =
+  let unlock (solution : Solution) (packages : Set<PackageIdentifier>) : Solution = {
+    Resolutions =
+      solution.Resolutions
+        |> Map.toSeq
+        |> Seq.filter (fst >> packages.Contains >> not)
+        |> Map.ofSeq
+  }
+
+  let private recoverOrFail atom state log resolutions =
     resolutions
     |> AsyncSeq.map (fun resolution ->
         match resolution with
-        | Resolution.Failure f ->
+        | Resolution.Backtrack (s, f) ->
+          log("trying to recover from: " + f.ToString() + " [" + atom.ToString() + "]" |> text, LoggingLevel.Info)
           if state.Constraints.ContainsKey f.Package &&
             match f.Constraint with
             | All xs -> xs |> List.forall state.Constraints.[f.Package].Contains
             | x -> state.Constraints.[f.Package].Contains x
           then resolution
           else
-            log("Trying different resolution to workaround: " + f.ToString()|>text, LoggingLevel.Info)
-            // we backtracked far enough, we can proceed normally...
-            // TODO: remember f.Package + f.Constraint always fails
-            Resolution.Error (new System.Exception (f.ToString()))
+            log("Trying different resolution to workaround: " + f.ToString() |> text, LoggingLevel.Info)
+            Resolution.Avoid (s, f)
         | x -> x
     )
     |> AsyncSeq.takeWhileInclusive (fun resolution ->
       match resolution with
-      | Resolution.Failure f ->
+      | Resolution.Backtrack (_,  f) ->
         log("Backtracking due to failure " + f.ToString() |> text, LoggingLevel.Debug)
         false
       | _ -> true
     )
 
+  let private mergeConstraints c1 c2 =
+    c2
+    |> Seq.fold
+      (fun m (dep : Dependency) ->
+        Map.insertWith
+          Set.union
+          dep.Package
+          (Set[dep.Constraint])
+          m)
+      c1
+
+  let private updateState (package, packageLock) (freshHints) (manifest: Manifest) (state: SolverState) =
+    let mergedLocations =
+      match mergeLocations state.Locations manifest.Locations with
+      | Result.Ok xs -> xs
+      | Result.Error e -> raise (new System.Exception(e.ToString()))
+
+    let nextConstraints = mergeConstraints state.Constraints manifest.Dependencies
+
+    {state with
+      Constraints = nextConstraints
+      Visited =
+        state.Visited
+        |> Set.add (package, packageLock);
+      Locations = mergedLocations;
+      Hints =
+        state.Hints
+        |> AsyncSeq.append freshHints
+  }
+
+  let private unlockConflicts (state: SolverState) =
+
+    let conflicts =
+      findConflicts state.Solution state.Constraints
+      |> Set.ofSeq
+
+    {
+      state with
+        Solution = unlock state.Solution conflicts
+    }
+
+  let private addPrivatePackageSolution state package resolvedVersion solution =
+    {
+      state with
+        Solution = {
+          state.Solution with
+            Resolutions =
+              state.Solution.Resolutions
+              |> Map.add package (resolvedVersion, solution)
+    }}
+
+  let private getHintsFromLockTask log state package lockTask  = asyncSeq {
+    try
+      log( (text "Fetching lock-file for ") + (PackageIdentifier.showRich package) + "...", LoggingLevel.Debug)
+      let! lock = lockTask
+      log( (success "success ") + (text "Fetched the lock-file for ") + (PackageIdentifier.showRich package), LoggingLevel.Info)
+      yield!
+        lock
+        |> lockToHints
+        |> Seq.filter (fun (atom, packageLock) ->
+          Set.contains (atom.Package, packageLock) state.Visited |> not &&
+          state.Solution.Resolutions |> Map.containsKey atom.Package |> not)
+        |> AsyncSeq.ofSeq
+    with error ->
+      log(string error|>text, LoggingLevel.Debug)
+      ()
+  }
+
+  let private solvePrivate solver state dependencies =
+    let privatePackagesSolverState = {
+      Solution = Solution.empty
+      Locations = Map.empty
+      Visited = Set.empty
+      Hints = state.Hints
+      Depth = state.Depth + 1
+      Constraints = constraintsOf dependencies
+      Failures = state.Failures
+    }
+
+    solver
+      privatePackagesSolverState
+      |> AsyncSeq.choose (fun resolution ->
+        match resolution with
+        | Resolution.Ok solution -> Some solution
+        | _ -> None
+      )
+
   let rec private step (context : TaskContext) (strategy : SearchStrategy) (state : SolverState) : AsyncSeq<Resolution> = asyncSeq {
 
     let sourceExplorer = context.SourceExplorer
-
-    let log = namespacedLogger context.Console "solver"
+    let log = namespacedLogger context.Console ("solver")
 
     let unsatisfied =
       findUnsatisfied state.Solution state.Constraints
       |> Seq.toList
 
-    if Seq.isEmpty unsatisfied
+    let unsatisfiables =
+      unsatisfied
+      |> Seq.filter (fun u ->
+        let allConstraints = state.Constraints.[u]
+        let badConstraints = state.Failures |> Map.findOrDefault u (Set[])
+
+        Set.intersect
+            allConstraints
+            badConstraints
+          |> Set.isEmpty |> not)
+
+    if Seq.isEmpty unsatisfiables |> not
+    then ()
+    elif Seq.isEmpty unsatisfied
       then
         yield Resolution.Ok state.Solution
       else
         let totalDeps = state.Constraints |> Map.count
         let satisfiedDepsCount = totalDeps - (unsatisfied |> Seq.length)
+
         log( ("Resolved " |> text) +
           (satisfiedDepsCount.ToString() |> highlight) +
           (subtle "/") +
@@ -269,19 +396,14 @@ module Solver =
             | Result.Ok atom -> filterAtom state atom
             | _ -> true)
 
-
-        for x in atomsToExplore do
-          match x with
-          | Result.Error e ->
-            match e with
-            | NotSatisfiable x ->
-              // Package + Constraint is unresolvable
-              // we need to skip every branch that requires Package + Constraint
-              yield Resolution.Failure x
-            | NoLocationAvaiable (p, c)  ->
-              yield Resolution.Error (new System.Exception ("No location found for: " + p.ToString() + " that could satisfy: " + c.ToString()))
-          | Result.Ok (package, (packageLock, versions)) ->
-            try
+        let rec loop state atoms = asyncSeq {
+            let! atom = atoms |> AsyncSeq.tryFirst
+            match atom with
+            | None -> ()
+            | Some (Result.Error (NotSatisfiable e)) ->
+              log("failed to retrive valid version for:" + e.ToString() |> text, LoggingLevel.Info)
+              yield Resolution.Backtrack (state.Solution, e)
+            | Some(Result.Ok (package, (packageLock, versions))) ->
               log(("Exploring " |> text) + (PackageIdentifier.showRich package) + "...", LoggingLevel.Info)
 
               // We pre-emptively grab the lock
@@ -299,19 +421,6 @@ module Solver =
                   LoggingLevel.Info)
               printManifestInfo log state manifest
 
-              let! mergedLocations = async {
-                return
-                  match mergeLocations state.Locations manifest.Locations with
-                  | Result.Ok xs -> xs
-                  | Result.Error e -> raise (new System.Exception(e.ToString()))
-              }
-
-              let resolvedVersion = {
-                Versions = versions;
-                Lock = packageLock;
-                Manifest = manifest;
-              }
-
               let versionSetStr =
                 packageLock
                 |> PackageLock.toLocation
@@ -321,86 +430,57 @@ module Solver =
 
               log ( (success "success ") + (text "Resolved ") + (PackageIdentifier.showRich package) + (subtle " -> ") + versionSetStr, LoggingLevel.Info)
 
-              let freshHints =
-                asyncSeq {
-                  try
-                    log( (text "Fetching lock-file for ") + (PackageIdentifier.showRich package) + "...", LoggingLevel.Debug)
-                    let! lock = lockTask
-                    log( (success "success ") + (text "Fetched the lock-file for ") + (PackageIdentifier.showRich package), LoggingLevel.Info)
-                    yield!
-                      lock
-                      |> lockToHints
-                      |> Seq.filter (fun (atom, packageLock) ->
-                        Set.contains (atom.Package, packageLock) state.Visited |> not &&
-                        state.Solution.Resolutions |> Map.containsKey atom.Package |> not
-                      )
-                      |> AsyncSeq.ofSeq
-                  with error ->
-                    log(string error|>text, LoggingLevel.Debug)
-                    ()
-                }
+              let resolvedVersion = {
+                Versions = versions;
+                Lock = packageLock;
+                Manifest = manifest;
+              }
 
-              let privatePackagesSolverState =
-                {
-                  Solution = Solution.empty;
-                  Locations = Map.empty;
-                  Visited = Set.empty;
-                  Hints = state.Hints;
-                  Depth = state.Depth + 1;
-                  Constraints = constraintsOf manifest.PrivateDependencies
-                }
+              let freshHints = lockTask |> getHintsFromLockTask log state package
 
               let privatePackagesSolutions =
-                step context strategy privatePackagesSolverState
-                |> AsyncSeq.choose (fun resolution ->
-                  match resolution with
-                  | Resolution.Ok solution -> Some solution
-                  | _ -> None
-                )
+                solvePrivate
+                  (step context strategy)
+                  state
+                  manifest.PrivateDependencies
 
-              yield!
+              let newState =
+                state
+                |> updateState (package, packageLock) freshHints manifest
+                |> unlockConflicts
+
+              let resolutions =
                 privatePackagesSolutions
-                |> AsyncSeq.collect (fun privatePackagesSolution -> asyncSeq {
-                  let nextState = {
-                    state with
-                      Solution =
-                        {
-                          state.Solution with
-                            Resolutions =
-                              state.Solution.Resolutions
-                              |> Map.add package (resolvedVersion, privatePackagesSolution)
-                        };
+                |> AsyncSeq.map(addPrivatePackageSolution newState package resolvedVersion)
+                |> AsyncSeq.collect (step context strategy)
+                |> recoverOrFail (packageLock, versions) newState log
+                |> recoverOrFail (packageLock, versions) state log
+                |> AsyncSeq.scan
+                     (fun (failures, _) resolution ->
+                       match resolution with
+                       | Resolution.Avoid (_, f) ->
+                         ((failures
+                          |> Map.insertWith
+                             Set.union f.Package
+                             (Set[f.Constraint])),
+                             resolution)
+                       | _ -> (failures, resolution))
+                     (newState.Failures, Resolution.Ok newState.Solution)
+                |> AsyncSeq.skip 1
+                |> AsyncSeq.cache
 
-                      Constraints =
-                        manifest.Dependencies
-                        |> Seq.fold
-                          (fun m (dep : Dependency) ->
-                            Map.insertWith
-                              Set.union
-                              dep.Package
-                              (Set[dep.Constraint])
-                              m)
-                          state.Constraints
+              yield! resolutions |> AsyncSeq.map snd
 
+              let! maybeLastState = AsyncSeq.tryLast resolutions
+              match maybeLastState with
+              | None -> ()
+              | Some (_, Backtrack _) -> ()
+              | Some (failures, _) ->
+                yield! loop {state with Failures = failures} (atoms |> AsyncSeq.skip 1)
+          }
 
-                      Depth = state.Depth;
-                      Visited =
-                        state.Visited
-                        |> Set.add (package, packageLock);
-                      Locations = mergedLocations;
-                      Hints =
-                        state.Hints
-                        |> AsyncSeq.append freshHints;
-                  }
-
-                  yield! step context strategy nextState
-                })
-                |> recoverOrFail state log
-
-            with error ->
-              log("Error exploring " + (string packageLock) + "..." |> text, LoggingLevel.Debug)
-              log(string error |> text, LoggingLevel.Debug)
-              yield Resolution.Error error
+        // here we start the loop
+        yield! loop state atomsToExplore
   }
 
   let solutionCollector resolutions =
@@ -408,12 +488,12 @@ module Solver =
     |> AsyncSeq.take (1024)
     |> AsyncSeq.takeWhileInclusive (fun x ->
       match x with
-      | Failure _ -> false
+      | Backtrack _ -> false
       | _ -> true)
     |> AsyncSeq.filter (fun x ->
       match x with
       | Ok _ -> true
-      | Failure _ -> true
+      | Backtrack _ -> true
       | _ -> false)
     |> AsyncSeq.take 1
     |> AsyncSeq.toListAsync
@@ -440,6 +520,7 @@ module Solver =
       Visited = Set.empty;
       Locations = manifest.Locations;
       Hints = hints;
+      Failures = Map.empty
     }
 
     let resolutions =
@@ -491,12 +572,4 @@ module Solver =
     return {
       Resolutions = resolutions |> Map.ofSeq
     }
-  }
-
-  let unlock (solution : Solution) (packages : Set<PackageIdentifier>) : Solution = {
-    Resolutions =
-      solution.Resolutions
-        |> Map.toSeq
-        |> Seq.filter (fst >> packages.Contains >> not)
-        |> Map.ofSeq
   }

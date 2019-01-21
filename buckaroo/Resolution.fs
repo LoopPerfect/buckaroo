@@ -21,7 +21,8 @@ type NotSatisfiable = {
 
 type Resolution =
 | Conflict of Set<Dependency * Version>
-| Failure of NotSatisfiable
+| Backtrack of Solution * NotSatisfiable
+| Avoid of Solution * NotSatisfiable
 | Error of System.Exception
 | Ok of Solution
 
@@ -76,14 +77,17 @@ module Resolution =
         |> Seq.map (fun (d, v) -> (Dependency.show d) + "->" + (Version.show v))
         |> String.concat " "
       )
+    | Backtrack (_, f) -> f.ToString()
+    | Avoid (_, e) -> "Error! " + e.ToString()
     | Error e -> "Error! " + e.Message
-    | Failure f -> f.ToString()
     | Ok solution -> "Success! " + (Solution.show solution)
 
   let merge (a : Resolution) (b : Resolution) : Resolution =
     match (a, b) with
-    | (Failure _, _) -> a
-    | (_, Failure _) -> b
+    | (Backtrack _, _) -> a
+    | (_, Backtrack _) -> b
+    | (Avoid _, _) -> a
+    | (_, Avoid _) -> b
     | (Conflict _, _) -> a
     | (_, Conflict _) -> b
     | (Error _, _) -> a
@@ -91,4 +95,4 @@ module Resolution =
     | (Ok x, Ok y) ->
       match Solution.merge x y with
       | Result.Ok z -> Ok z
-      | Result.Error e -> Resolution.Conflict (set []) // TODO
+      | Result.Error _ -> Resolution.Conflict (set []) // TODO

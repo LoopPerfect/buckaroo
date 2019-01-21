@@ -54,7 +54,11 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
     logInfo <| (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan)
 
     match resolution with
-    | Resolution.Failure f ->
+    | Resolution.Backtrack (_, f) ->
+      "Error! " |> text |> foreground ConsoleColor.Red |> log
+      f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
+      |> string |> text |> log
+    | Resolution.Avoid (_, f) ->
       "Error! " |> text |> foreground ConsoleColor.Red |> log
       f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
       |> string |> text |> log

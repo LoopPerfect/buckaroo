@@ -13,19 +13,55 @@ type ISourceExplorer =
   abstract member FetchManifest : PackageLock * Set<Version> -> Async<Manifest>
   abstract member FetchLock : PackageLock * Set<Version> -> Async<Lock>
 
+type FetchResult =
+| Candidate of PackageLocation * Set<Version>
+| Unsatisfiable of Constraint
+
 module SourceExplorer =
+
+  let private appendIfEmpty y (xs : AsyncSeq<_>) = asyncSeq {
+    let mutable hasYielded = false
+
+    for x in xs do
+      yield x
+      hasYielded <- true
+
+    if not hasYielded
+    then
+      yield y
+  }
+
+  let private candidates xs =
+    xs
+    |> Seq.choose (fun x ->
+      match x with
+      | Candidate (location, versions) -> Some (location, versions)
+      | _ -> None
+    )
+
   let fetchLocationsForConstraint (sourceExplorer : ISourceExplorer) locations package versionConstraint =
-    let rec loop (versionConstraint : Constraint) = asyncSeq {
+    let rec loop (versionConstraint : Constraint) : AsyncSeq<FetchResult> = asyncSeq {
       match Constraint.simplify versionConstraint with
       | Complement c ->
         let! complement =
           loop c
-          |> AsyncSeq.map fst
+          |> AsyncSeq.choose (fun x ->
+            match x with
+            | Candidate (location, _) -> Some location
+            | _ -> None
+          )
           |> AsyncSeq.fold (fun s x -> Set.add x s) Set.empty
 
         yield!
           loop (Constraint.All [])
-          |> AsyncSeq.filter (fun (location, _) -> complement |> Set.contains location |> not)
+          |> AsyncSeq.filter (fun x ->
+            match x with
+            | Candidate (location, _) ->
+              complement
+              |> Set.contains location
+              |> not
+            | _ -> true
+          )
       | Any xs ->
         yield!
           xs
@@ -33,7 +69,13 @@ module SourceExplorer =
           |> List.sortDescending
           |> List.map loop
           |> AsyncSeq.mergeAll
+          |> AsyncSeq.filter (fun x ->
+            match x with
+            | Candidate _ -> true
+            | Unsatisfiable _ -> false
+          )
           |> AsyncSeq.distinctUntilChanged
+          |> appendIfEmpty (Unsatisfiable versionConstraint)
       | All xs ->
         let combine (xs : Set<PackageLocation * Set<Version>>) (ys : Set<PackageLocation * Set<Version>>) =
           xs
@@ -50,50 +92,48 @@ module SourceExplorer =
           )
           |> Set.ofSeq
 
-        let! complement =
-          xs
-          |> Seq.choose (fun x ->
-            match x with
-            | Complement c -> Some c
-            | _ -> None
-          )
-          |> Seq.toList
-          |> Constraint.Any
-          |> loop
-          |> AsyncSeq.map fst
-          |> AsyncSeq.fold (fun s x -> Set.add x s) Set.empty
-
-        let constraints =
-          xs
-          |> List.filter (fun x ->
-            match x with
-            | Complement _ -> false
-            | _ -> true
-          )
-          |> List.sort
-          |> List.distinct
-
         yield!
           (
-            if Seq.isEmpty constraints
+            if Seq.isEmpty xs
             then
               sourceExplorer.FetchVersions locations package
               |> AsyncSeq.collect (fun version ->
                 sourceExplorer.FetchLocations locations package version
-                |> AsyncSeq.map (fun location -> (location, Set.singleton version))
+                |> AsyncSeq.map (fun location -> Candidate (location, Set.singleton version))
               )
             else
-              constraints
+              xs
+              |> List.distinct
+              |> List.sort
               |> List.map (loop >> (AsyncSeq.scan (fun s x -> Set.add x s) Set.empty))
-              |> List.reduce (AsyncSeq.combineLatestWith combine)
+              |> List.reduce (AsyncSeq.combineLatestWith (fun x y ->
+                let maybeUnsatisfiable =
+                  x
+                  |> Set.union y
+                  |> Seq.tryFind (fun x ->
+                    match x with
+                    | Unsatisfiable _ -> true
+                    | _ -> false
+                  )
+
+                match maybeUnsatisfiable with
+                | Some unsat -> Set.singleton (unsat)
+                | None ->
+                  let a = set (candidates x)
+                  let b = set (candidates y)
+
+                  combine a b |> Set.map Candidate
+              ))
               |> AsyncSeq.concatSeq
           )
-          |> AsyncSeq.filter (fun (location, _) -> Set.contains location complement |> not)
           |> AsyncSeq.distinctUntilChanged
+          |> appendIfEmpty (Unsatisfiable versionConstraint)
+
       | Exactly version ->
         yield!
           sourceExplorer.FetchLocations locations package version
-          |> AsyncSeq.map (fun location -> (location, Set.singleton version))
+          |> AsyncSeq.map (fun location -> Candidate (location, Set.singleton version))
+          |> appendIfEmpty (Unsatisfiable versionConstraint)
       | Range (op, v) ->
         yield!
           sourceExplorer.FetchVersions locations package
@@ -105,8 +145,14 @@ module SourceExplorer =
           |> AsyncSeq.map (Version.SemVer)
           |> AsyncSeq.collect (fun version ->
             sourceExplorer.FetchLocations locations package version
-            |> AsyncSeq.map (fun l -> (l, Set.singleton version))
+            |> AsyncSeq.map (fun l -> Candidate (l, Set.singleton version))
           )
+          |> appendIfEmpty (Unsatisfiable versionConstraint)
     }
 
     loop versionConstraint
+    |> AsyncSeq.takeWhileInclusive (fun x ->
+      match x with
+      | Candidate _ -> true
+      | Unsatisfiable _ -> false
+    )
