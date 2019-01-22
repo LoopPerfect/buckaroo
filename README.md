@@ -21,7 +21,7 @@ $ buckaroo init
 # Install dependencies
 $ buckaroo add github.com/buckaroo-pm/boost-thread@1.6.4
 
-# Run your code
+git@github.com:buckaroo-pm/LibRaw.git# Run your code
 $ buck run :my-app
 ```
 
@@ -60,6 +60,12 @@ $ buckaroo resolve
 ```
 
 Generates a fresh lock-file from the existing manifest.
+
+To resolve with an upgrading strategy:
+
+```bash=
+$ buckaroo resolve --upgrade
+```
 
 ### Install
 
