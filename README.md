@@ -19,9 +19,9 @@ The Buckaroo workflow looks like this:
 $ buckaroo init
 
 # Install dependencies
-$ buckaroo add github.com/buckaroo-pm/boost-thread@1.6.4
+$ buckaroo add github.com/buckaroo-pm/boost-thread@branch=master
 
-git@github.com:buckaroo-pm/LibRaw.git# Run your code
+# Run your code
 $ buck run :my-app
 ```
 
