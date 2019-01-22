@@ -203,7 +203,7 @@ module Command =
       sw.Write(Manifest.zero |> Manifest.show)
       context.Console.Write("Wrote " + Constants.ManifestFileName)
     else
-      context.Console.Write( ("warning " |> warn) + ("There is already a manifest in this directory" |> text))
+      context.Console.Write( ("warning " |> warn) + ("There is already a buckaroo.toml file in this directory" |> text))
   }
 
   let runCommand loggingLevel command = async {
