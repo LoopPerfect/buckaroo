@@ -39,6 +39,10 @@ let ``Target.parse works correctly`` () =
   let expected = Result.Ok { Folders = [ "foo_bar" ]; Name = "bar_bar" }
   Assert.Equal(expected, Target.parse input)
 
+  let input = "//Common++:Common++"
+  let expected = Result.Ok { Folders = [ "Common++" ]; Name = "Common++" }
+  Assert.Equal(expected, Target.parse input)
+
 [<Fact>]
 let ``Target.show works correctly`` () =
   let cases =

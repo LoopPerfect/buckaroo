@@ -18,7 +18,7 @@ module Target =
   let show (x : Target) : string =
     "//" + (x.Folders |> String.concat "/") + ":" + x.Name
 
-  let segmentParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|_|-(?=[a-zA-Z.\d])){0,38}"
+  let segmentParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|_|\+|-(?=[a-zA-Z.\d])){0,38}"
 
   let explicitNameParser = parse {
     let slash = CharParsers.skipString "/"
