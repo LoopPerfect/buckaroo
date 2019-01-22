@@ -207,6 +207,14 @@ As you might expect, these building blocks can be combined to write complex expr
  * `all(!branch=master any(tag=abc tag=def 1.0.0))`
  * `all(>=1.0.0 !any(1.0.0 1.3.4 revision=dc16c91af2519b6129a33bd6e1675ebf73739103))`
 
+## Official Packages
+
+Since Buckaroo works directly from Git, we don't know how many packages are in the wild!
+
+However, we have a collection of [official packages](https://github.com/buckaroo-pm) over at Buckaroo PM. 
+
+If you cannot find the package you need, create an issue over on [the wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) and we will take a look! 
+
 ## Creating a Package
 
 Creating a Buckaroo package is really easy!
