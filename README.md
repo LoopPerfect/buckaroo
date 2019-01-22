@@ -88,11 +88,10 @@ If no satisfactory resolution can be found then nothing is changed.
 ### Upgrade
 
 ```bash=
-$ buckaroo upgrade [ <package> [ @<version> ] ]
+$ buckaroo upgrade [ <package> ]
 ```
 
 Upgrades the given package(s) to the highest version that meets the constraints in the manifest.
-Optionally, a version can be specified to move the package to.
 
 If no packages are specified, then all are upgraded.
 
