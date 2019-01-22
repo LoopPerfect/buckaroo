@@ -1,37 +1,30 @@
-os: Visual Studio 2015
+version: '1.0.{build}'
+image: Visual Studio 2017
 
-version: '{build}'
-
-environment:
-  BUCK_EXTRA_JAVA_ARGS: "-Djna.nosys=true"
-  matrix:
-    - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
-
-install:
-  - ps: choco install wget -y --no-progress
-  - ps: choco install zip -y --no-progress
-  - ps: refreshenv
-  - ps: choco install buck -y --no-progress
-  - ps: refreshenv
-  - ps: choco list --localonly
-  - ps: buck --version
-
-# Disable automatic builds by MSBuild
-build: off
+before_build:
+  - ps: dotnet --version
 
 build_script:
-  - buck build :buckaroo
-  - buck build :buckaroo-cli
-  - buck build :buckaroo-unit
-  - buck build :buckaroo-integration
+  - ps: dotnet build ./buckaroo
+  - ps: dotnet build ./buckaroo-cli
+  - ps: ./warp-bundle-windows.ps1
+
+clone_depth: 1
 
 test_script:
-  - buck test :buckaroo-unit
+  - ps: dotnet test ./buckaroo-tests
 
 artifacts:
-  - path: buck-out\gen\buckaroo-cli.jar
-    name: buckaroo-cli.jar
+  - path: ./warp/buckaroo-windows.exe
+    name: buckaroo-windows.exe
 
-cache:
-  - C:\ProgramData\chocolatey\bin -> appveyor.yml
-  - C:\ProgramData\chocolatey\lib -> appveyor.yml
+deploy:
+  description: 'AppVeyor Release'
+  provider: GitHub
+  auth_token:
+    secure: Z+IaDd5u9nwMMBWqxrYd5l8igQcBV2EQij0wJA4jr1F78Nd6UrC9d4xuWLr4WI/n
+  artifact: buckaroo-windows.exe
+  draft: true
+  prerelease: true
+  on:
+    APPVEYOR_REPO_TAG: true

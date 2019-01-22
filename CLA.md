@@ -13,7 +13,7 @@ This is a binding legal agreement on you and any organization you represent. If 
 
 **"Work"** means any project, work or materials owned or managed by LoopPerfect Ltd.
 
-**"You"** and **"your"** means you and any organization on whose behalf you are entering this Agreement. 
+**"You"** and **"your"** means you and any organization on whose behalf you are entering this Agreement.
 
 
 ## 2. Copyright Assignment, License and Waiver

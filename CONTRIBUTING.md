@@ -5,19 +5,13 @@ Hello! Thanks for taking the time to contribute to Buckaroo. Buckaroo is a commu
 
 ## Important Resources
 
-Buckaroo is spread across a few different repositories:
+The Buckaroo project is spread across a few different repositories:
 
  1. [LoopPerfect/buckaroo](https://github.com/LoopPerfect/buckaroo) contains the source-code for the Buckaroo client that users install on their machines.
- 2. [LoopPerfect/buckaroo-recipes](https://github.com/LoopPerfect/buckaroo-recipes/) contains the official cookbook that is installed with Buckaroo by default.
- 3. [LoopPerfect/buckaroo-wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) is an issue-tracker where users can suggest recipes for inclusion in the official cookbook.
- 4. [LoopPerfect/buckaroo-docs](https://github.com/LoopPerfect/buckaroo-docs/) contains the user documentation for Buckaroo.
- 5. [LoopPerfect/homebrew-lp](https://github.com/LoopPerfect/homebrew-lp) is the [Homebrew](https://brew.sh/) (and [Linuxbrew](http://linuxbrew.sh/)) tap that contains the Buckaroo formula.
+ 2. [LoopPerfect/buckaroo-wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) is an issue-tracker where users can suggest recipes for inclusion in the official cookbook.
+ 3. [LoopPerfect/homebrew-lp](https://github.com/LoopPerfect/homebrew-lp) is the [Homebrew](https://brew.sh/) (and [Linuxbrew](http://linuxbrew.sh/)) tap that contains the Buckaroo formula.
 
-Additionally, there are a few websites related to Buckaroo:
-
- 1. [Buckaroo.pm](https://buckaroo.pm/) is the official website for Buckaroo, where you can browse recipes.
- 2. [buckaroo.readthedocs.io](https://buckaroo.readthedocs.io/) is a convenient place to browse the documentation.
- 3. [Travis CI](https://travis-ci.org/LoopPerfect/buckaroo) is the build and testing service used by Buckaroo.
+Official packages live in a [dedicated GitHub account](https://github.com/buckaroo-pm/).
 
 
 ## Getting Help
@@ -31,11 +25,12 @@ Since Buckaroo has a few different components, it is important that issues are r
 
  * Report **installation problems** to the [buckaroo issue tracker](https://github.com/LoopPerfect/buckaroo/issues).
  * Report **bugs in the client** to the [buckaroo issue tracker](https://github.com/LoopPerfect/buckaroo/issues).
- * Report **issues with a specific recipe** to the [buckaroo-recipes issue tracker](https://github.com/LoopPerfect/buckaroo-recipes/issues).
+ * Report **issues with a specific package** to that package's issue tracker.
  * Report **package requests** to the [buckaroo-wishlist](https://github.com/LoopPerfect/buckaroo-wishlist/issues).
  * Report **feature requests** to the [buckaroo issue tracker](https://github.com/LoopPerfect/buckaroo/issues).
 
-If you are not sure, just report to the [buckaroo issue tracker](https://github.com/LoopPerfect/buckaroo/issues).  😌
+If you are not sure, just report to the [buckaroo issue tracker](https://github.com/LoopPerfect/buckaroo/issues). 😌
+
 
 ### Security
 
@@ -61,18 +56,19 @@ We endeavor to keep [the issue tracker](https://github.com/LoopPerfect/buckaroo/
 
 First-time contributor? Take a look at the issue tracker for [issues marked "first commit"](https://github.com/LoopPerfect/buckaroo/labels/first%20commit) for smaller, self-contained tasks. We would also be happy to walk you through any of the existing code on [Gitter.im](https://gitter.im/LoopPerfect/buckaroo).
 
-### Recipes
+### Packages
 
-Another way to contribute is by writing recipes! Send a PR to [this repo](https://github.com/LoopPerfect/buckaroo-recipes) to add a recipe to the official cookbook. If you are looking for a library to port, [the wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) is a good place to start.
+Another way to contribute is by writing packages! Because Buckaroo is decentralized, you can do this in your repo without approvals from us. However, we can also help guide the process on [Gitter.im](https://gitter.im/LoopPerfect/buckaroo).
+
+If you are looking for a library to port, [the wishlist](https://github.com/LoopPerfect/buckaroo-wishlist) is a good place to start.
 
 ### Your Own Feature
 
 If you would like to contribute a feature that you have thought of, please [create an issue](https://github.com/LoopPerfect/buckaroo/issues) first so that we can ensure the design is in-keeping with the general direction of Buckaroo.
 
-
 ## Environment
 
-Development of Buckaroo requires a [Buck](https://buckbuild.com) installation on your system. We would also recommend using [IntelliJ IDEA](https://www.jetbrains.com/idea/) for its code-completion features.
+Development of Buckaroo requires [F# and dotNET Core](https://docs.microsoft.com/en-us/dotnet/fsharp/get-started/get-started-command-line). We also recommend [Visual Studio Code](https://code.visualstudio.com/) and [Ionide](http://ionide.io/) for code-completion features.
 
 To fetch the source-code:
 
@@ -84,30 +80,15 @@ cd buckaroo
 To build the project:
 
 ```bash=
-buck build :buckaroo
+dotnet build ./buckaroo-cli
 ```
 
 To run the project:
 
 ```bash=
-buck build :buckaroo-cli
+dotnet run --project ./buckaroo-cli
 ```
 
-To build the Debian bundle you will need `equivs`: 
-
-```bash=
-sudo apt install -y equivs
-```
-
-### IntelliJ IDEA
-
-To generate IntelliJ IDEA project files:
-
-```bash=
-buck project --ide intellij
-```
-
-Due to a bug in Buck, you may need to manually mark the `main/resources` folder as a resource folder in IntelliJ IDEA. To do this, right-click on the folder in the `Project` pane, choose `Mark Directory as` and then `Resources Root`.
 
 ### Which branch should I use? 🤔
 
@@ -128,28 +109,28 @@ If you would like to patch an old release, you should branch off of `release/ver
 
 Buckaroo uses automated testing and [Travis CI](https://travis-ci.org/LoopPerfect/buckaroo) to prevent regressions.
 
-There are two `buck test` targets for Buckaroo:
-
- * `buckaroo-unit` is for self-contained tests of interal logic to Buckaroo.
- * `buckaroo-integration` is for tests that require external services, such as GitHub.
-
 To run the tests:
 
 ```bash=
-buck test :buckaroo-unit
-buck test :buckaroo-integration
+dotnet test
 ```
 
-You can also run these tests inside IntelliJ IDEA.
+## Bundling
 
-### Adding a Test
+Releases are bundled using [Warp](https://github.com/dgiagio/warp):
 
-First, determine if your test belongs in `buckaroo-unit` or `buckaroo-integration`. A test in `buckaroo-unit` must not modify the file system or call any external services. Favour `buckaroo-unit` tests where possible.
+```bash=
+wget -O warp-packer https://github.com/dgiagio/warp/releases/download/v0.3.0/macos-x64.warp-packer
+./warp-packer
+```
 
-Next, place your test in the right directory:
+To create a release for macOS:
 
- * `buckaroo-unit` tests live under `src/test/java/com/loopperfect/buckaroo`.
- * `buckaroo-integration` tests live under `src/integration/java/com/loopperfect/buckaroo`.
+```bash=
+dotnet publish ./buckaroo-cli/ -c Release -r osx-x64
+./warp-packer --arch macos-x64 --exec buckaroo-cli --input_dir ./buckaroo-cli/bin/Release/netcoreapp2.1/osx-x64 --output buckaroo-macos
+./buckaroo-macos
+```
 
 
 ## Making a Pull Request
@@ -160,7 +141,7 @@ Once your submission is ready, you should make a pull request on GitHub to the a
 
  * If you are making a bug-fix for an old release, you should `base` on the appropriate `release/version` branch.
 
-We review pulls request within 24 hours.
+We review pull requests within 24 hours.
 
 
 ## Releases
@@ -168,6 +149,7 @@ We review pulls request within 24 hours.
 Buckaroo releases are semantically versioned Git tags. You can see [the releases on GitHub](https://github.com/LoopPerfect/buckaroo/releases).
 
 Each release has a corresponding branch named `release/version`. This allows `master` to progress beyond the current release, whilst still allowing for easy patching of old versions.
+
 
 ### Installing a Cutting-edge Release ✋⚠️
 
