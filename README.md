@@ -262,7 +262,7 @@ hello_deps = buckaroo_deps_from_package('github.com/buckaroo-pm/hello')
 
 ## To .gitignore or not to .gitignore?
 
-A general purpose .gitignore for Buckaroo projects is: 
+A general purpose `.gitignore` for Buckaroo projects is: 
 
 ```
 .buckd
