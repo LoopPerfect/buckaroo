@@ -38,6 +38,27 @@ type GitCli (console : ConsoleManager) =
     return stdout.ToString()
   }
 
+  let listLocalCommits repository branch skip = async {
+    let command =
+      "git --no-pager -C " + repository +
+      " log " + branch + " --pretty=format:'%H'" + " --skip=" + skip.ToString()
+
+    let! output =
+      runBash  command
+      |> Async.Catch
+      |> Async.map (fun x ->
+        match x with
+        | Choice1Of2 y -> y
+        | Choice2Of2 _ -> ""
+      )
+
+    return
+      output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
+      |> Seq.map (fun x -> x.Trim())
+      |> Seq.filter (fun x -> x.Length > 0)
+      |> Seq.toList
+  }
+
   member this.Init (directory : string) =
     runBash ("git init " + directory)
 
@@ -89,7 +110,10 @@ type GitCli (console : ConsoleManager) =
 
     member this.DefaultBranch (gitPath : string) = async {
       let! result = runBash ("git -C " + gitPath + " symbolic-ref HEAD")
-      return result.Trim()
+
+      let parts = result.Split([| '/' |])
+
+      return parts.[2].Trim()
     }
 
     member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
@@ -112,13 +136,19 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.Checkout (gitDir : string) (revision : string) = async {
-      do!
-        runBash ("git -C " + gitDir + " checkout " + revision + " .")
-        |> Async.Ignore
+      try
+        do!
+          runBash ("git -C " + gitDir + " checkout " + revision + " .")
+          |> Async.Ignore
+      with _ ->
+        // If the commit is an orphan then this might work
+        do!
+          runBash ("git -C " + gitDir + " checkout --orphan " + revision + " ")
+          |> Async.Ignore
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
-      log((text "shallow cloning ") + (highlight url), LoggingLevel.Info)
+      log((text "Shallow cloning ") + (highlight url), LoggingLevel.Info)
       do!
         runBash ("git clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore
@@ -126,21 +156,27 @@ type GitCli (console : ConsoleManager) =
 
     member this.FetchBranch (repository : String) (branch : Branch) (depth : int) = async {
       let gitDir = repository
-      let depthStr =
-        if depth > 0
-        then "--depth=" + (string depth) + " "
-        else ""
-      let command =
-        "git --no-pager -C " + gitDir +
-        " fetch origin " + depthStr + branch + ":" + branch
 
-      try
+      let fetchToDepth depth = async {
+        let depthStr =
+          if depth > 0
+          then "--depth=" + (string depth) + " "
+          else ""
+
+        let command =
+          "git --no-pager -C " + gitDir +
+          " fetch origin " + depthStr + branch.Trim() + ":" + branch.Trim()
+
         do!
           runBash command
           |> Async.Ignore
+      }
+
+      try
+        do! fetchToDepth depth
       with
         | :? BashException as error ->
-          if error.ExitCode = 1
+          if error.ExitCode > 0
           then
             // Delete the branch and try again
             // Seems like commits are cached (TODO: verify this)
@@ -148,9 +184,7 @@ type GitCli (console : ConsoleManager) =
               runBash ("git -C " + gitDir + " branch -D " + branch)
               |> Async.Ignore
 
-            do!
-              runBash command
-              |> Async.Ignore
+            do! fetchToDepth depth
     }
 
     member this.FetchCommits (repository : String) (branch : Branch) : AsyncSeq<Revision> = asyncSeq {
@@ -158,32 +192,16 @@ type GitCli (console : ConsoleManager) =
         [0..12]
           |> Seq.map (fun i -> pown 2 i)
           |> Seq.map( fun depth skip -> async {
+            let! revs =
+              listLocalCommits repository branch skip
 
-              let command =
-                "git --no-pager -C " + repository +
-                " log " + branch + " --pretty=format:'%H'" + " --skip=" + skip.ToString()
+            let! fetchNext =
+              (this :> IGit).FetchBranch repository branch <| (List.length revs) + depth
+              |> Async.Ignore
+              |> Async.StartChild
 
-              let! output =
-                runBash  command
-                |> Async.Catch
-                |> Async.map(
-                  fun x ->
-                    match x with
-                    | Choice1Of2 y -> y
-                    | Choice2Of2 _ -> ""
-                  )
-
-              let revs =
-                output.Split ([| nl |], StringSplitOptions.RemoveEmptyEntries)
-                |> Seq.map (fun x -> x.Trim())
-                |> Seq.toList
-
-              let! fetchNext =
-                (this :> IGit).FetchBranch repository branch <| (List.length revs) + depth
-                |> Async.Ignore
-                |> Async.StartChild
-              return (revs, fetchNext)
-            })
+            return (revs, fetchNext)
+          })
           |> AsyncSeq.ofSeq
           |> AsyncSeq.scanAsync
               (fun (skip, prev, _) next -> async {

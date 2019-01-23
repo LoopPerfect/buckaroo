@@ -109,21 +109,21 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
 
     let! success =
       operations
-      |> AsyncSeq.mapAsync(id)
-      |> AsyncSeq.mapAsync(fun _ -> git.HasCommit targetDirectory commit)
-      |> AsyncSeq.skipWhile(not)
-      |> AsyncSeq.take(1)
-      |> AsyncSeq.lastOrDefault(false)
+      |> AsyncSeq.mapAsync id
+      |> AsyncSeq.mapAsync (fun _ -> git.HasCommit targetDirectory commit)
+      |> AsyncSeq.skipWhile not
+      |> AsyncSeq.take 1
+      |> AsyncSeq.lastOrDefault false
 
     if not success then
-      raise <| new Exception("failed to fetch: " + url + " " + commit)
+      raise <| new Exception("Failed to fetch: " + url + " " + commit)
   }
 
   member this.FetchRefs (url : string) = async {
     match refsCache |> Map.tryFind url with
     | Some refs -> return refs
     | None ->
-      log( (text "fetching refs from ") + (highlight url), LoggingLevel.Info)
+      log( (text "Fetching refs from ") + (highlight url), LoggingLevel.Info)
       let cacheDir = cloneFolderName url
       let startTime = System.DateTime.Now
       let! refs =
@@ -138,7 +138,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
           )
         |> Async.map(fun (a, b) ->
           if a.Length = 0 && b.Length = 0 then
-            raise <| new SystemException("no internet connection and cache empty")
+            raise <| new SystemException("No internet connection and the cache is empty")
           else if a.Length > 0
           then a
           else b
