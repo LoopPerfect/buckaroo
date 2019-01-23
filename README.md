@@ -36,6 +36,7 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
  * Private and public dependencies to avoid "dependency hell"
  * Multiple libraries per package, so tools like Lerna are unnecessary
  * Pull individual packages out of mono-repos
+ * Full support for semantic versioning (but only when you want it!)
  * Live at head! Move fast by depending directly on Git branches, but in a controlled way
  * Blazing fast resolution using clever heuristics
  * Version equivalency checks to reduce dependency conflicts
