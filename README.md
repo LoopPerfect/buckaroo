@@ -259,3 +259,20 @@ hello_cell = buckaroo_cell('github.com/buckaroo-pm/hello')
 hello_deps = buckaroo_deps_from_package('github.com/buckaroo-pm/hello')
 # [ 'buckaroo.github.buckaroo-pm.hello//:hello' ]
 ```
+
+## To .gitignore or not to .gitignore?
+
+A general purpose .gitignore for Buckaroo projects is: 
+
+```
+.buckd
+buck-out
+.buckconfig.local
+.buckconfig.d
+buckaroo
+buckaroo_macros.bzl
+```
+
+You should always check-in you `buckaroo.lock.toml`!
+
+This file gives you reproducible installations of your dependencies every time you build. 
