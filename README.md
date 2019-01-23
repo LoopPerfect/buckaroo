@@ -224,7 +224,9 @@ You will need to create a few files:
  * `BUCK` containing a build rule ([example](https://github.com/buckaroo-pm/hello/blob/master/BUCK#L1))
  * `buckaroo.toml` containing `targets = [ "<some-build-rule>" ]` ([example](https://github.com/buckaroo-pm/hello/blob/master/buckaroo.toml))
 
-Push these to GitHub, then install as follows:
+Push these to GitHub.
+
+Now, you can install your package as follows:
 
 ```bash=
 $ buckaroo add github.com/<org>/<project>@branch=master
