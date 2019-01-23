@@ -153,7 +153,7 @@ $ buckaroo add github.com/buckaroo-pm/ericniebler-range-v3@branch=master
 
  5. Now you can use range-v3. Update `main.cpp` to:
 
-```cpp=
+```cpp
 #include <iostream>
 #include <vector>
 #include <range/v3/all.hpp>
@@ -177,7 +177,7 @@ int main() {
 
 If your C++ compiler does not default to C++ 14, then you will need to add this to your `.buckconfig` file: 
 
-```ini=
+```ini
 [cxx]
   cxxflags = -std=c++14
 ```
@@ -238,7 +238,7 @@ Buckaroo will install some macros for use in your build scripts. If you have use
 
 However, if you need something more custom, this is how they work:
 
-```python=
+```python
 # Load the macros
 load('//:buckaroo_macros.bzl', 'buckaroo_cell', 'buckaroo_deps', 'buckaroo_deps_from_package')
 
