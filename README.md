@@ -153,7 +153,7 @@ $ buckaroo add github.com/buckaroo-pm/ericniebler-range-v3@branch=master
 
  5. Now you can use range-v3. Update `main.cpp` to:
 
-```c++=
+```cpp
 #include <iostream>
 #include <vector>
 #include <range/v3/all.hpp>
