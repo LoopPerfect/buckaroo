@@ -119,8 +119,17 @@ type GitCli (console : ConsoleManager) =
     member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
       do! Files.mkdirp installPath
       do!
-        runBash ("git clone -s -n " + gitPath + " " + installPath  + " && git -C " + installPath + " checkout " + revision)
-        |> Async.Ignore
+        runBash ("git clone -s -n " + gitPath + " " + installPath)
+          |> Async.Ignore
+
+      try
+        do!
+          runBash ("git -C " + installPath + " checkout " + revision)
+          |> Async.Ignore
+      with _ ->
+        do!
+          runBash ("git -C " + installPath + " checkout --orphan " + revision)
+          |> Async.Ignore
     }
 
     member this.Unshallow (gitDir : string) = async {
