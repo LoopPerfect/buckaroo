@@ -110,7 +110,10 @@ type GitCli (console : ConsoleManager) =
 
     member this.DefaultBranch (gitPath : string) = async {
       let! result = runBash ("git -C " + gitPath + " symbolic-ref HEAD")
-      return result.Trim()
+
+      let parts = result.Split([| '/' |])
+
+      return parts.[2].Trim()
     }
 
     member this.CheckoutTo (gitPath : string) (revision : Revision) (installPath : string) = async {
@@ -162,7 +165,7 @@ type GitCli (console : ConsoleManager) =
 
         let command =
           "git --no-pager -C " + gitDir +
-          " fetch origin " + depthStr + branch + ":" + branch
+          " fetch origin " + depthStr + branch.Trim() + ":" + branch.Trim()
 
         do!
           runBash command
@@ -196,6 +199,7 @@ type GitCli (console : ConsoleManager) =
               (this :> IGit).FetchBranch repository branch <| (List.length revs) + depth
               |> Async.Ignore
               |> Async.StartChild
+
             return (revs, fetchNext)
           })
           |> AsyncSeq.ofSeq
