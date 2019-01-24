@@ -43,16 +43,19 @@ module Solver =
 
   let fetchCandidatesForConstraint sourceExplorer locations package constraints = asyncSeq {
     let candidatesToExplore = SourceExplorer.fetchLocationsForConstraint sourceExplorer locations package (Constraint.simplify constraints)
+
     let mutable hasCandidates = false
-    let mutable consecutiveFailures = 0
+    let mutable branchFailures = Map.empty
+
     for x in candidatesToExplore do
-      if consecutiveFailures > MaxConsecutiveFailures then
+      if branchFailures |> Map.exists (fun _ v -> v > MaxConsecutiveFailures) then
         yield
-          Result.Error (NotSatisfiable {
-          Package = package;
-          Constraint = constraints
-          Msg = (string MaxConsecutiveFailures) + " consecutive versions didn't have a valid manifest"
-        })
+          NotSatisfiable {
+            Package = package;
+            Constraint = constraints
+            Msg = (string MaxConsecutiveFailures) + " consecutive versions didn't have a valid manifest"
+          }
+          |> Result.Error
       else
         yield!
           match x with
@@ -62,10 +65,19 @@ module Solver =
                 do! sourceExplorer.FetchManifest (lock, c) |> Async.Ignore
                 yield Result.Ok (package, (packageLocation, c))
                 hasCandidates <- true
-                consecutiveFailures <- 0
               with _ ->
-                consecutiveFailures <- consecutiveFailures + 1
-                ()
+                let branches =
+                  c
+                  |> Seq.choose (fun v ->
+                    match v with
+                    | Version.Git (Branch b) -> Some b
+                    | _ -> None
+                  )
+
+                for branch in branches do
+                  branchFailures <-
+                    branchFailures
+                    |> Map.insertWith (fun _ j -> j + 1) branch 0
             }
           | Unsatisfiable u -> asyncSeq {
             yield
@@ -76,12 +88,14 @@ module Solver =
             })
           }
 
-    if hasCandidates = false then
-      yield Result.Error (NotSatisfiable {
+    if hasCandidates = false
+    then
+      yield
+        Result.Error (NotSatisfiable {
           Package = package;
           Constraint = constraints;
           Msg = "No Version we tested had a valid manifest"
-      })
+       })
   }
 
   let constraintsOf (ds: Set<Dependency>) =
@@ -90,7 +104,6 @@ module Solver =
     |> Seq.groupBy fst
     |> Seq.map (fun (k, xs) -> (k, xs |> Seq.map snd |> Set.ofSeq))
     |> Map.ofSeq
-
 
   let findConflicts (solution : Solution) (dependencies : Constraints) = seq {
      let maybeConflict =
