@@ -60,24 +60,31 @@ module Solver =
         yield!
           match x with
           | Candidate (packageLocation, c) -> asyncSeq {
+              let branches =
+                c
+                |> Seq.choose (fun v ->
+                  match v with
+                  | Version.Git (Branch b) -> Some b
+                  | _ -> None
+                )
+
               try
                 let! lock = sourceExplorer.LockLocation packageLocation
                 do! sourceExplorer.FetchManifest (lock, c) |> Async.Ignore
                 yield Result.Ok (package, (packageLocation, c))
+
                 hasCandidates <- true
-              with _ ->
-                let branches =
-                  c
-                  |> Seq.choose (fun v ->
-                    match v with
-                    | Version.Git (Branch b) -> Some b
-                    | _ -> None
-                  )
 
                 for branch in branches do
                   branchFailures <-
                     branchFailures
-                    |> Map.insertWith (fun _ j -> j + 1) branch 0
+                    |> Map.add branch 0
+
+              with _ ->
+                for branch in branches do
+                  branchFailures <-
+                    branchFailures
+                    |> Map.insertWith (fun i j -> i + j + 1) branch 0
             }
           | Unsatisfiable u -> asyncSeq {
             yield
