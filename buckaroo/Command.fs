@@ -5,17 +5,17 @@ open Buckaroo.Console
 open Buckaroo.Tasks
 
 type Command =
-| Start
-| Help
-| Init
-| Version
-| Resolve of ResolutionStyle
-| Install
-| Quickstart
-| UpgradeDependencies of List<PackageIdentifier>
-| AddDependencies of List<Dependency>
-| RemoveDependencies of List<PackageIdentifier>
-| ShowCompletions
+  | Start
+  | Help
+  | Init
+  | Version
+  | Resolve of ResolutionStyle
+  | Install
+  | Quickstart
+  | UpgradeDependencies of List<PackageIdentifier>
+  | AddDependencies of List<Dependency>
+  | RemoveDependencies of List<PackageIdentifier>
+  | ShowCompletions
 
 module Command =
 
