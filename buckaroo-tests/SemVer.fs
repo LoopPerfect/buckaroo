@@ -6,7 +6,7 @@ open Xunit
 open Buckaroo
 
 let dropError<'T, 'E> (x : Result<'T, 'E>) =
-  match x with 
+  match x with
   | Result.Ok o -> Some o
   | Result.Error _ -> None
 
@@ -29,6 +29,8 @@ let ``SemVer.parse works correctly`` () =
     ("", None);
     ("abc", None);
     ("v0.9.0-g++-4.9", None);
+    ("boost-1.66.0", Some { SemVer.zero with Major = 1; Minor = 66 });
+    ("boost-1.64.0-beta2", None);
   ]
   for (input, expected) in cases do
     Assert.Equal(expected, SemVer.parse input |> dropError)

@@ -49,14 +49,28 @@ module SemVer =
       |> Seq.fold (fun acc elem -> acc * 10 + elem) 0
   }
 
+  let prefixParser = parse {
+    do!
+      CharParsers.asciiLetter
+      |> Primitives.many1
+      |>> ignore
+    do! CharParsers.skipString "-"
+  }
+
   let parser : Parser<SemVer, unit> = parse {
     do! CharParsers.spaces
-    do! CharParsers.skipString "v" <|> CharParsers.skipString "V" |> Primitives.optional
+    do!
+      (attempt prefixParser)
+      <|> CharParsers.skipString "v"
+      <|> CharParsers.skipString "V"
+      |> Primitives.optional
+
     let! major = integerParser
     let segment = parse {
       do! CharParsers.skipString "."
       return! integerParser
     }
+
     let! minor = segment |> Primitives.opt
     let! patch = segment |> Primitives.opt
     let! increment = segment |> Primitives.opt
