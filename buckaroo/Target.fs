@@ -18,14 +18,15 @@ module Target =
   let show (x : Target) : string =
     "//" + (x.Folders |> String.concat "/") + ":" + x.Name
 
-  let segmentParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|_|\+|-(?=[a-zA-Z.\d])){0,38}"
+  let private segmentParser = CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z.\d]|_|\+|-(?=[a-zA-Z.\d])){0,38}"
+
+  let private slash = CharParsers.skipString "/"
 
   let explicitNameParser = parse {
-    let slash = CharParsers.skipString "/"
-    let! folders = Primitives.sepBy segmentParser slash
-    do! slash |> Primitives.optional
+    let! folders = Primitives.sepEndBy segmentParser slash
     do! CharParsers.skipString ":"
     let! name = segmentParser
+
     return { Folders = folders; Name = name }
   }
 
@@ -34,6 +35,7 @@ module Target =
     let! folders = Primitives.sepBy1 segmentParser slash
     do! slash |> Primitives.optional
     let name = folders |> List.rev |> List.head
+
     return { Folders = folders; Name = name }
   }
 

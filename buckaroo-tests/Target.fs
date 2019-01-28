@@ -43,6 +43,10 @@ let ``Target.parse works correctly`` () =
   let expected = Result.Ok { Folders = [ "Common++" ]; Name = "Common++" }
   Assert.Equal(expected, Target.parse input)
 
+  let input = "//src/liblzma/:lzma"
+  let expected = Result.Ok { Folders = [ "src"; "liblzma" ]; Name = "lzma" }
+  Assert.Equal(expected, Target.parse input)
+
 [<Fact>]
 let ``Target.show works correctly`` () =
   let cases =
