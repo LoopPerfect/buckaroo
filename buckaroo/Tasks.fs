@@ -14,9 +14,10 @@ type TaskContext = {
 }
 
 let private isWindows () =
-  InteropServices.RuntimeInformation.OSDescription
-  |> String.toLower
-  |> String.contains "win"
+  let description =
+    InteropServices.RuntimeInformation.OSDescription
+    |> String.toLower
+  (String.contains "win" description) && not (String.contains "darwin" description)
 
 let private getCachePath = async {
   return
