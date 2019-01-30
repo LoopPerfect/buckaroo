@@ -123,13 +123,35 @@ Buckaroo is shipped as a self-contained executable, so all you need to do is dow
 
 For example:
 
-```bash=
-$ wget https://github.com/LoopPerfect/buckaroo/releases/download/buckaroo-redux-alpha-6/buckaroo-linux -O buckaroo
+```bash
+# Linux
+$ wget https://github.com/LoopPerfect/buckaroo/releases/download/buckaroo-redux-alpha-15/buckaroo-linux -O buckaroo
+$ chmod +x ./buckaroo
+$ ./buckaroo
+
+# macOS
+$ wget https://github.com/LoopPerfect/buckaroo/releases/download/buckaroo-redux-alpha-15/buckaroo-macos -O buckaroo
 $ chmod +x ./buckaroo
 $ ./buckaroo
 ```
 
-Buckaroo uses [Buck](https://buckbuild.com/) as a packaging format, so to build packages you will also need to [install that](https://buckbuild.com/setup/getting_started.html).
+#### Buck
+
+Buckaroo uses [Buck](https://buckbuild.com/) as a packaging format and build system, so you will also need to [install that](https://buckbuild.com/setup/getting_started.html).
+
+The *quickest* way to get up and running with Buck is to use our Warp bundles: 
+
+```bash
+# Linux
+$ wget https://github.com/njlr/buck-warp/releases/download/v0.3.0/buck-2019.01.10.01-linux -O buck
+$ chmod +x ./buck
+$ ./buck
+
+# macOS
+$ wget https://github.com/njlr/buck-warp/releases/download/v0.3.0/buck-2019.01.10.01-osx -O buck
+$ chmod +x ./buck
+$ ./buck
+```
 
 ## Quick Start
 
@@ -137,7 +159,7 @@ Buckaroo uses [Buck](https://buckbuild.com/) as a packaging format, so to build 
  2. Run `$ buckaroo quickstart`
  3. Run the generated app:
 
-```bash=
+```bash
 $ buck run :app
 Parsing buck files: finished in 0.7 sec (100%)
 Building: finished in 1.0 sec (100%) 6/6 jobs, 6 updated
@@ -147,7 +169,7 @@ Hello, world.
 
  4. Add a dependency:
 
-```bash=
+```bash
 $ buckaroo add github.com/buckaroo-pm/ericniebler-range-v3@branch=master
 ```
 
@@ -228,7 +250,7 @@ Push these to GitHub.
 
 Now, you can install your package as follows:
 
-```bash=
+```bash
 $ buckaroo add github.com/<org>/<project>@branch=master
 ```
 
