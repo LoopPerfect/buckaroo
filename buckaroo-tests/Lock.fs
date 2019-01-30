@@ -1,6 +1,7 @@
 module Buckaroo.Tests.Lock
 
 open Xunit
+open FSharpx
 open Buckaroo
 
 [<Fact>]
@@ -17,6 +18,14 @@ let ``Lock.parse works correctly 1`` () =
     Dependencies = Set.empty;
     Packages = Map.empty;
   }
+
+  // 3 new-lines indicates poor formatting
+  Assert.True (
+    expected
+    |> Lock.toToml
+    |> String.contains "\n\n\n"
+    |> not
+  )
 
   Assert.Equal(Result.Ok expected, actual)
 
@@ -72,6 +81,14 @@ let ``Lock.parse works correctly 2`` () =
           PrivatePackages = Map.empty;
         };
   }
+
+  // 3 new-lines indicates poor formatting
+  Assert.True (
+    expected
+    |> Lock.toToml
+    |> String.contains "\n\n\n"
+    |> not
+  )
 
   Assert.Equal(Result.Ok expected, actual)
 
@@ -149,5 +166,13 @@ let ``Lock.parse works correctly 3`` () =
               };
         };
   }
+
+  // 3 new-lines indicates poor formatting
+  Assert.True (
+    expected
+    |> Lock.toToml
+    |> String.contains "\n\n\n"
+    |> not
+  )
 
   Assert.Equal(Result.Ok expected, actual)

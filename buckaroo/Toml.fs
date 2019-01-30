@@ -3,9 +3,9 @@ module Buckaroo.Toml
 open System
 
 type TomlError =
-| CouldNotParse of Exception
-| KeyNotFound of string
-| UnexpectedType of string
+  | CouldNotParse of Exception
+  | KeyNotFound of string
+  | UnexpectedType of string
 
 module TomlError =
   let show (x : TomlError) =

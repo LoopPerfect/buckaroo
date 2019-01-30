@@ -337,25 +337,25 @@ module Manifest =
     (
       match x.Tags |> Seq.exists (fun _ -> true) with
       | true ->
-        "tags = [ " + (
-          x.Tags
-          |> Seq.distinct
-          |> Seq.sort
-          |> Seq.map (fun x -> "\"" + x + "\"")
-          |> String.concat ", "
-        ) + " ]\n\n"
+          "tags = [ " + (
+            x.Tags
+            |> Seq.distinct
+            |> Seq.sort
+            |> Seq.map (fun x -> "\"" + x + "\"")
+            |> String.concat ", "
+          ) + " ]\n\n"
       | false -> ""
     ) +
     (
       match x.Targets |> Seq.exists (fun _ -> true) with
       | true ->
-        "targets = [ " + (
-          x.Targets
-          |> Seq.distinct
-          |> Seq.sort
-          |> Seq.map (fun x -> "\"" + (Target.show x) + "\"")
-          |> String.concat ", "
-        ) + " ]\n\n"
+          "targets = [ " + (
+            x.Targets
+            |> Seq.distinct
+            |> Seq.sort
+            |> Seq.map (fun x -> "\"" + (Target.show x) + "\"")
+            |> String.concat ", "
+          ) + " ]\n\n"
       | false -> ""
     ) +
     (
@@ -363,31 +363,33 @@ module Manifest =
       |> Map.toSeq
       |> Seq.sortBy fst
       |> Seq.map (fun (package, source) ->
-        match source with
+        (
+          match source with
           | PackageSource.Git git ->
-            "[[location]]\n" +
-            "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
-            "git = \"" + git.Uri + "\"\n"
+              "[[location]]\n" +
+              "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
+              "git = \"" + git.Uri + "\"\n"
           | PackageSource.Http http ->
-            http
-              |> Map.toSeq
-              |> Seq.sortBy fst
-              |> Seq.map (fun (version, h) ->
-                "[[location]]\n" +
-                "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
-                "version = \"" + (Version.show version) + "\"\n" +
-                "url = \"" + h.Url + "\"\n" +
-                (h.StripPrefix
-                  |> Option.map(fun p -> "strip_prefix = \"" + p + "\"\n")
-                  |> Option.defaultValue("")) +
-                (h.Type
-                  |> Option.map(fun t -> "type = \"" + t.ToString() + "\"\n")
-                  |> Option.defaultValue(""))
-              )
-              |> String.concat "\n"
+              http
+                |> Map.toSeq
+                |> Seq.sortBy fst
+                |> Seq.map (fun (version, h) ->
+                  "[[location]]\n" +
+                  "package = \"" + PackageIdentifier.show (PackageIdentifier.Adhoc package) + "\"\n" +
+                  "version = \"" + (Version.show version) + "\"\n" +
+                  "url = \"" + h.Url + "\"\n" +
+                  (h.StripPrefix
+                    |> Option.map(fun p -> "strip_prefix = \"" + p + "\"\n")
+                    |> Option.defaultValue("")) +
+                  (h.Type
+                    |> Option.map(fun t -> "type = \"" + t.ToString() + "\"\n")
+                    |> Option.defaultValue(""))
+                )
+                |> String.concat "\n"
+        ) + "\n"
       )
-      |> String.concat "\n"
-    ) + "\n" +
+      |> String.concat ""
+    ) +
     (
       Seq.append
         (x.Dependencies
@@ -398,9 +400,7 @@ module Manifest =
         "[[dependency]]\n" +
         "package = \"" + PackageIdentifier.show x.Package + "\"\n" +
         "version = \"" + Constraint.show x.Constraint + "\"\n" +
-        (if isPrivate
-         then "private = true\n"
-         else "") +
+        (if isPrivate then "private = true\n" else "") +
         (
           match x.Targets with
           | Some ts ->
@@ -408,9 +408,10 @@ module Manifest =
             (ts |> Seq.map (fun t -> "\"" + Target.show t + "\"") |> String.concat ", ") +
             " ]\n"
           | None -> ""
-        )
+        ) +
+        "\n"
       )
-      |> String.concat "\n"
+      |> String.concat ""
     )
 
   let hash manifest =
