@@ -87,12 +87,38 @@ module Command =
     return Quickstart
   }
 
+  let private packageToAddParser =
+    parse {
+      let! p = PackageIdentifier.parser
+
+      return!
+        parse {
+          do! CharParsers.skipString "@"
+          let! c = Constraint.parser
+
+          return
+            {
+              Package = p;
+              Constraint = c;
+              Targets = None;
+            }
+        } <|>
+        parse {
+          return
+            {
+              Package = p;
+              Constraint = Constraint.wildcard;
+              Targets = None;
+            }
+        }
+    }
+
   let addDependenciesParser = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "add"
     do! CharParsers.spaces1
 
-    let! deps = Primitives.sepEndBy1 Dependency.parser CharParsers.spaces1
+    let! deps = Primitives.sepEndBy1 packageToAddParser CharParsers.spaces1
 
     return AddDependencies deps
   }
