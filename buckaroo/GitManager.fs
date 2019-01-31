@@ -83,7 +83,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
     let operations = asyncSeq {
       yield async { return () };
 
-      yield async { git.UpdateRefs targetDirectory |> ignore }
+      yield git.UpdateRefs targetDirectory
 
       match maybeBranchHint with
       | Some branch ->
