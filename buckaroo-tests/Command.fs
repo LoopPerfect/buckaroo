@@ -30,6 +30,16 @@ let ``Command.parse works correctly`` () =
     (Result.Ok (Command.UpgradeDependencies [ abcDef ], verboseLoggingLevel), "upgrade  abc/def --verbose ");
 
     (
+      Result.Ok
+        (
+          Command.AddDependencies
+            [ { Package = ijkXyz; Constraint = Constraint.wildcard; Targets = None } ],
+          defaultLoggingLevel
+        ),
+      "add github.com/ijk/xyz  "
+    );
+
+    (
       Result.Ok (Command.UpgradeDependencies [ abcDef; ijkXyz ], verboseLoggingLevel),
       "upgrade  abc/def github.com/ijk/xyz --verbose "
     );
