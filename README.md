@@ -7,6 +7,7 @@
 The decentralized C++ package manager.
 
 [![](https://img.shields.io/travis/LoopPerfect/buckaroo/buckaroo-redux.svg)](https://travis-ci.org/LoopPerfect/buckaroo) [![](https://img.shields.io/appveyor/ci/njlr/buckaroo/buckaroo-redux.svg)](https://ci.appveyor.com/project/njlr/buckaroo)
+[![](https://img.shields.io/badge/docs-wiki-blue.svg)](https://github.com/LoopPerfect/buckaroo/wiki)
 
 ## Why Buckaroo?
 
