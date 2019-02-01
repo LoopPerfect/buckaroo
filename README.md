@@ -47,4 +47,4 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
 
 ### Get Started
 
-Please refer to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for installation instructions! ✌️
+Please refer to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for [installation instructions](https://github.com/LoopPerfect/buckaroo/wiki/installation)! ✌️
