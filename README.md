@@ -48,3 +48,7 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
 ### Get Started
 
 Please refer to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for [installation instructions](https://github.com/LoopPerfect/buckaroo/wiki/installation)! ✌️
+
+## Attribution
+
+SVG graphics in diagrams are made by [Freepik](http://www.freepik.com/) from [www.flaticon.com](https://www.flaticon.com/) and are licensed by [Creative Commons BY 3.0](http://creativecommons.org/licenses/by/3.0/). 
