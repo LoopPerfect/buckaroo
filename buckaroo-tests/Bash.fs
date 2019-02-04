@@ -12,30 +12,30 @@ open System.Text
 #else
 
 // [<Fact>]
-// let ``Bash.runBash works correctly`` () = 
+// let ``Bash.runBash works correctly`` () =
 //   let stdout = new StringBuilder()
-//   let exitCode = 
-//     Bash.runBash "hello" (stdout.Append >> ignore) ignore 
+//   let exitCode =
+//     Bash.runBash "hello" (stdout.Append >> ignore) ignore
 //     |> Async.RunSynchronously
 //   Assert.Equal(0, exitCode)
 //   Assert.Equal("Hello, world!", stdout.ToString())
 
 [<Fact>]
-let ``Bash.runBashSync works correctly`` () = 
+let ``Bash.runBashSync works correctly`` () =
   let stdout = new StringBuilder()
-  let exitCode = 
-    Bash.runBashSync "true" (stdout.Append >> ignore) ignore 
+  let exitCode =
+    Bash.runBashSync "true" "" (stdout.Append >> ignore) ignore
     |> Async.RunSynchronously
   Assert.Equal(0, exitCode)
   Assert.Equal("", stdout.ToString().Trim())
 
 [<Fact>]
-let ``Stress test of Bash.runBashSync works correctly`` () = 
-  let task = 
-    Bash.runBashSync "true" ignore ignore
+let ``Stress test of Bash.runBashSync works correctly`` () =
+  let task =
+    Bash.runBashSync "true" "" ignore ignore
 
-  let exitCodes = 
-    task 
+  let exitCodes =
+    task
     |> List.replicate 128
     |> Seq.chunkBySize 16
     |> Seq.map Async.Parallel
