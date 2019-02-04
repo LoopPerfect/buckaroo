@@ -17,13 +17,13 @@ let escapeBash (command : string) =
     raise <| new Exception("Malicious bash? " + command)
   command
 
-let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHandler : ProgressCallback) = async {
-  let startInfo = new ProcessStartInfo()
+let runBashSync (exe : String) (args : String) (stdoutHandler : ProgressCallback) (stderrHandler : ProgressCallback) = async {
+  let startInfo = ProcessStartInfo()
 
   startInfo.CreateNoWindow <- true
   startInfo.UseShellExecute <- false
-  startInfo.FileName <- "/bin/bash"
-  startInfo.Arguments <- "-c \"" + (escapeBash command) + "\""
+  startInfo.FileName <- exe
+  startInfo.Arguments <- args
   startInfo.RedirectStandardOutput <- true
   startInfo.RedirectStandardError <- true
   startInfo.RedirectStandardInput <- true
@@ -66,7 +66,7 @@ let runBashSync (command : String) (stdoutHandler : ProgressCallback) (stderrHan
   if p.ExitCode > 0
   then
     return
-      raise <| new BashException(command, p.ExitCode)
+      raise <| new BashException(exe + " " + args, p.ExitCode)
 
   return p.ExitCode
 }
