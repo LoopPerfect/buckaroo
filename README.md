@@ -51,7 +51,7 @@ Please refer to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for [in
 
 ### How Buckaroo Works
 
-The Buckaroo model is very simple. Packages live in source-control, and a manifest file is used to describe dependencies. This point to further manifests to create a dependency graph. Buckaroo works directly over Git and HTTP. 
+The Buckaroo model is very simple. Packages live in source-control, and a manifest file is used to describe dependencies. This points to further manifests to create a dependency graph. Buckaroo works directly over Git and HTTP. 
 
 <p align="center">
   <img src="www/how-buckaroo-works.png?raw=true" alt="Buckaroo" />
