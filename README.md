@@ -49,6 +49,16 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
 
 Please refer to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for [installation instructions](https://github.com/LoopPerfect/buckaroo/wiki/installation)! ✌️
 
+### How Buckaroo Works
+
+The Buckaroo model is very simple. Packages live in source-control, and a manifest file is used to describe dependencies. This point to further manifests to create a dependency graph. Buckaroo works directly over Git and HTTP. 
+
+<p align="center">
+  <img src="www/how-buckaroo-works.png?raw=true" alt="Buckaroo" />
+</p>
+
+Head over to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for more detailed information. 
+
 ## Attribution
 
 SVG graphics in diagrams are made by [Freepik](http://www.freepik.com/) from [www.flaticon.com](https://www.flaticon.com/) and are licensed by [Creative Commons BY 3.0](http://creativecommons.org/licenses/by/3.0/). 
