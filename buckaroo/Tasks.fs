@@ -5,6 +5,7 @@ open System.IO
 open System.Runtime
 open Buckaroo.Console
 open FSharpx
+open Buckaroo
 
 type TaskContext = {
   Console : ConsoleManager;
@@ -34,17 +35,25 @@ let getContext loggingLevel = async {
   let! cachePath = getCachePath
   let downloadManager = new DownloadManager(consoleManager, cachePath)
 
+  let! hasGit =
+    Bash.runBashSync "git" "version" ignore ignore
+    |> Async.Catch
+    |> Async.map
+      (Choice.toOption
+        >> Option.map (fun _ -> true)
+        >> Option.defaultValue false)
+
   let useLibGit2 =
-    isWindows ()
-    || System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null
+    (System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null)
+    || not hasGit
 
   let git =
     if useLibGit2
-      then new GitLib(consoleManager) :> IGit
-      else new GitCli(consoleManager) :> IGit
+      then GitLib(consoleManager) :> IGit
+      else GitCli(consoleManager) :> IGit
 
-  let gitManager = new GitManager(consoleManager, git, cachePath)
-  let sourceExplorer = new DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
+  let gitManager = GitManager(consoleManager, git, cachePath)
+  let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
 
   return {
     Console = consoleManager;
