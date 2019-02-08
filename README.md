@@ -26,6 +26,8 @@ $ buckaroo add github.com/buckaroo-pm/boost-thread@branch=master
 $ buck run :my-app
 ```
 
+We have an [FAQ](https://github.com/LoopPerfect/buckaroo/wiki/FAQ). 
+
 ### Features
 
 C++ has unique requirements, so Buckaroo is a highly sophisticated piece of software.
