@@ -150,6 +150,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         | (RefType.Tag, Result.Ok semVer) -> Some (Version.SemVer semVer)
         | _ -> None
       )
+      |> Seq.sortDescending
       |> AsyncSeq.ofSeq
 
     // Tags
