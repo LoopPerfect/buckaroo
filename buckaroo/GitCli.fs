@@ -138,13 +138,13 @@ type GitCli (console : ConsoleManager) =
         |> Async.Catch
         |> Async.Ignore
       do!
-        runBash "git" ("-C " + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
+        runBash "git" ("-C " + gitDir + " fetch origin +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*")
         |> Async.Ignore
     }
 
     member this.UpdateRefs (gitDir : string) = async {
       do!
-        runBash "git" ("-C " + gitDir + " fetch origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'")
+        runBash "git" ("-C " + gitDir + " fetch origin +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*")
         |> Async.Ignore
     }
 
