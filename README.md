@@ -51,6 +51,37 @@ C++ has unique requirements, so Buckaroo is a highly sophisticated piece of soft
 
 Please refer to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for [installation instructions](https://github.com/LoopPerfect/buckaroo/wiki/installation)! ✌️
 
+#### Quick Install
+
+Buckaroo is shipped as a self-contained executable, so all you need to do is download the bundle from the [releases page](https://github.com/LoopPerfect/buckaroo/releases).
+
+### Linux
+
+```bash
+$ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.2/buckaroo-linux -O buckaroo
+$ chmod +x ./buckaroo
+$ ./buckaroo
+```
+
+### macOS
+
+```bash
+$ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.2/buckaroo-macos -O buckaroo
+$ chmod +x ./buckaroo
+$ ./buckaroo
+```
+
+### Windows
+
+Download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.2/buckaroo-windows.exe) from the [release page](https://github.com/LoopPerfect/buckaroo/releases/v2.0.2)
+
+This can also be done directly using PowerShell:
+
+```
+wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.2/buckaroo-windows.exe >buckaroo.exe
+./buckaroo.exe
+```
+
 ### How Buckaroo Works
 
 The Buckaroo model is very simple. Packages live in source-control, and a manifest file is used to describe dependencies. This points to further manifests to create a dependency graph. Buckaroo works directly over Git and HTTP. 
