@@ -152,6 +152,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
           ((endTime-startTime).TotalSeconds.ToString("N3")|>info), LoggingLevel.Info)
       return refs
   }
+
   member this.getFile (url : string) (revision : Revision) (file : string) : Async<string> =
     async {
       let targetDirectory = cloneFolderName(url)

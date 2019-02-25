@@ -142,6 +142,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
   let fetchVersionsFromGit gitUrl = asyncSeq {
     let! refs = gitManager.FetchRefs gitUrl
+
     // Sem-vers
     yield!
       refs
@@ -256,7 +257,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         yield!
           fetchRevisionsFromGitVersion gitUrl version
           |> AsyncSeq.map (fun revision ->
-            PackageLocation.GitHub {
+            PackageLocation.GitLab {
               Package = gitLab;
               Revision = revision;
             }
@@ -266,7 +267,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         yield!
           fetchRevisionsFromGitVersion gitUrl version
           |> AsyncSeq.map (fun revision ->
-            PackageLocation.GitHub {
+            PackageLocation.BitBucket {
               Package = bitBucket;
               Revision = revision;
             }
