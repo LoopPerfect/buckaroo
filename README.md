@@ -31,13 +31,13 @@ We have an [FAQ](https://github.com/LoopPerfect/buckaroo/wiki/FAQ).
 ### Package Registries
 
 <p align="center">
-  <img src="www/registries.png?raw=true" alt="Package Registries" width="320px" />
+  <img src="www/registries.png?raw=true" alt="Package Registries" width="500px" />
 </p>
 
 ### IDE Integrations
 
 <p align="center">
-  <img src="www/ides.png?raw=true" alt="IDE Integrations" />
+  <img src="www/ides.png?raw=true" alt="IDE Integrations" width="500px" />
 </p>
 
 Integration guides can be found in [the docs](https://github.com/LoopPerfect/buckaroo/wiki/).
