@@ -30,17 +30,19 @@ We have an [FAQ](https://github.com/LoopPerfect/buckaroo/wiki/FAQ).
 
 ### Package Registries
 
+Pull dependencies directly from GitHub, BitBucket, GitLab, hosted Git and HTTP. [How?](https://github.com/LoopPerfect/buckaroo/wiki/Git-as-a-Package-Registry)
+
 <p align="center">
   <img src="www/registries.png?raw=true" alt="Package Registries" width="500px" />
 </p>
 
 ### IDE Integrations
 
+Support for major IDEs and tools. Integration guides can be found in [the docs](https://github.com/LoopPerfect/buckaroo/wiki/).
+
 <p align="center">
   <img src="www/ides.png?raw=true" alt="IDE Integrations" width="500px" />
 </p>
-
-Integration guides can be found in [the docs](https://github.com/LoopPerfect/buckaroo/wiki/).
 
 ### Features
 
