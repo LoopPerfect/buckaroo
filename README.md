@@ -31,7 +31,7 @@ We have an [FAQ](https://github.com/LoopPerfect/buckaroo/wiki/FAQ).
 ### Package Registries
 
 <p align="center">
-  <img src="www/registries.png?raw=true" alt="Package Registries" width="100em" />
+  <img src="www/registries.png?raw=true" alt="Package Registries" width="320px" />
 </p>
 
 ### IDE Integrations
