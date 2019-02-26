@@ -26,7 +26,23 @@ $ buckaroo add github.com/buckaroo-pm/boost-thread@branch=master
 $ buck run :my-app
 ```
 
-We have an [FAQ](https://github.com/LoopPerfect/buckaroo/wiki/FAQ). 
+We have an [FAQ](https://github.com/LoopPerfect/buckaroo/wiki/FAQ).
+
+### Package Registries
+
+Pull dependencies directly from GitHub, BitBucket, GitLab, hosted Git and HTTP. [How?](https://github.com/LoopPerfect/buckaroo/wiki/Git-as-a-Package-Registry)
+
+<p align="center">
+  <img src="www/registries.png?raw=true" alt="Package Registries" width="500px" />
+</p>
+
+### IDE Integrations
+
+Support for major IDEs and tools. Integration guides can be found in [the docs](https://github.com/LoopPerfect/buckaroo/wiki/).
+
+<p align="center">
+  <img src="www/ides.png?raw=true" alt="IDE Integrations" width="500px" />
+</p>
 
 ### Features
 
@@ -73,18 +89,18 @@ $ ./buckaroo
 
 ##### Windows
 
-Download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-windows.exe) from the [release page](https://github.com/LoopPerfect/buckaroo/releases/v2.0.3). 
+Download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-windows.exe) from the [release page](https://github.com/LoopPerfect/buckaroo/releases/v2.0.3).
 
 ### How Buckaroo Works
 
-The Buckaroo model is very simple. Packages live in source-control, and a manifest file is used to describe dependencies. This points to further manifests to create a dependency graph. Buckaroo works directly over Git and HTTP. 
+The Buckaroo model is very simple. Packages live in source-control, and a manifest file is used to describe dependencies. This points to further manifests to create a dependency graph. Buckaroo works directly over Git and HTTP.
 
 <p align="center">
   <img src="www/how-buckaroo-works.png?raw=true" alt="Buckaroo" />
 </p>
 
-Head over to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for more detailed information. 
+Head over to [the Wiki](https://github.com/LoopPerfect/buckaroo/wiki) for more detailed information.
 
 ## Attribution
 
-SVG graphics in diagrams are made by [Freepik](http://www.freepik.com/) from [www.flaticon.com](https://www.flaticon.com/) and are licensed by [Creative Commons BY 3.0](http://creativecommons.org/licenses/by/3.0/). 
+SVG graphics in diagrams are made by [Freepik](http://www.freepik.com/) from [www.flaticon.com](https://www.flaticon.com/) and are licensed by [Creative Commons BY 3.0](http://creativecommons.org/licenses/by/3.0/).
