@@ -145,6 +145,12 @@ let rec computeCellIdentifier (parents : PackageIdentifier list) (package : Pack
   | head::tail ->
     (computeCellIdentifier tail head) + "." + (computeCellIdentifier [] package)
 
+let rec private combinePaths xs =
+  match xs with
+  | [ x ] -> x
+  | x::xs -> Path.Combine (x, combinePaths xs)
+  | [] -> ""
+
 let rec packageInstallPath (parents : PackageIdentifier list) (package : PackageIdentifier) =
   match parents with
   | [] ->
@@ -152,7 +158,7 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
       match package with
       | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
       | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
-      | PackageIdentifier.GitLab x -> ("gitlab", (x.Groups |> String.concat "."), x.Project)
+      | PackageIdentifier.GitLab x -> ("gitlab", combinePaths x.Groups, x.Project)
       | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
     Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
   | head::tail ->
