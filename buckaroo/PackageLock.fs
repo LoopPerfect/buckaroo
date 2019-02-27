@@ -9,7 +9,7 @@ type PackageLock =
 | Git of GitLocation
 | GitHub of HostedGitLocation
 | BitBucket of HostedGitLocation
-| GitLab of HostedGitLocation
+| GitLab of GitLabLocation
 
 module PackageLock =
 
