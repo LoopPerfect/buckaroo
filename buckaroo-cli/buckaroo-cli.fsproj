@@ -5,6 +5,8 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <IsPackable>false</IsPackable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RootAllApplicationAssemblies>false</RootAllApplicationAssemblies>
+    <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
   </PropertyGroup>
 
   <ItemGroup>
