@@ -2,10 +2,12 @@ namespace Buckaroo
 
 type AdhocPackageIdentifier = { Owner : string; Project : string }
 
+type GitLabPackageIdentifier = { Groups : string list; Project : string }
+
 type PackageIdentifier =
 | GitHub of AdhocPackageIdentifier
 | BitBucket of AdhocPackageIdentifier
-| GitLab of AdhocPackageIdentifier
+| GitLab of GitLabPackageIdentifier
 | Adhoc of AdhocPackageIdentifier
 
 module PackageIdentifier =
@@ -17,19 +19,13 @@ module PackageIdentifier =
     match id with
     | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
     | BitBucket x -> "bitbucket.org/" + x.Owner + "/" + x.Project
-    | GitLab x -> "gitlab.com/" + x.Owner + "/" + x.Project
+    | GitLab x -> "gitlab.com/" + (x.Groups |> String.concat "/") + "/" + x.Project
     | Adhoc x -> x.Owner + "/" + x.Project
 
   let showRich (id : PackageIdentifier) =
-    let host = highlight
-    let owner = highlight
-    let project = highlight
-
-    match id with
-    | GitHub x -> (host "github.com") + (subtle "/") + (owner x.Owner) + (subtle "/") + (project x.Project)
-    | BitBucket x -> (host "bitbucket.org") + (subtle "/") + x.Owner + (subtle "/") + (project x.Project)
-    | GitLab x -> (host "gitlab.com") + (subtle "/") + x.Owner + (subtle "/") + (project x.Project)
-    | Adhoc x -> (owner x.Owner) + (subtle "/") + (project x.Project)
+    id
+    |> show
+    |> identifier
 
   let private gitHubIdentifierParser =
     CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z_.\d]|-(?=[a-zA-Z_.\d])){0,38}"
@@ -45,7 +41,6 @@ module PackageIdentifier =
     match run (adhocPackageIdentifierParser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result
     | Failure(error, _, _) -> Result.Error error
-
 
   let gitHubPackageIdentifierParser = parse {
     do! CharParsers.skipString "github.com/" <|> CharParsers.skipString "github+"
@@ -74,11 +69,18 @@ module PackageIdentifier =
     | Failure(error, _, _) -> Result.Error error
 
   let gitLabPackageIdentifierParser = parse {
-    do! CharParsers.skipString "gitlab.com/" <|> CharParsers.skipString "gitlab+"
-    let! owner = gitHubIdentifierParser
+    do! CharParsers.skipString "gitlab.com/"
+    let! x = gitHubIdentifierParser
     do! CharParsers.skipString "/"
-    let! project = gitHubIdentifierParser
-    return { Owner = owner.ToLower(); Project = project.ToLower() }
+    let! xs = Primitives.sepBy1 gitHubIdentifierParser (skipString "/")
+    let parts =
+      [ x ] @ xs
+      |> List.map (fun x -> x.ToLower ())
+
+    return {
+      Groups = parts |> List.truncate (parts.Length - 1)
+      Project = parts |> List.last
+    }
   }
 
   let parseGitLabIdentifier (x : string) =
