@@ -37,10 +37,9 @@ let task context (packages : List<PackageIdentifier>) = async {
         async {
           let! solution = Solver.fromLock context.SourceExplorer lock
 
-          return
-            packages
-            |> Set.ofList
-            |> Solver.unlock solution
+          return solution
+         //   |> Set.ofList
+         //   |> Solver.unlock solution
         }
 
     do! ResolveCommand.task context partial ResolutionStyle.Upgrading
