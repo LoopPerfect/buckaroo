@@ -24,7 +24,7 @@ module Solver =
 
   type SolverState = {
     Locations : Map<AdhocPackageIdentifier, PackageSource>
-    Root: Manifest
+    Root : Set<Dependency>
     Hints: Map<PackageIdentifier, List<LocatedAtom>>
     Selections : Map<PackageIdentifier, ResolvedVersion>
   }
@@ -276,22 +276,21 @@ module Solver =
     let sourceExplorer = context.SourceExplorer
     let log = namespacedLogger context.Console ("solver")
 
-    let selections = pruneSelections state.Selections state.Root.Dependencies
+    let selections = pruneSelections state.Selections state.Root
 
     let manifests =
       selections
       |> Map.valueList
       |> Seq.map (fun rv -> rv.Manifest)
-      |> Seq.append [state.Root]
       |> Seq.toList
 
     let locations =
       manifests
       |> Seq.map (fun m -> m.Locations |> Map.toSeq)
-      |> Seq.fold Seq.append (Seq.ofList[])
+      |> Seq.fold Seq.append (state.Locations |> Map.toSeq)
       |> Map.ofSeq
 
-    let unresolved = depthFirst selections state.Root.Dependencies |> Seq.toList
+    let unresolved = depthFirst selections state.Root |> Seq.toList
 
     System.Console.WriteLine (List.length unresolved |> string)
     if (unresolved |> List.length) = 0
@@ -366,9 +365,6 @@ module Solver =
     |> List.tryHead
 
   let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
-
-    System.Console.WriteLine "aaaa"
-
     let hints = Map.empty
     //  lock
     //  |> Option.map (fun l ->
@@ -376,7 +372,9 @@ module Solver =
     //  |> Option.defaultValue Map.empty
 
     let state = {
-      Root = manifest
+      Root = Set.union
+        manifest.Dependencies
+        manifest.PrivateDependencies
       Hints = hints
       Selections = Map.empty
       Locations = manifest.Locations
