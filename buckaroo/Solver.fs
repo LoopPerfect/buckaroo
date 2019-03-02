@@ -133,7 +133,11 @@ module Solver =
   | Unsatisfiable of PackageConstraint
   | IntroducesConflict of List<SearchStrategyError>
 
-  type ResolutionRequest = Map<PackageIdentifier, ResolvedVersion> * PackageConstraint * PackageSources * AsyncReplyChannel<AsyncSeq<Result<(PackageIdentifier * LocatedVersionSet),SearchStrategyError>>>
+  type ResolutionRequest =
+  | GetSnapshot of AsyncReplyChannel<Map<PackageConstraint, Set<Set<PackageConstraint>>>>
+  | GetCandidates of Constraints * PackageConstraint * PackageSources * AsyncReplyChannel<AsyncSeq<Result<(PackageIdentifier * LocatedVersionSet), SearchStrategyError>>>
+
+
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
 
   let fetchCandidatesForConstraint sourceExplorer locations p c = asyncSeq {
@@ -201,42 +205,69 @@ module Solver =
     | All xs -> xs |> List.map constraintToSet |> Set.unionMany
     | _ -> Set [c]
 
+
+
   let resolutionManger (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> = MailboxProcessor.Start(fun inbox -> async {
     let mutable badDeps  : Map<PackageConstraint, SearchStrategyError> = Map.empty
+    let mutable world : Map<PackageConstraint, Set<Set<PackageConstraint>>> = Map.empty
+    let mutable complete : Set<PackageConstraint> = Set.empty
+
+    let testIfBad (p, cs) =
+      badDeps
+        |> Map.tryFindKey (fun (q, bs) _ -> p = q && cs |> Set.isSubset bs)
+        |> Option.map (fun k -> badDeps.[k])
+
+    let testIfSelectionGood (constraints : Constraints) =
+      constraints
+      |> Map.toSeq
+      |> Seq.tryFind (fun (p, cs) ->
+        badDeps |> Map.containsKey (p, cs))
+      |> Option.isNone
+
 
     let trackLocal locations (p, cs) = asyncSeq {
       let mutable hadCandidate = false
       let c = cs |> Seq.toList |> All |> Constraint.simplify
 
-      for candidate in fetchCandidatesForConstraint sourceExplorer locations p c do
-        match candidate with
-        | Result.Error (IntroducesConflict _) -> ()
-        | Result.Error (Unsatisfiable d) ->
-          badDeps <- (badDeps |> Map.add d (Unsatisfiable d))
-          yield Result.Error <| Unsatisfiable d
-        | Result.Error (LimitReached d) ->
-          if hadCandidate <> false
-          then
-            badDeps <- (badDeps |> Map.add d (LimitReached d))
-          yield Result.Error <| LimitReached d
-        | Result.Ok (_, (location, versions)) ->
-          let! lock = sourceExplorer.LockLocation location
-          let! manifest = sourceExplorer.FetchManifest (lock, versions)
-          let conflicts =
-            manifest.Dependencies
-            |> Seq.choose (fun d -> badDeps |> Map.tryFind (d.Package, constraintToSet d.Constraint))
-            |> Seq.toList
+      let isBad = testIfBad (p, cs)
 
-          if conflicts.IsEmpty
-          then
-            hadCandidate <- true
-            yield candidate
-          else
-            yield Result.Error (IntroducesConflict conflicts)
+      match isBad with
+      | Some e -> yield Result.Error e
+      | None ->
+        for candidate in fetchCandidatesForConstraint sourceExplorer locations p c do
+          match candidate with
+          | Result.Error (IntroducesConflict _) -> ()
+          | Result.Error (Unsatisfiable d) ->
+            badDeps <- (badDeps |> Map.add d (Unsatisfiable d))
+            yield Result.Error <| Unsatisfiable d
+          | Result.Error (LimitReached d) ->
+            if hadCandidate <> false
+            then
+              badDeps <- (badDeps |> Map.add d (LimitReached d))
+            yield Result.Error <| LimitReached d
+          | Result.Ok (_, (location, versions)) ->
+            let! lock = sourceExplorer.LockLocation location
+            let! manifest = sourceExplorer.FetchManifest (lock, versions)
 
-      if hadCandidate
-      then ()
-      else badDeps <- (badDeps |> Map.add (p, cs) (IntroducesConflict[]))
+            let packageConstraints = manifest.Dependencies |> Set.map (fun d -> (d.Package, d.Constraint |> constraintToSet))
+            world <- (world |> Map.insertWith Set.union (p, cs) (Set[packageConstraints]))
+
+            let conflicts =
+              manifest.Dependencies
+              |> Seq.choose (fun d -> badDeps |> Map.tryFind (d.Package, constraintToSet d.Constraint))
+              |> Seq.toList
+
+            if conflicts.IsEmpty
+            then
+              hadCandidate <- true
+              yield candidate
+            else
+              yield Result.Error (IntroducesConflict conflicts)
+
+        if hadCandidate
+        then ()
+        else badDeps <- (badDeps |> Map.add (p, cs) (IntroducesConflict[]))
+        complete <- complete |> Set.add (p, cs)
     }
 
     let trackGlobal (constraints: Constraints) (candidates: AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>) = asyncSeq {
@@ -254,21 +285,28 @@ module Solver =
             |> Seq.choose (fun (p, cs) ->
               badDeps
               |> Map.tryFindKey (fun (q, bs) _ -> p = q && cs |> Set.isSubset bs)
-              |> Option.map (fun k -> badDeps.[k]))
+              |> Option.map (fun k -> IntroducesConflict [badDeps.[k]]))
             |> Seq.toList
 
           if conflicts.IsEmpty
-          then yield candidate
-          else yield Result.Error (IntroducesConflict conflicts)
+          then
+            yield candidate
+          else
+            yield Result.Error (IntroducesConflict conflicts)
         ()
       ()
     }
 
     while true do
-      let! (selections, dep, locations, channel) = inbox.Receive()
-      let constraints = constraintsOfSelection selections
-      let candidates = trackLocal locations dep |> trackGlobal constraints
-      channel.Reply candidates
+      let! req = inbox.Receive()
+      match req with
+      | GetCandidates (constraints, dep, locations, channel) ->
+        trackLocal locations dep
+        |> trackGlobal constraints
+        |> AsyncSeq.takeWhileInclusive (fun _ -> testIfBad dep |> Option.isNone)
+        |> AsyncSeq.takeWhileInclusive (fun _ -> testIfSelectionGood constraints)
+        |> channel.Reply
+      | GetSnapshot channel -> channel.Reply world
   })
 
 
@@ -277,6 +315,13 @@ module Solver =
     let log = namespacedLogger context.Console ("solver")
 
     let selections = pruneSelections state.Selections state.Root
+    let constraints =
+      selections
+      |> Map.valueList
+      |> Seq.map (fun m -> m.Manifest.Dependencies)
+      |> Seq.append [state.Root]
+      |> Set.unionMany
+      |> constraintsOf
 
     let manifests =
       selections
@@ -290,11 +335,11 @@ module Solver =
       |> Seq.fold Seq.append (state.Locations |> Map.toSeq)
       |> Map.ofSeq
 
-    let unresolved = depthFirst selections state.Root |> Seq.toList
+    let unresolved = breathFirst selections state.Root |> Seq.toList
 
-    System.Console.WriteLine (List.length unresolved |> string)
-    if (unresolved |> List.length) = 0
-    then yield state
+    if (unresolved |> Seq.isEmpty)
+    then
+      yield state
     else
       for (p, cs) in unresolved do
         let c = cs |> Seq.toList |> All
@@ -318,14 +363,14 @@ module Solver =
             with _ -> return None
           })
 
-        let! request = resolver.PostAndAsyncReply (fun channel -> (selections, (p, cs), locations, channel))
+        let! candidates = resolver.PostAndAsyncReply (fun channel -> GetCandidates (constraints, (p, cs), locations, channel))
 
         let fetched =
-          request
+          candidates
           |> AsyncSeq.chooseAsync(fun candidate -> async {
             match candidate with
-            | Result.Error _ ->
-              //TODO
+            | Result.Error e ->
+              System.Console.WriteLine e
               return None
             | Result.Ok (_, (location, versions)) ->
               let! lock = sourceExplorer.LockLocation location
@@ -336,6 +381,9 @@ module Solver =
                 Manifest = manifest
               }
               return Some {state with Selections = state.Selections |> Map.add p resolvedVersion}})
+              |> AsyncSeq.distinctUntilChangedWith (fun prev next ->
+                  prev.Selections.[p].Manifest = next.Selections.[p].Manifest
+              )
 
         for nextState in AsyncSeq.append hints fetched do
           let node = Node (p, nextState.Selections.[p])
@@ -344,7 +392,30 @@ module Solver =
           then
             yield! step context resolver nextState (node :: path)
 
-    ()
+        System.Console.WriteLine ("Exhausted " + (string p) + (string cs))
+        let! world = resolver.PostAndAsyncReply (fun ch -> GetSnapshot ch)
+        System.Console.WriteLine (
+          world |> Map.toSeq |> Seq.map (fun (pc, ss) ->
+            (string pc) + " -> {\n"
+              + ((ss |> Seq.map (fun s -> s |> Seq.map string |> String.concat "\n") |> String.concat "\n")
+              + "\n}"
+
+          )
+        ) |> String.concat "\n")
+
+
+    // System.Console.WriteLine (unresolved |> List.map (fun (p, cs) -> string p + (string cs) ) |> String.concat "\n")
+
+    // System.Console.WriteLine (
+    //   path
+    //   |> List.map(
+    //     fun x ->
+    //       match x with
+    //       | Root _ -> "Root"
+    //       | Node (p, r) -> (string p + "@" + string r.Versions))
+    //   |> String.concat "\n"
+    // )
+    // ()
   }
 
   let solutionCollector resolutions =

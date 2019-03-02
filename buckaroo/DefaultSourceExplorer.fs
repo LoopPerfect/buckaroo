@@ -101,7 +101,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     match maybeBranchRef with
     | Some branchRef ->
       yield branchRef.Revision
-      yield! gitManager.FetchCommits url branchRef.Revision
+      yield! gitManager.FetchCommits url branch
       ()
     | None -> ()
   }

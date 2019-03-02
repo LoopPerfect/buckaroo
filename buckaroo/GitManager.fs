@@ -94,6 +94,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
           |> Async.Ignore
       | None ->
         let! defaultBranch = git.DefaultBranch targetDirectory
+
         yield
           AsyncSeq.interleave
             (if defaultBranch <> "master"
