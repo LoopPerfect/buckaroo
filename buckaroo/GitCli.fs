@@ -222,6 +222,7 @@ type GitCli (console : ConsoleManager) =
                 return (skip + (nextList |> List.length), nextList, fetchNext)
               })
               ( 0, List.empty, async { return () } )
+          |> AsyncSeq.takeWhile (fun (_, revs, _) -> revs.Length > 0)
           |> AsyncSeq.collect (fun (_, revs, fetchNext) -> asyncSeq {
             yield! revs |> AsyncSeq.ofSeq
             do! fetchNext
