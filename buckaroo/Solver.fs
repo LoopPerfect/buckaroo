@@ -72,7 +72,7 @@ module Solver =
     loop Set.empty deps |> Map.ofSeq
 
   let isUnresolved (selections : Map<PackageIdentifier, ResolvedVersion>) (constraints : Map<PackageIdentifier, Set<Constraint>>) (dep:Dependency) =
-    let c = constraints.[dep.Package] |> Seq.toList  |> All |> Constraint.simplify
+    let c = constraints.[dep.Package] |> All |> Constraint.simplify
     selections
     |> Map.tryFind dep.Package
     |> Option.map (fun rv -> rv.Versions |> Constraint.satisfies c |> not)
@@ -202,7 +202,7 @@ module Solver =
 
   let rec constraintToSet c =
     match c with
-    | All xs -> xs |> List.map constraintToSet |> Set.unionMany
+    | All xs -> xs
     | _ -> Set [c]
 
   let resolutionManger (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> = MailboxProcessor.Start(fun inbox -> async {
@@ -237,14 +237,14 @@ module Solver =
         |> Set.map (fun core -> Set.difference core deps))
 
       if isBad
-      then System.Console.WriteLine "BADDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+      then System.Console.WriteLine "BADDDDDDDDDDDDDDDDDDDDDDDDDDDDDDddDDDDDDDDDDDDDDDDDDD"
 
       isBad
 
 
     let trackLocal locations (p, cs) = asyncSeq {
       let mutable hadCandidate = false
-      let c = cs |> Seq.toList |> All |> Constraint.simplify
+      let c = cs |>  All |> Constraint.simplify
 
       let isBad = testIfBad (p, cs)
 
@@ -405,7 +405,7 @@ module Solver =
       yield state
     else
       for (p, cs) in unresolved do
-        let c = cs |> Seq.toList |> All
+        let c = cs |> All
 
         let hints =
           state.Hints
