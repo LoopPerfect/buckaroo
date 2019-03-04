@@ -134,7 +134,7 @@ module Solver =
   | IntroducesConflict of List<SearchStrategyError>
 
   type ResolutionRequest =
-  | GetSnapshot of AsyncReplyChannel<Map<PackageConstraint, Set<Set<PackageConstraint>>>>
+  | MarkBadPath of List<ResolutionPath> * PackageConstraint * PackageConstraint * AsyncReplyChannel<Unit>
   | GetCandidates of Constraints * PackageConstraint * PackageSources * AsyncReplyChannel<AsyncSeq<Result<(PackageIdentifier * LocatedVersionSet), SearchStrategyError>>>
 
 
@@ -205,12 +205,11 @@ module Solver =
     | All xs -> xs |> List.map constraintToSet |> Set.unionMany
     | _ -> Set [c]
 
-
-
   let resolutionManger (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> = MailboxProcessor.Start(fun inbox -> async {
     let mutable badDeps  : Map<PackageConstraint, SearchStrategyError> = Map.empty
+    let mutable badCores : Set<Set<PackageConstraint>> = Set.empty
     let mutable world : Map<PackageConstraint, Set<Set<PackageConstraint>>> = Map.empty
-    let mutable complete : Set<PackageConstraint> = Set.empty
+
 
     let testIfBad (p, cs) =
       badDeps
@@ -223,6 +222,24 @@ module Solver =
       |> Seq.tryFind (fun (p, cs) ->
         badDeps |> Map.containsKey (p, cs))
       |> Option.isNone
+
+    let testIfHasBadCore (constraints : Constraints) =
+      let deps =
+        constraints
+        |> Map.toSeq
+        |> Set
+
+      let isBad =
+        badCores
+        |> Set.exists (fun core -> Set.isSuperset deps core)
+
+      System.Console.WriteLine (badCores
+        |> Set.map (fun core -> Set.difference core deps))
+
+      if isBad
+      then System.Console.WriteLine "BADDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+
+      isBad
 
 
     let trackLocal locations (p, cs) = asyncSeq {
@@ -248,9 +265,9 @@ module Solver =
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
             let! manifest = sourceExplorer.FetchManifest (lock, versions)
-
             let packageConstraints = manifest.Dependencies |> Set.map (fun d -> (d.Package, d.Constraint |> constraintToSet))
-            world <- (world |> Map.insertWith Set.union (p, cs) (Set[packageConstraints]))
+
+            world <- (world |> Map.insertWith Set.union (p, cs) (Set [packageConstraints]))
 
             let conflicts =
               manifest.Dependencies
@@ -262,30 +279,33 @@ module Solver =
               hadCandidate <- true
               yield candidate
             else
-              yield Result.Error (IntroducesConflict conflicts)
+              ()
+              //ield Result.Error (IntroducesConflict conflicts)
 
         if hadCandidate
         then ()
-        else badDeps <- (badDeps |> Map.add (p, cs) (IntroducesConflict[]))
-        complete <- complete |> Set.add (p, cs)
+        else ()
+          //badDeps <- (badDeps |> Map.add (p, cs) (IntroducesConflict[]))
+
+
     }
 
     let trackGlobal (constraints: Constraints) (candidates: AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>) = asyncSeq {
       for candidate in candidates do
         match candidate with
-        | Result.Error e -> yield Result.Error e
+        | Result.Error e ->
+          yield Result.Error e
         | Result.Ok (_, (location, versions)) ->
           let! lock = sourceExplorer.LockLocation location
           let! manifest = sourceExplorer.FetchManifest (lock, versions)
           let conflicts =
             manifest.Dependencies
             |> Seq.filter (fun d -> constraints |> Map.containsKey d.Package)
-            |> Seq.filter (fun d -> constraints.[d.Package] <> (constraintToSet d.Constraint))
-            |> Seq.map (fun d -> (d.Package, constraintToSet d.Constraint))
-            |> Seq.choose (fun (p, cs) ->
+            |> Seq.map (fun d -> (d.Package, constraintToSet d.Constraint |> Set.union constraints.[d.Package]))
+            |> Seq.choose (fun (p, _) ->
               badDeps
-              |> Map.tryFindKey (fun (q, bs) _ -> p = q && cs |> Set.isSubset bs)
-              |> Option.map (fun k -> IntroducesConflict [badDeps.[k]]))
+              |> Map.tryFindKey (fun (q, bs) _ -> p = q && constraints.[p] |> Set.isSubset bs)
+              |> Option.map (fun k -> badDeps.[k]))
             |> Seq.toList
 
           if conflicts.IsEmpty
@@ -294,6 +314,7 @@ module Solver =
           else
             yield Result.Error (IntroducesConflict conflicts)
         ()
+
       ()
     }
 
@@ -303,10 +324,51 @@ module Solver =
       | GetCandidates (constraints, dep, locations, channel) ->
         trackLocal locations dep
         |> trackGlobal constraints
-        |> AsyncSeq.takeWhileInclusive (fun _ -> testIfBad dep |> Option.isNone)
-        |> AsyncSeq.takeWhileInclusive (fun _ -> testIfSelectionGood constraints)
+        |> AsyncSeq.takeWhile (fun _ -> testIfBad dep |> Option.isNone)
+        |> AsyncSeq.takeWhile (fun _ -> testIfSelectionGood constraints)
+        |> AsyncSeq.takeWhile (fun _ -> testIfHasBadCore constraints |> not)
         |> channel.Reply
-      | GetSnapshot channel -> channel.Reply world
+      | MarkBadPath (path, failedDep, (p, bs), channel) ->
+        //System.Console.WriteLine ("Marking " + string failedDep + " because " + string (p, bs) )
+
+        let groups =
+          world.[failedDep]
+          |> Set.map(fun xs ->
+            xs
+            |> Set.filter(fun (q, _) -> p = q )
+            |> Set.map(fun (_, cs) -> cs )
+            |> Set.unionMany)
+
+        for contribution in groups do
+
+          let core =
+            path
+            |> Seq.choose(fun x ->
+              match x with
+              | Root m -> Some m.Dependencies
+              | Node (q, rv) ->
+                if q <> fst failedDep && p <> q
+                then
+                  Some rv.Manifest.Dependencies
+                else None)
+            |> Seq.map (fun deps ->
+              deps
+              |> Seq.map (fun x -> (x.Package, x.Constraint |> constraintToSet |> (fun c -> Set.difference c contribution)))
+              |> Seq.filter (fun (q, cs) -> cs.IsEmpty |> not)
+              |> Seq.filter (fun (q, cs) -> p = q && Set.isProperSubset cs bs) // should be an intersection
+              |> Set
+
+            )
+            |> Set.unionMany
+            |> Set.add failedDep
+
+          badCores <- badCores |> Set.add core
+         // System.Console.WriteLine "bad core: "
+          //System.Console.WriteLine core
+         // System.Console.WriteLine "-------"
+
+        channel.Reply ()
+
   })
 
 
@@ -323,6 +385,7 @@ module Solver =
       |> Set.unionMany
       |> constraintsOf
 
+
     let manifests =
       selections
       |> Map.valueList
@@ -335,7 +398,7 @@ module Solver =
       |> Seq.fold Seq.append (state.Locations |> Map.toSeq)
       |> Map.ofSeq
 
-    let unresolved = breathFirst selections state.Root |> Seq.toList
+    let unresolved = depthFirst selections state.Root |> Seq.toList
 
     if (unresolved |> Seq.isEmpty)
     then
@@ -363,14 +426,16 @@ module Solver =
             with _ -> return None
           })
 
-        let! candidates = resolver.PostAndAsyncReply (fun channel -> GetCandidates (constraints, (p, cs), locations, channel))
+        let! requested =
+          resolver.PostAndAsyncReply (fun channel -> GetCandidates (constraints, (p, cs), locations, channel))
+        let candidates = requested |> AsyncSeq.cache
 
         let fetched =
           candidates
           |> AsyncSeq.chooseAsync(fun candidate -> async {
             match candidate with
             | Result.Error e ->
-              System.Console.WriteLine e
+              //System.Console.WriteLine e
               return None
             | Result.Ok (_, (location, versions)) ->
               let! lock = sourceExplorer.LockLocation location
@@ -392,16 +457,31 @@ module Solver =
           then
             yield! step context resolver nextState (node :: path)
 
-        System.Console.WriteLine ("Exhausted " + (string p) + (string cs))
-        let! world = resolver.PostAndAsyncReply (fun ch -> GetSnapshot ch)
-        System.Console.WriteLine (
-          world |> Map.toSeq |> Seq.map (fun (pc, ss) ->
-            (string pc) + " -> {\n"
-              + ((ss |> Seq.map (fun s -> s |> Seq.map string |> String.concat "\n") |> String.concat "\n")
-              + "\n}"
 
-          )
-        ) |> String.concat "\n")
+        let! error =
+          candidates
+          |> AsyncSeq.choose (fun candidate ->
+            match candidate with
+            | Result.Error (IntroducesConflict [Unsatisfiable (p, cs)]) ->
+              //System.Console.WriteLine "####################################################################"
+              Some (p, cs)
+            | _ -> None)
+          |> AsyncSeq.tryFirst
+
+        match error with
+        | Some transitiveFailure ->
+          ()
+          do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), transitiveFailure, ch))
+
+          constraints
+          |> Map.toSeq
+          |> Seq.map(fun x -> System.Console.WriteLine x)
+          |> Seq.toList
+          |> ignore
+
+
+        | None -> ()
+
 
 
     // System.Console.WriteLine (unresolved |> List.map (fun (p, cs) -> string p + (string cs) ) |> String.concat "\n")
