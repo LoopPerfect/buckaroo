@@ -128,22 +128,22 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
       let cacheDir = cloneFolderName url
       let startTime = System.DateTime.Now
       let! refs =
-        Async.Parallel
-          (
-            (git.RemoteRefs url
-              |> Async.Catch
-              |> Async.map(Choice.toOption >> Option.defaultValue([]))),
+        // Async.Parallel
+        //   (
+        //     (git.RemoteRefs url
+        //       |> Async.Catch
+        //       |> Async.map(Choice.toOption >> Option.defaultValue([]))),
             (git.RemoteRefs cacheDir
               |> Async.Catch
               |> Async.map(Choice.toOption >> Option.defaultValue([])))
-          )
-        |> Async.map(fun (a, b) ->
-          if a.Length = 0 && b.Length = 0 then
-            raise <| new SystemException("No internet connection and the cache is empty")
-          else if a.Length > 0
-          then a
-          else b
-        )
+        //   )
+        // |> Async.map(fun (a, b) ->
+        //   if a.Length = 0 && b.Length = 0 then
+        //     raise <| new SystemException("No internet connection and the cache is empty")
+        //   else if a.Length > 0
+        //   then a
+        //   else b
+        // )
       refsCache <- refsCache |> Map.add url refs
       let endTime = System.DateTime.Now
       log((success "success ") +
