@@ -20,7 +20,7 @@ module Solver =
 
   type ResolutionPath =
   | Root of Manifest
-  | Node of PackageIdentifier * ResolvedVersion
+  | Node of PackageIdentifier * Set<Constraint> * ResolvedVersion
 
   type SolverState = {
     Locations : Map<AdhocPackageIdentifier, PackageSource>
@@ -41,7 +41,7 @@ module Solver =
   | Conflicts of Set<SearchStrategyError>
 
   type ResolutionRequest =
-  | MarkBadPath of List<ResolutionPath> * PackageConstraint * Set<SearchStrategyError> * AsyncReplyChannel<Unit>
+  | MarkBadPath of List<ResolutionPath> * PackageConstraint * SearchStrategyError * AsyncReplyChannel<Unit>
   | GetCandidates of Constraints * PackageConstraint * PackageSources * AsyncReplyChannel<AsyncSeq<Result<(PackageIdentifier * LocatedVersionSet), SearchStrategyError>>>
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
@@ -240,18 +240,30 @@ module Solver =
 
       match conflicts with
       | Some (dep, _) ->
-        System.Console.WriteLine (string (p, cs))
         yield Result.Error (Unresolvable dep.MinimumElement)
       | None ->
         for candidate in fetchCandidatesForConstraint sourceExplorer locations p c do
           match candidate with
           | Result.Error (Unresolvable d) ->
             unresolvableCores <- (unresolvableCores |> Map.add (Set [d]) (Unresolvable d))
+
+            System.Console.WriteLine "----------"
+            for cores in unresolvableCores |> Map.keySet do
+              cores |> Set |> System.Console.WriteLine
+              System.Console.WriteLine "&&&&&"
+            System.Console.WriteLine "----------"
+
             yield Result.Error <| Unresolvable d
           | Result.Error (LimitReached d) ->
             if hadCandidate <> false
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
+              System.Console.WriteLine "----------"
+              for cores in unresolvableCores |> Map.keySet do
+                cores |> Set |> System.Console.WriteLine
+                System.Console.WriteLine "&&&&&"
+              System.Console.WriteLine "----------"
+
             yield Result.Error <| LimitReached d
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
@@ -277,7 +289,6 @@ module Solver =
               hadCandidate <- true
               yield candidate
             else
-              System.Console.WriteLine "foo"
               yield Result.Error (Conflicts conflicts)
           | _ -> ()
     }
@@ -293,6 +304,7 @@ module Solver =
           let conflicts =
             manifest.Dependencies
             |> Seq.map toPackageConstraint
+            |> Seq.append (constraints |> Map.toSeq)
             |> constraintsOf
             |> testIfHasBadCore
             |> Seq.map TransitiveConflict
@@ -302,81 +314,86 @@ module Solver =
           then
             yield candidate
           else
-            System.Console.WriteLine "bar"
             yield Result.Error (Conflicts conflicts)
         ()
 
       ()
     }
 
+    let depsFromPath p =
+      match p with
+      | Root m -> m.Dependencies
+      | Node (_, _, rv) -> rv.Manifest.Dependencies
+
+
     while true do
       let! req = inbox.Receive()
       match req with
       | GetCandidates (constraints, dep, locations, channel) ->
         trackLocal locations dep
-        |> AsyncSeq.takeWhile (fun _ -> testIfHasBadCore constraints |> Seq.isEmpty)
+        |> AsyncSeq.takeWhile(fun e ->
+          match e with
+          | _ -> testIfHasBadCore constraints |> Seq.isEmpty)
         |> trackGlobal constraints
         |> channel.Reply
-      | MarkBadPath (path, failedDep, errors, channel) ->
-
-
-        let rec compute error =
-
+      | MarkBadPath (path, failedDep, error, channel) ->
           match error with
-          | LimitReached _-> () // TODO
-          | Unresolvable (p, bs) ->
-            System.Console.WriteLine "unresolvable..."
+          | Conflicts conflicts ->
+            //System.Console.WriteLine error
 
-            if failedDep <> (p, bs)
-            then
-              let groups =
-                world.[failedDep]
-                |> Set.map(fun xs ->
-                  xs
-                  |> Set.filter(fun (q, _) -> p = q )
-                  |> Set.map(fun (_, cs) -> cs )
-                  |> Set.unionMany)
+            for (failedCore, p, bs) in conflicts
+              |> Seq.choose(fun x ->
+                match x with
+                | TransitiveConflict (failedCore , Unresolvable (p, cs)) -> Some (failedCore, p, cs)
+                | _ -> None) do
 
-              System.Console.WriteLine "xxx"
-              for contribution in groups do
-                let core =
-                  path
-                  |> Seq.choose(fun x ->
-                    match x with
-                    | Root m -> Some m.Dependencies
-                    | Node (q, rv) ->
-                      if q <> fst failedDep && p <> q
-                      then
-                        Some rv.Manifest.Dependencies
-                      else None)
-                  |> Seq.map (fun deps ->
+            let contributions =
+              match world |> Map.tryFind failedDep with
+              | None ->
+                Set.empty
+              | Some buckets ->
+                //System.Console.WriteLine failedDep
+                buckets
+                |> Set.map(fun deps ->
                     deps
-                    |> Seq.map (fun x -> (x.Package, x.Constraint |> toDnf |> (fun c -> Set.difference c contribution)))
-                    |> Seq.filter (fun (q, cs) -> cs.IsEmpty |> not)
-                    |> Seq.filter (fun (q, cs) -> p = q && Set.isProperSubset cs bs) // should be an intersection?
-                    |> Set)
-                  |> Set.unionMany
-                  |> Set.add failedDep
-                unresolvableCores <- unresolvableCores |> Map.add core (SearchStrategyError.Unresolvable (p, bs))
-              else
-                unresolvableCores <- unresolvableCores |> Map.add (Set[(p, bs)]) (SearchStrategyError.Unresolvable (p, bs))
-          | TransitiveConflict (core, next) ->
-            System.Console.WriteLine (string (core, next))
-            compute next
-          | Conflicts cs ->
-            for c in cs do compute c
-
-        for error in errors do
-          System.Console.WriteLine "errors"
-          compute error
-        channel.Reply ()
-        System.Console.WriteLine "done"
+                    |> Seq.filter (fun (q, _) -> p = q)
+                    |> Seq.map (fun (_, cs) -> cs)
+                    |> Set.unionMany)
 
 
+            for contrib in contributions do
+              let core =
+                path
+                |> Seq.filter (fun x ->
+                  match x with
+                  | Node (q, _, _) -> p <> q
+                  | _ -> true)
+                |> Seq.map depsFromPath
+                |> Seq.map (fun deps ->
+                  deps
+                  |> Seq.map (fun x -> (x.Package, x.Constraint |> toDnf))
+                  |> Seq.filter (fun (q, cs) -> p = q && cs <> contrib)
+                  |> Seq.filter (fun (_, cs) -> Set.isProperSubset cs bs) // should be an intersection?
+                  |> Seq.map (fun (q, cs) -> (q, Set.difference cs contrib))
+                  |> Seq.filter (fun (_, cs) -> cs.IsEmpty |> not)
+                  |> Set)
+                |> Set.unionMany
+                |> Set.add failedDep
+
+              unresolvableCores <- unresolvableCores |> Map.add core (SearchStrategyError.Unresolvable (p, bs))
+              System.Console.WriteLine "----------"
+              for cores in unresolvableCores |> Map.keySet do
+                cores |> Set |> System.Console.WriteLine
+                System.Console.WriteLine "&&&&&"
+              System.Console.WriteLine "----------"
+          | _ -> ()
+
+
+          channel.Reply ()
   })
 
 
-  let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<SolverState> = asyncSeq {
+  let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<SolverState, SearchStrategyError>> = asyncSeq {
     let sourceExplorer = context.SourceExplorer
     let log = namespacedLogger context.Console ("solver")
 
@@ -403,11 +420,11 @@ module Solver =
       |> Seq.fold Seq.append (state.Locations |> Map.toSeq)
       |> Map.ofSeq
 
-    let unresolved = depthFirst selections state.Root |> Seq.toList
+    let unresolved = breathFirst selections state.Root |> Seq.toList
 
     if (unresolved |> Seq.isEmpty)
     then
-      yield state
+      yield Result.Ok state
     else
       for (p, cs) in unresolved do
         let c = cs |> All
@@ -433,10 +450,9 @@ module Solver =
 
         let! requested =
           resolver.PostAndAsyncReply (fun channel -> GetCandidates (constraints, (p, cs), locations, channel))
-        let candidates = requested |> AsyncSeq.cache
 
         let fetched =
-          candidates
+          requested
           |> AsyncSeq.mapAsync(fun candidate -> async {
             match candidate with
             | Result.Error e ->
@@ -455,26 +471,47 @@ module Solver =
             | (Result.Ok prevS), (Result.Ok nextS) ->
               prevS.Selections.[p].Manifest = nextS.Selections.[p].Manifest
             | (_, _) -> prev = next)
+          |> AsyncSeq.cache
 
 
-        for nextState in AsyncSeq.append hints (fetched |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)) do
-          let node = Node (p, nextState.Selections.[p])
-          let visited = path |> List.contains node
-          if visited <> true
-          then
-            yield! step context resolver nextState (node :: path)
+        let results =
+          fetched
+          |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)
+          |> AsyncSeq.append hints
+          |> AsyncSeq.collect (fun nextState ->
+            let node = Node (p, cs , nextState.Selections.[p])
+            let visited = path |> List.contains node
+            if visited <> true
+            then
+              step context resolver nextState (node :: path)
+            else AsyncSeq.empty)
+
+        let solutions =
+          results
+          |> AsyncSeq.choose(fun x ->
+            match x with
+            | Result.Ok _ -> Some x
+            | _ -> None)
+
 
         let errors =
-          candidates
-          |> AsyncSeq.choose (fun candidate ->
-            match candidate with
-            | Result.Error e ->
-              Some e
+          fetched
+          |> AsyncSeq.choose(fun x ->
+            match x with
+            | Result.Error e -> Some e
             | _ -> None)
-          |> AsyncSeq.toBlockingSeq
-          |> Set
+          |> AsyncSeq.distinctUntilChanged
 
-        do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), errors, ch))
+        let! solution = solutions |> AsyncSeq.tryFirst
+        match solution with
+        | Some s ->
+          yield s
+          yield! solutions
+        | None ->
+          for error in errors do
+            do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
+            yield Result.Error error
+        ()
 
   }
 
@@ -518,6 +555,11 @@ module Solver =
 
     let result =
       resolutions
+      |> AsyncSeq.choose (fun s ->
+        match s with
+        | Result.Ok s -> Some s
+        | _ -> None
+      )
       |> AsyncSeq.map (fun s ->
         Resolution.Ok <| {Resolutions = s.Selections |> Map.map(fun k v -> (v, Solution.empty))}
       )
