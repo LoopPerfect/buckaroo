@@ -26,7 +26,7 @@ module Solver =
     Locations : Map<AdhocPackageIdentifier, PackageSource>
     Root : Set<Dependency>
     Hints: Map<PackageIdentifier, List<LocatedAtom>>
-    Selections : Map<PackageIdentifier, ResolvedVersion>
+    Selections : Map<PackageIdentifier, (ResolvedVersion * Solution)>
   }
 
   type PackageConstraint = PackageIdentifier * Set<Constraint>
@@ -39,6 +39,7 @@ module Solver =
   | TransitiveConflict of Set<PackageConstraint> * SearchStrategyError
   | Conflicts of Set<SearchStrategyError>
   | NoManifest
+  | NoPrivateSolution
 
   type ResolutionRequest =
   | MarkBadPath of List<ResolutionPath> * PackageConstraint * SearchStrategyError * AsyncReplyChannel<Unit>
@@ -69,7 +70,7 @@ module Solver =
       |> constraintsOf
 
 
-  let pruneSelections (selections: Map<PackageIdentifier, ResolvedVersion>) (deps: Set<Dependency>) =
+  let pruneSelections (selections: Map<PackageIdentifier, ResolvedVersion * Solution>) (deps: Set<Dependency>) =
 
     let rec loop (visited: Set<PackageIdentifier>) (deps: Set<Dependency>) : seq<PackageIdentifier * ResolvedVersion> = seq {
       let notVisited =
@@ -85,12 +86,12 @@ module Solver =
         yield!
           notVisited
           |> Seq.filter (fun d -> selections |> Map.containsKey d.Package)
-          |> Seq.map (fun d -> (d.Package, selections.[d.Package]))
+          |> Seq.map (fun d -> (d.Package, fst selections.[d.Package]))
 
         let next =
           notVisited
           |> Seq.choose (fun d -> selections |> Map.tryFind d.Package)
-          |> Seq.fold (fun deps m -> Set.union m.Manifest.Dependencies deps) Set.empty
+          |> Seq.fold (fun deps (rv, _) -> Set.union rv.Manifest.Dependencies deps) Set.empty
 
         yield! loop nextVisited next
     }
@@ -395,8 +396,9 @@ module Solver =
           Versions = atom.Versions
           Manifest = manifest
         }
-        return Result.Ok {state with Selections = state.Selections |> Map.add p resolvedVersion}
-      with _ -> return Result.Error NoManifest
+        return Result.Ok resolvedVersion
+      with _ ->
+        return Result.Error NoManifest
     })
     |> AsyncSeq.filter (fun x ->
       match x with
@@ -444,16 +446,16 @@ module Solver =
               Manifest = manifest
             }
 
-            return Result.Ok {state with Selections = state.Selections |> Map.add p resolvedVersion}})
+            return Result.Ok resolvedVersion
+        })
         |> AsyncSeq.distinctUntilChangedWith (fun prev next ->
           match prev, next with
-          | (Result.Ok prevS), (Result.Ok nextS) ->
-            prevS.Selections.[p].Manifest = nextS.Selections.[p].Manifest
+          | (Result.Ok p), (Result.Ok n) ->
+            p.Manifest = n.Manifest
           | (_, _) -> prev = next)
   }
 
-
-  let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<SolverState, SearchStrategyError>> = asyncSeq {
+  let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<Solution, SearchStrategyError>> = asyncSeq {
     let sourceExplorer = context.SourceExplorer
     let log = namespacedLogger context.Console ("solver")
 
@@ -463,7 +465,7 @@ module Solver =
 
     if (unresolved |> Seq.isEmpty)
     then
-      yield Result.Ok state
+      yield Result.Ok {Resolutions = state.Selections}
     else
 
       for (p, cs) in unresolved do
@@ -476,23 +478,48 @@ module Solver =
         let results =
           candidates
           |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)
-          |> AsyncSeq.collect (fun nextState ->
-            let node = Node (p, cs , nextState.Selections.[p])
-            let visited = path |> List.contains node
-            if visited <> true
-            then
-              step context resolver nextState (node :: path)
-            else AsyncSeq.empty)
+          |> AsyncSeq.filter(fun rv ->
+            let node = Node (p, cs, rv)
+            path |> List.contains node |> not)
+          |> AsyncSeq.mapAsync (fun rv -> async {
+            let m = rv.Manifest
+            let privateState : SolverState = {
+              Hints = state.Hints
+              Root = m.PrivateDependencies
+              Locations = state.Locations
+              Selections = Map.empty
+            }
+
+            let! privateSolution =
+              (step context resolver privateState [Root m])
+              |> AsyncSeq.choose(fun x ->
+                match x with
+                | Result.Ok x -> Some x
+                | _ -> None)
+              |> AsyncSeq.tryFirst
+
+            return
+              match privateSolution with
+              | Some ps ->
+                let nextState = {
+                   state with
+                     Selections = state.Selections |> Map.add p (rv, ps)
+                }
+                let node = Node (p, cs, rv)
+                Result.Ok <| step context resolver nextState (node :: path)
+              | None -> Result.Error NoPrivateSolution
+          })
 
         let solutions =
           results
-          |> AsyncSeq.choose(fun x ->
+          |> AsyncSeq.collect(fun x ->
             match x with
-            | Result.Ok _ -> Some x
-            | _ -> None)
+            | Result.Ok next -> next
+            | _ -> AsyncSeq.empty
+          )
 
         let errors =
-          candidates
+          results
           |> AsyncSeq.choose(fun x ->
             match x with
             | Result.Error e -> Some e
@@ -506,6 +533,7 @@ module Solver =
           yield! solutions
         | None ->
           for error in errors do
+            System.Console.WriteLine error
             do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
             yield Result.Error error
         ()
@@ -557,7 +585,7 @@ module Solver =
         | _ -> None
       )
       |> AsyncSeq.map (fun s ->
-        Resolution.Ok <| {Resolutions = s.Selections |> Map.map(fun k v -> (v, Solution.empty))}
+        Resolution.Ok s
       )
       |> solutionCollector
       |> Option.defaultValue (Set.empty |> Resolution.Conflict)
