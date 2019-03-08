@@ -14,7 +14,7 @@ module Solver =
   [<Literal>]
   let MaxConsecutiveFailures = 10
 
-  type LocatedAtom = Atom * PackageLocation
+  type LocatedAtom = Atom * PackageLock
 
   type Constraints = Map<PackageIdentifier, Set<Constraint>>
 
@@ -31,7 +31,6 @@ module Solver =
 
   type PackageConstraint = PackageIdentifier * Set<Constraint>
 
-
   type LocatedVersionSet = PackageLocation * Set<Version>
 
   type SearchStrategyError =
@@ -39,6 +38,7 @@ module Solver =
   | Unresolvable of PackageConstraint
   | TransitiveConflict of Set<PackageConstraint> * SearchStrategyError
   | Conflicts of Set<SearchStrategyError>
+  | NoManifest
 
   type ResolutionRequest =
   | MarkBadPath of List<ResolutionPath> * PackageConstraint * SearchStrategyError * AsyncReplyChannel<Unit>
@@ -209,12 +209,12 @@ module Solver =
   }
 
 
-  let resolutionManger (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> = MailboxProcessor.Start(fun inbox -> async {
+  let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> = MailboxProcessor.Start(fun inbox -> async {
     let mutable unresolvableCores : Map<Set<PackageConstraint>, SearchStrategyError> = Map.empty
     let mutable underconstraintDeps : Set<PackageConstraint> = Set.empty
     let mutable world : Map<PackageConstraint, Set<Set<PackageConstraint>>> = Map.empty
 
-    let testIfHasBadCore (constraints : Constraints) =
+    let findBadCores (constraints : Constraints) =
       let deps =
         constraints
         |> Map.toSeq
@@ -231,12 +231,18 @@ module Solver =
             |> Option.defaultValue false
         ))
 
+    let printCores () =
+      System.Console.WriteLine "----------"
+      for cores in unresolvableCores |> Map.keySet do
+        cores |> Set |> System.Console.WriteLine
+        System.Console.WriteLine "&&&&&"
+      System.Console.WriteLine "----------"
 
     let trackLocal locations (p, cs) = asyncSeq {
       let mutable hadCandidate = false
       let c = cs |>  All |> Constraint.simplify
 
-      let conflicts = testIfHasBadCore (Map.ofSeq [(p, cs)]) |> Seq.tryHead
+      let conflicts = findBadCores (Map.ofSeq [(p, cs)]) |> Seq.tryHead
 
       match conflicts with
       | Some (dep, _) ->
@@ -246,23 +252,13 @@ module Solver =
           match candidate with
           | Result.Error (Unresolvable d) ->
             unresolvableCores <- (unresolvableCores |> Map.add (Set [d]) (Unresolvable d))
-
-            System.Console.WriteLine "----------"
-            for cores in unresolvableCores |> Map.keySet do
-              cores |> Set |> System.Console.WriteLine
-              System.Console.WriteLine "&&&&&"
-            System.Console.WriteLine "----------"
-
+            printCores()
             yield Result.Error <| Unresolvable d
           | Result.Error (LimitReached d) ->
             if hadCandidate <> false
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
-              System.Console.WriteLine "----------"
-              for cores in unresolvableCores |> Map.keySet do
-                cores |> Set |> System.Console.WriteLine
-                System.Console.WriteLine "&&&&&"
-              System.Console.WriteLine "----------"
+              printCores()
 
             yield Result.Error <| LimitReached d
           | Result.Ok (_, (location, versions)) ->
@@ -279,7 +275,7 @@ module Solver =
               |> Set.map toPackageConstraint
               |> constraintsOf
               |> Map.insertWith Set.union p cs
-              |> testIfHasBadCore
+              |> findBadCores
               |> Seq.map TransitiveConflict
               |> Set
 
@@ -306,7 +302,7 @@ module Solver =
             |> Seq.map toPackageConstraint
             |> Seq.append (constraints |> Map.toSeq)
             |> constraintsOf
-            |> testIfHasBadCore
+            |> findBadCores
             |> Seq.map TransitiveConflict
             |> Set
 
@@ -316,7 +312,6 @@ module Solver =
           else
             yield Result.Error (Conflicts conflicts)
         ()
-
       ()
     }
 
@@ -333,15 +328,13 @@ module Solver =
         trackLocal locations dep
         |> AsyncSeq.takeWhile(fun e ->
           match e with
-          | _ -> testIfHasBadCore constraints |> Seq.isEmpty)
+          | _ -> findBadCores constraints |> Seq.isEmpty)
         |> trackGlobal constraints
         |> channel.Reply
       | MarkBadPath (path, failedDep, error, channel) ->
           match error with
           | Conflicts conflicts ->
-            //System.Console.WriteLine error
-
-            for (failedCore, p, bs) in conflicts
+            for (_, p, bs) in conflicts
               |> Seq.choose(fun x ->
                 match x with
                 | TransitiveConflict (failedCore , Unresolvable (p, cs)) -> Some (failedCore, p, cs)
@@ -352,7 +345,6 @@ module Solver =
               | None ->
                 Set.empty
               | Some buckets ->
-                //System.Console.WriteLine failedDep
                 buckets
                 |> Set.map(fun deps ->
                     deps
@@ -381,16 +373,84 @@ module Solver =
                 |> Set.add failedDep
 
               unresolvableCores <- unresolvableCores |> Map.add core (SearchStrategyError.Unresolvable (p, bs))
-              System.Console.WriteLine "----------"
-              for cores in unresolvableCores |> Map.keySet do
-                cores |> Set |> System.Console.WriteLine
-                System.Console.WriteLine "&&&&&"
-              System.Console.WriteLine "----------"
+              printCores()
           | _ -> ()
 
 
           channel.Reply ()
   })
+
+  let getHints (sourceExplorer : ISourceExplorer) state p cs =
+    let c = cs |> All
+    state.Hints
+    |> Map.tryFind p
+    |> Option.defaultValue([])
+    |> Seq.filter(fun (atom, _) -> atom.Versions |> Constraint.satisfies c)
+    |> AsyncSeq.ofSeq
+    |> AsyncSeq.mapAsync(fun (atom, lock) -> async {
+      try
+        let! manifest = sourceExplorer.FetchManifest (lock, atom.Versions)
+        let resolvedVersion = {
+          Lock = lock
+          Versions = atom.Versions
+          Manifest = manifest
+        }
+        return Result.Ok {state with Selections = state.Selections |> Map.add p resolvedVersion}
+      with _ -> return Result.Error NoManifest
+    })
+    |> AsyncSeq.filter (fun x ->
+      match x with
+      | Result.Error NoManifest -> false
+      | _ -> true)
+
+  let getCandidates (resolver: MailboxProcessor<ResolutionRequest>) (sourceExplorer: ISourceExplorer) state selections p cs = asyncSeq {
+
+      let constraints =
+        selections
+        |> Map.valueList
+        |> Seq.map (fun m -> m.Manifest.Dependencies)
+        |> Seq.append [state.Root]
+        |> Seq.map (Set.map toPackageConstraint)
+        |> Set.unionMany
+        |> constraintsOf
+
+      let manifests =
+        selections
+        |> Map.valueList
+        |> Seq.map (fun rv -> rv.Manifest)
+        |> Seq.toList
+
+      let locations =
+        manifests
+        |> Seq.map (fun m -> m.Locations |> Map.toSeq)
+        |> Seq.fold Seq.append (state.Locations |> Map.toSeq)
+        |> Map.ofSeq
+
+
+      let! requested =
+        resolver.PostAndAsyncReply (fun channel -> GetCandidates (constraints, (p, cs), locations, channel))
+
+      yield! requested
+        |> AsyncSeq.mapAsync(fun candidate -> async {
+          match candidate with
+          | Result.Error e ->
+            return Result.Error e
+          | Result.Ok (_, (location, versions)) ->
+            let! lock = sourceExplorer.LockLocation location
+            let! manifest = sourceExplorer.FetchManifest (lock, versions)
+            let resolvedVersion = {
+              Lock = lock
+              Versions = versions
+              Manifest = manifest
+            }
+
+            return Result.Ok {state with Selections = state.Selections |> Map.add p resolvedVersion}})
+        |> AsyncSeq.distinctUntilChangedWith (fun prev next ->
+          match prev, next with
+          | (Result.Ok prevS), (Result.Ok nextS) ->
+            prevS.Selections.[p].Manifest = nextS.Selections.[p].Manifest
+          | (_, _) -> prev = next)
+  }
 
 
   let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<SolverState, SearchStrategyError>> = asyncSeq {
@@ -398,27 +458,6 @@ module Solver =
     let log = namespacedLogger context.Console ("solver")
 
     let selections = pruneSelections state.Selections state.Root
-    let constraints =
-      selections
-      |> Map.valueList
-      |> Seq.map (fun m -> m.Manifest.Dependencies)
-      |> Seq.append [state.Root]
-      |> Seq.map (Set.map toPackageConstraint)
-      |> Set.unionMany
-      |> constraintsOf
-
-
-    let manifests =
-      selections
-      |> Map.valueList
-      |> Seq.map (fun rv -> rv.Manifest)
-      |> Seq.toList
-
-    let locations =
-      manifests
-      |> Seq.map (fun m -> m.Locations |> Map.toSeq)
-      |> Seq.fold Seq.append (state.Locations |> Map.toSeq)
-      |> Map.ofSeq
 
     let unresolved = breathFirst selections state.Root |> Seq.toList
 
@@ -426,58 +465,17 @@ module Solver =
     then
       yield Result.Ok state
     else
+
       for (p, cs) in unresolved do
-        let c = cs |> All
-
-        let hints =
-          state.Hints
-          |> Map.tryFind p
-          |> Option.defaultValue([])
-          |> Seq.filter(fun (atom, _) -> atom.Versions |> Constraint.satisfies c)
-          |> AsyncSeq.ofSeq
-          |> AsyncSeq.chooseAsync(fun (atom, location) -> async {
-            try
-              let! lock = sourceExplorer.LockLocation location
-              let! manifest = sourceExplorer.FetchManifest (lock, atom.Versions)
-              let resolvedVersion = {
-                Lock = lock
-                Versions = atom.Versions
-                Manifest = manifest
-              }
-              return Some {state with Selections = state.Selections |> Map.add p resolvedVersion}
-            with _ -> return None
-          })
-
-        let! requested =
-          resolver.PostAndAsyncReply (fun channel -> GetCandidates (constraints, (p, cs), locations, channel))
-
-        let fetched =
-          requested
-          |> AsyncSeq.mapAsync(fun candidate -> async {
-            match candidate with
-            | Result.Error e ->
-              return Result.Error e
-            | Result.Ok (_, (location, versions)) ->
-              let! lock = sourceExplorer.LockLocation location
-              let! manifest = sourceExplorer.FetchManifest (lock, versions)
-              let resolvedVersion = {
-                Lock = lock
-                Versions = versions
-                Manifest = manifest
-              }
-              return Result.Ok {state with Selections = state.Selections |> Map.add p resolvedVersion}})
-          |> AsyncSeq.distinctUntilChangedWith (fun prev next ->
-            match prev, next with
-            | (Result.Ok prevS), (Result.Ok nextS) ->
-              prevS.Selections.[p].Manifest = nextS.Selections.[p].Manifest
-            | (_, _) -> prev = next)
+        let candidates =
+          AsyncSeq.append
+            (getHints sourceExplorer state p cs)
+            (getCandidates resolver sourceExplorer state selections p cs)
           |> AsyncSeq.cache
 
-
         let results =
-          fetched
+          candidates
           |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)
-          |> AsyncSeq.append hints
           |> AsyncSeq.collect (fun nextState ->
             let node = Node (p, cs , nextState.Selections.[p])
             let visited = path |> List.contains node
@@ -493,9 +491,8 @@ module Solver =
             | Result.Ok _ -> Some x
             | _ -> None)
 
-
         let errors =
-          fetched
+          candidates
           |> AsyncSeq.choose(fun x ->
             match x with
             | Result.Error e -> Some e
@@ -512,7 +509,6 @@ module Solver =
             do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
             yield Result.Error error
         ()
-
   }
 
   let solutionCollector resolutions =
@@ -533,11 +529,11 @@ module Solver =
     |> List.tryHead
 
   let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
-    let hints = Map.empty
-    //  lock
-    //  |> Option.map (fun l ->
-    //    l.Packages |> Map.map (fun p v -> [({Package = p; Versions = v.Versions}, v.Location)] )   )
-    //  |> Option.defaultValue Map.empty
+    let hints =
+      lock
+      |> Option.map (fun l ->
+        l.Packages |> Map.map (fun p v -> [({Package = p; Versions = v.Versions}, v.Location)] )   )
+      |> Option.defaultValue Map.empty
 
     let state = {
       Root = Set.union
@@ -548,7 +544,7 @@ module Solver =
       Locations = manifest.Locations
     }
 
-    let resolver = resolutionManger context.SourceExplorer
+    let resolver = resolutionManager context.SourceExplorer
 
     let resolutions =
       step context resolver state [Root manifest]
