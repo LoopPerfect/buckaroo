@@ -47,7 +47,6 @@ module Solver =
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
 
-
   let toDnf c =
     match c with
     | All xs -> xs
@@ -71,7 +70,6 @@ module Solver =
 
 
   let pruneSelections (selections: Map<PackageIdentifier, ResolvedVersion * Solution>) (deps: Set<Dependency>) =
-
     let rec loop (visited: Set<PackageIdentifier>) (deps: Set<Dependency>) : seq<PackageIdentifier * ResolvedVersion> = seq {
       let notVisited =
         deps
@@ -318,7 +316,7 @@ module Solver =
 
     let depsFromPath p =
       match p with
-      | Root m -> m.Dependencies
+      | Root m -> Set.union m.Dependencies m.PrivateDependencies
       | Node (_, _, rv) -> rv.Manifest.Dependencies
 
 
@@ -352,7 +350,6 @@ module Solver =
                     |> Seq.filter (fun (q, _) -> p = q)
                     |> Seq.map (fun (_, cs) -> cs)
                     |> Set.unionMany)
-
 
             for contrib in contributions do
               let core =
@@ -473,7 +470,6 @@ module Solver =
           AsyncSeq.append
             (getHints sourceExplorer state p cs)
             (getCandidates resolver sourceExplorer state selections p cs)
-          |> AsyncSeq.cache
 
         let results =
           candidates
@@ -507,15 +503,23 @@ module Solver =
                 }
                 let node = Node (p, cs, rv)
                 Result.Ok <| step context resolver nextState (node :: path)
-              | None -> Result.Error NoPrivateSolution
+              | None -> Result.Error NoPrivateSolution // TODO: propagate error
           })
-
-        let solutions =
-          results
           |> AsyncSeq.collect(fun x ->
             match x with
             | Result.Ok next -> next
-            | _ -> AsyncSeq.empty
+            | Result.Error e -> AsyncSeq.ofSeq [Result.Error e]
+          )
+          |> AsyncSeq.cache
+
+        yield! results
+
+        let solutions =
+          results
+          |> AsyncSeq.choose(fun x ->
+            match x with
+            | Result.Ok s -> Some s
+            | _ -> None
           )
 
         let errors =
@@ -528,28 +532,19 @@ module Solver =
 
         let! solution = solutions |> AsyncSeq.tryFirst
         match solution with
-        | Some s ->
-          yield s
-          yield! solutions
+        | Some _ -> ()
         | None ->
           for error in errors do
-            System.Console.WriteLine error
             do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
-            yield Result.Error error
         ()
   }
 
   let solutionCollector resolutions =
     resolutions
     |> AsyncSeq.take (1024)
-    |> AsyncSeq.takeWhileInclusive (fun x ->
-      match x with
-      | Backtrack _ -> false
-      | _ -> true)
     |> AsyncSeq.filter (fun x ->
       match x with
       | Ok _ -> true
-      | Backtrack _ -> true
       | _ -> false)
     |> AsyncSeq.take 1
     |> AsyncSeq.toListAsync
@@ -560,7 +555,7 @@ module Solver =
     let hints =
       lock
       |> Option.map (fun l ->
-        l.Packages |> Map.map (fun p v -> [({Package = p; Versions = v.Versions}, v.Location)] )   )
+        l.Packages |> Map.map (fun p v -> [({Package = p; Versions = v.Versions}, v.Location)]))
       |> Option.defaultValue Map.empty
 
     let state = {
@@ -594,7 +589,6 @@ module Solver =
 
     return result
   }
-
 
   let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Solution> = async {
     let rec packageLockToSolution (locked : LockedPackage) : Async<ResolvedVersion * Solution> = async {
