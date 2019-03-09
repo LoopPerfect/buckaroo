@@ -5,6 +5,7 @@ open Buckaroo.Tasks
 open Buckaroo.Console
 open RichOutput
 open FSharp.Control
+open Buckaroo.Constraint
 
 module Solver =
 
@@ -25,8 +26,8 @@ module Solver =
   type SolverState = {
     Locations : Map<AdhocPackageIdentifier, PackageSource>
     Root : Set<Dependency>
-    Hints: Map<PackageIdentifier, List<LocatedAtom>>
     Selections : Map<PackageIdentifier, (ResolvedVersion * Solution)>
+    Hints : Map<PackageIdentifier, List<LockedPackage>>
   }
 
   type PackageConstraint = PackageIdentifier * Set<Constraint>
@@ -70,7 +71,7 @@ module Solver =
 
 
   let pruneSelections (selections: Map<PackageIdentifier, ResolvedVersion * Solution>) (deps: Set<Dependency>) =
-    let rec loop (visited: Set<PackageIdentifier>) (deps: Set<Dependency>) : seq<PackageIdentifier * ResolvedVersion> = seq {
+    let rec loop (visited: Set<PackageIdentifier>) (deps: Set<Dependency>) : seq<PackageIdentifier * (ResolvedVersion * Solution)> = seq {
       let notVisited =
         deps
         |> Seq.filter (fun d -> visited |> Set.contains d.Package |> not)
@@ -84,7 +85,7 @@ module Solver =
         yield!
           notVisited
           |> Seq.filter (fun d -> selections |> Map.containsKey d.Package)
-          |> Seq.map (fun d -> (d.Package, fst selections.[d.Package]))
+          |> Seq.map (fun d -> (d.Package, selections.[d.Package]))
 
         let next =
           notVisited
@@ -96,16 +97,18 @@ module Solver =
 
     loop Set.empty deps |> Map.ofSeq
 
-  let isUnresolved (selections : Map<PackageIdentifier, ResolvedVersion>) (constraints : Map<PackageIdentifier, Set<Constraint>>) (dep : Dependency) =
+  let isUnresolved (selections : Map<PackageIdentifier, ResolvedVersion * Solution>) (constraints : Map<PackageIdentifier, Set<Constraint>>) (dep : Dependency) =
     let c = constraints.[dep.Package] |> All |> Constraint.simplify
     selections
     |> Map.tryFind dep.Package
+    |> Option.map fst
     |> Option.map (fun rv -> rv.Versions |> Constraint.satisfies c |> not)
     |> Option.defaultValue true
 
-  let findUnresolved pick (selections: Map<PackageIdentifier, ResolvedVersion>) (deps: Set<Dependency>) =
+  let findUnresolved pick (selections: Map<PackageIdentifier, ResolvedVersion * Solution>) (deps: Set<Dependency>) =
     let constraints =
       Map.valueList selections
+      |> List.map fst
       |> List.map (fun m -> m.Manifest.Dependencies)
       |> List.map (Set.map toPackageConstraint)
       |> List.fold Set.union (deps |> Set.map toPackageConstraint)
@@ -125,6 +128,7 @@ module Solver =
         let next =
           notVisited
           |> Seq.choose (fun d -> selections |> Map.tryFind d.Package)
+          |> Seq.map fst
           |> Seq.fold (fun deps m -> Set.union m.Manifest.Dependencies deps) Set.empty
 
         yield!
@@ -383,14 +387,15 @@ module Solver =
     state.Hints
     |> Map.tryFind p
     |> Option.defaultValue([])
-    |> Seq.filter(fun (atom, _) -> atom.Versions |> Constraint.satisfies c)
+    |> Seq.filter(fun lp -> lp.Versions |> Constraint.satisfies c)
+    |> Seq.distinct
     |> AsyncSeq.ofSeq
-    |> AsyncSeq.mapAsync(fun (atom, lock) -> async {
+    |> AsyncSeq.mapAsync(fun lp -> async {
       try
-        let! manifest = sourceExplorer.FetchManifest (lock, atom.Versions)
+        let! manifest = sourceExplorer.FetchManifest (lp.Location, lp.Versions)
         let resolvedVersion = {
-          Lock = lock
-          Versions = atom.Versions
+          Lock = lp.Location
+          Versions = lp.Versions
           Manifest = manifest
         }
         return Result.Ok resolvedVersion
@@ -402,11 +407,43 @@ module Solver =
       | Result.Error NoManifest -> false
       | _ -> true)
 
+  let fetchHints (sourceExplorer : ISourceExplorer) (state: SolverState) (resolvedVersion : ResolvedVersion) : Async<SolverState> = async {
+    try
+      let! lock = sourceExplorer.FetchLock (resolvedVersion.Lock, resolvedVersion.Versions)
+      let hints =
+        Seq.append
+          (state.Hints |> Map.toSeq)
+          (lock.Packages
+            |> Map.toSeq
+            |> Seq.map (fun (k, v) -> (k, [v])))
+        |> Seq.groupBy fst
+        |> Seq.map (fun (k, vs) -> (k, vs |> Seq.map snd |> Seq.distinct |> List.concat))
+        |> Map.ofSeq
+
+      return {
+        state with Hints = hints
+      }
+    with _ ->
+      return state
+  }
+
+  let collectPrivateHints (state : SolverState) (p : PackageIdentifier) =
+    state.Hints
+    |> Map.tryFind p
+    |> Option.defaultValue []
+    |> List.map (fun l -> l.PrivatePackages |> Map.toSeq)
+    |> Seq.collect id
+    |> Seq.groupBy fst
+    |> Seq.map (fun (k, vs) -> (k, vs |> Seq.map snd |> Seq.distinct |> Seq.map List.singleton |> List.concat))
+    |> Map.ofSeq
+
+
   let getCandidates (resolver: MailboxProcessor<ResolutionRequest>) (sourceExplorer: ISourceExplorer) state selections p cs = asyncSeq {
 
       let constraints =
         selections
         |> Map.valueList
+        |> Seq.map fst
         |> Seq.map (fun m -> m.Manifest.Dependencies)
         |> Seq.append [state.Root]
         |> Seq.map (Set.map toPackageConstraint)
@@ -416,6 +453,7 @@ module Solver =
       let manifests =
         selections
         |> Map.valueList
+        |> Seq.map fst
         |> Seq.map (fun rv -> rv.Manifest)
         |> Seq.toList
 
@@ -452,91 +490,115 @@ module Solver =
           | (_, _) -> prev = next)
   }
 
-  let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<Solution, SearchStrategyError>> = asyncSeq {
+  let zipState state clause =
+    Result.map (fun candidate -> (clause, state, candidate))
+    >> Result.mapError(fun e -> (clause, e))
+
+  let mergeHint sourceExplorer next = async {
+    match next with
+    | Result.Ok (clause, state, rv) ->
+      let! nextState = fetchHints sourceExplorer state rv
+      return Result.Ok (clause, nextState, rv)
+    | Result.Error e -> return Result.Error e
+  }
+
+  let quickStrategy resolver sourceExplorer state selections = asyncSeq {
+    let unresolved = breathFirst selections state.Root
+
+    for (p, cs) in unresolved do
+      yield!
+        (AsyncSeq.append
+          (getHints sourceExplorer state p cs)
+          (getCandidates resolver sourceExplorer state selections p cs))
+        |> AsyncSeq.map (zipState state (p, cs))
+        |> AsyncSeq.mapAsync (mergeHint sourceExplorer)
+  }
+
+  let upgradeStrategy resolver sourceExplorer state selections = asyncSeq {
+    let unresolved = breathFirst selections state.Root
+
+    for (p, cs) in unresolved do
+      yield!
+        getCandidates resolver sourceExplorer state selections p cs
+        |> AsyncSeq.map (zipState state (p, cs))
+  }
+
+  let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) strategy (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<Solution, PackageConstraint * SearchStrategyError>> = asyncSeq {
     let sourceExplorer = context.SourceExplorer
     let log = namespacedLogger context.Console ("solver")
 
     let selections = pruneSelections state.Selections state.Root
 
-    let unresolved = breathFirst selections state.Root |> Seq.toList
-
-    if (unresolved |> Seq.isEmpty)
+    if breathFirst selections state.Root |> Seq.isEmpty
     then
-      yield Result.Ok {Resolutions = state.Selections}
+      yield Result.Ok {Resolutions = selections}
     else
+      let candidates = strategy state selections |> AsyncSeq.cache
 
-      for (p, cs) in unresolved do
-        let candidates =
-          AsyncSeq.append
-            (getHints sourceExplorer state p cs)
-            (getCandidates resolver sourceExplorer state selections p cs)
+      let results =
+        candidates
+        |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)
+        |> AsyncSeq.filter(fun ((p, cs), _, rv) -> path |> List.contains (Node (p, cs, rv)) |> not)
+        |> AsyncSeq.mapAsync (fun ((p, cs), state, rv) -> async {
+          let m = rv.Manifest
+          let privateState : SolverState = {
+            Hints = collectPrivateHints state p
+            Root = m.PrivateDependencies
+            Locations = state.Locations
+            Selections = Map.empty
+          }
 
-        let results =
-          candidates
-          |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)
-          |> AsyncSeq.filter(fun rv ->
-            let node = Node (p, cs, rv)
-            path |> List.contains node |> not)
-          |> AsyncSeq.mapAsync (fun rv -> async {
-            let m = rv.Manifest
-            let privateState : SolverState = {
-              Hints = state.Hints
-              Root = m.PrivateDependencies
-              Locations = state.Locations
-              Selections = Map.empty
-            }
+          let! privateSolution =
+            (step context resolver strategy privateState [Root m])
+            |> AsyncSeq.choose(fun x ->
+              match x with
+              | Result.Ok x -> Some x
+              | _ -> None)
+            |> AsyncSeq.tryFirst
 
-            let! privateSolution =
-              (step context resolver privateState [Root m])
-              |> AsyncSeq.choose(fun x ->
-                match x with
-                | Result.Ok x -> Some x
-                | _ -> None)
-              |> AsyncSeq.tryFirst
+          return
+            match privateSolution with
+            | Some ps ->
+              let nextState = {
+                 state with
+                   Selections = selections |> Map.add p (rv, ps)
+              }
+              let node = Node (p, cs, rv)
+              Result.Ok <| step context resolver strategy nextState (node :: path)
+            | None -> Result.Error ((p, cs), NoPrivateSolution) // TODO: propagate error
+        })
+        |> AsyncSeq.collect(fun x ->
+          match x with
+          | Result.Ok next -> next
+          | Result.Error e -> AsyncSeq.ofSeq [Result.Error e]
+        )
+        |> AsyncSeq.cache
 
-            return
-              match privateSolution with
-              | Some ps ->
-                let nextState = {
-                   state with
-                     Selections = state.Selections |> Map.add p (rv, ps)
-                }
-                let node = Node (p, cs, rv)
-                Result.Ok <| step context resolver nextState (node :: path)
-              | None -> Result.Error NoPrivateSolution // TODO: propagate error
-          })
-          |> AsyncSeq.collect(fun x ->
-            match x with
-            | Result.Ok next -> next
-            | Result.Error e -> AsyncSeq.ofSeq [Result.Error e]
-          )
-          |> AsyncSeq.cache
+      yield! results
 
-        yield! results
+      let solutions =
+        results
+        |> AsyncSeq.choose(fun x ->
+          match x with
+          | Result.Ok s -> Some s
+          | _ -> None
+        )
 
-        let solutions =
-          results
-          |> AsyncSeq.choose(fun x ->
-            match x with
-            | Result.Ok s -> Some s
-            | _ -> None
-          )
+      let errors =
+        results
+        |> AsyncSeq.choose(fun x ->
+          match x with
+          | Result.Error e -> Some e
+          | _ -> None)
+        |> AsyncSeq.distinctUntilChanged
 
-        let errors =
-          results
-          |> AsyncSeq.choose(fun x ->
-            match x with
-            | Result.Error e -> Some e
-            | _ -> None)
-          |> AsyncSeq.distinctUntilChanged
-
-        let! solution = solutions |> AsyncSeq.tryFirst
-        match solution with
-        | Some _ -> ()
-        | None ->
-          for error in errors do
-            do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
-        ()
+      let! solution = solutions |> AsyncSeq.tryFirst
+      match solution with
+      | Some _ -> ()
+      | None ->
+        for ((p, cs), error) in errors do
+          do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
+      ()
   }
 
   let solutionCollector resolutions =
@@ -554,8 +616,7 @@ module Solver =
   let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
     let hints =
       lock
-      |> Option.map (fun l ->
-        l.Packages |> Map.map (fun p v -> [({Package = p; Versions = v.Versions}, v.Location)]))
+      |> Option.map (fun l -> l.Packages |> (Map.map  (fun _ v -> [v])))
       |> Option.defaultValue Map.empty
 
     let state = {
@@ -563,25 +624,31 @@ module Solver =
         manifest.Dependencies
         manifest.PrivateDependencies
       Hints = hints
-      Selections = Map.empty
+      Selections = partialSolution.Resolutions
       Locations = manifest.Locations
     }
 
     let resolver = resolutionManager context.SourceExplorer
 
+    let strategy =
+      match style with
+      | Quick -> quickStrategy resolver context.SourceExplorer
+      | Upgrading -> upgradeStrategy resolver context.SourceExplorer
+
     let resolutions =
-      step context resolver state [Root manifest]
+      step context resolver strategy state [Root manifest]
+
 
     let result =
       resolutions
       |> AsyncSeq.choose (fun s ->
         match s with
         | Result.Ok s -> Some s
-        | _ -> None
-      )
-      |> AsyncSeq.map (fun s ->
-        Resolution.Ok s
-      )
+        | Result.Error e ->
+          System.Console.WriteLine e
+          None
+        )
+      |> AsyncSeq.map Resolution.Ok
       |> solutionCollector
       |> Option.defaultValue (Set.empty |> Resolution.Conflict)
 
