@@ -44,9 +44,25 @@ module Solver =
 
   type ResolutionRequest =
   | MarkBadPath of List<ResolutionPath> * PackageConstraint * SearchStrategyError * AsyncReplyChannel<Unit>
+  | ProposeCandidates of Constraints * PackageConstraint * seq<LockedPackage> * AsyncReplyChannel<AsyncSeq<Result<ResolvedVersion, SearchStrategyError>>>
   | GetCandidates of Constraints * PackageConstraint * PackageSources * AsyncReplyChannel<AsyncSeq<Result<(PackageIdentifier * LocatedVersionSet), SearchStrategyError>>>
 
   type SearchStrategy = ISourceExplorer -> SolverState -> AsyncSeq<Result<PackageIdentifier * LocatedVersionSet, SearchStrategyError>>
+
+  let private ifError x =
+    match x with
+    | Result.Error e -> Some e
+    | _ -> None
+
+  let private ifOk x =
+    match x with
+    | Result.Ok v -> Some v
+    | _ -> None
+
+  let private resultOrDefaultWith f x =
+    match x with
+    | Result.Ok v -> v
+    | Result.Error e -> f e
 
   let toDnf c =
     match c with
@@ -64,9 +80,9 @@ module Solver =
 
   let constraintsOfSelection selections =
     Map.valueList selections
-      |> List.map (fun m -> m.Manifest.Dependencies)
-      |> List.map (Set.map toPackageConstraint)
-      |> List.fold Set.union Set.empty
+      |> Seq.map (fun m -> m.Manifest.Dependencies)
+      |> Seq.map (Set.map toPackageConstraint)
+      |> Seq.fold Set.union Set.empty
       |> constraintsOf
 
 
@@ -108,10 +124,10 @@ module Solver =
   let findUnresolved pick (selections: Map<PackageIdentifier, ResolvedVersion * Solution>) (deps: Set<Dependency>) =
     let constraints =
       Map.valueList selections
-      |> List.map fst
-      |> List.map (fun m -> m.Manifest.Dependencies)
-      |> List.map (Set.map toPackageConstraint)
-      |> List.fold Set.union (deps |> Set.map toPackageConstraint)
+      |> Seq.map fst
+      |> Seq.map (fun m -> m.Manifest.Dependencies)
+      |> Seq.map (Set.map toPackageConstraint)
+      |> Seq.fold Set.union (deps |> Set.map toPackageConstraint)
       |> constraintsOf
 
     let rec loop (visited: Set<PackageIdentifier>) (deps: Set<Dependency>) : seq<PackageIdentifier * Set<Constraint>> = seq {
@@ -327,6 +343,43 @@ module Solver =
     while true do
       let! req = inbox.Receive()
       match req with
+      | ProposeCandidates (constraints, (p, cs), lockedPackages, channel) ->
+        lockedPackages
+        |> AsyncSeq.ofSeq
+        |> AsyncSeq.mapAsync(fun lp -> async {
+          try
+            let! manifest = sourceExplorer.FetchManifest (lp.Location, lp.Versions)
+
+            let conflicts =
+              manifest.Dependencies
+              |> Set.map toPackageConstraint
+              |> constraintsOf
+              |> Map.insertWith Set.union p cs
+              |> findBadCores
+              |> Seq.map TransitiveConflict
+
+            if conflicts |> Seq.isEmpty
+            then
+              return Result.Error NoManifest // TODO ...
+            else
+              let rv: ResolvedVersion = {
+                Manifest = manifest
+                Lock = lp.Location
+                Versions = lp.Versions
+              }
+              return Result.Ok rv
+          with _ ->
+            return Result.Error NoManifest
+        })
+        |> AsyncSeq.filter (fun x ->
+          match x with
+          | Result.Error _ -> false
+          | _ -> true)
+        |> AsyncSeq.takeWhile(fun e ->
+          match e with
+          | _ -> findBadCores constraints |> Seq.isEmpty)
+        |> channel.Reply
+
       | GetCandidates (constraints, dep, locations, channel) ->
         trackLocal locations dep
         |> AsyncSeq.takeWhile(fun e ->
@@ -382,30 +435,30 @@ module Solver =
           channel.Reply ()
   })
 
-  let getHints (sourceExplorer : ISourceExplorer) state p cs =
+  let getHints (resolver: MailboxProcessor<ResolutionRequest>) state selections p cs = asyncSeq {
+
+    let constraints =
+      selections
+      |> Map.valueList
+      |> Seq.map fst
+      |> Seq.map (fun m -> m.Manifest.Dependencies)
+      |> Seq.append [state.Root]
+      |> Seq.map (Set.map toPackageConstraint)
+      |> Set.unionMany
+      |> constraintsOf
+
     let c = cs |> All
-    state.Hints
-    |> Map.tryFind p
-    |> Option.defaultValue([])
-    |> Seq.filter(fun lp -> lp.Versions |> Constraint.satisfies c)
-    |> Seq.distinct
-    |> AsyncSeq.ofSeq
-    |> AsyncSeq.mapAsync(fun lp -> async {
-      try
-        let! manifest = sourceExplorer.FetchManifest (lp.Location, lp.Versions)
-        let resolvedVersion = {
-          Lock = lp.Location
-          Versions = lp.Versions
-          Manifest = manifest
-        }
-        return Result.Ok resolvedVersion
-      with _ ->
-        return Result.Error NoManifest
-    })
-    |> AsyncSeq.filter (fun x ->
-      match x with
-      | Result.Error NoManifest -> false
-      | _ -> true)
+    let candidates =
+      state.Hints
+      |> Map.tryFind p
+      |> Option.defaultValue([])
+      |> Seq.filter(fun lp -> lp.Versions |> Constraint.satisfies c)
+      |> Seq.distinct
+
+
+    let! request = resolver.PostAndAsyncReply (fun channel -> ProposeCandidates (constraints, (p, cs), candidates, channel))
+    yield! request
+  }
 
   let fetchHints (sourceExplorer : ISourceExplorer) (state: SolverState) (resolvedVersion : ResolvedVersion) : Async<SolverState> = async {
     try
@@ -431,7 +484,7 @@ module Solver =
     state.Hints
     |> Map.tryFind p
     |> Option.defaultValue []
-    |> List.map (fun l -> l.PrivatePackages |> Map.toSeq)
+    |> Seq.map (fun l -> l.PrivatePackages |> Map.toSeq)
     |> Seq.collect id
     |> Seq.groupBy fst
     |> Seq.map (fun (k, vs) -> (k, vs |> Seq.map snd |> Seq.distinct |> Seq.map List.singleton |> List.concat))
@@ -471,6 +524,7 @@ module Solver =
         |> AsyncSeq.mapAsync(fun candidate -> async {
           match candidate with
           | Result.Error e ->
+            System.Console.WriteLine e
             return Result.Error e
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
@@ -486,12 +540,13 @@ module Solver =
         |> AsyncSeq.distinctUntilChangedWith (fun prev next ->
           match prev, next with
           | (Result.Ok p), (Result.Ok n) ->
-            p.Manifest = n.Manifest
+            p.Manifest = n.Manifest // All revisions with an identical manifest will have the same outcome
           | (_, _) -> prev = next)
   }
 
   let zipState state clause =
-    Result.map (fun candidate -> (clause, state, candidate))
+    id
+    >> Result.map (fun candidate -> (clause, state, candidate))
     >> Result.mapError(fun e -> (clause, e))
 
   let mergeHint sourceExplorer next = async {
@@ -508,7 +563,7 @@ module Solver =
     for (p, cs) in unresolved do
       yield!
         (AsyncSeq.append
-          (getHints sourceExplorer state p cs)
+          (getHints resolver state selections p cs)
           (getCandidates resolver sourceExplorer state selections p cs))
         |> AsyncSeq.map (zipState state (p, cs))
         |> AsyncSeq.mapAsync (mergeHint sourceExplorer)
@@ -523,82 +578,73 @@ module Solver =
         |> AsyncSeq.map (zipState state (p, cs))
   }
 
+  let private privateStep step ((p, _), state, rv) =
+    let m = rv.Manifest
+    let privateState : SolverState = {
+      Hints = collectPrivateHints state p
+      Root = m.PrivateDependencies
+      Locations = state.Locations
+      Selections = Map.empty
+    }
+
+    (step privateState [Root m])
+      |> AsyncSeq.choose ifOk
+      |> AsyncSeq.tryFirst
+
+
   let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) strategy (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<Solution, PackageConstraint * SearchStrategyError>> = asyncSeq {
     let sourceExplorer = context.SourceExplorer
     let log = namespacedLogger context.Console ("solver")
+    let nextStep = step context resolver strategy
 
     let selections = pruneSelections state.Selections state.Root
+    System.Console.WriteLine ("path: ")
+    for (p, v) in path |> Seq.choose(fun x -> match x with | Node (p, cs, rv) -> Some (p, rv.Versions) | Root _-> None) do
+      context.Console.Write (
+         (PackageIdentifier.showRich p) + subtle "@"
+         + (Version.showRichSet v)
+         + subtle " -> "
+      )
+
 
     if breathFirst selections state.Root |> Seq.isEmpty
     then
       yield Result.Ok {Resolutions = selections}
     else
-      let candidates = strategy state selections |> AsyncSeq.cache
-
       let results =
-        candidates
-        |> AsyncSeq.choose (fun x -> match x with | Result.Ok v -> Some v | _ -> None)
+        strategy state selections
+        |> AsyncSeq.choose ifOk
         |> AsyncSeq.filter(fun ((p, cs), _, rv) -> path |> List.contains (Node (p, cs, rv)) |> not)
         |> AsyncSeq.mapAsync (fun ((p, cs), state, rv) -> async {
-          let m = rv.Manifest
-          let privateState : SolverState = {
-            Hints = collectPrivateHints state p
-            Root = m.PrivateDependencies
-            Locations = state.Locations
-            Selections = Map.empty
-          }
-
-          let! privateSolution =
-            (step context resolver strategy privateState [Root m])
-            |> AsyncSeq.choose(fun x ->
-              match x with
-              | Result.Ok x -> Some x
-              | _ -> None)
-            |> AsyncSeq.tryFirst
-
+          let! privateSolution = privateStep nextStep ((p, cs), state, rv)
           return
             match privateSolution with
+            | None -> Result.Error ((p, cs), NoPrivateSolution) // TODO: propagate error
             | Some ps ->
+              let node = Node (p, cs, rv)
               let nextState = {
                  state with
                    Selections = selections |> Map.add p (rv, ps)
               }
-              let node = Node (p, cs, rv)
-              Result.Ok <| step context resolver strategy nextState (node :: path)
-            | None -> Result.Error ((p, cs), NoPrivateSolution) // TODO: propagate error
+              Result.Ok <| nextStep nextState (node :: path)
         })
-        |> AsyncSeq.collect(fun x ->
-          match x with
-          | Result.Ok next -> next
-          | Result.Error e -> AsyncSeq.ofSeq [Result.Error e]
-        )
+        |> AsyncSeq.collect (resultOrDefaultWith  (AsyncSeq.singleton << Result.Error))
         |> AsyncSeq.cache
-
-      yield! results
-
-      let solutions =
-        results
-        |> AsyncSeq.choose(fun x ->
-          match x with
-          | Result.Ok s -> Some s
-          | _ -> None
-        )
 
       let errors =
         results
-        |> AsyncSeq.choose(fun x ->
-          match x with
-          | Result.Error e -> Some e
-          | _ -> None)
+        |> AsyncSeq.choose ifError
         |> AsyncSeq.distinctUntilChanged
 
-      let! solution = solutions |> AsyncSeq.tryFirst
+      let! solution = results |> AsyncSeq.choose ifOk |> AsyncSeq.tryFirst
       match solution with
       | Some _ -> ()
       | None ->
         for ((p, cs), error) in errors do
+          System.Console.WriteLine error
           do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
-      ()
+
+      yield! results
   }
 
   let solutionCollector resolutions =
