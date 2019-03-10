@@ -67,6 +67,8 @@ module Constraint =
         | SemVer semVer -> semVer |> isWithinRange (op, v)
         | _ -> false
       )
+
+  // TODO: Better Sorting!!!!!
   let rec compare (x : Constraint) (y : Constraint) : int =
     match (x, y) with
     | (Exactly u, Exactly v) -> Version.compare u v
@@ -86,7 +88,7 @@ module Constraint =
     | (All xs, y) ->
       xs
       |> Seq.map (fun x -> compare x y)
-      |> Seq.append [ 1 ]
+      |> Seq.append [ -1 ]
       |> Seq.min
     | (y, All xs) ->
       (compare (All xs) y) * -1

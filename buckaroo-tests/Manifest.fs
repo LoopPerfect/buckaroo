@@ -87,7 +87,7 @@ let ``Manifest.toToml roundtrip 1`` () =
       ]
       Dependencies = Set [{
         Targets = Some ([{Folders=["foo"; "bar"]; Name = "xxx"}])
-        Constraint = All [Constraint.Exactly (Version.SemVer SemVer.zero)]
+        Constraint = All <| Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
         Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
       }]
   }
@@ -123,12 +123,12 @@ let ``Manifest.toToml roundtrip 2`` () =
     ]
     Dependencies = Set [{
       Targets = Some ([{Folders=["foo"; "bar"]; Name = "xxx"}])
-      Constraint = All [Constraint.Exactly (Version.SemVer SemVer.zero)]
+      Constraint = All <| Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
     }]
     PrivateDependencies = Set [{
       Targets = Some ([{Folders=["foo"; "bar"]; Name = "yyy"}])
-      Constraint = Any [Constraint.Exactly (Version.SemVer SemVer.zero)]
+      Constraint = Any <|Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
     }]
   }

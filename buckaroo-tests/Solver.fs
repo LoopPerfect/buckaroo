@@ -228,7 +228,7 @@ let ``Solver can compute version intersections`` () =
 let ``Solver can compute intersection of branches`` () =
 
   let root = manifest [
-    ("a", All [Exactly (br "b"); Exactly (br "a")])
+    ("a", All <| Set[Exactly (br "b"); Exactly (br "a")])
   ]
 
   let spec = [
@@ -346,7 +346,7 @@ let ``Solver handles negated constraints also`` () =
 
   let root = manifest [
     ("a", Exactly (br "a"))
-    ("b", Any [Exactly (br "a"); Exactly (br "b")])
+    ("b", Any <|Set[Exactly (br "a"); Exactly (br "b")])
   ]
 
   let spec = [
