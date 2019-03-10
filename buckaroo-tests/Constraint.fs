@@ -16,21 +16,21 @@ let ``Constraint.parse works correctly`` () =
     ("*", Constraint.wildcard |> Some);
     ("revision=aabbccddee", Version.Git(GitVersion.Revision "aabbccddee") |> Exactly |> Some);
     ("!*", Constraint.wildcard |> Constraint.Complement |> Some);
-    ("any(branch=master)", Some(Any [Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("any(any(branch=master))", Some(Any [ Any [Exactly (Version.Git(GitVersion.Branch "master"))]]));
-    ("any(revision=aabbccddee branch=master)", Some (Any [
+    ("any(branch=master)", Some(Any <| Set[Exactly (Version.Git(GitVersion.Branch "master"))]));
+    ("any(any(branch=master))", Some(Any <|Set[ Any <|Set[Exactly (Version.Git(GitVersion.Branch "master"))]]));
+    ("any(revision=aabbccddee branch=master)", Some (Any <|Set[
       Exactly (Version.Git(GitVersion.Revision "aabbccddee"));
       Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("all(*)", Some(All [Constraint.wildcard]));
+    ("all(*)", Some(All <| Set[Constraint.wildcard]));
     (
       "all(branch=master !revision=aabbccddee)",
-      Some (All [Exactly (Version.Git(GitVersion.Branch "master")); Complement (Exactly (Version.Git(GitVersion.Revision "aabbccddee")))])
+      Some (All <| Set[Exactly (Version.Git(GitVersion.Branch "master")); Complement (Exactly (Version.Git(GitVersion.Revision "aabbccddee")))])
     );
     (
       "all(branch=master !any(revision=aabbccddee branch=develop))",
-      Some (All [
+      Some (All <| Set[
         Exactly (Version.Git(GitVersion.Branch "master"));
-        Complement (Any([
+        Complement (Any(Set[
           Exactly (Version.Git(GitVersion.Revision "aabbccddee"));
           Exactly (Version.Git(GitVersion.Branch "develop"));
         ]))
@@ -52,12 +52,12 @@ let ``Constraint.parse works correctly`` () =
       "+1.0.0",
       Some (Constraint.rangeToConstraint RangeType.Patch (SemVer.create (1, 0, 0, 0)))
     );
-    ("all(branch=master ^1.0.0)", Some (All [
+    ("all(branch=master ^1.0.0)", Some (All <| Set[
         Exactly (Git (GitVersion.Branch "master"));
         Constraint.rangeToConstraint RangeType.Major (SemVer.create (1, 0, 0, 0))
       ]
     ));
-    ("all(^1.0.0 branch=master)", Some (All [
+    ("all(^1.0.0 branch=master)", Some (All <| Set[
         Constraint.rangeToConstraint RangeType.Major (SemVer.create (1, 0, 0, 0));
         Exactly (Git (GitVersion.Branch "master"))
       ]))
