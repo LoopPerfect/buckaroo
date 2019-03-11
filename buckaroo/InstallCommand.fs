@@ -131,7 +131,13 @@ let rec computeCellIdentifier (parents : PackageIdentifier list) (package : Pack
       | PackageIdentifier.BitBucket bitBucket ->
         [ "buckaroo"; "bitbucket"; bitBucket.Owner; bitBucket.Project ]
       | PackageIdentifier.GitLab gitLab ->
-        [ "buckaroo"; "gitlab"; gitLab.Owner; gitLab.Project ]
+        seq {
+          yield "buckaroo"
+          yield "gitlab"
+          yield! gitLab.Groups
+          yield gitLab.Project
+        }
+        |> Seq.toList
       | PackageIdentifier.Adhoc adhoc ->
         [ "buckaroo"; "adhoc"; adhoc.Owner; adhoc.Project ]
     )
@@ -139,15 +145,21 @@ let rec computeCellIdentifier (parents : PackageIdentifier list) (package : Pack
   | head::tail ->
     (computeCellIdentifier tail head) + "." + (computeCellIdentifier [] package)
 
+let rec private combinePaths xs =
+  match xs with
+  | [ x ] -> x
+  | x::xs -> Path.Combine (x, combinePaths xs)
+  | [] -> ""
+
 let rec packageInstallPath (parents : PackageIdentifier list) (package : PackageIdentifier) =
   match parents with
   | [] ->
     let (prefix, owner, project) =
       match package with
-        | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
-        | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
-        | PackageIdentifier.GitLab x -> ("gitlab", x.Owner, x.Project)
-        | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
+      | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
+      | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
+      | PackageIdentifier.GitLab x -> ("gitlab", combinePaths x.Groups, x.Project)
+      | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
     Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
   | head::tail ->
     Path.Combine(packageInstallPath tail head, packageInstallPath [] package)
@@ -181,11 +193,11 @@ let writeReceipt (installPath : string) (packageLock : PackageLock) = async {
       "package = \"" + (PackageIdentifier.show package) + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
     | GitLab g ->
-      let package = PackageIdentifier.GitHub g.Package
+      let package = PackageIdentifier.GitLab g.Package
       "package = \"" + (PackageIdentifier.show package) + "\"\n" +
       "revision = \"" + g.Revision + "\"\n"
     | BitBucket b ->
-      let package = PackageIdentifier.GitHub b.Package
+      let package = PackageIdentifier.BitBucket b.Package
       "package = \"" + (PackageIdentifier.show package) + "\"\n" +
       "revision = \"" + b.Revision + "\"\n"
 

@@ -1,19 +1,24 @@
 namespace Buckaroo
 
 type HttpLocation = {
-  Url : string;
-  StripPrefix : string option;
-  Type : ArchiveType option;
+  Url : string
+  StripPrefix : string option
+  Type : ArchiveType option
 }
 
 type GitLocation = {
-  Url : string;
-  Revision : Revision;
+  Url : string
+  Revision : Revision
+}
+
+type GitLabLocation = {
+  Package : GitLabPackageIdentifier
+  Revision : Revision
 }
 
 type HostedGitLocation = {
-  Package : AdhocPackageIdentifier;
-  Revision : Revision;
+  Package : AdhocPackageIdentifier
+  Revision : Revision
 }
 
 type PackageLocation =
@@ -21,7 +26,7 @@ type PackageLocation =
 | Git of GitLocation
 | GitHub of HostedGitLocation
 | BitBucket of HostedGitLocation
-| GitLab of HostedGitLocation
+| GitLab of GitLabLocation
 
   override this.ToString () =
     match this with
@@ -29,7 +34,7 @@ type PackageLocation =
     | Git git -> git.Url + "#" + git.Revision
     | GitHub gitHub -> "github.com/" + gitHub.Package.Owner + "/" + gitHub.Package.Project + "#" + gitHub.Revision
     | BitBucket bitbucket -> "bitbucket.org/" + bitbucket.Package.Owner + "/" + bitbucket.Package.Project + "#" + bitbucket.Revision
-    | GitLab gitLab -> "gitlab.com/" + gitLab.Package.Owner + "/" + gitLab.Package.Project + "#" + gitLab.Revision
+    | GitLab gitLab -> "gitlab.com/" + (gitLab.Package.Groups |> String.concat "/") + "/" + gitLab.Package.Project + "#" + gitLab.Revision
 
 module PackageLocation =
 
@@ -49,12 +54,12 @@ module PackageLocation =
     else
       "ssh://git@bitbucket.org:" + x.Owner + "/" + x.Project + ".git"
 
-  let gitLabUrl (x : AdhocPackageIdentifier) =
+  let gitLabUrl (x : GitLabPackageIdentifier) =
     if Environment.GetEnvironmentVariable "BUCKAROO_GITLAB_SSH" |> isNull
     then
-      "https://gitlab.com/" + x.Owner + "/" + x.Project + ".git"
+      "https://gitlab.com/" + (x.Groups |> String.concat "/") + "/" + x.Project + ".git"
     else
-      "ssh://git@gitlab.com:" + x.Owner + "/" + x.Project + ".git"
+      "ssh://git@gitlab.com:" + (x.Groups |> String.concat "/") + "/" + x.Project + ".git"
 
   let versionSetFromLocation location =
     match location with

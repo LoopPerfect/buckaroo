@@ -19,14 +19,14 @@ let private extractRoot (archive : IArchive) (pattern : string) =
   match candidates with
   | head::[] -> head
   | [] ->
-    raise <| new Exception("No directories matched the root")
+    raise <| Exception ("No directories matched the root")
   | xs ->
-    raise <| new Exception("Multiple directories match the root: " + (string xs))
+    raise <| Exception ("Multiple directories match the root: " + (string xs))
 
 let extractTo (pathToArchive : string) (pathToExtraction : string) (stripPrefix : string option) = async {
   use archive = Archives.Zip.ZipArchive.Open(pathToArchive) :> IArchive
 
-  let extractionOptions = new ExtractionOptions()
+  let extractionOptions = ExtractionOptions ()
   extractionOptions.ExtractFullPath <- false
   extractionOptions.Overwrite <- true
 
