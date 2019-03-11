@@ -88,7 +88,7 @@ module Constraint =
     | (All xs, y) ->
       xs
       |> Seq.map (fun x -> compare x y)
-      |> Seq.append [ -1 ]
+      |> Seq.append [ 1 ]
       |> Seq.min
     | (y, All xs) ->
       (compare (All xs) y) * -1

@@ -358,7 +358,7 @@ module Solver =
               |> findBadCores
               |> Seq.map TransitiveConflict
 
-            if conflicts |> Seq.isEmpty
+            if conflicts |> Seq.isEmpty |> not
             then
               return Result.Error NoManifest // TODO ...
             else
