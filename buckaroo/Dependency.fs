@@ -9,6 +9,7 @@ type Dependency = {
 module Dependency =
 
   open FParsec
+  open Buckaroo.RichOutput
 
   let satisfies (dependency : Dependency) (atom : Atom) =
     atom.Package = dependency.Package && atom.Versions |> Constraint.satisfies dependency.Constraint
@@ -23,15 +24,17 @@ module Dependency =
 
   let showRich (x : Dependency) =
     (
-      PackageIdentifier.show x.Package
-      |> RichOutput.text
-      |> RichOutput.foreground System.ConsoleColor.Cyan
-    ) +
-    "@" +
-    (
-      Constraint.show x.Constraint
-      |> RichOutput.text
-      |> RichOutput.foreground System.ConsoleColor.DarkRed
+      (
+        PackageIdentifier.show x.Package
+        |> text
+        |> foreground System.ConsoleColor.Magenta
+      ) +
+      " at " +
+      (
+        Constraint.show x.Constraint
+        |> text
+        |> foreground System.ConsoleColor.Magenta
+      )
     ) +
     (
       x.Targets

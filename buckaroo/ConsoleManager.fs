@@ -113,19 +113,11 @@ type ConsoleManager (minimumLoggingLevel : LoggingLevel) =
   member this.Error (message, loggingLevel) =
     actor.Post (Output (message, loggingLevel, OutputCategory.Error))
 
-  member this.Read() =
-    actor.PostAndAsyncReply(fun channel -> Input channel)
+  member this.Read () =
+    actor.PostAndAsyncReply Input
 
-  member this.ReadSecret() =
-    actor.PostAndAsyncReply(fun channel -> InputSecret channel)
+  member this.ReadSecret () =
+    actor.PostAndAsyncReply InputSecret
 
-  member this.Flush() =
-    actor.PostAndAsyncReply(fun channel -> Flush channel)
-
-let namespacedLogger (console : ConsoleManager) (componentName  : string) (x : RichOutput, logLevel : LoggingLevel) =
-    (
-      "[" + componentName + "] "
-      |> RichOutput.text
-      |> RichOutput.foreground System.ConsoleColor.DarkGray
-    ) +
-    x |> fun x -> console.Write (x, logLevel)
+  member this.Flush () =
+    actor.PostAndAsyncReply Flush
