@@ -39,6 +39,19 @@ type RichOutput =
             Segments = a.Segments @ b.Segments
       }
 
+    static member (+) (a : string, b : RichOutput) =
+      {
+        b with
+          Segments =
+            [
+              {
+                Foreground = None
+                Background = None
+                Text = a
+              }
+            ] @ b.Segments
+      }
+
 let zero = []
 
 let length richOutput =

@@ -1,7 +1,7 @@
 module Buckaroo.Constants
 
 [<Literal>]
-let Version = "2.0.2"
+let Version = "2.2.0"
 
 [<Literal>]
 let PackagesDirectory = "buckaroo"
@@ -20,3 +20,6 @@ let BuckarooMacrosFileName = "buckaroo_macros.bzl"
 
 [<Literal>]
 let BuckarooDepsFileName = "BUCKAROO_DEPS"
+
+[<Literal>]
+let MaxConsecutiveFailures = 10

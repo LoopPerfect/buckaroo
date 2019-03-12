@@ -11,8 +11,9 @@ open Buckaroo.Tests
 type CookBook = List<PackageIdentifier * Set<Version> * Manifest>
 type LockBookEntries = List<(string*int) * List<string*int*Set<Version>>>
 type LockBook = Map<PackageLock, Lock>
+
 let package name = PackageIdentifier.Adhoc {
-  Owner = "test";
+  Owner = "test"
   Project = name
 }
 
@@ -89,7 +90,7 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
                   Revision = r
                 })
             |> AsyncSeq.ofSeq
-        | _ -> raise <| new System.SystemException "package not found"
+        | _ -> raise <| System.SystemException "Package not found"
     }
 
     member this.LockLocation (location : PackageLocation) : Async<PackageLock> = async {
@@ -120,11 +121,11 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
 
 let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
   let lockBook = lockBookOf lockBookEntries
-  let console = new ConsoleManager(LoggingLevel.Silent);
+  let console = ConsoleManager (LoggingLevel.Silent)
   let context : TaskContext = {
-    Console = console;
-    DownloadManager = DownloadManager(console, "/tmp");
-    GitManager = new GitManager(console, new GitCli(console), "/tmp");
+    Console = console
+    DownloadManager = DownloadManager(console, "/tmp")
+    GitManager = new GitManager(console, new GitCli(console), "/tmp")
     SourceExplorer = TestingSourceExplorer(cookBook, lockBook)
   }
 
@@ -133,7 +134,7 @@ let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBook
     root style
     (lockBook |> Map.tryFind (packageLock ("root", 0)))
 
-let getLockedRev (p : string) (r: Resolution) =
+let getLockedRev (p : string) (r : _) =
   match r with
   | Ok solution ->
     let (resolved, _) = solution.Resolutions.[package p]
@@ -143,7 +144,7 @@ let getLockedRev (p : string) (r: Resolution) =
   | _ -> ""
 ()
 
-let isOk (r: Resolution) =
+let isOk (r : _) =
   match r with
   | Ok _ -> true
   | _ -> false

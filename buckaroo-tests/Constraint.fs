@@ -16,9 +16,9 @@ let ``Constraint.parse works correctly`` () =
     ("*", Constraint.wildcard |> Some);
     ("revision=aabbccddee", Version.Git(GitVersion.Revision "aabbccddee") |> Exactly |> Some);
     ("!*", Constraint.wildcard |> Constraint.Complement |> Some);
-    ("any(branch=master)", Some(Any <| Set[Exactly (Version.Git(GitVersion.Branch "master"))]));
-    ("any(any(branch=master))", Some(Any <|Set[ Any <|Set[Exactly (Version.Git(GitVersion.Branch "master"))]]));
-    ("any(revision=aabbccddee branch=master)", Some (Any <|Set[
+    ("any(branch=master)", Some(Any <| Set [ Exactly (Version.Git(GitVersion.Branch "master"))]));
+    ("any(any(branch=master))", Some(Any <| Set[ Any <| Set [ Exactly (Version.Git(GitVersion.Branch "master"))]]));
+    ("any(revision=aabbccddee branch=master)", Some (Any <| Set[
       Exactly (Version.Git(GitVersion.Revision "aabbccddee"));
       Exactly (Version.Git(GitVersion.Branch "master"))]));
     ("all(*)", Some(All <| Set[Constraint.wildcard]));

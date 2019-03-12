@@ -210,15 +210,13 @@ module Command =
       let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
 
       match resolution with
-      | Resolution.Ok solution ->
+      | Result.Ok solution ->
         do! Tasks.writeManifest newManifest
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
         do! InstallCommand.task context
+
+        System.Console.WriteLine ("Success. ")
       | _ -> ()
-
-      System.Console.WriteLine ("Success. ")
-
-      return ()
   }
 
   let init context = async {

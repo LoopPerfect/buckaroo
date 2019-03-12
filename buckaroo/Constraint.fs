@@ -254,6 +254,7 @@ module Constraint =
       allParser
     ]
   }
+
   let parse (x : string) : Result<Constraint, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result

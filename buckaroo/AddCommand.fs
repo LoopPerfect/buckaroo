@@ -1,13 +1,14 @@
 module Buckaroo.AddCommand
 
-open System
 open System.IO
 open Buckaroo.RichOutput
-open Buckaroo
+open Buckaroo.Logger
 
 let task (context : Tasks.TaskContext) dependencies = async {
-  context.Console.Write (
-    (text "Adding ") +
+  let logger = createLogger context.Console None
+
+  logger.RichInfo (
+    (text "Adding dependency on ") +
     (
       dependencies
       |> Seq.map Dependency.showRich
@@ -16,6 +17,7 @@ let task (context : Tasks.TaskContext) dependencies = async {
   )
 
   let! manifest = Tasks.readManifest "."
+
   let newManifest = {
     manifest with
       Dependencies =
@@ -26,6 +28,7 @@ let task (context : Tasks.TaskContext) dependencies = async {
 
   if manifest = newManifest
   then
+    logger.Warning ("The dependency already exists in the manifest")
     return ()
   else
     let! maybeLock = async {
@@ -37,15 +40,16 @@ let task (context : Tasks.TaskContext) dependencies = async {
         return None
     }
 
-    let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
+    let! resolution =
+      Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
 
     match resolution with
-    | Resolution.Ok solution ->
+    | Result.Ok solution ->
       do! Tasks.writeManifest newManifest
       do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
       do! InstallCommand.task context
-    | _ ->
-      ()
 
-  context.Console.Write ("Success. " |> text |> foreground ConsoleColor.Green)
+      logger.Success ("The dependency was added to the manifest and installed")
+    | _ ->
+      logger.Error ("Failed to add the dependency")
 }
