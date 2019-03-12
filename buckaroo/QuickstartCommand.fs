@@ -66,7 +66,7 @@ let private defaultMain =
   |> String.concat "\n"
 
 let isValidProjectName (candidate : string) =
-  (new Regex(@"^[A-Za-z0-9\-_]{2,32}$")).IsMatch(candidate)
+  (Regex(@"^[A-Za-z0-9\-_]{2,32}$")).IsMatch(candidate)
 
 let requestProjectName (context : TaskContext) = async {
   let mutable candidate = ""
@@ -92,7 +92,7 @@ let task (context : Tasks.TaskContext) = async {
   do! Files.writeFile "BUCK" (defaultBuck projectName)
   do! Files.writeFile "main.cpp" defaultMain
 
-  do! ResolveCommand.task context Solution.empty ResolutionStyle.Quick
+  do! ResolveCommand.task context Solution.empty ResolutionStyle.Quick |> Async.Ignore
   do! InstallCommand.task context
 
   context.Console.Write("To start your app: ")

@@ -6,10 +6,10 @@ open Buckaroo.Tasks
 open Buckaroo.Console
 open Buckaroo.RichOutput
 open Buckaroo.Logger
-open Buckaroo.Constants
 open Buckaroo.Constraint
 open Buckaroo.Result
 open Buckaroo.SearchStrategy
+open Buckaroo.Prefetch
 
 type LocatedAtom = Atom * PackageLock
 
@@ -143,7 +143,7 @@ let findUnresolved pick (selections: Map<PackageIdentifier, ResolvedVersion * So
   loop Set.empty deps
 
 
-let breathFirst = findUnresolved (fun a b -> seq {
+let breadthFirst = findUnresolved (fun a b -> seq {
   yield! a
   yield! b
 })
@@ -160,10 +160,10 @@ let fetchCandidatesForConstraint sourceExplorer locations p c = asyncSeq {
   let mutable branchFailures = Map.empty
 
   for x in candidatesToExplore do
-    if branchFailures |> Map.exists (fun _ v -> v > MaxConsecutiveFailures) then
+    if branchFailures |> Map.exists (fun _ v -> v > Constants.MaxConsecutiveFailures) then
       let d = (p, Set [ c ])
       yield
-        LimitReached (d, MaxConsecutiveFailures)
+        LimitReached (d, Constants.MaxConsecutiveFailures)
         |> Result.Error
     else
       yield!
@@ -212,7 +212,6 @@ let fetchCandidatesForConstraint sourceExplorer locations p c = asyncSeq {
       |> Result.Error
 }
 
-
 let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> =
   MailboxProcessor.Start(fun inbox -> async {
     let mutable unresolvableCores : Map<Set<PackageConstraint>, SearchStrategyError> = Map.empty
@@ -230,13 +229,6 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
             |> Option.map (Set.isSubset bs)
             |> Option.defaultValue false
         ))
-
-    let printCores () =
-      System.Console.WriteLine "----------"
-      for cores in unresolvableCores |> Map.keySet do
-        cores |> Set |> System.Console.WriteLine
-        System.Console.WriteLine "&&&&&"
-      System.Console.WriteLine "----------"
 
     let trackLocal locations (p, cs) constraintsContext = asyncSeq {
       let mutable hadCandidate = false
@@ -258,15 +250,13 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
           match candidate with
           | Result.Error (Unresolvable d) ->
             unresolvableCores <- (unresolvableCores |> Map.add (Set [d]) (Unresolvable d))
-            printCores()
             yield Result.Error <| Unresolvable d
-          | Result.Error (LimitReached (d, MaxConsecutiveFailures)) ->
+          | Result.Error (LimitReached (d, Constants.MaxConsecutiveFailures)) ->
             if hadCandidate
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
-              printCores()
 
-            yield Result.Error <| LimitReached (d, MaxConsecutiveFailures)
+            yield Result.Error <| LimitReached (d, Constants.MaxConsecutiveFailures)
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
             let! manifest = sourceExplorer.FetchManifest (lock, versions)
@@ -419,8 +409,9 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
                   |> Set.unionMany
                   |> Set.add failedDep
 
-                unresolvableCores <- unresolvableCores |> Map.add core (SearchStrategyError.Unresolvable (p, bs))
-                printCores()
+                unresolvableCores <-
+                  unresolvableCores
+                  |> Map.add core (SearchStrategyError.Unresolvable (p, bs))
           | _ -> ()
 
 
@@ -553,7 +544,9 @@ let mergeHint sourceExplorer next = async {
 }
 
 let quickStrategy resolver sourceExplorer state selections = asyncSeq {
-  let unresolved = breathFirst selections state.Root
+  let unresolved =
+    breadthFirst selections state.Root
+    |> Seq.sortBy (snd >> All >> simplify >> Constraint.chanceOfSuccess)
 
   for (p, cs) in unresolved do
     yield!
@@ -565,7 +558,9 @@ let quickStrategy resolver sourceExplorer state selections = asyncSeq {
 }
 
 let upgradeStrategy resolver sourceExplorer state selections = asyncSeq {
-  let unresolved = breathFirst selections state.Root
+  let unresolved =
+    breadthFirst selections state.Root
+    |> Seq.sortBy (snd >> All >> simplify >> Constraint.chanceOfSuccess)
 
   for (p, cs) in unresolved do
     yield!
@@ -581,18 +576,17 @@ let private privateStep step ((p, _), state, rv) =
     Locations = state.Locations
     Selections = Map.empty
   }
-
   (step privateState [ Root m ])
     |> AsyncSeq.choose ifOk
     |> AsyncSeq.tryFirst
 
-let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) strategy (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<Solution, PackageConstraint * SearchStrategyError>> = asyncSeq {
-  let log = createLogger context.Console (Some "solver")
-  let nextStep = step context resolver strategy
+let rec private step (context : TaskContext) (resolver : MailboxProcessor<ResolutionRequest>) (prefetcher : Prefetcher) strategy (state : SolverState) (path: List<ResolutionPath>): AsyncSeq<Result<Solution, PackageConstraint * SearchStrategyError>> = asyncSeq {
+  let logger = createLogger context.Console (Some "solver")
+  let nextStep = step context resolver prefetcher strategy
 
   let selections = pruneSelections state.Selections state.Root
 
-  if breathFirst selections state.Root |> Seq.isEmpty
+  if breadthFirst selections state.Root |> Seq.isEmpty
   then
     yield Result.Ok { Resolutions = selections }
   else
@@ -605,6 +599,13 @@ let rec private step (context : TaskContext) (resolver : MailboxProcessor<Resolu
           | Result.Ok ((p, cs), state, rv) ->
             if path |> List.contains (Node (p, cs, rv)) |> not
             then
+              logger.Info (
+                "Trying " + (PackageIdentifier.show p) + " at " +
+                (rv.Versions |> Seq.map Version.show |> String.concat ", "))
+
+              for p in rv.Manifest.Dependencies |> Seq.map (fun d -> d.Package) |> Seq.distinct do
+                prefetcher.Prefetch p
+
               let! privateSolution = privateStep nextStep ((p, cs), state, rv)
 
               match privateSolution with
@@ -638,7 +639,7 @@ let rec private step (context : TaskContext) (resolver : MailboxProcessor<Resolu
         |> AsyncSeq.distinctUntilChanged
 
       for ((p, cs), error) in errors do
-        System.Console.WriteLine error
+        context.Console.Write(string error, LoggingLevel.Trace)
         do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
 }
 
@@ -672,13 +673,15 @@ let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manif
 
   let resolver = resolutionManager context.SourceExplorer
 
+  let prefetcher = Prefetcher (context.SourceExplorer, 10)
+
   let strategy =
     match style with
     | Quick -> quickStrategy resolver context.SourceExplorer
     | Upgrading -> upgradeStrategy resolver context.SourceExplorer
 
   let resolutions =
-    step context resolver strategy state [ Root manifest ]
+    step context resolver prefetcher strategy state [ Root manifest ]
 
   let! result =
     resolutions

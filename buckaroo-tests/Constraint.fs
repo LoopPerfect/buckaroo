@@ -100,6 +100,7 @@ let ``Constraint.simplify works correctly`` () =
     ("any(all(revision=aabbccddee))", "revision=aabbccddee");
     ("all(any(revision=aabbccddee))", "revision=aabbccddee");
     ("any(branch=master any(revision=aabbccddee))", "any(revision=aabbccddee branch=master)");
+    ("any(all() revision=aabbccddee)", "any(revision=aabbccddee all())");
   ]
   for (input, expected) in cases do
     let actual =
