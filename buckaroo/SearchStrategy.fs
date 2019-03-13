@@ -29,6 +29,9 @@ module SearchStrategyError =
     |> text
     |> foreground ConsoleColor.Blue
 
+  let private showCore (p, cs) =
+    (showPackage p) + " at " + (showConstraint (All cs))
+
   let rec show (e : SearchStrategyError) =
     match e with
     | LimitReached ((p, c), l) ->
@@ -41,14 +44,14 @@ module SearchStrategyError =
     | NoPrivateSolution p ->
       "We could not resolve a private dependency for " + (showPackage p) + "."
     | TransitiveConflict xs ->
-      (text "We had the following conflicts: ") +
+      (text "We had the following conflicts: \n") +
       (
         xs
         |> Seq.collect (fun (cores, reason) ->
           cores
           |> Seq.map (fun core ->
-            ("<" + (core |> string) + "> because " |> text) + (show reason)
+            ("  " + (core |> showCore) + ": ") + (show reason)
           )
         )
-        |> RichOutput.concat (text ", ")
+        |> RichOutput.concat (text "\n")
       )

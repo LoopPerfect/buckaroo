@@ -45,10 +45,10 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         | [ root ] -> return root
         | [] ->
           return
-            raise (new System.Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
+            raise (System.Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
         | _ ->
           return
-            raise (new System.Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
+            raise (System.Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
       | None ->
         return ""
     }
@@ -188,7 +188,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
     // TODO: Revisions?
   }
-
 
   interface ISourceExplorer with
 

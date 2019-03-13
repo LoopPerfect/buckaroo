@@ -68,6 +68,22 @@ module Constraint =
         | _ -> false
       )
 
+  [<Literal>]
+  let private MaxChanceOfSuccess = 1024
+
+  let rec chanceOfSuccess (x : Constraint) : int =
+    match x with
+    | Exactly (Version.Git (Revision _)) -> 1
+    | Exactly (Version.Git (Tag _)) -> 2
+    | Exactly (Version.SemVer _) -> 3
+    | Range _ -> 4
+    | Exactly (Version.Git (Branch _)) -> 5
+    | Any xs -> xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.sum
+    | All xs ->
+      (xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.max) -
+      (xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.sum)
+    | Complement x -> MaxChanceOfSuccess - (chanceOfSuccess x)
+
   // TODO: Better Sorting!!!!!
   let rec compare (x : Constraint) (y : Constraint) : int =
     match (x, y) with
@@ -124,7 +140,7 @@ module Constraint =
       | Complement (Complement x) -> x
       | Constraint.All xs ->
         match xs |> Set.toList with
-        | [x] -> x
+        | [ x ] -> x
         | xs ->
           xs
           |> Seq.collect (fun x ->
@@ -132,13 +148,13 @@ module Constraint =
             | All xs -> xs
             | _ -> Set[ x ]
           )
-          |> Seq.sort
+          |> Seq.sortDescending
           |> Seq.distinct
           |> Set
           |> Constraint.All
       | Constraint.Any xs ->
         match xs |> Set.toList with
-        | [x] -> x
+        | [ x ] -> x
         | xs ->
           xs
           |> Seq.collect (fun x ->
@@ -146,11 +162,12 @@ module Constraint =
             | Any xs -> xs
             | _ -> Set[ x ]
           )
-          |> Seq.sort
+          |> Seq.sortDescending
           |> Seq.distinct
           |> Set
           |> Constraint.Any
       | _ -> c
+
     let next = iterate c
     if next = c
     then
