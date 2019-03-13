@@ -417,7 +417,7 @@ let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionReque
                         deps
                         |> Seq.map (fun x -> (x.Package, x.Constraint |> toDnf))
                         |> Seq.filter (fun (q, cs) -> p = q && cs <> contrib)
-                        |> Seq.filter (fun (_, cs) -> Set.isProperSubset cs bs) // TODO: should be an intersection?
+                        |> Seq.map (fun (q, cs) -> (q, Set.intersect cs bs))
                         |> Seq.map (fun (q, cs) -> (q, Set.difference cs contrib))
                         |> Seq.filter (fun (_, cs) -> cs.IsEmpty |> not)
                         |> Set
