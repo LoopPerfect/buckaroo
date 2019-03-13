@@ -255,7 +255,6 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
             if hadCandidate
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
-
             yield Result.Error <| LimitReached (d, Constants.MaxConsecutiveFailures)
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location

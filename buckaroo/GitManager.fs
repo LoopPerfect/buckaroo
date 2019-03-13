@@ -15,7 +15,11 @@ type GitManagerRequest =
 | CloneRequest of string * AsyncReplyChannel<Async<string>>
 | FetchRefs of string * AsyncReplyChannel<Async<Ref list>>
 
-type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) =
+type FetchStyle =
+| RemoteFirst
+| CacheFirst
+
+type GitManager (style: FetchStyle, console : ConsoleManager, git : IGit, cacheDirectory : string) =
 
   let logger = createLogger console (Some "git")
 
@@ -44,6 +48,20 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
       |> bytesToHex
     let folder = sanitizeFilename(url).ToLower() + "-" + hash.Substring(0, 16)
     Path.Combine(cacheDirectory, folder)
+
+  let pickRefsToFetch (style: FetchStyle) (remote : Async<List<Ref>>) (cache: Async<List<Ref>>) = async {
+    match style with
+    | RemoteFirst ->
+      let! x = remote
+      if x |> List.isEmpty |> not then
+        return x
+      else return! cache
+    | CacheFirst ->
+      let! x = cache
+      if x |> List.isEmpty |> not then
+        return x
+      else return! remote
+  }
 
   let mailboxCloneProcessor = MailboxProcessor.Start(fun inbox -> async {
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
@@ -78,31 +96,19 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
               let startTime = System.DateTime.Now
 
               let! refs =
-                Async.Parallel
-                  (
-                    (
-                      git.RemoteRefs url
-                      |> Async.Catch
-                      |> Async.map (Choice.toOption >> Option.defaultValue([]))
-                    ),
-                    (
-                      git.RemoteRefs cacheDir
-                      |> Async.Catch
-                      |> Async.map (Choice.toOption >> Option.defaultValue([]))
-                    )
-                  )
-                |> Async.map(fun (a, b) ->
-                  if a.Length = 0 && b.Length = 0
-                  then
-                    raise <| SystemException("No internet connection and the cache is empty")
-                  else if a.Length > 0
-                  then
-                    a
-                  else
-                    b
-                )
+                pickRefsToFetch
+                  style
+                  (git.RemoteRefs url
+                    |> Async.Catch
+                    |> Async.map (Choice.toOption >> Option.defaultValue([])))
+                  (git.RemoteRefs cacheDir
+                    |> Async.Catch
+                    |> Async.map (Choice.toOption >> Option.defaultValue([])))
 
               let endTime = System.DateTime.Now
+
+              if refs |> List.isEmpty then
+                raise <| SystemException("No internet connection and the cache is empty")
 
               logger.RichSuccess(
                 (text "Fetched ") +

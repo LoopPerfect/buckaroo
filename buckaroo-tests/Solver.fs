@@ -125,7 +125,7 @@ let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBook
   let context : TaskContext = {
     Console = console
     DownloadManager = DownloadManager(console, "/tmp")
-    GitManager = new GitManager(console, new GitCli(console), "/tmp")
+    GitManager = new GitManager(CacheFirst, console, new GitCli(console), "/tmp")
     SourceExplorer = TestingSourceExplorer(cookBook, lockBook)
   }
 
