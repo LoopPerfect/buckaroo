@@ -511,64 +511,64 @@ let ``Solver does not upgrade if a complete solution is supplied`` () =
   Assert.Equal ("1", getLockedRev "c" solution)
   ()
 
-//[<Fact>]
-// let ``Solver upgrades completes partial solution with latest packages`` () =
-//   let cookBook = [
-//     (package "a",
-//       Set[ver 2; br "a"],
-//       manifest [])
-//     (package "a",
-//       Set[ver 1; br "a"],
-//       manifest [])
-//     (package "b",
-//       Set[ver 2; br "a"],
-//       manifest [])
-//     (package "b",
-//       Set[ver 1; br "a"],
-//       manifest [])
-//     (package "c",
-//       Set[ver 2; br "a"],
-//       manifest [])
-//     (package "c",
-//       Set[ver 1; br "a"],
-//       manifest [])
-//   ]
+[<Fact>]
+let ``Solver upgrades completes partial solution with latest packages`` () =
+  let cookBook = [
+    (package "a",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "a",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "b",
+      Set[ver 1; br "a"],
+      manifest [])
+    (package "c",
+      Set[ver 2; br "a"],
+      manifest [])
+    (package "c",
+      Set[ver 1; br "a"],
+      manifest [])
+  ]
 
-//   let lockBookSpec = [
-//     (("root", 0), [
-//       ("a", 1, Set[ver 1; br "a"])
-//       ("b", 1, Set[ver 1; br "a"])
-//       ("c", 1, Set[ver 1; br "a"])
-//     ])
-//   ]
+  let lockBookSpec = [
+    (("root", 0), [
+      ("a", 1, Set[ver 1; br "a"])
+      ("b", 1, Set[ver 1; br "a"])
+      ("c", 1, Set[ver 1; br "a"])
+    ])
+  ]
 
-//   let root = manifest [
-//     ("a", Exactly (br "a") )
-//     ("b", Exactly (br "a") )
-//     ("c", Exactly (br "a") )
-//   ]
+  let root = manifest [
+    ("a", Exactly (br "a") )
+    ("b", Exactly (br "a") )
+    ("c", Exactly (br "a") )
+  ]
 
-//   let lockBook = lockBookOf lockBookSpec
-//   let rootLock = lockBook |> Map.find (packageLock ("root", 0))
+  let lockBook = lockBookOf lockBookSpec
+  let rootLock = lockBook |> Map.find (packageLock ("root", 0))
 
-//   let explorer = TestingSourceExplorer(cookBook, lockBook)
-//   let completeSolution =
-//     Solver.fromLock explorer rootLock
-//     |> Async.RunSynchronously
+  let explorer = TestingSourceExplorer(cookBook, lockBook)
+  let completeSolution =
+    Solver.fromLock explorer rootLock
+    |> Async.RunSynchronously
 
-//   let partialSolution = Set[package "b"] |> Solver.unlock completeSolution
+  let partialSolution = Set[package "b"] |> Solver.unlock completeSolution
 
-//   let solution =
-//     solve
-//       partialSolution
-//       cookBook lockBookSpec root
-//       ResolutionStyle.Upgrading
-//       |> Async.RunSynchronously
+  let solution =
+    solve
+      partialSolution
+      cookBook lockBookSpec root
+      ResolutionStyle.Upgrading
+      |> Async.RunSynchronously
 
-//   Assert.Equal ("1", getLockedRev "a" solution)
-//   Assert.Equal ("2", getLockedRev "b" solution)
-//   Assert.Equal ("1", getLockedRev "c" solution)
-//   ()
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("2", getLockedRev "b" solution)
+  Assert.Equal ("1", getLockedRev "c" solution)
+  ()
 
 [<Fact>]
 let ``Solver can handle the simple triangle case`` () =
