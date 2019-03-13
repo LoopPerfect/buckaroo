@@ -31,6 +31,13 @@ module Command =
     return Option.isSome maybeSkip
   }
 
+  let cacheFirstParser : Parser<bool, Unit> = parse {
+    let! cacheFirst =
+      CharParsers.skipString "--cache-first"
+      |> Primitives.opt
+    return Option.isSome cacheFirst
+  }
+
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     return Start
@@ -170,13 +177,27 @@ module Command =
 
     do! CharParsers.spaces
 
-    let! isVerbose = verboseParser
-
+    let! isCacheFirst = cacheFirstParser
     do! CharParsers.spaces
 
-    let loggingLevel = if isVerbose then LoggingLevel.Trace else LoggingLevel.Info
+    let! isVerbose = verboseParser
+    do! CharParsers.spaces
 
-    return (command, loggingLevel)
+    let loggingLevel =
+      if isVerbose
+      then
+        LoggingLevel.Trace
+      else
+        LoggingLevel.Info
+
+    let fetchStyle =
+      if isCacheFirst
+      then
+        CacheFirst
+      else
+        RemoteFirst
+
+    return (command, loggingLevel, fetchStyle)
   }
 
   let parse (x : string) =
@@ -210,15 +231,13 @@ module Command =
       let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
 
       match resolution with
-      | Resolution.Ok solution ->
+      | Result.Ok solution ->
         do! Tasks.writeManifest newManifest
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
         do! InstallCommand.task context
+
+        System.Console.WriteLine ("Success. ")
       | _ -> ()
-
-      System.Console.WriteLine ("Success. ")
-
-      return ()
   }
 
   let init context = async {
@@ -232,8 +251,8 @@ module Command =
       context.Console.Write( ("warning " |> warn) + ("There is already a buckaroo.toml file in this directory" |> text))
   }
 
-  let runCommand loggingLevel command = async {
-    let! context = Tasks.getContext loggingLevel
+  let runCommand loggingLevel fetchStyle command = async {
+    let! context = Tasks.getContext loggingLevel fetchStyle
 
     do!
       match command with
@@ -241,7 +260,7 @@ module Command =
       | Init -> init context
       | Help -> HelpCommand.task context
       | Version -> VersionCommand.task context
-      | Resolve style -> ResolveCommand.task context Solution.empty style
+      | Resolve style -> ResolveCommand.task context Solution.empty style |> Async.Ignore
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
       | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies

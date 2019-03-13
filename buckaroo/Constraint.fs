@@ -21,8 +21,8 @@ type RangeComparatorTypes =
 type Constraint =
 | Exactly of Version
 | Range of RangeComparatorTypes * SemVer
-| Any of List<Constraint>
-| All of List<Constraint>
+| Any of Set<Constraint>
+| All of Set<Constraint>
 | Complement of Constraint
 
 #nowarn "40"
@@ -31,13 +31,13 @@ module Constraint =
 
   open FParsec
 
-  let wildcard = All []
+  let wildcard = All Set.empty
 
   let intersection (c : Constraint) (d : Constraint) : Constraint =
-    All [ c; d ]
+    All (Set[ c; d ])
 
   let union (c : Constraint) (d : Constraint) : Constraint =
-    Any [ c; d ]
+    Any (Set[ c; d ])
 
   let complement (c : Constraint) : Constraint =
     Complement c
@@ -67,6 +67,24 @@ module Constraint =
         | SemVer semVer -> semVer |> isWithinRange (op, v)
         | _ -> false
       )
+
+  [<Literal>]
+  let private MaxChanceOfSuccess = 1024
+
+  let rec chanceOfSuccess (x : Constraint) : int =
+    match x with
+    | Exactly (Version.Git (Revision _)) -> 1
+    | Exactly (Version.Git (Tag _)) -> 2
+    | Exactly (Version.SemVer _) -> 3
+    | Range _ -> 4
+    | Exactly (Version.Git (Branch _)) -> 5
+    | Any xs -> xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.sum
+    | All xs ->
+      (xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.max) -
+      (xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.sum)
+    | Complement x -> MaxChanceOfSuccess - (chanceOfSuccess x)
+
+  // TODO: Better Sorting!!!!!
   let rec compare (x : Constraint) (y : Constraint) : int =
     match (x, y) with
     | (Exactly u, Exactly v) -> Version.compare u v
@@ -120,31 +138,36 @@ module Constraint =
     let iterate c =
       match c with
       | Complement (Complement x) -> x
-      | Constraint.All [ x ] -> x
       | Constraint.All xs ->
-        xs
-        |> Seq.collect (fun x ->
-          match x with
-          | All xs -> xs
-          | _ -> [ x ]
-        )
-        |> Seq.sort
-        |> Seq.distinct
-        |> Seq.toList
-        |> Constraint.All
-      | Constraint.Any [ x ] -> x
+        match xs |> Set.toList with
+        | [ x ] -> x
+        | xs ->
+          xs
+          |> Seq.collect (fun x ->
+            match x with
+            | All xs -> xs
+            | _ -> Set[ x ]
+          )
+          |> Seq.sortDescending
+          |> Seq.distinct
+          |> Set
+          |> Constraint.All
       | Constraint.Any xs ->
-        xs
-        |> Seq.collect (fun x ->
-          match x with
-          | Any xs -> xs
-          | _ -> [ x ]
-        )
-        |> Seq.sort
-        |> Seq.distinct
-        |> Seq.toList
-        |> Constraint.Any
+        match xs |> Set.toList with
+        | [ x ] -> x
+        | xs ->
+          xs
+          |> Seq.collect (fun x ->
+            match x with
+            | Any xs -> xs
+            | _ -> Set[ x ]
+          )
+          |> Seq.sortDescending
+          |> Seq.distinct
+          |> Set
+          |> Constraint.Any
       | _ -> c
+
     let next = iterate c
     if next = c
     then
@@ -154,7 +177,7 @@ module Constraint =
 
   let wildcardParser = parse {
     do! CharParsers.skipString "*"
-    return All []
+    return All Set.empty
   }
 
   let symbolParser<'T> (token : string, symbol : 'T) = parse {
@@ -178,10 +201,10 @@ module Constraint =
       | Patch ->
         { semVer with Patch = semVer.Patch + 1; Increment = 0 }
     Constraint.All
-      [
+      (Set[
         Constraint.Range (GTE, semVer);
         Constraint.Range (LT, max);
-      ]
+      ])
 
   let rangeParser = parse {
     let! rangeType = rangeTypeParser
@@ -227,7 +250,7 @@ module Constraint =
       let! elements = CharParsers.spaces1 |> Primitives.sepBy parser
       do! CharParsers.skipString ")"
 
-      return Any elements
+      return Any (Set elements)
     }
 
     let allParser = parse {
@@ -235,7 +258,7 @@ module Constraint =
       let! elements = CharParsers.spaces1 |> Primitives.sepBy parser
       do! CharParsers.skipString ")"
 
-      return All elements
+      return All (Set elements)
     }
 
     return! choice [
@@ -248,6 +271,7 @@ module Constraint =
       allParser
     ]
   }
+
   let parse (x : string) : Result<Constraint, string> =
     match run (parser .>> CharParsers.eof) x with
     | Success(result, _, _) -> Result.Ok result

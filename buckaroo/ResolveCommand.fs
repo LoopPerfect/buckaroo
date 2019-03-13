@@ -2,25 +2,19 @@ module Buckaroo.ResolveCommand
 
 open System
 open Buckaroo.RichOutput
+open Buckaroo.Logger
+open Buckaroo.SearchStrategy
 
 let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
-  let log (x : RichOutput) = context.Console.Write x
-
-  let logInfo (x : RichOutput) =
-    ("info " |> text |> foreground ConsoleColor.Blue) + x
-    |> log
-
-  let logError (x : RichOutput) =
-    ("error " |> text |> foreground ConsoleColor.Red) + x
-    |> log
+  let logger = createLogger context.Console None
 
   let! maybeLock = async {
     try
       return!
         Tasks.readLockIfPresent
     with error ->
-      logError ("The existing lock-file is invalid. " |> text)
-      logInfo (
+      logger.Error "The existing lock-file is invalid. "
+      logger.RichInfo (
         (text "Perhaps you want to delete ") +
         (text "buckaroo.lock.toml" |> foreground ConsoleColor.Magenta) +
         (text " and try again?")
@@ -35,7 +29,7 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
   let resolve = async {
     let resolveStart = DateTime.Now
 
-    logInfo <| (text "Resolve start: ") + (resolveStart |> Toml.formatDateTime |> text |> foreground ConsoleColor.Cyan)
+    logger.RichInfo <| (text "Resolve start: ") + (resolveStart |> Toml.formatDateTime |> text |> foreground ConsoleColor.Cyan)
 
     let styleName =
       match resolutionStyle with
@@ -44,56 +38,46 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
       |> text
       |> foreground ConsoleColor.Cyan
 
-    (text "Resolving dependencies using ") + (styleName) + " strategy... " |> logInfo
+    (text "Resolving dependencies using ") + (styleName) + " strategy... " |> logger.RichInfo
 
-    let! resolution = Solver.solve context partialSolution manifest resolutionStyle maybeLock
+    let! resolution =
+      Solver.solve context partialSolution manifest resolutionStyle maybeLock
 
     let resolveEnd = DateTime.Now
 
-    logInfo <| (text "Resolve end: ") + (resolveEnd |> Toml.formatDateTime |> text |> foreground ConsoleColor.Cyan)
-    logInfo <| (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan)
+    logger.RichInfo <| (text "Resolve end: ") + (resolveEnd |> Toml.formatDateTime |> text |> foreground ConsoleColor.Cyan)
+    logger.RichInfo <| (text "Resolve time: ") + (resolveEnd - resolveStart |> string |> text |> foreground ConsoleColor.Cyan)
 
     match resolution with
-    | Resolution.Backtrack (_, f) ->
-      "Error! " |> text |> foreground ConsoleColor.Red |> log
-      f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
-      |> string |> text |> log
-    | Resolution.Avoid (_, f) ->
-      "Error! " |> text |> foreground ConsoleColor.Red |> log
-      f.Constraint.ToString() + " for " + f.Package.ToString() + " coudn't be satisfied because: " + f.Msg
-      |> string |> text |> log
-    | Resolution.Conflict x ->
-      "Conflict! " |> text |> foreground ConsoleColor.Red |> log
-      x |> string |> text |> log
+    | Result.Error e ->
+      (SearchStrategyError.show e) |> logger.RichError
 
-      return ()
-    | Resolution.Error e ->
-      "Error! " |> text |> foreground ConsoleColor.Red |> log
-      e |> string |> text |> log
-      return ()
-    | Resolution.Ok solution ->
-      "Success! " |> text |> foreground ConsoleColor.Green |> log
+      return false
+    | Result.Ok solution ->
+      "A solution to the constraints was found" |> text |> logger.RichSuccess
       let lock = Lock.fromManifestAndSolution manifest solution
 
       try
         let! previousLock = Tasks.readLock
         let diff = Lock.showDiff previousLock lock
-        diff |> text |> log
+        diff |> text |> logger.RichInfo
       with _ ->
         ()
 
       do! Tasks.writeLock lock
 
-      return ()
+      "The lock-file was updated" |> text |> logger.RichSuccess
+
+      return true
   }
 
   match (resolutionStyle, maybeLock) with
   | (Quick, Some lock) ->
     if lock.ManifestHash = Manifest.hash manifest
     then
-      logInfo <| (text "The existing lock-file is already up-to-date! ")
+      logger.RichInfo <| (text "The existing lock-file is already up-to-date! ")
 
-      return ()
+      return true
     else
     return! resolve
   | (_, _) ->

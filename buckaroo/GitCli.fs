@@ -2,15 +2,16 @@ namespace Buckaroo
 
 open System
 open System.Text
-open Buckaroo.Console
-open RichOutput
 open FSharp.Control
 open FSharpx
-open Bash
+open Buckaroo.Console
+open Buckaroo.RichOutput
+open Buckaroo.Bash
+open Buckaroo.Logger
 
 type GitCli (console : ConsoleManager) =
 
-  let log = namespacedLogger console "git"
+  let logger = createLogger console (Some "git")
 
   let nl = System.Environment.NewLine
 
@@ -29,7 +30,7 @@ type GitCli (console : ConsoleManager) =
 
     console.Write (rt, LoggingLevel.Debug)
 
-    let stdout = new StringBuilder()
+    let stdout = StringBuilder ()
 
     do!
       Bash.runBashSync exe args (stdout.Append >> ignore) ignore
@@ -161,7 +162,7 @@ type GitCli (console : ConsoleManager) =
     }
 
     member this.ShallowClone (url : String) (directory : string) = async {
-      log((text "Shallow cloning ") + (highlight url), LoggingLevel.Info)
+      logger.RichInfo ((text "Shallow cloning ") + (highlight url))
       do!
         runBash "git" ("clone --bare --depth=1 " + url + " " + directory)
         |> Async.Ignore

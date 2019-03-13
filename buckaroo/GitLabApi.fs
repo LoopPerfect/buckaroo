@@ -11,6 +11,5 @@ let fetchFile (package : GitLabPackageIdentifier) (commit : Revision) (file : st
     let url =
       "https://gitlab.com/" + (package.Groups |> String.concat "/") +
       "/" + package.Project + "/raw/" + commit + "/" + file
-
     return! Http.AsyncRequestString(url)
 }

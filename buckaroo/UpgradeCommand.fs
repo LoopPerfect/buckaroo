@@ -5,60 +5,52 @@ open System.IO
 open Buckaroo
 open Buckaroo.Tasks
 open Buckaroo.RichOutput
+open Buckaroo.Logger
+open Buckaroo
 
 let task context (packages : List<PackageIdentifier>) = async {
+  let logger = createLogger context.Console None
+
   if Seq.isEmpty packages
   then
-    context.Console.Write (
-      (
-        "info "
-        |> text
-        |> foreground ConsoleColor.Blue
-      ) +
-      "Upgrading all packages... "
-    )
+    logger.Info "Upgrading all packages... "
   else
-    context.Console.Write (
-      (
-        "info "
-        |> text
-        |> foreground ConsoleColor.Blue
-      ) +
-      "Upgrading [ " + (packages |> Seq.map PackageIdentifier.show |> String.concat " ") + " ]... "
-    )
+    logger.Info
+      <| "Upgrading [ " + (packages |> Seq.map PackageIdentifier.show |> String.concat " ") + " ]... "
 
-  if File.Exists (Constants.LockFileName)
-  then
-    let! lock = Tasks.readLock
-    let! partial =
-      if packages |> Seq.isEmpty
-      then async { return Solution.empty }
+  let extractPartialSolution =
+    async {
+      if File.Exists (Constants.LockFileName)
+      then
+        let! lock = Tasks.readLock
+        let! partial =
+          if packages |> Seq.isEmpty
+          then async { return Solution.empty }
+          else
+            async {
+              let! solution = Solver.fromLock context.SourceExplorer lock
+
+              return solution
+            }
+
+        return partial
       else
-        async {
-          let! solution = Solver.fromLock context.SourceExplorer lock
+        logger.Warning
+          "There is no lock-file to upgrade. A fresh lock-file will be generated. "
 
-          return
-            packages
-            |> Set.ofList
-            |> Solver.unlock solution
-        }
+        return Solution.empty
+    }
 
-    do! ResolveCommand.task context partial ResolutionStyle.Upgrading
+  let! partial = extractPartialSolution
+
+  let! resolveSucceeded =
+    ResolveCommand.task context partial ResolutionStyle.Upgrading
+
+  if resolveSucceeded
+  then
     do! InstallCommand.task context
-
-    return ()
   else
-    context.Console.Write (
-      (
-        "warning "
-        |> text
-        |> foreground ConsoleColor.Yellow
-      ) +
-      "There is no lock-file to upgrade. A fresh lock-file will be generated. "
-    )
+    logger.Error "The upgrade failed. No packages were changed. "
 
-    do! ResolveCommand.task context Solution.empty ResolutionStyle.Upgrading
-    do! InstallCommand.task context
-
-    return ()
+  return ()
 }

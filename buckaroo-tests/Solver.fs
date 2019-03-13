@@ -11,8 +11,9 @@ open Buckaroo.Tests
 type CookBook = List<PackageIdentifier * Set<Version> * Manifest>
 type LockBookEntries = List<(string*int) * List<string*int*Set<Version>>>
 type LockBook = Map<PackageLock, Lock>
+
 let package name = PackageIdentifier.Adhoc {
-  Owner = "test";
+  Owner = "test"
   Project = name
 }
 
@@ -89,7 +90,7 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
                   Revision = r
                 })
             |> AsyncSeq.ofSeq
-        | _ -> raise <| new System.SystemException "package not found"
+        | _ -> raise <| System.SystemException "Package not found"
     }
 
     member this.LockLocation (location : PackageLocation) : Async<PackageLock> = async {
@@ -120,11 +121,11 @@ type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
 
 let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBookEntries) root style =
   let lockBook = lockBookOf lockBookEntries
-  let console = new ConsoleManager(LoggingLevel.Silent);
+  let console = ConsoleManager (LoggingLevel.Silent)
   let context : TaskContext = {
-    Console = console;
-    DownloadManager = DownloadManager(console, "/tmp");
-    GitManager = new GitManager(console, new GitCli(console), "/tmp");
+    Console = console
+    DownloadManager = DownloadManager(console, "/tmp")
+    GitManager = new GitManager(CacheFirst, console, new GitCli(console), "/tmp")
     SourceExplorer = TestingSourceExplorer(cookBook, lockBook)
   }
 
@@ -133,7 +134,7 @@ let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBook
     root style
     (lockBook |> Map.tryFind (packageLock ("root", 0)))
 
-let getLockedRev (p : string) (r: Resolution) =
+let getLockedRev (p : string) (r : _) =
   match r with
   | Ok solution ->
     let (resolved, _) = solution.Resolutions.[package p]
@@ -143,7 +144,7 @@ let getLockedRev (p : string) (r: Resolution) =
   | _ -> ""
 ()
 
-let isOk (r: Resolution) =
+let isOk (r : _) =
   match r with
   | Ok _ -> true
   | _ -> false
@@ -228,7 +229,7 @@ let ``Solver can compute version intersections`` () =
 let ``Solver can compute intersection of branches`` () =
 
   let root = manifest [
-    ("a", All [Exactly (br "b"); Exactly (br "a")])
+    ("a", All <| Set[Exactly (br "b"); Exactly (br "a")])
   ]
 
   let spec = [
@@ -346,7 +347,7 @@ let ``Solver handles negated constraints also`` () =
 
   let root = manifest [
     ("a", Exactly (br "a"))
-    ("b", Any [Exactly (br "a"); Exactly (br "b")])
+    ("b", Any <|Set[Exactly (br "a"); Exactly (br "b")])
   ]
 
   let spec = [
@@ -357,7 +358,7 @@ let ``Solver handles negated constraints also`` () =
       Set[ver 2; br "a"],
       manifest [])
     (package "b",
-      Set[ver 2; br "b"],
+      Set[ver 2; br "a"],
       manifest [])
     (package "a",
       Set[ver 3; br "a"],

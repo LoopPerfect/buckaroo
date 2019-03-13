@@ -4,18 +4,24 @@ open System
 open System.IO
 open System.Security.Cryptography
 open System.Text.RegularExpressions
-open FSharpx.Control
 open FSharp.Control
 open FSharpx
-open Console
-open RichOutput
+open FSharpx.Control
+open Buckaroo.Console
+open Buckaroo.Logger
+open Buckaroo.RichOutput
 
-type CloneRequest =
+type GitManagerRequest =
 | CloneRequest of string * AsyncReplyChannel<Async<string>>
+| FetchRefs of string * AsyncReplyChannel<Async<Ref list>>
 
-type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) =
+type FetchStyle =
+| RemoteFirst
+| CacheFirst
 
-  let log = namespacedLogger console "git"
+type GitManager (style: FetchStyle, console : ConsoleManager, git : IGit, cacheDirectory : string) =
+
+  let logger = createLogger console (Some "git")
 
   let mutable refsCache = Map.empty
 
@@ -28,8 +34,10 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
     let regexSearch =
       new string(Path.GetInvalidFileNameChars()) +
       new string(Path.GetInvalidPathChars()) +
-      "@.:\\/";
-    let r = new Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
+      "@.:\\/"
+
+    let r = Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
+
     Regex.Replace(r.Replace(x, "-"), "-{2,}", "-")
 
   let cloneFolderName (url : string) =
@@ -40,6 +48,20 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
       |> bytesToHex
     let folder = sanitizeFilename(url).ToLower() + "-" + hash.Substring(0, 16)
     Path.Combine(cacheDirectory, folder)
+
+  let pickRefsToFetch (style: FetchStyle) (remote : Async<List<Ref>>) (cache: Async<List<Ref>>) = async {
+    match style with
+    | RemoteFirst ->
+      let! x = remote
+      if x |> List.isEmpty |> not then
+        return x
+      else return! cache
+    | CacheFirst ->
+      let! x = cache
+      if x |> List.isEmpty |> not then
+        return x
+      else return! remote
+  }
 
   let mailboxCloneProcessor = MailboxProcessor.Start(fun inbox -> async {
     let mutable cloneCache : Map<string, Async<string>> = Map.empty
@@ -62,6 +84,45 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
             |> Async.Cache
           cloneCache <- cloneCache |> Map.add url task
           replyChannel.Reply(task)
+      | FetchRefs (url, replyChannel) ->
+        match refsCache |> Map.tryFind url with
+        | Some task -> replyChannel.Reply (task)
+        | None ->
+          let task =
+            async {
+              logger.RichInfo ((text "Fetching refs from ") + (highlight url))
+
+              let cacheDir = cloneFolderName url
+              let startTime = System.DateTime.Now
+
+              let! refs =
+                pickRefsToFetch
+                  style
+                  (git.RemoteRefs url
+                    |> Async.Catch
+                    |> Async.map (Choice.toOption >> Option.defaultValue([])))
+                  (git.RemoteRefs cacheDir
+                    |> Async.Catch
+                    |> Async.map (Choice.toOption >> Option.defaultValue([])))
+
+              let endTime = System.DateTime.Now
+
+              if refs |> List.isEmpty then
+                raise <| SystemException("No internet connection and the cache is empty")
+
+              logger.RichSuccess(
+                (text "Fetched ") +
+                (refs |> List.length |> string |> info) +
+                (text " refs in ") +
+                ((endTime - startTime).TotalSeconds.ToString("N3")))
+
+              return refs
+            }
+            |> Async.Cache
+
+          refsCache <- refsCache |> Map.add url task
+
+          replyChannel.Reply (task)
   })
 
   member this.Clone (url : string) : Async<string> = async {
@@ -70,8 +131,11 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
   }
 
   member this.CopyFromCache (gitUrl : string) (revision : Revision) (installPath : string) : Async<Unit> = async {
-    let! hasGit = Files.directoryExists (Path.Combine (installPath, ".git/"))
-    if hasGit then
+    let! hasGit =
+      Files.directoryExists (Path.Combine (installPath, ".git/"))
+
+    if hasGit
+    then
       do! git.UpdateRefs installPath
       return! git.Checkout installPath revision
     else
@@ -94,6 +158,7 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
           |> Async.Ignore
       | None ->
         let! defaultBranch = git.DefaultBranch targetDirectory
+
         yield
           AsyncSeq.interleave
             (if defaultBranch <> "master"
@@ -115,48 +180,20 @@ type GitManager (console : ConsoleManager, git : IGit, cacheDirectory : string) 
       |> AsyncSeq.take 1
       |> AsyncSeq.lastOrDefault false
 
-    if not success then
-      raise <| new Exception("Failed to fetch: " + url + " " + commit)
+    if not success
+    then
+      raise <| Exception("Failed to fetch: " + url + " " + commit)
   }
 
   member this.FetchRefs (url : string) = async {
-    match refsCache |> Map.tryFind url with
-    | Some refs -> return refs
-    | None ->
-      log( (text "Fetching refs from ") + (highlight url), LoggingLevel.Info)
-      let cacheDir = cloneFolderName url
-      let startTime = System.DateTime.Now
-      let! refs =
-        Async.Parallel
-          (
-            (git.RemoteRefs url
-              |> Async.Catch
-              |> Async.map(Choice.toOption >> Option.defaultValue([]))),
-            (git.RemoteRefs cacheDir
-              |> Async.Catch
-              |> Async.map(Choice.toOption >> Option.defaultValue([])))
-          )
-        |> Async.map(fun (a, b) ->
-          if a.Length = 0 && b.Length = 0 then
-            raise <| new SystemException("No internet connection and the cache is empty")
-          else if a.Length > 0
-          then a
-          else b
-        )
-      refsCache <- refsCache |> Map.add url refs
-      let endTime = System.DateTime.Now
-      log((success "success ") +
-          (text "fetched ") +
-          ((refs|>List.length).ToString() |> info) +
-          (text " refs in ") +
-          ((endTime-startTime).TotalSeconds.ToString("N3")|>info), LoggingLevel.Info)
-      return refs
+    let! res = mailboxCloneProcessor.PostAndAsyncReply(fun ch -> FetchRefs(url, ch))
+    return! res
   }
 
-  member this.getFile (url : string) (revision : Revision) (file : string) : Async<string> =
+  member this.GetFile (url : string) (revision : Revision) (file : string) : Async<string> =
     async {
-      let targetDirectory = cloneFolderName(url)
-      // TODO: preemptivly clone and fetch
+      let targetDirectory = cloneFolderName url
+      // TODO: Preemptively clone and fetch
       return! git.ReadFile targetDirectory revision file
     }
 

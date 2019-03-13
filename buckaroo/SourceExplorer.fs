@@ -53,7 +53,7 @@ module SourceExplorer =
           |> AsyncSeq.fold (fun s x -> Set.add x s) Set.empty
 
         yield!
-          loop (Constraint.All [])
+          loop (Constraint.All Set.empty)
           |> AsyncSeq.filter (fun x ->
             match x with
             | Candidate (location, _) ->
@@ -65,7 +65,7 @@ module SourceExplorer =
       | Any xs ->
         yield!
           xs
-          |> List.distinct
+          |> Set.toList
           |> List.sortDescending
           |> List.map loop
           |> AsyncSeq.mergeAll
@@ -103,7 +103,7 @@ module SourceExplorer =
               )
             else
               xs
-              |> List.distinct
+              |> Set.toList
               |> List.sort
               |> List.map (loop >> (AsyncSeq.scan (fun s x -> Set.add x s) Set.empty))
               |> List.reduce (AsyncSeq.combineLatestWith (fun x y ->

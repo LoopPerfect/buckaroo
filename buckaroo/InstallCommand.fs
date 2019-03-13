@@ -7,67 +7,15 @@ open Buckaroo
 open Buckaroo.BuckConfig
 open Buckaroo.Tasks
 open Buckaroo.Console
+open Buckaroo.Logger
 open Buckaroo.RichOutput
-
-type Logger =
-  {
-    Info : string -> Unit
-    Success : string -> Unit
-    Trace : string -> Unit
-    Warning : string -> Unit
-    Error : string -> Unit
-  }
-
-let private createLogger (console : ConsoleManager) =
-  let prefix =
-    "info "
-    |> text
-    |> foreground ConsoleColor.Blue
-
-  let info (x : string) =
-    console.Write (prefix + x, LoggingLevel.Info)
-
-  let prefix =
-    "success "
-    |> text
-    |> foreground ConsoleColor.Green
-
-  let success (x : string) =
-    console.Write (prefix + x, LoggingLevel.Info)
-
-  let trace (x : string) =
-    console.Write (x, LoggingLevel.Trace)
-
-  let prefix =
-    "warning "
-    |> text
-    |> foreground ConsoleColor.Yellow
-
-  let warning (x : string) =
-    console.Write (prefix + x, LoggingLevel.Info)
-
-  let prefix =
-    "error "
-    |> text
-    |> foreground ConsoleColor.Red
-
-  let error (x : string) =
-    console.Write (prefix + x, LoggingLevel.Info)
-
-  {
-    Info = info;
-    Success = success;
-    Trace = trace;
-    Warning = warning;
-    Error = error;
-  }
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =
     match lock.Packages |> Map.tryFind package with
     | Some lockedPackage -> (lockedPackage.Location, lockedPackage.Versions)
     | None ->
-      new Exception("Lock file does not contain " + (PackageIdentifier.show package))
+      Exception ("Lock file does not contain " + (PackageIdentifier.show package))
       |> raise
 
   return! sourceExplorer.FetchManifest location
@@ -242,7 +190,7 @@ let private compareReceipt logger installPath location = async {
 }
 
 let installPackageSources (context : Tasks.TaskContext) (installPath : string) (location : PackageLock) (versions : Set<Version>) = async {
-  let logger = createLogger context.Console
+  let logger = createLogger context.Console None
 
   let downloadManager = context.DownloadManager
   let gitManager = context.GitManager
@@ -286,7 +234,7 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
       if discoveredHash <> sha256
       then
         return
-          new Exception("Hash mismatch for " + http.Url + "! Expected " + sha256 + "but found " + discoveredHash)
+          Exception("Hash mismatch for " + http.Url + "! Expected " + sha256 + "but found " + discoveredHash)
           |> raise
       do! Files.deleteDirectoryIfExists installPath |> Async.Ignore
       do! Files.mkdirp installPath
@@ -480,7 +428,7 @@ let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Loc
 }
 
 let task (context : Tasks.TaskContext) = async {
-  let logger = createLogger context.Console
+  let logger = createLogger context.Console None
 
   logger.Info "Installing packages..."
 

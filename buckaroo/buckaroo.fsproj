@@ -20,6 +20,7 @@
     <Compile Include="TargetIdentifier.fs" />
     <Compile Include="Bash.fs" />
     <Compile Include="ConsoleManager.fs" />
+    <Compile Include="Logger.fs" />
     <Compile Include="DownloadManager.fs" />
     <Compile Include="Git.fs" />
     <Compile Include="GitCli.fs" />
@@ -43,6 +44,8 @@
     <Compile Include="SourceExplorer.fs" />
     <Compile Include="DefaultSourceExplorer.fs" />
     <Compile Include="Tasks.fs" />
+    <Compile Include="SearchStrategy.fs" />
+    <Compile Include="Prefetch.fs" />
     <Compile Include="Solver.fs" />
     <Compile Include="StartCommand.fs" />
     <Compile Include="HelpCommand.fs" />

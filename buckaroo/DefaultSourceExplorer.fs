@@ -1,16 +1,17 @@
 namespace Buckaroo
 
 open FSharp.Control
-open Buckaroo.Console
 open FSharpx
-open RichOutput
+open Buckaroo.Console
+open Buckaroo.RichOutput
+open Buckaroo.Logger
 
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
-  let log = namespacedLogger console "explorer"
+  let logger = createLogger console (Some "explorer")
   let toOptional = Async.Catch >> (Async.map Choice.toOption)
 
   let fromFileCache url revision path =
-    gitManager.getFile url revision path |> toOptional
+    gitManager.GetFile url revision path |> toOptional
 
   let cacheOrApi (api, url : string, rev : string, path : string) = async {
     let! cached = fromFileCache url rev path
@@ -22,7 +23,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
-      return raise (new System.Exception("Only zip is currently supported"))
+      return raise (System.Exception("Only zip is currently supported"))
 
     let! pathToZip = downloadManager.DownloadToCache source.Url
     use file = System.IO.File.OpenRead pathToZip
@@ -44,10 +45,10 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         | [ root ] -> return root
         | [] ->
           return
-            raise (new System.Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
+            raise (System.Exception("Strip prefix " + stripPrefix + " did not match any paths! "))
         | _ ->
           return
-            raise (new System.Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
+            raise (System.Exception("Strip prefix " + stripPrefix + " matched multiple paths: " + (string roots)))
       | None ->
         return ""
     }
@@ -72,7 +73,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
       cacheOrApi (GitLabApi.fetchFile gitLab.Package, url, gitLab.Revision, path)
     | PackageLock.Git git ->
       let url = git.Url
-      cacheOrApi(gitManager.getFile git.Url, url, git.Revision, path)
+      cacheOrApi(gitManager.GetFile git.Url, url, git.Revision, path)
     | PackageLock.Http (http, _) ->
       extractFileFromHttp http path
 
@@ -188,7 +189,6 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     // TODO: Revisions?
   }
 
-
   interface ISourceExplorer with
 
     member this.FetchVersions locations package = asyncSeq {
@@ -300,8 +300,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
             let errorMessage =
               "Invalid " + Constants.ManifestFileName + " file. \n" +
               (Manifest.ManifestParseError.show error)
-            new System.Exception(errorMessage)
-            |> raise
+            raise <| System.Exception errorMessage
       }
 
     member this.FetchLock (location, versions) =
@@ -310,16 +309,16 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
         return
           match maybeContent with
           | None ->
-            log(
-              (warn "warning ") + (text "Could not fetch ") + (highlight Constants.LockFileName) + (text " from ") +
-              (PackageLock.show location |> highlight) + (warn " 404"), LoggingLevel.Info)
-            raise <| new System.Exception("Could not fetch " + Constants.LockFileName + " file")
+            logger.RichWarning (
+              (text "Could not fetch ") + (highlight Constants.LockFileName) + (text " from ") +
+              (PackageLock.show location |> highlight) + (warn " 404"))
+            raise <| System.Exception("Could not fetch " + Constants.LockFileName + " file")
           | Some content ->
             match Lock.parse content with
             | Result.Ok manifest -> manifest
             | Result.Error errorMessage ->
-              log(
-                (warn "warning ") + (text "Could not parse ") + (highlight Constants.LockFileName) + (text " from ") +
-                (PackageLock.show location |> highlight) + (text " ") + (warn errorMessage), LoggingLevel.Info)
-              new System.Exception("Invalid " + Constants.LockFileName + " file") |> raise
+              logger.RichWarning(
+                (text "Could not parse ") + (highlight Constants.LockFileName) + (text " from ") +
+                (PackageLock.show location |> highlight) + (text " ") + (warn errorMessage))
+              System.Exception("Invalid " + Constants.LockFileName + " file") |> raise
       }

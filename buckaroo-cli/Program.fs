@@ -15,10 +15,10 @@ let main argv =
     let! exitCode = async {
       try
         match Buckaroo.Command.parse input with
-        | Result.Ok (command, loggingLevel) ->
+        | Result.Ok (command, loggingLevel, fetchStyle) ->
           do!
             command
-            |> Buckaroo.Command.runCommand loggingLevel
+            |> Buckaroo.Command.runCommand loggingLevel fetchStyle
           return 0
         | Result.Error error ->
           Console.WriteLine error

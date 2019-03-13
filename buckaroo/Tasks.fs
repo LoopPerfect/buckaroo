@@ -30,11 +30,11 @@ let private getCachePath = async {
     | path -> path
 }
 
-let getContext loggingLevel = async {
-  let consoleManager = new ConsoleManager(loggingLevel)
+let getContext loggingLevel fetchStyle = async {
+  let consoleManager = ConsoleManager(loggingLevel)
 
   let! cachePath = getCachePath
-  let downloadManager = new DownloadManager(consoleManager, cachePath)
+  let downloadManager = DownloadManager(consoleManager, cachePath)
 
   let! hasGit =
     Bash.runBashSync "git" "version" ignore ignore
@@ -53,7 +53,7 @@ let getContext loggingLevel = async {
       then GitLib(consoleManager) :> IGit
       else GitCli(consoleManager) :> IGit
 
-  let gitManager = GitManager(consoleManager, git, cachePath)
+  let gitManager = GitManager(fetchStyle, consoleManager, git, cachePath)
   let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
 
   return {
@@ -92,9 +92,9 @@ let readLock = async {
       match Lock.parse content with
       | Result.Ok lock -> lock
       | Result.Error error ->
-        new Exception("Error reading lock file. " + error) |> raise
+        Exception("Error reading lock file. " + error) |> raise
   else
-    return new Exception("No lock file was found. Perhaps you need to run 'buckaroo resolve'?") |> raise
+    return Exception("No lock file was found. Perhaps you need to run 'buckaroo resolve'?") |> raise
 }
 
 let readLockIfPresent = async {
