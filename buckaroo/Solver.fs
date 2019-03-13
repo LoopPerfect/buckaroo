@@ -728,3 +728,11 @@ let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Soluti
     Resolutions = resolutions |> Map.ofSeq
   }
 }
+
+let unlock (solution : Solution) (packages : Set<PackageIdentifier>) : Solution = {
+  Resolutions =
+    solution.Resolutions
+      |> Map.toSeq
+      |> Seq.filter (fst >> packages.Contains >> not)
+      |> Map.ofSeq
+}
