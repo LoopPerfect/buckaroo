@@ -358,7 +358,7 @@ let ``Solver handles negated constraints also`` () =
       Set[ver 2; br "a"],
       manifest [])
     (package "b",
-      Set[ver 2; br "b"],
+      Set[ver 2; br "a"],
       manifest [])
     (package "a",
       Set[ver 3; br "a"],

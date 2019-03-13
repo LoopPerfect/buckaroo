@@ -261,7 +261,7 @@ let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionReque
             )
             yield Result.Error <| Unresolvable d
           | Result.Error (LimitReached (d, Constants.MaxConsecutiveFailures)) ->
-            if hadCandidate |> not && (Set.contains d underconstraintDeps |> not)
+            if hadCandidate && (Set.contains d underconstraintDeps |> not)
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
               let (p, cs) = d
