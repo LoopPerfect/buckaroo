@@ -29,7 +29,6 @@ type ManifestParseError =
 | Location of LocationParseError
 | ConflictingLocations of AdhocPackageIdentifier * PackageSource * PackageSource
 
-
 module Manifest =
 
   open Buckaroo.Result

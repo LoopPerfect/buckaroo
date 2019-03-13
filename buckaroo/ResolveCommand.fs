@@ -51,6 +51,8 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
     match resolution with
     | Result.Error e ->
       (SearchStrategyError.show e) |> logger.RichError
+
+      return false
     | Result.Ok solution ->
       "A solution to the constraints was found" |> text |> logger.RichSuccess
       let lock = Lock.fromManifestAndSolution manifest solution
@@ -66,7 +68,7 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
 
       "The lock-file was updated" |> text |> logger.RichSuccess
 
-      return ()
+      return true
   }
 
   match (resolutionStyle, maybeLock) with
@@ -75,7 +77,7 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
     then
       logger.RichInfo <| (text "The existing lock-file is already up-to-date! ")
 
-      return ()
+      return true
     else
     return! resolve
   | (_, _) ->

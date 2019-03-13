@@ -249,7 +249,7 @@ module Command =
       | Init -> init context
       | Help -> HelpCommand.task context
       | Version -> VersionCommand.task context
-      | Resolve style -> ResolveCommand.task context Solution.empty style
+      | Resolve style -> ResolveCommand.task context Solution.empty style |> Async.Ignore
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
       | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies
