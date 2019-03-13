@@ -74,7 +74,7 @@ Buckaroo is shipped as a self-contained executable, so all you need to do is dow
 ##### Linux
 
 ```bash
-$ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-linux -O buckaroo
+$ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.2.0/buckaroo-linux -O buckaroo
 $ chmod +x ./buckaroo
 $ ./buckaroo
 ```
@@ -82,14 +82,14 @@ $ ./buckaroo
 ##### macOS
 
 ```bash
-$ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-macos -O buckaroo
+$ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.2.0/buckaroo-macos -O buckaroo
 $ chmod +x ./buckaroo
 $ ./buckaroo
 ```
 
 ##### Windows
 
-Download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-windows.exe) from the [release page](https://github.com/LoopPerfect/buckaroo/releases/v2.0.3).
+Download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-windows.exe) from the [release page](https://github.com/LoopPerfect/buckaroo/releases/v2.2.0).
 
 ### How Buckaroo Works
 
