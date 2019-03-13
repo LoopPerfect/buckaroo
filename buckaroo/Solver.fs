@@ -212,12 +212,14 @@ let fetchCandidatesForConstraint sourceExplorer locations p c = asyncSeq {
       |> Result.Error
 }
 
-let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<ResolutionRequest> =
+let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionRequest> =
   MailboxProcessor.Start(fun inbox -> async {
     let mutable unresolvableCores : Map<Set<PackageConstraint>, SearchStrategyError> = Map.empty
     let mutable underconstraintDeps : Set<PackageConstraint> = Set.empty
     let mutable world : Map<PackageConstraint, Set<Set<PackageConstraint>>> = Map.empty
 
+    let sourceExplorer = context.SourceExplorer
+    let logger = createLogger context.Console (Some "solver")
     let findBadCores (constraints : Constraints) =
       unresolvableCores
         |> Map.toSeq
@@ -250,11 +252,27 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
           match candidate with
           | Result.Error (Unresolvable d) ->
             unresolvableCores <- (unresolvableCores |> Map.add (Set [d]) (Unresolvable d))
+            let (p, cs) = d
+            logger.RichWarning (
+              "Unresolvable: " +
+              PackageIdentifier.showRich p +
+              subtle "@" +
+              (highlight <| Constraint.show (All cs |> simplify))
+            )
             yield Result.Error <| Unresolvable d
           | Result.Error (LimitReached (d, Constants.MaxConsecutiveFailures)) ->
-            if hadCandidate
+            if hadCandidate |> not && (Set.contains d underconstraintDeps |> not)
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
+              let (p, cs) = d
+              logger.RichWarning (
+                text("No manifest found for: ") +
+                PackageIdentifier.showRich p +
+                subtle "@" +
+                Constraint.show (All cs)
+              )
+              logger.Warning ("... is this a valid Buckaroo package?")
+
             yield Result.Error <| LimitReached (d, Constants.MaxConsecutiveFailures)
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
@@ -545,7 +563,7 @@ let mergeHint sourceExplorer next = async {
 let quickStrategy resolver sourceExplorer state selections = asyncSeq {
   let unresolved =
     breadthFirst selections state.Root
-    |> Seq.sortBy (snd >> All >> simplify >> Constraint.chanceOfSuccess)
+    |> Seq.sortByDescending (snd >> All >> simplify >> Constraint.chanceOfSuccess)
 
   for (p, cs) in unresolved do
     yield!
@@ -559,7 +577,7 @@ let quickStrategy resolver sourceExplorer state selections = asyncSeq {
 let upgradeStrategy resolver sourceExplorer state selections = asyncSeq {
   let unresolved =
     breadthFirst selections state.Root
-    |> Seq.sortBy (snd >> All >> simplify >> Constraint.chanceOfSuccess)
+    |> Seq.sortByDescending (snd >> All >> simplify >> Constraint.chanceOfSuccess)
 
   for (p, cs) in unresolved do
     yield!
@@ -670,7 +688,7 @@ let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manif
     Locations = manifest.Locations
   }
 
-  let resolver = resolutionManager context.SourceExplorer
+  let resolver = resolutionManager context
 
   let prefetcher = Prefetcher (context.SourceExplorer, 10)
 
