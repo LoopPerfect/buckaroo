@@ -31,6 +31,13 @@ module Command =
     return Option.isSome maybeSkip
   }
 
+  let cacheFirstParser : Parser<bool, Unit> = parse {
+    let! cacheFirst =
+      CharParsers.skipString "--cache-first"
+      |> Primitives.opt
+    return Option.isSome cacheFirst
+  }
+
   let startParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     return Start
@@ -170,13 +177,16 @@ module Command =
 
     do! CharParsers.spaces
 
+    let! isCacheFirst = cacheFirstParser
+    do! CharParsers.spaces
     let! isVerbose = verboseParser
 
     do! CharParsers.spaces
 
     let loggingLevel = if isVerbose then LoggingLevel.Trace else LoggingLevel.Info
+    let fetchStyle = if isCacheFirst then CacheFirst else RemoteFirst
 
-    return (command, loggingLevel)
+    return (command, loggingLevel, fetchStyle)
   }
 
   let parse (x : string) =
@@ -230,8 +240,8 @@ module Command =
       context.Console.Write( ("warning " |> warn) + ("There is already a buckaroo.toml file in this directory" |> text))
   }
 
-  let runCommand loggingLevel command = async {
-    let! context = Tasks.getContext loggingLevel
+  let runCommand loggingLevel fetchStyle command = async {
+    let! context = Tasks.getContext loggingLevel fetchStyle
 
     do!
       match command with

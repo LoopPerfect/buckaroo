@@ -15,32 +15,37 @@ let private ijkXyz = GitHub { Owner = "ijk"; Project = "xyz" }
 [<Fact>]
 let ``Command.parse works correctly`` () =
   let cases = [
-    (Result.Ok (Command.Init, defaultLoggingLevel), "init");
+    (Result.Ok (Command.Init, defaultLoggingLevel, RemoteFirst), "init");
 
-    (Result.Ok (Command.Install, defaultLoggingLevel), "   install  ");
+    (Result.Ok (Command.Install, defaultLoggingLevel, RemoteFirst), "   install  ");
 
-    (Result.Ok (Command.Resolve Quick, defaultLoggingLevel), "resolve");
-    (Result.Ok (Command.Resolve Quick, verboseLoggingLevel), "resolve --verbose");
-    (Result.Ok (Command.Resolve Upgrading, defaultLoggingLevel), "resolve  --upgrade    ");
-    (Result.Ok (Command.Resolve Upgrading, verboseLoggingLevel), "resolve --upgrade   --verbose");
+    (Result.Ok (Command.Resolve Quick, defaultLoggingLevel, RemoteFirst), "resolve");
+    (Result.Ok (Command.Resolve Quick, verboseLoggingLevel, RemoteFirst), "resolve --verbose");
+    (Result.Ok (Command.Resolve Upgrading, defaultLoggingLevel, RemoteFirst), "resolve  --upgrade    ");
+    (Result.Ok (Command.Resolve Upgrading, verboseLoggingLevel, RemoteFirst), "resolve --upgrade  --verbose");
+    (Result.Ok (Command.Resolve Quick, defaultLoggingLevel, CacheFirst), "resolve --cache-first ");
+    (Result.Ok (Command.Resolve Quick, verboseLoggingLevel, CacheFirst), "resolve --cache-first --verbose");
 
-    (Result.Ok (Command.UpgradeDependencies [], defaultLoggingLevel), "upgrade");
-    (Result.Ok (Command.UpgradeDependencies [ abcDef ], defaultLoggingLevel), "upgrade  abc/def");
-    (Result.Ok (Command.UpgradeDependencies [], verboseLoggingLevel), "  upgrade  --verbose  ");
-    (Result.Ok (Command.UpgradeDependencies [ abcDef ], verboseLoggingLevel), "upgrade  abc/def --verbose ");
+    (Result.Ok (Command.UpgradeDependencies [], defaultLoggingLevel, RemoteFirst), "upgrade");
+    (Result.Ok (Command.UpgradeDependencies [ abcDef ], defaultLoggingLevel, RemoteFirst), "upgrade  abc/def");
+    (Result.Ok (Command.UpgradeDependencies [], verboseLoggingLevel, RemoteFirst), "  upgrade  --verbose  ");
+    (Result.Ok (Command.UpgradeDependencies [ abcDef ], verboseLoggingLevel, RemoteFirst), "upgrade  abc/def --verbose ");
+    (Result.Ok (Command.UpgradeDependencies [], verboseLoggingLevel, CacheFirst), "  upgrade  --cache-first --verbose  ");
+    (Result.Ok (Command.UpgradeDependencies [ abcDef ], verboseLoggingLevel, CacheFirst), "upgrade  abc/def --cache-first --verbose ");
 
     (
       Result.Ok
         (
           Command.AddDependencies
             [ { Package = ijkXyz; Constraint = Constraint.wildcard; Targets = None } ],
-          defaultLoggingLevel
+          defaultLoggingLevel,
+          RemoteFirst
         ),
       "add github.com/ijk/xyz  "
     );
 
     (
-      Result.Ok (Command.UpgradeDependencies [ abcDef; ijkXyz ], verboseLoggingLevel),
+      Result.Ok (Command.UpgradeDependencies [ abcDef; ijkXyz ], verboseLoggingLevel, RemoteFirst),
       "upgrade  abc/def github.com/ijk/xyz --verbose "
     );
   ]
@@ -48,8 +53,8 @@ let ``Command.parse works correctly`` () =
   for (expected, input) in cases do
     let actual = Command.parse input
 
-    match actual with
-    | Result.Error error ->
+    match actual, expected with
+    | Result.Error error, _ ->
       System.Console.WriteLine (error + "\nfor \"" + input + "\"")
     | _ -> ()
 

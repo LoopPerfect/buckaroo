@@ -258,13 +258,13 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
           match candidate with
           | Result.Error (Unresolvable d) ->
             unresolvableCores <- (unresolvableCores |> Map.add (Set [d]) (Unresolvable d))
-            printCores()
+            //printCores()
             yield Result.Error <| Unresolvable d
           | Result.Error (LimitReached (d, MaxConsecutiveFailures)) ->
             if hadCandidate
             then
               underconstraintDeps <- (underconstraintDeps |> Set.add d)
-              printCores()
+              //printCores()
 
             yield Result.Error <| LimitReached (d, MaxConsecutiveFailures)
           | Result.Ok (_, (location, versions)) ->
@@ -420,7 +420,7 @@ let resolutionManager (sourceExplorer : ISourceExplorer) : MailboxProcessor<Reso
                   |> Set.add failedDep
 
                 unresolvableCores <- unresolvableCores |> Map.add core (SearchStrategyError.Unresolvable (p, bs))
-                printCores()
+                //printCores()
           | _ -> ()
 
 

@@ -30,7 +30,7 @@ let private getCachePath = async {
     | path -> path
 }
 
-let getContext loggingLevel = async {
+let getContext loggingLevel (fetchStyle : FetchStyle) = async {
   let consoleManager = ConsoleManager(loggingLevel)
 
   let! cachePath = getCachePath
@@ -53,7 +53,7 @@ let getContext loggingLevel = async {
       then GitLib(consoleManager) :> IGit
       else GitCli(consoleManager) :> IGit
 
-  let gitManager = GitManager(consoleManager, git, cachePath)
+  let gitManager = GitManager(fetchStyle, consoleManager, git, cachePath)
   let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
 
   return {
