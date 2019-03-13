@@ -53,8 +53,8 @@ let ``Command.parse works correctly`` () =
   for (expected, input) in cases do
     let actual = Command.parse input
 
-    match actual, expected with
-    | Result.Error error, _ ->
+    match actual with
+    | Result.Error error ->
       System.Console.WriteLine (error + "\nfor \"" + input + "\"")
     | _ -> ()
 

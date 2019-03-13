@@ -53,12 +53,12 @@ type GitManager (style: FetchStyle, console : ConsoleManager, git : IGit, cacheD
     match style with
     | RemoteFirst ->
       let! x = remote
-      if x |> List.isEmpty then
+      if x |> List.isEmpty |> not then
         return x
       else return! cache
     | CacheFirst ->
       let! x = cache
-      if x |> List.isEmpty then
+      if x |> List.isEmpty |> not then
         return x
       else return! remote
   }

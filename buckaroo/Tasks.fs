@@ -30,7 +30,7 @@ let private getCachePath = async {
     | path -> path
 }
 
-let getContext loggingLevel (fetchStyle : FetchStyle) = async {
+let getContext loggingLevel fetchStyle = async {
   let consoleManager = ConsoleManager(loggingLevel)
 
   let! cachePath = getCachePath

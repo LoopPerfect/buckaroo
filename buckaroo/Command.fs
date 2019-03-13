@@ -179,12 +179,23 @@ module Command =
 
     let! isCacheFirst = cacheFirstParser
     do! CharParsers.spaces
-    let! isVerbose = verboseParser
 
+    let! isVerbose = verboseParser
     do! CharParsers.spaces
 
-    let loggingLevel = if isVerbose then LoggingLevel.Trace else LoggingLevel.Info
-    let fetchStyle = if isCacheFirst then CacheFirst else RemoteFirst
+    let loggingLevel =
+      if isVerbose
+      then
+        LoggingLevel.Trace
+      else
+        LoggingLevel.Info
+
+    let fetchStyle =
+      if isCacheFirst
+      then
+        CacheFirst
+      else
+        RemoteFirst
 
     return (command, loggingLevel, fetchStyle)
   }
