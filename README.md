@@ -81,6 +81,14 @@ $ ./buckaroo
 
 ##### macOS
 
+With Homebrew:
+
+```bash
+brew install loopperfect/lp/buckaroo
+```
+
+Or without Homebrew:
+
 ```bash
 $ wget https://github.com/LoopPerfect/buckaroo/releases/download/v2.2.0/buckaroo-macos -O buckaroo
 $ chmod +x ./buckaroo
