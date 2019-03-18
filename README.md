@@ -84,7 +84,7 @@ $ ./buckaroo
 With Homebrew:
 
 ```bash
-brew install loopperfect/lp/buckaroo
+$ brew install loopperfect/lp/buckaroo
 ```
 
 Or without Homebrew:
