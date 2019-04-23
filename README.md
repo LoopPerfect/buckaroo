@@ -97,7 +97,13 @@ $ ./buckaroo
 
 ##### Windows
 
-Download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-windows.exe) from the [release page](https://github.com/LoopPerfect/buckaroo/releases/v2.2.0).
+You can use the [Chocolatey package](https://chocolatey.org/packages/buckaroo): 
+
+```bash
+choco install buckaroo
+```
+
+Or, download [buckaroo.exe](https://github.com/LoopPerfect/buckaroo/releases/download/v2.0.3/buckaroo-windows.exe) from the [releases page](https://github.com/LoopPerfect/buckaroo/releases/v2.2.0).
 
 ### How Buckaroo Works
 
