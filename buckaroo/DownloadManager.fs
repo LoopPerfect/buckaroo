@@ -46,7 +46,7 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
     return target
   }
 
-  let hashCache = MailboxProcessor.Start(fun inbox -> async {
+  let hashCache = MailboxProcessor.Start (fun inbox -> async {
     let mutable cache = Map.empty
 
     while true do
@@ -66,15 +66,17 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
   })
 
   let copy source destination = async {
-    let! task = hashCache.PostAndAsyncReply(fun ch -> Copy(source, destination, ch))
+    let! task = hashCache.PostAndAsyncReply (fun ch -> Copy (source, destination, ch))
+    
     return! task
   }
 
-  let downloadCache = MailboxProcessor.Start(fun inbox -> async {
+  let downloadCache = MailboxProcessor.Start (fun inbox -> async {
     let mutable cache = Map.empty
 
     while true do
-      let! (Download(url, replyChannel)) = inbox.Receive()
+      let! (Download (url, replyChannel)) = inbox.Receive ()
+      
       match cache |> Map.tryFind url with
       | Some task -> replyChannel.Reply(task)
       | None -> 
@@ -92,6 +94,7 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
             return destination
           }
           |> Async.StartChild
+          
         cache <- cache |> Map.add url task
         replyChannel.Reply(task)
   })
