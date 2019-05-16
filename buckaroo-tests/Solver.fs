@@ -24,7 +24,8 @@ let ver (x : int) = Version.SemVer {SemVer.zero with Major = x}
 let dep (p : string, c: Constraint) : Buckaroo.Dependency = {
     Package = package p;
     Constraint = c;
-    Targets = None
+    Targets = None;
+    Features = None;
 }
 
 let manifest xs = {

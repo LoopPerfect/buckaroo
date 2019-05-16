@@ -30,6 +30,7 @@
     <Compile Include="Version.fs" />
     <Compile Include="Constraint.fs" />
     <Compile Include="Atom.fs" />
+    <Compile Include="Feature.fs" />
     <Compile Include="Dependency.fs" />
     <Compile Include="PackageLocation.fs" />
     <Compile Include="PackageSource.fs" />

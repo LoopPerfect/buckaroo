@@ -108,6 +108,7 @@ module Command =
               Package = p;
               Constraint = c;
               Targets = None;
+              Features = None;
             }
         } <|>
         parse {
@@ -116,6 +117,7 @@ module Command =
               Package = p;
               Constraint = Constraint.wildcard;
               Targets = None;
+              Features = None;
             }
         }
     }

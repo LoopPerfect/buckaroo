@@ -15,6 +15,7 @@ type DependencyParseError =
 | InvalidPackage of string
 | InvalidConstraint of string
 | InvalidTarget of string
+| InvalidFeature of string
 
 type LocationParseError =
 | TomlError of TomlError
@@ -40,6 +41,7 @@ module Manifest =
       | DependencyParseError.InvalidPackage e -> "Invalid package name: " + e
       | DependencyParseError.InvalidConstraint e -> "Invalid constraint: " + e
       | DependencyParseError.InvalidTarget e -> "Invalid target: " + e
+      | DependencyParseError.InvalidFeature e -> "Invalid feature: " + e
 
   module LocationParseError =
     let show (x : LocationParseError) =
@@ -131,8 +133,46 @@ module Manifest =
       )
       |> Option.defaultValue (Ok false)
 
+    let! features = result {
+      match x |> Toml.tryGet "feature" with
+      | Some xs ->
+        let! array =
+          xs
+          |> Toml.asTableArray
+          |> Result.mapError DependencyParseError.TomlError
 
-    return (isPrivate, { Package = package; Constraint = version; Targets = targets })
+        let! features =
+          array.Items
+          |> Seq.map (fun item -> result {
+            let! name =
+              item
+              |> Toml.get "name"
+              |> Result.bind Toml.asString
+              |> Result.mapError DependencyParseError.TomlError
+
+            let! toml_value =
+              item
+              |> Toml.get "value"
+              |> Result.mapError DependencyParseError.TomlError
+
+            let! value =
+              toml_value
+              |> FeatureValue.fromToml
+              |> Result.mapError DependencyParseError.TomlError
+
+            return! (name, value) |> Result.Ok
+          })
+          |> Result.all
+        return
+          features
+          |> Seq.rev
+          |> Map.ofSeq
+          |> Some
+      | None ->
+        return None
+    }
+
+    return (isPrivate, { Package = package; Constraint = version; Targets = targets; Features = features })
   }
 
   let private tomlTableToGitPackageSource (x : Nett.TomlObject) = result {
@@ -406,6 +446,17 @@ module Manifest =
             "targets = [ " +
             (ts |> Seq.map (fun t -> "\"" + Target.show t + "\"") |> String.concat ", ") +
             " ]\n"
+          | None -> ""
+        ) +
+        (
+          match x.Features with
+          | Some ts ->
+            "\n" +
+            (ts |> Map.toSeq |> Seq.map (fun ((name, value)) ->
+              "  [[dependency.feature]]\n" +
+              "  name = \"" + name + "\"\n" +
+              "  value = " + (FeatureValue.show value) + "\n"
+            ) |> String.concat "\n")
           | None -> ""
         ) +
         "\n"

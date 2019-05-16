@@ -3,7 +3,8 @@ namespace Buckaroo
 type Dependency = {
   Package : PackageIdentifier;
   Constraint : Constraint;
-  Targets : Target list option
+  Targets : Target list option;
+  Features : Map<string, FeatureValue> option;
 }
 
 module Dependency =
@@ -55,7 +56,7 @@ module Dependency =
     do! CharParsers.skipString "@"
     let! c = Constraint.parser
     return
-      { Package = p; Constraint = c; Targets = None }
+      { Package = p; Constraint = c; Targets = None; Features = None }
   }
 
   let parse (x : string) : Result<Dependency, string> =

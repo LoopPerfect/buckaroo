@@ -6,21 +6,21 @@ open FSharpx
 
 open Buckaroo
 open Buckaroo.Tests
-open Buckaroo
-open Buckaroo.Tests
 
 [<Fact>]
 let ``Manifest.parse works correctly`` () =
   let a = {
     Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" };
     Constraint = Constraint.wildcard;
-    Targets = None
+    Targets = None;
+    Features = None;
   }
 
   let b = {
     Package = PackageIdentifier.GitHub { Owner = "ijk"; Project = "xyz" };
     Constraint = Constraint.wildcard;
-    Targets = Some [ { Folders = []; Name = "foo" } ]
+    Targets = Some [ { Folders = []; Name = "foo" } ];
+    Features = None;
   }
 
   let lmnqrs = { Owner = "lmn"; Project = "qrs" }
@@ -29,6 +29,7 @@ let ``Manifest.parse works correctly`` () =
     Package = PackageIdentifier.Adhoc lmnqrs;
     Constraint = Constraint.wildcard;
     Targets = None;
+    Features = None;
   }
 
   let locationC =
@@ -89,10 +90,21 @@ let ``Manifest.toToml roundtrip 1`` () =
         Targets = Some ([{Folders=["foo"; "bar"]; Name = "xxx"}])
         Constraint = All <| Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
         Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
+        Features = ([
+          ("profile", "core" |> FeatureUnitValue.String |> FeatureValue.Value);
+          ("api", FeatureValue.Dictionary ([
+            ("gl", "3.2" |> FeatureUnitValue.String);
+            ("gles", "" |> FeatureUnitValue.String);
+          ] |> Map.ofSeq) );
+          ("extensions", FeatureValue.Array [
+            "GL_EXT_framebuffer_multisample" |> FeatureUnitValue.String;
+            "GL_EXT_texture_filter_anisotropic" |> FeatureUnitValue.String;
+          ] );
+        ] |> Map.ofSeq |> Some);
       }]
   }
 
-  let actual =  expected |> Manifest.toToml |> Manifest.parse
+  let actual = expected |> Manifest.toToml |> Manifest.parse
 
   // 3 new-lines indicates poor formatting
   Assert.True (
@@ -125,11 +137,33 @@ let ``Manifest.toToml roundtrip 2`` () =
       Targets = Some ([{Folders=["foo"; "bar"]; Name = "xxx"}])
       Constraint = All <| Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
+      Features = ([
+        ("profile", "core" |> FeatureUnitValue.String |> FeatureValue.Value);
+        ("api", FeatureValue.Dictionary ([
+          ("gl", "3.2" |> FeatureUnitValue.String);
+          ("gles", "" |> FeatureUnitValue.String);
+        ] |> Map.ofSeq) );
+        ("extensions", FeatureValue.Array [
+          "GL_EXT_framebuffer_multisample" |> FeatureUnitValue.String;
+          "GL_EXT_texture_filter_anisotropic" |> FeatureUnitValue.String;
+        ] );
+      ] |> Map.ofSeq |> Some);
     }]
     PrivateDependencies = Set [{
       Targets = Some ([{Folders=["foo"; "bar"]; Name = "yyy"}])
       Constraint = Any <|Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
+      Features = ([
+        ("profile", "core" |> FeatureUnitValue.String |> FeatureValue.Value);
+        ("api", FeatureValue.Dictionary ([
+          ("gl", "3.2" |> FeatureUnitValue.String);
+          ("gles", "" |> FeatureUnitValue.String);
+        ] |> Map.ofSeq) );
+        ("extensions", FeatureValue.Array [
+          "GL_EXT_framebuffer_multisample" |> FeatureUnitValue.String;
+          "GL_EXT_texture_filter_anisotropic" |> FeatureUnitValue.String;
+        ] );
+      ] |> Map.ofSeq |> Some);
     }]
   }
 
