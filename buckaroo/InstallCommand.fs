@@ -434,6 +434,21 @@ let task (context : Tasks.TaskContext) = async {
 
   let! lock = Tasks.readLock
 
+  let! manifestContent = Files.readFile (Path.Combine(".", Constants.ManifestFileName))
+  let manifest =
+    match Manifest.parse manifestContent with
+    | Result.Ok manifest -> manifest
+    | Result.Error error ->
+      raise <| Exception("Error parsing manifest:\n" + (Manifest.ManifestParseError.show error))
+  let manifestHash =
+      manifest
+      |> Manifest.toToml
+      |> Hashing.sha256
+
+  if manifestHash <> lock.ManifestHash then
+    logger.Warning "Manifest has changed since the last resolve."
+    logger.Warning "Consider running \"buckaroo resolve\""
+
   do! installPackages context "." [] lock.Packages
   do! writeTopLevelFiles context "." lock
 
