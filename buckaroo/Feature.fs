@@ -26,9 +26,9 @@ module FeatureUnitValue =
 
   let renderIni (x : FeatureUnitValue) =
     match x with
-    | Boolean x -> if x then "true" else "false"
-    | Integer x -> x.ToString()
-    | String x -> Escape.escapeWithDoubleQuotes x
+    | Boolean x -> INIString <| if x then "true" else "false"
+    | Integer x -> INIString <| x.ToString()
+    | String x -> INIString <| Escape.escapeWithDoubleQuotes x
 
   let fromToml (toml : Nett.TomlObject) : Result<FeatureUnitValue, TomlError> =
     match toml with
@@ -51,18 +51,21 @@ module FeatureValue =
 
   let renderIni (x : FeatureValue) =
     match x with
-    | Value x -> x |> FeatureUnitValue.renderIni |> INIString
+    | Value x -> x |> FeatureUnitValue.renderIni
     | Dictionary x ->
       x
       |> Map.toSeq
-      |> Seq.map (fun (key, value) ->
-        INIString <| Escape.escapeWithDoubleQuotes (key + "=" + (value |> FeatureUnitValue.renderIni))
+      |> Seq.collect (fun (key, value) ->
+        [
+          INIString <| Escape.escapeWithDoubleQuotes key;
+          FeatureUnitValue.renderIni <| value;
+        ]
       )
       |> List.ofSeq
       |> INIList
     | Array x ->
       x
-      |> Seq.map (FeatureUnitValue.renderIni >> INIString)
+      |> Seq.map FeatureUnitValue.renderIni
       |> List.ofSeq
       |> INIList
 
