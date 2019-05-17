@@ -1,5 +1,6 @@
 namespace Buckaroo
 
+open Buckaroo.BuckConfig
 open Buckaroo.Result
 open Buckaroo.Toml
 
@@ -7,7 +8,6 @@ open Buckaroo.Toml
 type FeatureUnitValue =
 | Boolean of bool
 | Integer of int64
-| Float of float
 | String of string
 // | Version of Version
 
@@ -22,14 +22,18 @@ module FeatureUnitValue =
     match x with
     | Boolean x -> if x then "true" else "false"
     | Integer x -> x.ToString()
-    | Float x -> x.ToString()
     | String x -> "\"" + x + "\""
+
+  let renderIni (x : FeatureUnitValue) =
+    match x with
+    | Boolean x -> if x then "true" else "false"
+    | Integer x -> x.ToString()
+    | String x -> Escape.escapeWithDoubleQuotes x
 
   let fromToml (toml : Nett.TomlObject) : Result<FeatureUnitValue, TomlError> =
     match toml with
     | :? Nett.TomlBool as v -> FeatureUnitValue.Boolean v.Value |> Result.Ok
     | :? Nett.TomlInt as v -> FeatureUnitValue.Integer v.Value |> Result.Ok
-    | :? Nett.TomlFloat as v -> FeatureUnitValue.Float v.Value |> Result.Ok
     | :? Nett.TomlString as v -> FeatureUnitValue.String v.Value |> Result.Ok
     | _ -> TomlError.UnexpectedType toml.ReadableTypeName |> Result.Error
 
@@ -44,6 +48,23 @@ module FeatureValue =
         |> String.concat ", "
       ) + " }"
     | Array x -> "[ " + (x |> Seq.map FeatureUnitValue.show |> String.concat ", ") + " ]"
+
+  let renderIni (x : FeatureValue) =
+    match x with
+    | Value x -> x |> FeatureUnitValue.renderIni |> INIString
+    | Dictionary x ->
+      x
+      |> Map.toSeq
+      |> Seq.map (fun (key, value) ->
+        INIString <| Escape.escapeWithDoubleQuotes (key + "=" + (value |> FeatureUnitValue.renderIni))
+      )
+      |> List.ofSeq
+      |> INIList
+    | Array x ->
+      x
+      |> Seq.map (FeatureUnitValue.renderIni >> INIString)
+      |> List.ofSeq
+      |> INIList
 
   let fromToml (toml : Nett.TomlObject) : Result<FeatureValue, TomlError> =
     match FeatureUnitValue.fromToml toml with

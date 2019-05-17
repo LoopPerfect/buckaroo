@@ -12,6 +12,7 @@
     <Compile Include="Paths.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
+    <Compile Include="Escape.fs" />
     <Compile Include="BuckConfig.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="Archive.fs" />
