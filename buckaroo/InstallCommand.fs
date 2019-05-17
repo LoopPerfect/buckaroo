@@ -244,7 +244,7 @@ let installPackageSources (context : Tasks.TaskContext) (installPath : string) (
     logger.Success ("Installed " + installPath)
 }
 
-let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : PackageIdentifier list) lockedPackage packages (pathToCell : string) = async {
+let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : PackageIdentifier list) features lockedPackage packages (pathToCell : string) = async {
   let pathToPackage (package : PackageIdentifier) =
     Path.Combine(
       (".." + (string Path.DirectorySeparatorChar)) |> String.replicate (Paths.depth pathToCell),
@@ -338,15 +338,28 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
     |> Seq.distinct
     |> Map.ofSeq
 
+  let featuresSection =
+    features
+    |> Option.defaultValue Map.empty
+    |> Map.toSeq
+    |> Seq.map (fun ((name, value)) ->
+      (
+        name,
+        value |> FeatureValue.renderIni
+      )
+    )
+    |> Map.ofSeq
+
   let buckarooConfig =
     Map.empty
     |> Map.add "repositories" repositoriesSection
     |> Map.add "buckaroo" buckarooSection
+    |> Map.add "features" featuresSection
 
   return buckarooConfig |> BuckConfig.render
 }
 
-let rec private installPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
+let rec private installPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packagesFeatures : Map<PackageIdentifier, Map<string, FeatureValue>>) (packages : Map<PackageIdentifier, LockedPackage>) = async {
   // Prepare workspace
   do! Files.mkdirp root
   do! Files.touch (Path.Combine(root, ".buckconfig"))
@@ -363,15 +376,27 @@ let rec private installPackages (context : Tasks.TaskContext) (root : string) (p
 
     let childParents = (parents @ [ package ])
 
+    let! manifest = context.SourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
+    let features = packagesFeatures |> Map.tryFind package
+
+    let childFeatures =
+      manifest.PrivateDependencies
+      |> Seq.choose (fun dependency ->
+        match dependency.Features with
+        | Some features -> Some (dependency.Package, features)
+        | None -> None
+      )
+      |> Map.ofSeq
+
     // Install child package sources
     do! installPackageSources context installPath lockedPackage.Location lockedPackage.Versions
 
     // Install child's child (recurse)
-    do! installPackages context installPath childParents lockedPackage.PrivatePackages
+    do! installPackages context installPath childParents childFeatures lockedPackage.PrivatePackages
 
     // Write .buckconfig.d for child package
     let! buckarooConfig =
-      generateBuckConfig context.SourceExplorer childParents lockedPackage (packages |> Map.remove package) installPath
+      generateBuckConfig context.SourceExplorer childParents features lockedPackage (packages |> Map.remove package) installPath
 
     do! Files.mkdirp (Path.Combine(installPath, ".buckconfig.d"))
     do! Files.writeFile (Path.Combine(installPath, ".buckconfig.d", ".buckconfig.buckaroo")) buckarooConfig
@@ -449,7 +474,16 @@ let task (context : Tasks.TaskContext) = async {
     logger.Warning "Manifest has changed since the last resolve."
     logger.Warning "Consider running \"buckaroo resolve\""
 
-  do! installPackages context "." [] lock.Packages
+  let packagesFeatures =
+    manifest.Dependencies
+    |> Seq.choose (fun dependency ->
+      match dependency.Features with
+      | Some features -> Some (dependency.Package, features)
+      | None -> None
+    )
+    |> Map.ofSeq
+
+  do! installPackages context "." [] packagesFeatures lock.Packages
   do! writeTopLevelFiles context "." lock
 
   logger.Success "The packages folder is now up-to-date. "
