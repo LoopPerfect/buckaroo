@@ -13,8 +13,8 @@ type INIData = Map<string, Map<INIKey,INIValue>>
 let rec renderValue (value : INIValue) : string = 
   match value with 
   | INIString s -> s
-  | INITuple xs -> xs |> Seq.map renderValue  |> String.concat ", "
-  | INIList xs -> xs |> Seq.map renderValue  |> String.concat ", "
+  | INITuple xs -> xs |> Seq.map renderValue |> String.concat " "
+  | INIList xs -> xs |> Seq.map renderValue |> String.concat " "
   | INIEmpty -> ""
 
 let renderSection (section : Map<INIKey, INIValue>) : string = 
