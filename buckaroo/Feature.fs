@@ -87,3 +87,84 @@ module FeatureValue =
         |> all
         |> Result.map (List.rev >> FeatureValue.Array)
       | _ -> e |> Result.Error
+
+module FeatureValueParse =
+  open FParsec
+  open System.Text.RegularExpressions
+
+  let private ws = CharParsers.spaces
+  let private str = CharParsers.skipString
+
+  let trueParser : Parser<FeatureUnitValue, unit> =
+    str "true" >>. (true |> FeatureUnitValue.Boolean |> Primitives.preturn)
+
+  let falseParser =
+    str "false" >>. (false |> FeatureUnitValue.Boolean |> Primitives.preturn)
+
+  let booleanParser =
+    trueParser <|> falseParser
+
+  let integerParser = CharParsers.pint64 |>> FeatureUnitValue.Integer
+
+  let private escapedParser =
+    CharParsers.regex @"(?:[^'\\]|\\.)*"
+  let private singleQuoteParser = str "'"
+
+  let private removeEscapeRegex = Regex @"\\(.)"
+  let private removeEscapeRegexReplacement = @"$1"
+
+  let stringParser =
+    singleQuoteParser >>. escapedParser .>> singleQuoteParser
+    |>> fun x ->
+      removeEscapeRegex.Replace(x, removeEscapeRegexReplacement)
+      |> FeatureUnitValue.String
+
+  let featureUnitValueParser =
+    booleanParser
+    <|> integerParser
+    <|> stringParser
+
+  let featureValueFromUnitParser = parse {
+    let! value = featureUnitValueParser
+
+    return value |> FeatureValue.Value
+  }
+
+  let private dictionaryKeyParser =
+    CharParsers.regex @"\w[\w\d]*"
+
+  let private dictionaryItemParser =
+    Primitives.tuple2
+      (dictionaryKeyParser .>> ws .>> (str "=") .>> ws)
+      featureUnitValueParser
+
+  let dictionaryParser =
+    str "{"
+    >>. ws
+    >>. Primitives.sepEndBy1
+      dictionaryItemParser
+      (ws >>. (str ",") .>> ws)
+    .>> ws
+    .>> str "}"
+    |>> (Map.ofList >> FeatureValue.Dictionary)
+
+  let private arrayItemParser = parse {
+    let! value = featureUnitValueParser
+
+    return value
+  }
+
+  let arrayParser =
+    str "["
+    >>. ws
+    >>. Primitives.sepEndBy1
+      arrayItemParser
+      (ws >>. (str ",") .>> ws)
+    .>> ws
+    .>> str "]"
+    |>> FeatureValue.Array
+
+  let featureValueParser =
+    featureValueFromUnitParser
+    <|> dictionaryParser
+    <|> arrayParser
