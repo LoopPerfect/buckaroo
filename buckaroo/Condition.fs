@@ -47,7 +47,7 @@ module ConditionParse =
       (ws >>. prev .>> ws)
       (Primitives.opt (Primitives.tuple2
         operators
-        ((parse.Delay (fun() -> compareExpressionParser)) <|> prev)
+        ((parse.Delay (fun() -> binaryOperatorParser prev operators)) <|> prev)
       ))
       (fun left rest ->
         match rest with
@@ -86,6 +86,7 @@ module ConditionParse =
     ws >>. (
       FeatureValueParse.featureValueParser |>> Value
       <|> variableParser
+      <|> (Primitives.between (str "(") (str ")") expressionParser)
     )
 
   and private expressionParser = parse.Delay (fun () ->
@@ -98,3 +99,8 @@ module ConditionParse =
     expressionParser
     .>> ws
     .>> CharParsers.eof
+
+  let parse (input : string) : Result<Condition, string> =
+    match run conditionParser input with
+    | Success(result, _, _) -> Result.Ok <| result
+    | Failure(errorMsg, _, _) -> Result.Error errorMsg
