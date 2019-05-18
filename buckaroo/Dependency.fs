@@ -5,6 +5,7 @@ type Dependency = {
   Constraint : Constraint;
   Targets : Target list option;
   Features : Map<string, FeatureValue> option;
+  Conditions : Condition list option;
 }
 
 module Dependency =
@@ -56,7 +57,7 @@ module Dependency =
     do! CharParsers.skipString "@"
     let! c = Constraint.parser
     return
-      { Package = p; Constraint = c; Targets = None; Features = None }
+      { Package = p; Constraint = c; Targets = None; Features = None; Conditions = None }
   }
 
   let parse (x : string) : Result<Dependency, string> =

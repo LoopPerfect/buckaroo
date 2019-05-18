@@ -18,7 +18,10 @@ type Expression =
 | NotExpression of Expression
 | BinaryExpression of Expression * BinaryOperator * Expression
 
-type Condition = Expression
+type Condition = {
+  Source : string;
+  Expression : Expression;
+}
 
 module ConditionParse =
   open FParsec
@@ -95,12 +98,15 @@ module ConditionParse =
       unitParser;
     ])
 
-  let conditionParser : Parser<Condition, unit> =
+  let private conditionParser : Parser<Expression, unit> =
     expressionParser
     .>> ws
     .>> CharParsers.eof
 
   let parse (input : string) : Result<Condition, string> =
     match run conditionParser input with
-    | Success(result, _, _) -> Result.Ok <| result
+    | Success(result, _, _) -> Result.Ok <| {
+        Source = input;
+        Expression = result;
+      }
     | Failure(errorMsg, _, _) -> Result.Error errorMsg

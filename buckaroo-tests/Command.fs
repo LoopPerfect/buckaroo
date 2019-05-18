@@ -37,7 +37,7 @@ let ``Command.parse works correctly`` () =
       Result.Ok
         (
           Command.AddDependencies
-            [ { Package = ijkXyz; Constraint = Constraint.wildcard; Targets = None; Features = None } ],
+            [ { Package = ijkXyz; Constraint = Constraint.wildcard; Targets = None; Features = None; Conditions = None } ],
           defaultLoggingLevel,
           RemoteFirst
         ),

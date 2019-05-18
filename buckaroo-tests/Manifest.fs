@@ -14,6 +14,7 @@ let ``Manifest.parse works correctly`` () =
     Constraint = Constraint.wildcard;
     Targets = None;
     Features = None;
+    Conditions = None;
   }
 
   let b = {
@@ -21,6 +22,7 @@ let ``Manifest.parse works correctly`` () =
     Constraint = Constraint.wildcard;
     Targets = Some [ { Folders = []; Name = "foo" } ];
     Features = None;
+    Conditions = None;
   }
 
   let lmnqrs = { Owner = "lmn"; Project = "qrs" }
@@ -30,6 +32,7 @@ let ``Manifest.parse works correctly`` () =
     Constraint = Constraint.wildcard;
     Targets = None;
     Features = None;
+    Conditions = None;
   }
 
   let locationC =
@@ -101,6 +104,15 @@ let ``Manifest.toToml roundtrip 1`` () =
             "GL_EXT_texture_filter_anisotropic" |> FeatureUnitValue.String;
           ] );
         ] |> Map.ofSeq |> Some);
+        Conditions = [{
+          Source = "gl > 3";
+          Expression =
+            Expression.BinaryExpression (
+              Expression.Variable "gl",
+              BinaryOperator.More,
+              Expression.Value (3 |> int64 |> FeatureUnitValue.Integer |> FeatureValue.Value)
+            );
+        }] |> Some;
       }]
   }
 
@@ -148,6 +160,7 @@ let ``Manifest.toToml roundtrip 2`` () =
           "GL_EXT_texture_filter_anisotropic" |> FeatureUnitValue.String;
         ] );
       ] |> Map.ofSeq |> Some);
+      Conditions = None;
     }]
     PrivateDependencies = Set [{
       Targets = Some ([{Folders=["foo"; "bar"]; Name = "yyy"}])
@@ -164,6 +177,7 @@ let ``Manifest.toToml roundtrip 2`` () =
           "GL_EXT_texture_filter_anisotropic" |> FeatureUnitValue.String;
         ] );
       ] |> Map.ofSeq |> Some);
+      Conditions = None;
     }]
   }
 

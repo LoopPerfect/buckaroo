@@ -26,6 +26,7 @@ let dep (p : string, c: Constraint) : Buckaroo.Dependency = {
     Constraint = c;
     Targets = None;
     Features = None;
+    Conditions = None;
 }
 
 let manifest xs = {

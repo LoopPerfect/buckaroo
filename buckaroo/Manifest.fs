@@ -16,6 +16,7 @@ type DependencyParseError =
 | InvalidConstraint of string
 | InvalidTarget of string
 | InvalidFeature of string
+| InvalidCondition of string
 
 type LocationParseError =
 | TomlError of TomlError
@@ -42,6 +43,7 @@ module Manifest =
       | DependencyParseError.InvalidConstraint e -> "Invalid constraint: " + e
       | DependencyParseError.InvalidTarget e -> "Invalid target: " + e
       | DependencyParseError.InvalidFeature e -> "Invalid feature: " + e
+      | DependencyParseError.InvalidCondition e -> "Invalid condition: " + e
 
   module LocationParseError =
     let show (x : LocationParseError) =
@@ -172,7 +174,46 @@ module Manifest =
         return None
     }
 
-    return (isPrivate, { Package = package; Constraint = version; Targets = targets; Features = features })
+    let! conditions = result {
+      match x |> Toml.tryGet "conditions" with
+      | Some x ->
+        let! conditions =
+          match x with
+          | :? Nett.TomlString as x ->
+            [
+              x.Value
+            ] |> Result.Ok
+          | :? Nett.TomlArray as x ->
+            x.Items
+            |> Seq.map (fun toml_value ->
+              toml_value
+              |> Toml.asString
+              |> Result.mapError DependencyParseError.TomlError
+            )
+            |> Result.all
+          | _ -> 
+            TomlError.UnexpectedType x.ReadableTypeName
+            |> DependencyParseError.TomlError
+            |> Result.Error
+
+        return!
+          conditions
+          |> Seq.rev
+          |> Seq.map ConditionParse.parse
+          |> Result.all
+          |> Result.mapError DependencyParseError.InvalidCondition
+          |> Result.map Some
+      | None ->
+        return None
+    }
+
+    return (isPrivate, {
+      Package = package;
+      Constraint = version;
+      Targets = targets;
+      Features = features;
+      Conditions = conditions;
+    })
   }
 
   let private tomlTableToGitPackageSource (x : Nett.TomlObject) = result {
@@ -446,6 +487,20 @@ module Manifest =
             "targets = [ " +
             (ts |> Seq.map (fun t -> "\"" + Target.show t + "\"") |> String.concat ", ") +
             " ]\n"
+          | None -> ""
+        ) +
+        (
+          match x.Conditions with
+          | Some conds ->
+            match conds.Length with
+            | 0 -> ""
+            | 1 -> "conditions = " + (Escape.escapeWithDoubleQuotes conds.Head.Source) + "\n"
+            | _ ->
+              "conditions = [\n" +
+              (conds |> List.map (fun cond ->
+                "  " + (Escape.escapeWithDoubleQuotes cond.Source) + "\n"
+              ) |> String.concat ",\n") +
+              "]\n"
           | None -> ""
         ) +
         (
