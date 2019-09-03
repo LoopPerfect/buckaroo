@@ -31,7 +31,7 @@ type ManifestParseError =
 
 module Manifest =
 
-  open Buckaroo.Result
+  open FSharpx.Result
 
   module DependencyParseError =
     let show (x : DependencyParseError) =
@@ -209,7 +209,7 @@ module Manifest =
     |> Result.bind (
       Toml.items
       >> Seq.map (Toml.asString >> Result.mapError ManifestParseError.TomlError)
-      >> all
+      >> Result.all
     )
     |> Result.map set
 
@@ -232,7 +232,7 @@ module Manifest =
           |> Target.parse
           |> Result.mapError ManifestParseError.InvalidTarget
       })
-      |> all
+      |> Result.all
 
     return set tags
   }
@@ -262,9 +262,10 @@ module Manifest =
         else None
       )
       |> Seq.map (Toml.asTableArray >> (Result.mapError ManifestParseError.TomlError))
-      |> all
+      |> Result.all
       |> Result.map (Seq.collect (fun x -> x.Items))
-      |> Result.bind (Seq.map (tomlTableToDependency >> Result.mapError ManifestParseError.Dependency) >> all)
+      |> Result.bind
+        (Seq.map (tomlTableToDependency >> Result.mapError ManifestParseError.Dependency) >> Result.all)
 
     let dependencies =
       allDependencies
@@ -292,9 +293,10 @@ module Manifest =
         else None
       )
       |> Seq.map (Toml.asTableArray >> (Result.mapError ManifestParseError.TomlError))
-      |> all
+      |> Result.all
       |> Result.map (Seq.collect (fun x -> x.Items))
-      |> Result.bind (Seq.map (tomlTableToPackageSource >> Result.mapError ManifestParseError.Location) >> all)
+      |> Result.bind
+        (Seq.map (tomlTableToPackageSource >> Result.mapError ManifestParseError.Location) >> Result.all)
 
     let! locations =
       locationEntries

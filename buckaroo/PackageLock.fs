@@ -1,8 +1,6 @@
 namespace Buckaroo
 
-open System
 open Buckaroo
-open FSharpx
 
 type PackageLock =
 | Http of HttpLocation * string
@@ -13,7 +11,7 @@ type PackageLock =
 
 module PackageLock =
 
-  open Buckaroo.Result
+  open FSharpx.Result
 
   let toLocation (x : PackageLock) : PackageLocation =
     match x with
