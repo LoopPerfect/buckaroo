@@ -1,19 +1,20 @@
 namespace Buckaroo
 
 type LockedPackage = {
-  Versions : Set<Version>;
-  Location : PackageLock;
-  PrivatePackages : Map<PackageIdentifier, LockedPackage>;
+  Versions : Set<Version>
+  Location : PackageLock
+  PrivatePackages : Map<PackageIdentifier, LockedPackage>
 }
 
 type Lock = {
-  ManifestHash : string;
-  Dependencies : Set<TargetIdentifier>;
-  Packages : Map<PackageIdentifier, LockedPackage>;
+  ManifestHash : string
+  Dependencies : Set<TargetIdentifier>
+  Packages : Map<PackageIdentifier, LockedPackage>
 }
 
 module Lock =
-  open Buckaroo.Result
+
+  open FSharpx.Result
 
   module LockedPackage =
     let show (x : LockedPackage) =
@@ -196,8 +197,7 @@ module Lock =
         "versions = [ " +
         (versions
           |> Set.toSeq
-          |> Seq.map Version.show
-          |> Seq.map (fun x ->"\"" + x + "\"")
+          |> Seq.map (Version.show >> (fun x ->"\"" + x + "\""))
           |> String.concat ", ") +
         " ]\n" +
         match location with
