@@ -66,7 +66,8 @@ let private defaultMain =
   |> String.concat "\n"
 
 let isValidProjectName (candidate : string) =
-  (Regex(@"^[A-Za-z0-9\-_]{2,32}$")).IsMatch(candidate)
+  (Regex(@"^[A-Za-z0-9\-_]{2,32}$")).IsMatch(candidate) &&
+  candidate.ToLower () <> "app"
 
 let requestProjectName (context : TaskContext) = async {
   let mutable candidate = ""
