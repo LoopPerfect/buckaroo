@@ -48,9 +48,16 @@ let task context (packages : List<PackageIdentifier>) = async {
 
   if resolveSucceeded
   then
-    do! InstallCommand.task context
+    let! install = InstallCommand.task context
+
+    if install <> 0
+    then
+      logger.Error "Upgraded version(s) were found but the packages could not be installed. "
+      return 1
+    else
+      logger.Success "The upgrade is complete. "
+      return 0
   else
     logger.Error "The upgrade failed. No packages were changed. "
-
-  return ()
+    return 1
 }

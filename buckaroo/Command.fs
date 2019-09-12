@@ -1,8 +1,10 @@
 namespace Buckaroo
 
 open FSharp.Control
+open FSharpx
 open Buckaroo.Console
 open Buckaroo.Tasks
+open Buckaroo.Logger
 
 type Command =
   | Start
@@ -234,7 +236,7 @@ module Command =
       | Result.Ok solution ->
         do! Tasks.writeManifest newManifest
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
-        do! InstallCommand.task context
+        do! InstallCommand.task context |> Async.Ignore
 
         System.Console.WriteLine ("Success. ")
       | _ -> ()
@@ -242,25 +244,34 @@ module Command =
 
   let init context = async {
     let path = Constants.ManifestFileName
+    let logger = createLogger context.Console None
+
     if File.Exists(path) |> not
     then
       use sw = File.CreateText(path)
-      sw.Write(Manifest.zero |> Manifest.show)
-      context.Console.Write("Wrote " + Constants.ManifestFileName)
+
+      sw.Write (Manifest.zero |> Manifest.show)
+      logger.Success ("Wrote " + Constants.ManifestFileName)
+
+      return 0
     else
-      context.Console.Write( ("warning " |> warn) + ("There is already a buckaroo.toml file in this directory" |> text))
+      logger.Warning "There is already a buckaroo.toml file in this directory. "
+
+      return 1
   }
 
   let runCommand loggingLevel fetchStyle command = async {
     let! context = Tasks.getContext loggingLevel fetchStyle
 
-    do!
+    let! returnCode =
       match command with
       | Start -> StartCommand.task context
       | Init -> init context
       | Help -> HelpCommand.task context
       | Version -> VersionCommand.task context
-      | Resolve style -> ResolveCommand.task context Solution.empty style |> Async.Ignore
+      | Resolve style ->
+        ResolveCommand.task context Solution.empty style
+        |> Async.map (function | true -> 0 | false -> 1)
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
       | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies
@@ -269,4 +280,6 @@ module Command =
       | ShowCompletions -> ShowCompletions.task context
 
     do! context.Console.Flush()
+
+    return returnCode
   }

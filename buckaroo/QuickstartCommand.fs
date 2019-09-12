@@ -94,7 +94,7 @@ let task (context : Tasks.TaskContext) = async {
   do! Files.writeFile "main.cpp" defaultMain
 
   do! ResolveCommand.task context Solution.empty ResolutionStyle.Quick |> Async.Ignore
-  do! InstallCommand.task context
+  do! InstallCommand.task context |> Async.Ignore
 
   context.Console.Write("To start your app: ")
   context.Console.Write(
@@ -103,4 +103,6 @@ let task (context : Tasks.TaskContext) = async {
     |> RichOutput.foreground ConsoleColor.Green
   )
   context.Console.Write("")
+
+  return 0
 }

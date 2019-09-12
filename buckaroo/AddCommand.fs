@@ -29,7 +29,7 @@ let task (context : Tasks.TaskContext) dependencies = async {
   if manifest = newManifest
   then
     logger.Warning ("The dependency already exists in the manifest")
-    return ()
+    return 0
   else
     let! maybeLock = async {
       if File.Exists(Constants.LockFileName)
@@ -47,9 +47,17 @@ let task (context : Tasks.TaskContext) dependencies = async {
     | Result.Ok solution ->
       do! Tasks.writeManifest newManifest
       do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
-      do! InstallCommand.task context
 
-      logger.Success ("The dependency was added to the manifest and installed")
+      let! install = InstallCommand.task context
+
+      if install <> 0
+      then
+        logger.Error ("Failed to install the new dependency. ")
+        return 1
+      else
+        logger.Success ("The dependency was added to the manifest and installed. ")
+        return 0
     | _ ->
-      logger.Error ("Failed to add the dependency")
+      logger.Error ("Failed to add the dependency. ")
+      return 1
 }

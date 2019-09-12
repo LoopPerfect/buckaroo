@@ -15,4 +15,6 @@ let task context = async {
   ]
 
   context.Console.Write(completions |> String.concat " ")
+
+  return 0
 }

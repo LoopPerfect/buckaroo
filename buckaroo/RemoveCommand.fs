@@ -14,11 +14,12 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
 
   let newManifest =
     packages
-    |> Seq.fold (fun state next -> Manifest.remove state next) manifest
+    |> Seq.fold Manifest.remove manifest
 
   if manifest = newManifest
   then
     context.Console.Write("No changes to be made. " |> text |> foreground ConsoleColor.Green)
+    return 0
   else
     let! maybeLock = Tasks.readLockIfPresent
     let! resolution = Solver.solve context Solution.empty newManifest ResolutionStyle.Quick maybeLock
@@ -45,11 +46,18 @@ let task (context : Tasks.TaskContext) (packages : List<PackageIdentifier>) = as
 
       do! Tasks.writeManifest newManifest
       do! Tasks.writeLock newLock
-      do! InstallCommand.task context
 
-      context.Console.Write("Done. " |> text |> foreground ConsoleColor.Green)
+      let! install = InstallCommand.task context
 
+      if install = 0
+      then
+        context.Console.Write("Done. " |> text |> foreground ConsoleColor.Green)
+        return 0
+      else
+        context.Console.Write("Failed. " |> text |> foreground ConsoleColor.Red)
+        return 1
     | x ->
       context.Console.Write(string x)
       context.Console.Write("No changes were written. " |> text |> foreground ConsoleColor.Green)
+      return 0
 }

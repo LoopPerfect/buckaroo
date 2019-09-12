@@ -5,6 +5,7 @@
   <ItemGroup>
     <Compile Include="Option.fs" />
     <Compile Include="Result.fs" />
+    <Compile Include="Strings.fs" />
     <Compile Include="Glob.fs" />
     <Compile Include="RichOutput.fs" />
     <Compile Include="Constants.fs" />
@@ -12,6 +13,7 @@
     <Compile Include="Paths.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
+    <Compile Include="BuildSystem.fs" />
     <Compile Include="BuckConfig.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="Archive.fs" />

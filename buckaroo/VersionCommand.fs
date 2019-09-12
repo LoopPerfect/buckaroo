@@ -1,5 +1,7 @@
 module Buckaroo.VersionCommand
 
-let task context = async {
-  System.Console.WriteLine (Buckaroo.Constants.Version)
+let task _ = async {
+  System.Console.WriteLine (Constants.Version)
+
+  return 0
 }
