@@ -106,11 +106,9 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
       | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
       | PackageIdentifier.GitLab x -> ("gitlab", combinePaths x.Groups, x.Project)
       | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
-    Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
+    String.Join ("/", [ Constants.PackagesDirectory; prefix; owner; project ])
   | head::tail ->
-    Path.Combine(packageInstallPath tail head, packageInstallPath [] package)
-    |> Paths.normalize
-
+    String.Join ("/", [ packageInstallPath tail head; packageInstallPath [] package ])
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
 
