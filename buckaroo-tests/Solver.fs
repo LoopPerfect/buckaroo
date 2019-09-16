@@ -123,6 +123,7 @@ let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBook
   let lockBook = lockBookOf lockBookEntries
   let console = ConsoleManager (LoggingLevel.Silent)
   let context : TaskContext = {
+    BuildSystem = BuildSystem.Bazel
     Console = console
     DownloadManager = DownloadManager(console, "/tmp")
     GitManager = new GitManager(CacheFirst, console, new GitCli(console), "/tmp")

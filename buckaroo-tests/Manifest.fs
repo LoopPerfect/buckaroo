@@ -1,11 +1,8 @@
 module Buckaroo.Tests.Manifest
 
-open System
 open Xunit
 open FSharpx
 
-open Buckaroo
-open Buckaroo.Tests
 open Buckaroo
 open Buckaroo.Tests
 
