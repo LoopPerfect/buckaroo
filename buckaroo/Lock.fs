@@ -94,36 +94,41 @@ module Lock =
         )
       )
 
-    [
-      "Added: ";
-      (
-        additions
-        |> Seq.map (fun (k, (l, v)) ->
-          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " -> " + (PackageLock.show l) + "@" + (Version.showSet v)
-        )
-        |> String.concat "\n"
-      );
-      "Removed: ";
-      (
-        removals
-        |> Seq.map (fun (k, (l, v)) ->
-          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " -> " + (PackageLock.show l) + "@" + (Version.showSet v)
-        )
-        |> String.concat "\n"
-      );
-      "Changed: ";
-      (
-        changes
-        |> Seq.map (fun (k, (bl, bv), (al, av)) ->
-          "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
-          " " + (PackageLock.show bl) + "@" + (Version.showSet bv) +
-          " -> " + (PackageLock.show al) + "@" + (Version.showSet av)
-        )
-        |> String.concat "\n"
-      );
-    ]
+    seq {
+      if Seq.isEmpty additions |> not
+      then
+        yield "Added: "
+        yield
+          additions
+          |> Seq.map (fun (k, (l, v)) ->
+            "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+            " -> " + (PackageLock.show l) + "@" + (Version.showSet v)
+          )
+          |> String.concat "\n"
+
+      if Seq.isEmpty removals |> not
+      then
+        yield "Removed: "
+        yield
+          removals
+          |> Seq.map (fun (k, (l, v)) ->
+            "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+            " -> " + (PackageLock.show l) + "@" + (Version.showSet v)
+          )
+          |> String.concat "\n"
+
+      if Seq.isEmpty changes |> not
+      then
+        yield "Changed: "
+        yield
+          changes
+          |> Seq.map (fun (k, (bl, bv), (al, av)) ->
+            "  " + (k |> Seq.map PackageIdentifier.show |> String.concat " ") +
+            " " + (PackageLock.show bl) + "@" + (Version.showSet bv) +
+            " -> " + (PackageLock.show al) + "@" + (Version.showSet av)
+          )
+          |> String.concat "\n"
+    }
     |> String.concat "\n"
 
   let fromManifestAndSolution (manifest : Manifest) (solution : Solution) : Lock =

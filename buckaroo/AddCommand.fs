@@ -28,11 +28,11 @@ let task (context : Tasks.TaskContext) dependencies = async {
 
   if manifest = newManifest
   then
-    logger.Warning ("The dependency already exists in the manifest")
+    logger.Warning ("The dependency already exists in the manifest. ")
     return 0
   else
     let! maybeLock = async {
-      if File.Exists(Constants.LockFileName)
+      if File.Exists Constants.LockFileName
       then
         let! lock = Tasks.readLock
         return Some lock

@@ -440,7 +440,7 @@ let rec private installBazelPackages (context : Tasks.TaskContext) (root : strin
     // Install child's child (recurse)
     do! installBazelPackages context installPath childParents lockedPackage.PrivatePackages
 
-    // TODO: Write buckaroo.bzl
+    // Write macros
     do! Files.writeFile (Path.Combine ("buckaroo", "data.bzl")) (dataBzl packages)
     do! Files.writeFile (Path.Combine ("buckaroo", "defs.bzl")) defsBzl
 }
@@ -506,9 +506,7 @@ let task (context : Tasks.TaskContext) = async {
   then
     let! lock = Tasks.readLock
 
-    let buildSystem = BuildSystem.Bazel // TODO: Allow user to select build-system?
-
-    match buildSystem with
+    match context.BuildSystem with
     | Buck ->
       do! installBuckPackages context "." [] lock.Packages
       do! writeTopLevelBuckFiles context "." lock

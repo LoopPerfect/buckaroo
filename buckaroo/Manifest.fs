@@ -3,11 +3,11 @@ namespace Buckaroo
 open Buckaroo.Toml
 
 type Manifest = {
-  Targets : Set<Target>;
-  Tags : Set<string>;
-  Dependencies : Set<Dependency>;
-  PrivateDependencies : Set<Dependency>;
-  Locations : Map<AdhocPackageIdentifier, PackageSource>;
+  Targets : Set<Target>
+  Tags : Set<string>
+  Dependencies : Set<Dependency>
+  PrivateDependencies : Set<Dependency>
+  Locations : Map<AdhocPackageIdentifier, PackageSource>
 }
 
 type DependencyParseError =
@@ -320,11 +320,11 @@ module Manifest =
         (Ok Map.empty)
 
     return {
-      Targets = targets |> set;
-      Tags = tags;
-      Dependencies = dependencies;
-      PrivateDependencies = privateDependencies;
-      Locations = locations;
+      Targets = targets |> set
+      Tags = tags
+      Dependencies = dependencies
+      PrivateDependencies = privateDependencies
+      Locations = locations
     }
   }
 

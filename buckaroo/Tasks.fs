@@ -3,15 +3,17 @@ module Buckaroo.Tasks
 open System
 open System.IO
 open System.Runtime
-open Buckaroo.Console
 open FSharpx
 open Buckaroo
+open Buckaroo.Console
+open Buckaroo.Logger
 
 type TaskContext = {
-  Console : ConsoleManager;
-  DownloadManager : DownloadManager;
-  GitManager : GitManager;
-  SourceExplorer : ISourceExplorer;
+  Console : ConsoleManager
+  DownloadManager : DownloadManager
+  GitManager : GitManager
+  SourceExplorer : ISourceExplorer
+  BuildSystem : BuildSystem
 }
 
 let private isWindows () =
@@ -19,6 +21,27 @@ let private isWindows () =
     InteropServices.RuntimeInformation.OSDescription
     |> String.toLower
   (String.contains "win" description) && not (String.contains "darwin" description)
+
+let private determineBuildSystem (logger : Logger) = async {
+  let useBazel =
+    Environment.GetEnvironmentVariable "BUCKAROO_USE_BAZEL"
+    |> isNull
+    |> not
+
+  if useBazel
+  then
+    return Bazel
+  else
+    let! hasBuckConfig = Files.exists ".buckconfig"
+
+    if hasBuckConfig
+    then
+      logger.Warning "Using the Buck build-system since a .buckconfig file was found. Set BUCKAROO_USE_BAZEL to override this. "
+      return Buck
+    else
+      return Bazel
+}
+
 
 let private getCachePath = async {
   return
@@ -31,10 +54,10 @@ let private getCachePath = async {
 }
 
 let getContext loggingLevel fetchStyle = async {
-  let consoleManager = ConsoleManager(loggingLevel)
+  let consoleManager = ConsoleManager loggingLevel
 
   let! cachePath = getCachePath
-  let downloadManager = DownloadManager(consoleManager, cachePath)
+  let downloadManager = DownloadManager (consoleManager, cachePath)
 
   let! hasGit =
     Bash.runBashSync "git" "version" ignore ignore
@@ -45,7 +68,7 @@ let getContext loggingLevel fetchStyle = async {
         >> Option.defaultValue false)
 
   let useLibGit2 =
-    (System.Environment.GetEnvironmentVariable("BUCKAROO_USE_LIBGIT2") <> null)
+    not (isNull (Environment.GetEnvironmentVariable "BUCKAROO_USE_LIBGIT2"))
     || not hasGit
 
   let git =
@@ -54,13 +77,17 @@ let getContext loggingLevel fetchStyle = async {
       else GitCli(consoleManager) :> IGit
 
   let gitManager = GitManager(fetchStyle, consoleManager, git, cachePath)
-  let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
+
+  let! buildSystem = determineBuildSystem (createLogger consoleManager None)
+
+  let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager, buildSystem)
 
   return {
-    Console = consoleManager;
-    DownloadManager = downloadManager;
-    GitManager = gitManager;
-    SourceExplorer = sourceExplorer;
+    Console = consoleManager
+    DownloadManager = downloadManager
+    GitManager = gitManager
+    SourceExplorer = sourceExplorer
+    BuildSystem = buildSystem
   }
 }
 
@@ -71,11 +98,11 @@ let readManifest (root : string) = async {
       match Manifest.parse content with
       | Result.Ok manifest -> manifest
       | Result.Error error ->
-        new Exception("Error parsing manifest:\n" + (Manifest.ManifestParseError.show error))
+        Exception ("Error parsing manifest:\n" + (Manifest.ManifestParseError.show error))
         |> raise
   with error ->
     return
-      new Exception("Could not read project manifest. Are you sure you are in the right directory? ", error)
+      Exception ("Could not read project manifest. Are you sure you are in the right directory? ", error)
       |> raise
 }
 

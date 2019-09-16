@@ -1,8 +1,8 @@
 module Buckaroo.StartCommand
 
+open System
 open Buckaroo.Tasks
 open Buckaroo.RichOutput
-open System
 
 let task (context : TaskContext) = async {
   let log (x : string) =
@@ -10,7 +10,7 @@ let task (context : TaskContext) = async {
       x
       |> text
       |> foreground ConsoleColor.Green
-    context.Console.Write(rt)
+    context.Console.Write rt
 
   let logUrl (x : string) =
     x

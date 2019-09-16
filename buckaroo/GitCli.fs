@@ -18,7 +18,7 @@ type GitCli (console : ConsoleManager) =
   let runBash exe args = async {
     let rt =
       (
-        "Running " + exe
+        "Running " + exe + " "
         |> RichOutput.text
         |> RichOutput.foreground ConsoleColor.Gray
       ) +
