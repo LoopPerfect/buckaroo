@@ -19,6 +19,9 @@ let LockFileName = "buckaroo.lock.toml"
 let BuckarooMacrosFileName = "buckaroo_macros.bzl"
 
 [<Literal>]
+let BuckarooDefsFileName = "defs.bzl"
+
+[<Literal>]
 let BuckarooDepsFileName = "BUCKAROO_DEPS"
 
 [<Literal>]

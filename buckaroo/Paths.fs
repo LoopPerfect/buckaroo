@@ -3,7 +3,7 @@ module Buckaroo.Paths
 open System
 open System.IO
 
-let private sep = String([| Path.DirectorySeparatorChar |])
+let private sep = String [| Path.DirectorySeparatorChar |]
 
 let normalize (path : string) : string =
   if path = ""
@@ -12,7 +12,7 @@ let normalize (path : string) : string =
   else
     let rec loop (path : string) =
       let parts =
-        path.Split(Path.DirectorySeparatorChar, StringSplitOptions.None)
+        path.Split (Path.DirectorySeparatorChar, StringSplitOptions.None)
         |> Seq.filter (fun x -> x <> ".")
         |> Seq.toList
 
@@ -24,7 +24,7 @@ let normalize (path : string) : string =
         |> String.concat sep
         |> loop
       | x::rest ->
-        if rest = []
+        if List.isEmpty rest
         then
           x
         else
@@ -36,3 +36,9 @@ let depth (path : string) =
   (normalize path).Split(Path.DirectorySeparatorChar).Length
 
 let combine x y = Path.Combine (x, y) |> normalize
+
+let rec combineAll xs =
+  match xs with
+  | [ x ] -> x
+  | x::xs -> combine x (combineAll xs)
+  | [] -> ""

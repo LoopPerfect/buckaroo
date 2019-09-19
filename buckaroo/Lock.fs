@@ -146,7 +146,7 @@ module Lock =
         |> Map.tryFind p
         |> Option.map (fun (rv, _) ->
           rv.Manifest.Targets
-          |> Seq.map (fun t -> { Package = p; Target = t })
+          |> Seq.map (fun t -> { PackagePath = [], p; Target = t })
         )
         |> Option.defaultValue Seq.empty
       )
@@ -187,7 +187,7 @@ module Lock =
       lock.Dependencies
       |> Seq.map(fun x ->
         "[[dependency]]\n" +
-        "package = \"" + (PackageIdentifier.show x.Package) + "\"\n" +
+        "package = \"" + (PackageIdentifier.show (snd x.PackagePath)) + "\"\n" +
         "target = \"" + (Target.show x.Target) + "\"\n\n"
       )
       |> String.concat ""
@@ -415,7 +415,11 @@ module Lock =
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
       |> Result.bind Target.parse
 
-    return { Package = package; Target = target }
+    return
+      {
+        PackagePath = [], package
+        Target = target
+      }
   }
 
   let parse (content : string) : Result<Lock, string> = result {
