@@ -48,14 +48,14 @@ let ``Lock.parse works correctly 2`` () =
     |> Lock.parse
 
   let expected = {
-    ManifestHash = "aabbccddee";
+    ManifestHash = "aabbccddee"
     Dependencies =
       [
         {
-          Package = PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" };
+          PackagePath = [], PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" }
           Target = {
-            Folders = [];
-            Name = "def";
+            Folders = []
+            Name = "def"
           }
         }
       ]
@@ -117,14 +117,14 @@ let ``Lock.parse works correctly 3`` () =
     |> Lock.parse
 
   let expected = {
-    ManifestHash = "aabbccddee";
+    ManifestHash = "aabbccddee"
     Dependencies =
       [
         {
-          Package = PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" };
+          PackagePath = [], PackageIdentifier.Adhoc { Owner = "abc"; Project = "def" }
           Target = {
-            Folders = [];
-            Name = "def";
+            Folders = []
+            Name = "def"
           }
         }
       ]
