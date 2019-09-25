@@ -46,6 +46,7 @@
     <Compile Include="GitLabApi.fs" />
     <Compile Include="SourceExplorer.fs" />
     <Compile Include="DefaultSourceExplorer.fs" />
+    <Compile Include="OverrideSourceExplorer.fs" />
     <Compile Include="Tasks.fs" />
     <Compile Include="SearchStrategy.fs" />
     <Compile Include="Prefetch.fs" />

@@ -2,14 +2,15 @@ namespace Buckaroo
 
 open Buckaroo.Toml
 
-type Manifest = {
-  Targets : Set<Target>
-  Tags : Set<string>
-  Dependencies : Set<Dependency>
-  PrivateDependencies : Set<Dependency>
-  Locations : Map<AdhocPackageIdentifier, PackageSource>
-  Overrides : Map<PackageIdentifier, string>
-}
+type Manifest =
+  {
+    Targets : Set<Target>
+    Tags : Set<string>
+    Dependencies : Set<Dependency>
+    PrivateDependencies : Set<Dependency>
+    Locations : Map<AdhocPackageIdentifier, PackageSource>
+    Overrides : Map<PackageIdentifier, PackageIdentifier>
+  }
 
 type DependencyParseError =
 | TomlError of TomlError
@@ -29,7 +30,7 @@ type ManifestParseError =
 | Dependency of DependencyParseError
 | Location of LocationParseError
 | ConflictingLocations of AdhocPackageIdentifier * PackageSource * PackageSource
-| ConflictingOverrides of PackageIdentifier * string * string
+| ConflictingOverrides of PackageIdentifier * PackageIdentifier * PackageIdentifier
 
 module Manifest =
 
@@ -65,7 +66,7 @@ module Manifest =
         (PackageSource.show b) + " ]"
       | ConflictingOverrides (p, a, b) ->
         "Conflicting overrides found for " +
-        (PackageIdentifier.show p) + ": [ " + a + ", " + b + " ]"
+        (PackageIdentifier.show p) + ": [ " + (PackageIdentifier.show a) + ", " + (PackageIdentifier.show b) + " ]"
 
   let zero : Manifest =
     {
@@ -468,7 +469,7 @@ module Manifest =
         [
           "[[override]]"
           "package = \"" + PackageIdentifier.show package + "\""
-          "substitution = \"" + substitution + "\""
+          "substitution = \"" + PackageIdentifier.show substitution + "\""
           ""
         ]
       )

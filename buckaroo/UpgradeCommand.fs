@@ -25,7 +25,8 @@ let task context (packages : List<PackageIdentifier>) = async {
         let! lock = Tasks.readLock
         let! partial =
           if packages |> Seq.isEmpty
-          then async { return Solution.empty }
+          then
+            async { return Solution.empty }
           else
             async {
               let! solution = Solver.fromLock context.SourceExplorer lock

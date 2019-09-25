@@ -157,8 +157,12 @@ let ``Manifest.toToml roundtrip 3`` () =
     Manifest.zero with
       Overrides =
         Map.empty
-        |> Map.add (PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }) "../abc/def"
-        |> Map.add (PackageIdentifier.GitHub { Owner = "ijk"; Project = "lmo" }) "../ijk/lmo"
+        |> Map.add
+          (PackageIdentifier.GitHub { Owner = "abc"; Project = "def" })
+          (PackageIdentifier.GitHub { Owner = "abc"; Project = "pqr" })
+        |> Map.add
+          (PackageIdentifier.GitHub { Owner = "ijk"; Project = "lmo" })
+          (PackageIdentifier.GitHub { Owner = "gfh"; Project = "xyz" })
   }
 
   let actual =  expected |> Manifest.toToml |> Manifest.parse

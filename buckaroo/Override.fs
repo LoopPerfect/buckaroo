@@ -3,7 +3,7 @@ namespace Buckaroo
 type Override =
   {
     Package : PackageIdentifier
-    Substitution : string
+    Substitution : PackageIdentifier
   }
 
 module Override =
@@ -26,6 +26,7 @@ module Override =
       table
       |> Toml.get "substitution"
       |> Result.bind Toml.asString
+      |> Result.bind (PackageIdentifier.parse >> Result.mapError TomlError.UnexpectedType)
 
     return
       {
