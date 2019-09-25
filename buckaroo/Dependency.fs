@@ -1,10 +1,11 @@
 namespace Buckaroo
 
-type Dependency = {
-  Package : PackageIdentifier;
-  Constraint : Constraint;
-  Targets : Target list option
-}
+type Dependency =
+  {
+    Package : PackageIdentifier
+    Constraint : Constraint
+    Targets : Target list option
+  }
 
 module Dependency =
 

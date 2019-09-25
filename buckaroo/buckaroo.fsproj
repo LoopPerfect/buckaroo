@@ -35,6 +35,7 @@
     <Compile Include="Dependency.fs" />
     <Compile Include="PackageLocation.fs" />
     <Compile Include="PackageSource.fs" />
+    <Compile Include="Override.fs" />
     <Compile Include="PackageLock.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />

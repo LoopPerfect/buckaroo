@@ -8,6 +8,7 @@ type Manifest = {
   Dependencies : Set<Dependency>
   PrivateDependencies : Set<Dependency>
   Locations : Map<AdhocPackageIdentifier, PackageSource>
+  Overrides : Map<PackageIdentifier, string>
 }
 
 type DependencyParseError =
@@ -28,6 +29,7 @@ type ManifestParseError =
 | Dependency of DependencyParseError
 | Location of LocationParseError
 | ConflictingLocations of AdhocPackageIdentifier * PackageSource * PackageSource
+| ConflictingOverrides of PackageIdentifier * string * string
 
 module Manifest =
 
@@ -61,14 +63,19 @@ module Manifest =
         (PackageIdentifier.show (Adhoc p)) + ": [ " +
         (PackageSource.show a) + ", " +
         (PackageSource.show b) + " ]"
+      | ConflictingOverrides (p, a, b) ->
+        "Conflicting overrides found for " +
+        (PackageIdentifier.show p) + ": [ " + a + ", " + b + " ]"
 
-  let zero : Manifest = {
-    Targets = Set.empty;
-    Tags = Set.empty;
-    Dependencies = Set.empty;
-    PrivateDependencies = Set.empty;
-    Locations = Map.empty;
-  }
+  let zero : Manifest =
+    {
+      Targets = Set.empty
+      Tags = Set.empty
+      Dependencies = Set.empty
+      PrivateDependencies = Set.empty
+      Locations = Map.empty
+      Overrides = Map.empty
+    }
 
   let remove (manifest : Manifest) (package : PackageIdentifier) =
     {
@@ -315,7 +322,46 @@ module Manifest =
                 |> Result.Error
           | None ->
             return
-              Map.ofSeq [(package, source)]
+              s
+              |> Map.add package source
+        })
+        (Ok Map.empty)
+
+    let! overrideEntries =
+      table
+      |> Toml.tryGet "override"
+      |> Option.map (fun tables ->
+        tables
+        |> Toml.asTableArray
+        |> Result.bind (fun x ->
+          x.Items
+          |> Seq.map Override.fromToml
+          |> Result.all
+        )
+        |> Result.mapError ManifestParseError.TomlError
+      )
+      |> Option.defaultValue (Result.Ok [])
+
+    let! overrides =
+      overrideEntries
+      |> Seq.fold
+        (fun state next -> result {
+          let! s = state
+          let nextOverride = next
+          match s |> Map.tryFind nextOverride.Package with
+          | Some substitution ->
+            return!
+              if nextOverride.Substitution = substitution
+              then
+                state
+              else
+                (nextOverride.Package, nextOverride.Substitution, substitution)
+                |> ManifestParseError.ConflictingOverrides
+                |> Result.Error
+          | None ->
+            return
+              s
+              |> Map.add nextOverride.Package nextOverride.Substitution
         })
         (Ok Map.empty)
 
@@ -325,6 +371,7 @@ module Manifest =
       Dependencies = dependencies
       PrivateDependencies = privateDependencies
       Locations = locations
+      Overrides = overrides
     }
   }
 
@@ -413,6 +460,19 @@ module Manifest =
         "\n"
       )
       |> String.concat ""
+    ) +
+    (
+      x.Overrides
+      |> Map.toSeq
+      |> Seq.collect (fun (package, substitution) ->
+        [
+          "[[override]]"
+          "package = \"" + PackageIdentifier.show package + "\""
+          "substitution = \"" + substitution + "\""
+          ""
+        ]
+      )
+      |> String.concat "\n"
     )
 
   let hash manifest =
