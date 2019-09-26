@@ -17,6 +17,7 @@ type Command =
   | UpgradeDependencies of List<PackageIdentifier>
   | AddDependencies of List<Dependency>
   | RemoveDependencies of List<PackageIdentifier>
+  | Explain of PackageIdentifier
   | ShowCompletions
 
 module Command =
@@ -154,6 +155,15 @@ module Command =
     return RemoveDependencies deps
   }
 
+  let explainParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "explain"
+    do! CharParsers.spaces1
+    let! package = PackageIdentifier.parser
+    do! CharParsers.spaces
+    return Explain package
+  }
+
   let showCompletionsParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "show-completions"
@@ -175,6 +185,7 @@ module Command =
       <|> versionParser
       <|> helpParser
       <|> showCompletionsParser
+      <|> explainParser
       <|> startParser
 
     do! CharParsers.spaces
@@ -277,9 +288,10 @@ module Command =
       | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies
       | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
+      | Explain package -> ExplainCommand.task context package
       | ShowCompletions -> ShowCompletions.task context
 
-    do! context.Console.Flush()
+    do! context.Console.Flush ()
 
     return returnCode
   }
