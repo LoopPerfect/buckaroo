@@ -104,16 +104,24 @@ let ``Manifest.toToml roundtrip 1`` () =
 [<Fact>]
 let ``Manifest.toToml roundtrip 2`` () =
   let expected : Manifest = {
-    Targets = Set [
-      {Folders=["foo"; "bar"]; Name = "xxx"}
-      {Folders=["foo"; "bar"]; Name = "yyy"}
-    ]
-    Tags = Set ["c++"; "java"; "ml"]
+    Targets =
+      Set [
+        { Folders = [ "foo"; "bar"]; Name = "xxx" }
+        { Folders = [ "foo"; "bar"]; Name = "yyy" }
+      ]
+    Tags = Set [ "c++"; "java"; "ml" ]
     Locations = Map.ofSeq [
-      ({Owner = "test"; Project = "test1"}, PackageSource.Http (Map.ofSeq [
-        (Version.SemVer { SemVer.zero with Major = 2 }, {
+      ({Owner = "testorg1"; Project = "test1"}, PackageSource.Http (Map.ofSeq [
+        (Version.SemVer { SemVer.zero with Major = 1 }, {
           Url = "https://test.com"
           StripPrefix = Some "prefix"
+          Type = Some ArchiveType.Zip
+        })
+      ]));
+      ({Owner = "testorg2"; Project = "test2"}, PackageSource.Http (Map.ofSeq [
+        (Version.SemVer { SemVer.zero with Major = 2 }, {
+          Url = "https://testing.com"
+          StripPrefix = Some "other_prefix"
           Type = Some ArchiveType.Zip
         })
       ]))
@@ -128,6 +136,33 @@ let ``Manifest.toToml roundtrip 2`` () =
       Constraint = Any <|Set[Constraint.Exactly (Version.SemVer SemVer.zero)]
       Package = PackageIdentifier.GitHub { Owner = "abc"; Project = "def" }
     }]
+    Overrides = Map.empty
+  }
+
+  let actual =  expected |> Manifest.toToml |> Manifest.parse
+
+  // 3 new-lines indicates poor formatting
+  Assert.True (
+    expected
+    |> Manifest.toToml
+    |> String.contains "\n\n\n"
+    |> not
+  )
+
+  Assert.Equal (Result.Ok expected, actual)
+
+[<Fact>]
+let ``Manifest.toToml roundtrip 3`` () =
+  let expected : Manifest = {
+    Manifest.zero with
+      Overrides =
+        Map.empty
+        |> Map.add
+          (PackageIdentifier.GitHub { Owner = "abc"; Project = "def" })
+          (PackageIdentifier.GitHub { Owner = "abc"; Project = "pqr" })
+        |> Map.add
+          (PackageIdentifier.GitHub { Owner = "ijk"; Project = "lmo" })
+          (PackageIdentifier.GitHub { Owner = "gfh"; Project = "xyz" })
   }
 
   let actual =  expected |> Manifest.toToml |> Manifest.parse
