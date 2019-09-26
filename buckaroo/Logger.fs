@@ -6,6 +6,7 @@ open Buckaroo.RichOutput
 
 type Logger =
   {
+    Print : string -> Unit
     Info : string -> Unit
     RichInfo : RichOutput -> Unit
     Success : string -> Unit
@@ -22,6 +23,9 @@ let createLogger (console : ConsoleManager) (componentName : string option) =
     componentName
     |> Option.map (fun x -> "[" + x + "] " |> text |> foreground ConsoleColor.DarkGray)
     |> Option.defaultValue (text "")
+
+  let print (x : string) =
+    console.Write (componentPrefix + x, LoggingLevel.Info)
 
   let prefix =
     "info "
@@ -71,6 +75,7 @@ let createLogger (console : ConsoleManager) (componentName : string option) =
     console.Write (componentPrefix + prefix + x, LoggingLevel.Info)
 
   {
+    Print = print
     Info = info
     RichInfo = richInfo
     Success = success
