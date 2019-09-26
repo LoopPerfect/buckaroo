@@ -25,23 +25,31 @@ let private isWindows () =
 let private determineBuildSystem (logger : Logger) = async {
   let useBazel =
     Environment.GetEnvironmentVariable "BUCKAROO_USE_BAZEL"
-    |> isNull
+    |> String.IsNullOrWhiteSpace
     |> not
 
   if useBazel
   then
     return Bazel
   else
-    let! hasBuckConfig = Files.exists ".buckconfig"
+    let useBuck =
+      Environment.GetEnvironmentVariable "BUCKAROO_USE_BUCK"
+      |> String.IsNullOrWhiteSpace
+      |> not
 
-    if hasBuckConfig
+    if useBuck
     then
-      logger.Warning "Using the Buck build-system since a .buckconfig file was found. Set BUCKAROO_USE_BAZEL to override this. "
       return Buck
     else
-      return Bazel
-}
+      let! hasBuckConfig = Files.exists ".buckconfig"
 
+      if hasBuckConfig
+      then
+        logger.Warning "Using the Buck build-system since a .buckconfig file was found. Set BUCKAROO_USE_BAZEL to override this or BUCKAROO_USE_BUCK to hide this warning. "
+        return Buck
+      else
+        return Bazel
+}
 
 let private getCachePath = async {
   return
