@@ -6,7 +6,7 @@ open Buckaroo.Console
 open Buckaroo.RichOutput
 open Buckaroo.Logger
 
-type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager, buildSystem : BuildSystem) =
+type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
   let logger = createLogger console (Some "explorer")
   let toOptional = Async.Catch >> (Async.map Choice.toOption)
 
@@ -308,16 +308,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
                 (Manifest.ManifestParseError.show error)
               raise <| System.Exception errorMessage
         | None ->
-          // This might be a Bazel project
-          if buildSystem = Bazel
-          then
-            do!
-              fetchFile location "WORKSPACE"
-              |> Async.Ignore
-
-            return Manifest.zero
-          else
-            return raise <| System.Exception ("No manifest was found at " + (PackageLock.show location) + ". ")
+          return raise <| System.Exception ("No manifest was found at " + (PackageLock.show location) + ". ")
       }
 
     member this.FetchLock (location, versions) =

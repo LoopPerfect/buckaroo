@@ -88,7 +88,7 @@ let getContext loggingLevel fetchStyle = async {
 
   let! buildSystem = determineBuildSystem (createLogger consoleManager None)
 
-  let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager, buildSystem)
+  let sourceExplorer = DefaultSourceExplorer(consoleManager, downloadManager, gitManager)
 
   return {
     Console = consoleManager
