@@ -331,7 +331,7 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
   return buckarooConfig |> BuckConfig.render
 }
 
-let private generateBazelDefs (targets : Set<TargetIdentifier>) =
+let private generateBazelDefs (packages : Map<PackageIdentifier, PackageIdentifier list>) (targets : Set<TargetIdentifier>) =
   seq {
     yield "def buckaroo_deps():"
 
@@ -344,7 +344,19 @@ let private generateBazelDefs (targets : Set<TargetIdentifier>) =
       })
 
     yield "  ]"
+    yield ""
 
+    yield "def buckaroo_workspace(package_name):"
+    yield!
+      packages
+      |> Map.toSeq
+      |> Seq.collect (fun (package, parents) -> seq {
+        yield "  if package_name == \"" + (PackageIdentifier.show package) + "\":"
+        yield "    return \"@" + (packageWorkspaceName parents package) + "\""
+        yield ""
+      })
+
+    yield "  fail(package_name + \" is not a recognized package\")"
     yield ""
   }
   |> String.concat "\n"
@@ -407,13 +419,31 @@ let private generateTopLevelBazelDefs (sourceExplorer : ISourceExplorer) (lock :
 
       yield "  return None"
       yield ""
-      yield generateBazelDefs lock.Dependencies
+
+      let accessiblePackages =
+        lock.Packages
+        |> Map.map (fun _ _ -> [])
+
+      yield generateBazelDefs accessiblePackages lock.Dependencies
     }
     |> String.concat "\n"
 }
 
 let rec private installBazelPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
-  do! Files.touch (Paths.combine root "WORKSPACE")
+  let! workspaceFileExists = Files.exists (Paths.combine root "WORKSPACE")
+
+  if not workspaceFileExists
+  then
+    let content =
+      seq {
+        yield "load(\"//buckaroo:defs.bzl\", \"buckaroo_setup\")"
+        yield ""
+        yield "buckaroo_setup()"
+        yield ""
+      }
+      |> String.concat "\n"
+
+    do! Files.writeFile (Paths.combine root "WORKSPACE") content
 
   // Install packages
   for (package, lockedPackage) in packages |> Map.toSeq do
@@ -435,6 +465,15 @@ let rec private installBazelPackages (context : Tasks.TaskContext) (root : strin
     do! Files.touch (Paths.combineAll [ installPath; Constants.PackagesDirectory; "BUILD.bazel" ])
 
     let! manifest = context.SourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
+
+    let accessiblePackages =
+      manifest.Dependencies
+      |> Seq.map (fun d -> (d.Package, parents))
+      |> Seq.append (
+        manifest.PrivateDependencies
+        |> Seq.map (fun d -> (d.Package, parents @ [ package ]))
+      )
+      |> Map.ofSeq
 
     let! targets =
       asyncSeq {
@@ -483,6 +522,7 @@ let rec private installBazelPackages (context : Tasks.TaskContext) (root : strin
 
     let buckarooDefs =
       generateBazelDefs
+        accessiblePackages
         targets
 
     do! Files.writeFile (Path.Combine(installPath, Constants.PackagesDirectory, Constants.BuckarooDefsFileName)) buckarooDefs
