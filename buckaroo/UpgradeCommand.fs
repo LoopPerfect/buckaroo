@@ -25,7 +25,8 @@ let task context (packages : List<PackageIdentifier>) = async {
         let! lock = Tasks.readLock
         let! partial =
           if packages |> Seq.isEmpty
-          then async { return Solution.empty }
+          then
+            async { return Solution.empty }
           else
             async {
               let! solution = Solver.fromLock context.SourceExplorer lock
@@ -48,9 +49,16 @@ let task context (packages : List<PackageIdentifier>) = async {
 
   if resolveSucceeded
   then
-    do! InstallCommand.task context
+    let! install = InstallCommand.task context
+
+    if install <> 0
+    then
+      logger.Error "Upgraded version(s) were found but the packages could not be installed. "
+      return 1
+    else
+      logger.Success "The upgrade is complete. "
+      return 0
   else
     logger.Error "The upgrade failed. No packages were changed. "
-
-  return ()
+    return 1
 }

@@ -55,10 +55,10 @@ module Git =
 
     let invalidSequences = [ ".."; "@{"; "\\"; "//" ]
 
-    if invalidSequences |> Seq.exists (fun x -> branchOrTag.Contains x)
-      then
-        let errorMessage = "Cannot contain any of: " + (invalidSequences |> String.concat ", ")
-        return! fail errorMessage
+    if invalidSequences |> Seq.exists branchOrTag.Contains
+    then
+      let errorMessage = "Cannot contain any of: " + (invalidSequences |> String.concat ", ")
+      return! fail errorMessage
     else
       return branchOrTag
   }

@@ -5,6 +5,7 @@
   <ItemGroup>
     <Compile Include="Option.fs" />
     <Compile Include="Result.fs" />
+    <Compile Include="Strings.fs" />
     <Compile Include="Glob.fs" />
     <Compile Include="RichOutput.fs" />
     <Compile Include="Constants.fs" />
@@ -12,6 +13,7 @@
     <Compile Include="Paths.fs" />
     <Compile Include="ArchiveType.fs" />
     <Compile Include="Toml.fs" />
+    <Compile Include="BuildSystem.fs" />
     <Compile Include="BuckConfig.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="Archive.fs" />
@@ -33,6 +35,7 @@
     <Compile Include="Dependency.fs" />
     <Compile Include="PackageLocation.fs" />
     <Compile Include="PackageSource.fs" />
+    <Compile Include="Override.fs" />
     <Compile Include="PackageLock.fs" />
     <Compile Include="Manifest.fs" />
     <Compile Include="ResolvedVersion.fs" />
@@ -43,6 +46,7 @@
     <Compile Include="GitLabApi.fs" />
     <Compile Include="SourceExplorer.fs" />
     <Compile Include="DefaultSourceExplorer.fs" />
+    <Compile Include="OverrideSourceExplorer.fs" />
     <Compile Include="Tasks.fs" />
     <Compile Include="SearchStrategy.fs" />
     <Compile Include="Prefetch.fs" />
@@ -55,6 +59,7 @@
     <Compile Include="QuickstartCommand.fs" />
     <Compile Include="AddCommand.fs" />
     <Compile Include="UpgradeCommand.fs" />
+    <Compile Include="ExplainCommand.fs" />
     <Compile Include="VersionCommand.fs" />
     <Compile Include="ShowCompletions.fs" />
     <Compile Include="Command.fs" />

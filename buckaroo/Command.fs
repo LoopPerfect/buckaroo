@@ -1,8 +1,10 @@
 namespace Buckaroo
 
 open FSharp.Control
+open FSharpx
 open Buckaroo.Console
 open Buckaroo.Tasks
+open Buckaroo.Logger
 
 type Command =
   | Start
@@ -15,6 +17,7 @@ type Command =
   | UpgradeDependencies of List<PackageIdentifier>
   | AddDependencies of List<Dependency>
   | RemoveDependencies of List<PackageIdentifier>
+  | Explain of PackageIdentifier
   | ShowCompletions
 
 module Command =
@@ -152,6 +155,15 @@ module Command =
     return RemoveDependencies deps
   }
 
+  let explainParser = parse {
+    do! CharParsers.spaces
+    do! CharParsers.skipString "explain"
+    do! CharParsers.spaces1
+    let! package = PackageIdentifier.parser
+    do! CharParsers.spaces
+    return Explain package
+  }
+
   let showCompletionsParser : Parser<Command, Unit> = parse {
     do! CharParsers.spaces
     do! CharParsers.skipString "show-completions"
@@ -173,6 +185,7 @@ module Command =
       <|> versionParser
       <|> helpParser
       <|> showCompletionsParser
+      <|> explainParser
       <|> startParser
 
     do! CharParsers.spaces
@@ -234,7 +247,7 @@ module Command =
       | Result.Ok solution ->
         do! Tasks.writeManifest newManifest
         do! Tasks.writeLock (Lock.fromManifestAndSolution newManifest solution)
-        do! InstallCommand.task context
+        do! InstallCommand.task context |> Async.Ignore
 
         System.Console.WriteLine ("Success. ")
       | _ -> ()
@@ -242,31 +255,43 @@ module Command =
 
   let init context = async {
     let path = Constants.ManifestFileName
+    let logger = createLogger context.Console None
+
     if File.Exists(path) |> not
     then
       use sw = File.CreateText(path)
-      sw.Write(Manifest.zero |> Manifest.show)
-      context.Console.Write("Wrote " + Constants.ManifestFileName)
+
+      sw.Write (Manifest.zero |> Manifest.show)
+      logger.Success ("Wrote " + Constants.ManifestFileName)
+
+      return 0
     else
-      context.Console.Write( ("warning " |> warn) + ("There is already a buckaroo.toml file in this directory" |> text))
+      logger.Warning "There is already a buckaroo.toml file in this directory. "
+
+      return 1
   }
 
   let runCommand loggingLevel fetchStyle command = async {
     let! context = Tasks.getContext loggingLevel fetchStyle
 
-    do!
+    let! returnCode =
       match command with
       | Start -> StartCommand.task context
       | Init -> init context
       | Help -> HelpCommand.task context
       | Version -> VersionCommand.task context
-      | Resolve style -> ResolveCommand.task context Solution.empty style |> Async.Ignore
+      | Resolve style ->
+        ResolveCommand.task context Solution.empty style
+        |> Async.map (function | true -> 0 | false -> 1)
       | Install -> InstallCommand.task context
       | Quickstart -> QuickstartCommand.task context
       | UpgradeDependencies dependencies -> UpgradeCommand.task context dependencies
       | AddDependencies dependencies -> AddCommand.task context dependencies
       | RemoveDependencies dependencies -> RemoveCommand.task context dependencies
+      | Explain package -> ExplainCommand.task context package
       | ShowCompletions -> ShowCompletions.task context
 
-    do! context.Console.Flush()
+    do! context.Console.Flush ()
+
+    return returnCode
   }

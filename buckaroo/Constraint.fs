@@ -84,7 +84,7 @@ module Constraint =
       (xs |> Seq.map chanceOfSuccess |> Seq.append [ 0 ] |> Seq.sum)
     | Complement x -> MaxChanceOfSuccess - (chanceOfSuccess x)
 
-  // TODO: Better Sorting!!!!!
+  // TODO: Better Sorting!
   let rec compare (x : Constraint) (y : Constraint) : int =
     match (x, y) with
     | (Exactly u, Exactly v) -> Version.compare u v

@@ -1,6 +1,6 @@
 namespace Buckaroo
 
-type TargetIdentifier = { 
-  Package : PackageIdentifier; 
-  Target : Target; 
+type TargetIdentifier = {
+  PackagePath : PackageIdentifier list * PackageIdentifier
+  Target : Target
 }

@@ -54,7 +54,7 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
 
       return false
     | Result.Ok solution ->
-      "A solution to the constraints was found" |> text |> logger.RichSuccess
+      "A solution to the constraints was found. " |> logger.Success
       let lock = Lock.fromManifestAndSolution manifest solution
 
       try
@@ -66,7 +66,7 @@ let task (context : Tasks.TaskContext) partialSolution resolutionStyle = async {
 
       do! Tasks.writeLock lock
 
-      "The lock-file was updated" |> text |> logger.RichSuccess
+      "The lock-file was updated. " |> logger.Success
 
       return true
   }

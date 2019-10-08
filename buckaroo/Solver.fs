@@ -1,13 +1,13 @@
 module Buckaroo.Solver
 
 open FSharp.Control
+open FSharpx
 open FSharpx.Collections
 open Buckaroo.Tasks
 open Buckaroo.Console
 open Buckaroo.RichOutput
 open Buckaroo.Logger
 open Buckaroo.Constraint
-open Buckaroo.Result
 open Buckaroo.SearchStrategy
 open Buckaroo.Prefetch
 
@@ -19,18 +19,18 @@ type ResolutionPath =
 | Root of Manifest
 | Node of PackageIdentifier * Set<Constraint> * ResolvedVersion
 
-type SolverState = {
-  Locations : Map<AdhocPackageIdentifier, PackageSource>
-  Root : Set<Dependency>
-  Selections : Map<PackageIdentifier, (ResolvedVersion * Solution)>
-  Hints : Map<PackageIdentifier, List<LockedPackage>>
-}
+type SolverState =
+  {
+    Locations : Map<AdhocPackageIdentifier, PackageSource>
+    Root : Set<Dependency>
+    Selections : Map<PackageIdentifier, (ResolvedVersion * Solution)>
+    Hints : Map<PackageIdentifier, List<LockedPackage>>
+  }
 
 type ResolutionRequest =
 | MarkBadPath of List<ResolutionPath> * PackageConstraint * SearchStrategyError * AsyncReplyChannel<Unit>
 | ProposeCandidates of Constraints * PackageConstraint * seq<LockedPackage> * AsyncReplyChannel<AsyncSeq<Result<ResolvedVersion, SearchStrategyError>>>
 | GetCandidates of Constraints * PackageConstraint * PackageSources * AsyncReplyChannel<AsyncSeq<Result<(PackageIdentifier * LocatedVersionSet), SearchStrategyError>>>
-
 
 let private ifError x =
   match x with
@@ -64,9 +64,9 @@ let constraintsOf (ds: seq<PackageConstraint>) =
 
 let constraintsOfSelection selections =
   Map.valueList selections
-  |> Seq.map (
-    (fun m -> m.Manifest.Dependencies) >>
-    (Set.map toPackageConstraint)
+  |> Seq.map (fun m ->
+    m.Manifest.Dependencies
+    |> Set.map toPackageConstraint
   )
   |> Seq.fold Set.union Set.empty
   |> constraintsOf
@@ -81,7 +81,11 @@ let pruneSelections (selections: Map<PackageIdentifier, ResolvedVersion * Soluti
     if notVisited |> List.isEmpty
     then ()
     else
-      let nextVisited = deps |> Seq.map (fun d -> d.Package) |> Set |> Set.union visited
+      let nextVisited =
+        deps
+        |> Seq.map (fun d -> d.Package)
+        |> Set
+        |> Set.union visited
 
       yield!
         notVisited
@@ -212,14 +216,12 @@ let fetchCandidatesForConstraint sourceExplorer locations p c = asyncSeq {
       |> Result.Error
 }
 
-let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionRequest> =
+let resolutionManager (sourceExplorer : ISourceExplorer) (logger : Logger) : MailboxProcessor<ResolutionRequest> =
   MailboxProcessor.Start(fun inbox -> async {
     let mutable unresolvableCores : Map<Set<PackageConstraint>, SearchStrategyError> = Map.empty
     let mutable underconstraintDeps : Set<PackageConstraint> = Set.empty
     let mutable world : Map<PackageConstraint, Set<Set<PackageConstraint>>> = Map.empty
 
-    let sourceExplorer = context.SourceExplorer
-    let logger = createLogger context.Console (Some "solver")
     let findBadCores (constraints : Constraints) =
       unresolvableCores
         |> Map.toSeq
@@ -276,7 +278,9 @@ let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionReque
             yield Result.Error <| LimitReached (d, Constants.MaxConsecutiveFailures)
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
-            let! manifest = sourceExplorer.FetchManifest (lock, versions)
+            let! manifest =
+              sourceExplorer.FetchManifest (lock, versions)
+
             let packageConstraints =
               manifest.Dependencies
               |> Set.map (fun d -> (d.Package, d.Constraint |> toDnf))
@@ -313,7 +317,9 @@ let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionReque
             yield Result.Error e
           | Result.Ok (_, (location, versions)) ->
             let! lock = sourceExplorer.LockLocation location
-            let! manifest = sourceExplorer.FetchManifest (lock, versions)
+            let! manifest =
+              sourceExplorer.FetchManifest (lock, versions)
+
             let conflicts =
               manifest.Dependencies
               |> Seq.map toPackageConstraint
@@ -337,14 +343,15 @@ let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionReque
       | Node (_, _, rv) -> rv.Manifest.Dependencies
 
     while true do
-      let! req = inbox.Receive()
+      let! req = inbox.Receive ()
       match req with
       | ProposeCandidates (constraints, (p, cs), lockedPackages, channel) ->
         lockedPackages
         |> AsyncSeq.ofSeq
         |> AsyncSeq.mapAsync(fun lp -> async {
           try
-            let! manifest = sourceExplorer.FetchManifest (lp.Location, lp.Versions)
+            let! manifest =
+              sourceExplorer.FetchManifest (lp.Location, lp.Versions)
 
             let conflicts =
               manifest.Dependencies
@@ -358,11 +365,13 @@ let resolutionManager (context : TaskContext) : MailboxProcessor<ResolutionReque
             then
               return Result.Error (NoManifest p) // TODO ...
             else
-              let rv: ResolvedVersion = {
-                Manifest = manifest
-                Lock = lp.Location
-                Versions = lp.Versions
-              }
+              let rv : ResolvedVersion =
+                {
+                  Manifest = manifest
+                  Lock = lp.Location
+                  Versions = lp.Versions
+                }
+
               return Result.Ok rv
           with _ ->
             return Result.Error (NoManifest p)
@@ -496,7 +505,6 @@ let collectPrivateHints (state : SolverState) (p : PackageIdentifier) =
   |> Map.ofSeq
 
 let getCandidates (resolver: MailboxProcessor<ResolutionRequest>) (sourceExplorer: ISourceExplorer) state selections p cs = asyncSeq {
-
     let constraints =
       selections
       |> Map.valueList
@@ -525,13 +533,15 @@ let getCandidates (resolver: MailboxProcessor<ResolutionRequest>) (sourceExplore
 
     yield!
       requested
-      |> AsyncSeq.mapAsync(fun candidate -> async {
+      |> AsyncSeq.mapAsync (fun candidate -> async {
         match candidate with
         | Result.Error e ->
           return Result.Error e
         | Result.Ok (_, (location, versions)) ->
           let! lock = sourceExplorer.LockLocation location
-          let! manifest = sourceExplorer.FetchManifest (lock, versions)
+          let! manifest =
+            sourceExplorer.FetchManifest (lock, versions)
+
           let resolvedVersion = {
             Lock = lock
             Versions = versions
@@ -586,14 +596,16 @@ let upgradeStrategy resolver sourceExplorer state selections = asyncSeq {
 }
 
 let private privateStep step ((p, _), state, rv) =
-  let m = rv.Manifest
-  let privateState : SolverState = {
-    Hints = collectPrivateHints state p
-    Root = m.PrivateDependencies
-    Locations = state.Locations
-    Selections = Map.empty
-  }
-  (step privateState [ Root m ])
+  let manifest = rv.Manifest
+  let privateState : SolverState =
+    {
+      state with
+        Hints = collectPrivateHints state p
+        Root = manifest.PrivateDependencies
+        Locations = state.Locations
+        Selections = Map.empty
+    }
+  (step privateState [ Root manifest ])
     |> AsyncSeq.choose ifOk
     |> AsyncSeq.tryFirst
 
@@ -630,12 +642,15 @@ let rec private step (context : TaskContext) (resolver : MailboxProcessor<Resolu
                 yield Result.Error ((p, cs), NoPrivateSolution p) // TODO: propagate error
               | Some ps ->
                 let node = Node (p, cs, rv)
-                let nextState = {
-                   state with
-                     Selections = selections |> Map.add p (rv, ps)
-                }
+                let nextState =
+                  {
+                    state with
+                      Selections = selections |> Map.add p (rv, ps)
+                  }
+
                 yield! nextStep nextState (node :: path)
-          | Result.Error e -> yield Result.Error e
+          | Result.Error e ->
+            yield Result.Error e
       }
       |> AsyncSeq.cache
 
@@ -656,7 +671,7 @@ let rec private step (context : TaskContext) (resolver : MailboxProcessor<Resolu
         |> AsyncSeq.distinctUntilChanged
 
       for ((p, cs), error) in errors do
-        context.Console.Write(string error, LoggingLevel.Trace)
+        context.Console.Write (string error, LoggingLevel.Trace)
         do! resolver.PostAndAsyncReply (fun ch -> MarkBadPath (path, (p, cs), error, ch))
 }
 
@@ -676,26 +691,30 @@ let solutionCollector resolutions = async {
 let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manifest) (style : ResolutionStyle) (lock : Lock option) = async {
   let hints =
     lock
-    |> Option.map (fun l -> l.Packages |> (Map.map  (fun _ v -> [ v ])))
+    |> Option.map (fun l -> l.Packages |> (Map.map (fun _ v -> [ v ])))
     |> Option.defaultValue Map.empty
 
-  let state = {
-    Root = Set.union
-      manifest.Dependencies
-      manifest.PrivateDependencies
-    Hints = hints
-    Selections = partialSolution.Resolutions
-    Locations = manifest.Locations
-  }
+  let state =
+    {
+      Root =
+        Set.union
+          manifest.Dependencies
+          manifest.PrivateDependencies
+      Hints = hints
+      Selections = partialSolution.Resolutions
+      Locations = manifest.Locations
+    }
 
-  let resolver = resolutionManager context
+  let sourceExplorer = OverrideSourceExplorer (context.SourceExplorer, manifest.Overrides)
 
-  let prefetcher = Prefetcher (context.SourceExplorer, 10)
+  let resolver = resolutionManager sourceExplorer (createLogger context.Console (Some "solver"))
+
+  let prefetcher = Prefetcher (sourceExplorer, 10)
 
   let strategy =
     match style with
-    | Quick -> quickStrategy resolver context.SourceExplorer
-    | Upgrading -> upgradeStrategy resolver context.SourceExplorer
+    | Quick -> quickStrategy resolver sourceExplorer
+    | Upgrading -> upgradeStrategy resolver sourceExplorer
 
   let resolutions =
     step context resolver prefetcher strategy state [ Root manifest ]
@@ -705,14 +724,16 @@ let solve (context : TaskContext) (partialSolution : Solution) (manifest : Manif
     |> AsyncSeq.map (Result.mapError snd)
     |> solutionCollector
 
-  context.Console.Write(string result, LoggingLevel.Trace)
+  context.Console.Write (string result, LoggingLevel.Trace)
 
   return result
 }
 
-let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Solution> = async {
+let fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Solution> = async {
   let rec packageLockToSolution (locked : LockedPackage) : Async<ResolvedVersion * Solution> = async {
-    let! manifest = sourceExplorer.FetchManifest (locked.Location, locked.Versions)
+    let! manifest =
+      sourceExplorer.FetchManifest (locked.Location, locked.Versions)
+
     let! resolutions =
       locked.PrivatePackages
         |> Map.toSeq
@@ -724,9 +745,9 @@ let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Soluti
         |> AsyncSeq.toListAsync
 
     let resolvedVersion : ResolvedVersion = {
-      Versions = locked.Versions;
-      Lock = locked.Location;
-      Manifest = manifest;
+      Versions = locked.Versions
+      Lock = locked.Location
+      Manifest = manifest
     }
 
     return (resolvedVersion, { Resolutions = resolutions |> Map.ofSeq })
@@ -736,21 +757,28 @@ let rec fromLock (sourceExplorer : ISourceExplorer) (lock : Lock) : Async<Soluti
     lock.Packages
     |> Map.toSeq
     |> AsyncSeq.ofSeq
-    |> AsyncSeq.mapAsync(fun (package, lockedPakckage) -> async {
-      let! solution = lockedPakckage |> packageLockToSolution
+    |> AsyncSeq.mapAsync (fun (package, lockedPackage) -> async {
+      let! solution =
+        lockedPackage
+        |> packageLockToSolution
+
       return (package, solution)
     })
     |> AsyncSeq.toListAsync
 
-  return {
-    Resolutions = resolutions |> Map.ofSeq
-  }
+  return
+    {
+      Resolutions =
+        resolutions
+        |> Map.ofSeq
+    }
 }
 
-let unlock (solution : Solution) (packages : Set<PackageIdentifier>) : Solution = {
-  Resolutions =
-    solution.Resolutions
+let unlock (solution : Solution) (packages : Set<PackageIdentifier>) : Solution =
+  {
+    Resolutions =
+      solution.Resolutions
       |> Map.toSeq
       |> Seq.filter (fst >> packages.Contains >> not)
       |> Map.ofSeq
-}
+  }

@@ -1,15 +1,14 @@
 module Buckaroo.Tests.Solver
 
 open Xunit
-open Buckaroo
 open FSharp.Control
-
+open Buckaroo
 open Buckaroo.Console
 open Buckaroo.Tasks
 open Buckaroo.Tests
 
 type CookBook = List<PackageIdentifier * Set<Version> * Manifest>
-type LockBookEntries = List<(string*int) * List<string*int*Set<Version>>>
+type LockBookEntries = List<(string * int) * List<string * int * Set<Version>>>
 type LockBook = Map<PackageLock, Lock>
 
 let package name = PackageIdentifier.Adhoc {
@@ -18,38 +17,41 @@ let package name = PackageIdentifier.Adhoc {
 }
 
 let br b = Version.Git (GitVersion.Branch b)
-let rev (x : int) = Version.Git(GitVersion.Revision (x.ToString()))
-let ver (x : int) = Version.SemVer {SemVer.zero with Major = x}
+let rev (x : int) = Version.Git (GitVersion.Revision (string x))
+let ver (x : int) = Version.SemVer { SemVer.zero with Major = x }
 
-let dep (p : string, c: Constraint) : Buckaroo.Dependency = {
-    Package = package p;
-    Constraint = c;
+let dep (p : string, c: Constraint) : Buckaroo.Dependency =
+  {
+    Package = package p
+    Constraint = c
     Targets = None
-}
+  }
 
-let manifest xs = {
-  Manifest.zero
-    with Dependencies = xs |> List.map dep |> Set.ofList
-}
+let manifest xs =
+  {
+    Manifest.zero
+      with Dependencies = xs |> List.map dep |> Set.ofList
+  }
 
 let lockPackage (p, r, vs) : LockedPackage = {
   Versions = Set vs
   Location = PackageLock.GitHub {
-    Package = {Owner = "test"; Project = p};
-    Revision = r.ToString()
+    Package = { Owner = "test"; Project = p }
+    Revision = string r
   }
   PrivatePackages = Map.empty
 }
 
 let packageLock (p, r) : PackageLock =  PackageLock.GitHub {
-  Package = {Owner = "test"; Project = p};
-  Revision = r.ToString()
+  Package = { Owner = "test"; Project = p }
+  Revision = string r
 }
 
 let lock deps : Lock = {
   ManifestHash = "";
-  Dependencies = Set[]
-  Packages = deps
+  Dependencies = Set []
+  Packages =
+    deps
     |> Seq.map (fun (name, r, vs) -> (package name, lockPackage (name, r, vs)))
     |> Map.ofSeq
 }
@@ -61,7 +63,7 @@ let lockBookOf (entries : LockBookEntries) : LockBook =
 
 type TestingSourceExplorer (cookBook : CookBook, lockBook : LockBook) =
   interface ISourceExplorer with
-    member this.FetchVersions (_ : PackageSources) (package: PackageIdentifier) : AsyncSeq<Version>  = asyncSeq {
+    member this.FetchVersions (_ : PackageSources) (package: PackageIdentifier) : AsyncSeq<Version> = asyncSeq {
       yield!
         cookBook
           |> Seq.choose (fun (p, v, _) ->
@@ -123,6 +125,7 @@ let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBook
   let lockBook = lockBookOf lockBookEntries
   let console = ConsoleManager (LoggingLevel.Silent)
   let context : TaskContext = {
+    BuildSystem = BuildSystem.Bazel
     Console = console
     DownloadManager = DownloadManager(console, "/tmp")
     GitManager = new GitManager(CacheFirst, console, new GitCli(console), "/tmp")
@@ -130,19 +133,25 @@ let solve (partial : Solution) (cookBook : CookBook) (lockBookEntries : LockBook
   }
 
   Buckaroo.Solver.solve
-    context partial
-    root style
+    context
+    partial
+    root
+    style
     (lockBook |> Map.tryFind (packageLock ("root", 0)))
 
 let getLockedRev (p : string) (r : _) =
   match r with
   | Ok solution ->
+    if not (Map.containsKey (package p) solution.Resolutions)
+    then
+      failwith (p + " is not in the solution")
+
     let (resolved, _) = solution.Resolutions.[package p]
+
     match resolved.Lock with
     | PackageLock.GitHub g -> g.Revision
     | _ -> ""
   | _ -> ""
-()
 
 let isOk (r : _) =
   match r with
@@ -605,9 +614,53 @@ let ``Solver can handle the simple triangle case`` () =
   let solution =
     solve
       completeSolution
-      cookBook lockBookSpec root
+      cookBook
+      lockBookSpec
+      root
       ResolutionStyle.Upgrading
       |> Async.RunSynchronously
 
+  Assert.Equal ("1", getLockedRev "a" solution)
+  Assert.Equal ("1", getLockedRev "b" solution)
+
+
+[<Fact>]
+let ``Solver can follow overrides`` () =
+  let cookBook = [
+    (package "x",
+      Set [ver 1],
+      manifest [("b", Exactly (ver 1))])
+    (package "y",
+      Set [ver 1],
+      manifest [])
+  ]
+
+  let lockBookSpec = [
+    (("root", 0), [
+      ("x", 1, Set [ ver 1 ])
+      ("y", 1, Set [ ver 1 ])
+    ])
+  ]
+
+  let root = {
+    manifest [
+      ("a", Exactly (ver 1) )
+    ] with
+      Overrides =
+        Map.empty
+        |> Map.add (package "a") (package "x")
+        |> Map.add (package "b") (package "y")
+  }
+
+  let solution =
+    solve
+      Solution.empty
+      cookBook
+      lockBookSpec
+      root
+      ResolutionStyle.Upgrading
+      |> Async.RunSynchronously
+
+  // We should find a and b in solution, but they point to locations from x and y
   Assert.Equal ("1", getLockedRev "a" solution)
   Assert.Equal ("1", getLockedRev "b" solution)

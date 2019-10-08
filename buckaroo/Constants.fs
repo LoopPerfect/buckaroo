@@ -1,7 +1,7 @@
 module Buckaroo.Constants
 
 [<Literal>]
-let Version = "2.2.0"
+let Version = "3.0.0"
 
 [<Literal>]
 let PackagesDirectory = "buckaroo"
@@ -17,6 +17,9 @@ let LockFileName = "buckaroo.lock.toml"
 
 [<Literal>]
 let BuckarooMacrosFileName = "buckaroo_macros.bzl"
+
+[<Literal>]
+let BuckarooDefsFileName = "defs.bzl"
 
 [<Literal>]
 let BuckarooDepsFileName = "BUCKAROO_DEPS"

@@ -3,7 +3,7 @@ open System
 [<EntryPoint>]
 let main argv =
   async {
-    let session = Guid.NewGuid() |> string
+    let session = Guid.NewGuid () |> string
     let input = argv |> String.concat " "
 
     let! telemetry =
@@ -15,12 +15,12 @@ let main argv =
     let! exitCode = async {
       try
         match Buckaroo.Command.parse input with
-        | Result.Ok (command, loggingLevel, fetchStyle) ->
-          do!
+        | Ok (command, loggingLevel, fetchStyle) ->
+          let! exitCode =
             command
             |> Buckaroo.Command.runCommand loggingLevel fetchStyle
-          return 0
-        | Result.Error error ->
+          return exitCode
+        | Error error ->
           Console.WriteLine error
           return 1
       with error ->

@@ -23,7 +23,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
     if Option.defaultValue ArchiveType.Zip source.Type <> ArchiveType.Zip
     then
-      return raise (System.Exception("Only zip is currently supported"))
+      return raise (System.Exception "Only zip is currently supported")
 
     let! pathToZip = downloadManager.DownloadToCache source.Url
     use file = System.IO.File.OpenRead pathToZip
@@ -34,7 +34,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
       | Some stripPrefix ->
         let roots =
           zip.Entries
-          |> Seq.map (fun entry -> System.IO.Path.GetDirectoryName(entry.FullName))
+          |> Seq.map (fun entry -> System.IO.Path.GetDirectoryName entry.FullName)
           |> Seq.distinct
           |> Seq.filter (fun directory ->
             directory |> Glob.isLike stripPrefix
@@ -57,7 +57,8 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     use streamReader = new System.IO.StreamReader(stream)
 
     return!
-      streamReader.ReadToEndAsync() |> Async.AwaitTask
+      streamReader.ReadToEndAsync ()
+      |> Async.AwaitTask
   }
 
   let fetchFile location path =
@@ -292,27 +293,38 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
 
     member this.FetchManifest (location, versions) =
       async {
-        let! content = fetchFile location Constants.ManifestFileName
-        return
-          match Manifest.parse content with
-          | Result.Ok manifest -> manifest
-          | Result.Error error ->
-            let errorMessage =
-              "Invalid " + Constants.ManifestFileName + " file. \n" +
-              (Manifest.ManifestParseError.show error)
-            raise <| System.Exception errorMessage
+        let! maybeContent =
+          fetchFile location Constants.ManifestFileName
+          |> toOptional
+
+        match maybeContent with
+        | Some content ->
+          return
+            match Manifest.parse content with
+            | Result.Ok manifest -> manifest
+            | Result.Error error ->
+              let errorMessage =
+                "Invalid " + Constants.ManifestFileName + " file. \n" +
+                (Manifest.ManifestParseError.show error)
+              raise <| System.Exception errorMessage
+        | None ->
+          return raise <| System.Exception ("No manifest was found at " + (PackageLock.show location) + ". ")
       }
 
     member this.FetchLock (location, versions) =
       async {
-        let! maybeContent = fetchFile location Constants.LockFileName |> Async.Catch |> Async.map(Choice.toOption)
+        let! maybeContent =
+          fetchFile location Constants.LockFileName
+          |> Async.Catch
+          |> Async.map Choice.toOption
+
         return
           match maybeContent with
           | None ->
             logger.RichWarning (
               (text "Could not fetch ") + (highlight Constants.LockFileName) + (text " from ") +
               (PackageLock.show location |> highlight) + (warn " 404"))
-            raise <| System.Exception("Could not fetch " + Constants.LockFileName + " file")
+            raise <| System.Exception ("Could not fetch " + Constants.LockFileName + " file")
           | Some content ->
             match Lock.parse content with
             | Result.Ok manifest -> manifest

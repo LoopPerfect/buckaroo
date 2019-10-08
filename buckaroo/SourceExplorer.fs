@@ -117,7 +117,7 @@ module SourceExplorer =
                   )
 
                 match maybeUnsatisfiable with
-                | Some unsat -> Set.singleton (unsat)
+                | Some unsat -> Set.singleton unsat
                 | None ->
                   let a = set (candidates x)
                   let b = set (candidates y)

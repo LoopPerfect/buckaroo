@@ -9,39 +9,39 @@ open Buckaroo.RichOutput
 open Buckaroo.Console
 open Buckaroo.Hashing
 
-type CopyMessage = 
+type CopyMessage =
 | Copy of string * string * AsyncReplyChannel<Async<Unit>>
 
-type DownloadMessage = 
+type DownloadMessage =
 | Download of string * AsyncReplyChannel<Async<string>>
 
-type DownloadManager (console : ConsoleManager, cacheDirectory : string) = 
-  
-  let sanitizeFilename (x : string) = 
-    let regexSearch = 
-      new string(Path.GetInvalidFileNameChars()) + 
-      new string(Path.GetInvalidPathChars()) + 
-      "@.:\\/";
-    let r = new Regex(String.Format("[{0}]", Regex.Escape(regexSearch)))
+type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
+
+  let sanitizeFilename (x : string) =
+    let regexSearch =
+      new string (Path.GetInvalidFileNameChars()) +
+      new string (Path.GetInvalidPathChars()) +
+      "@.:\\/"
+    let r = Regex (String.Format ("[{0}]", Regex.Escape regexSearch))
     Regex.Replace(r.Replace(x, "-"), "-{2,}", "-")
 
-  let cachePath (url : string) = 
+  let cachePath (url : string) =
     let hash = sha256 url
     Path.Combine(cacheDirectory, (sanitizeFilename url).ToLower() + "-" + hash.Substring(0, 16))
 
-  let cachePathHash (hash : string) = 
+  let cachePathHash (hash : string) =
     Path.Combine(cacheDirectory, hash)
 
   let downloadFile (url : string) (target : string) = async {
     console.Write (
-      (text "Downloading ") + 
-      (text url |> foreground ConsoleColor.Magenta) + 
-      " to " + 
+      (text "Downloading ") +
+      (text url |> foreground ConsoleColor.Magenta) +
+      " to " +
       (text target |> foreground ConsoleColor.Cyan) + "... ")
     let! request = Http.AsyncRequestStream url
     use outputFile = new FileStream(target, FileMode.Create)
-    do! 
-      request.ResponseStream.CopyToAsync outputFile 
+    do!
+      request.ResponseStream.CopyToAsync outputFile
       |> Async.AwaitTask
     return target
   }
@@ -53,8 +53,8 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
       let! (Copy(source, destination, replyChannel)) = inbox.Receive()
       match cache |> Map.tryFind destination with
       | Some task -> replyChannel.Reply(task)
-      | None -> 
-        let! task = 
+      | None ->
+        let! task =
           async {
             if File.Exists destination |> not
             then
@@ -67,7 +67,7 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
 
   let copy source destination = async {
     let! task = hashCache.PostAndAsyncReply (fun ch -> Copy (source, destination, ch))
-    
+
     return! task
   }
 
@@ -76,32 +76,32 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
 
     while true do
       let! (Download (url, replyChannel)) = inbox.Receive ()
-      
+
       match cache |> Map.tryFind url with
       | Some task -> replyChannel.Reply(task)
-      | None -> 
+      | None ->
         let target = cachePath url
-        let! task = 
+        let! task =
           async {
             if File.Exists target
             then
               console.Write ((text "Deleting ") + (text target |> foreground ConsoleColor.Cyan) + "... ")
               do! Files.delete target
-            let! cachePath = downloadFile url target 
+            let! cachePath = downloadFile url target
             let! hash = Files.sha256 cachePath
             let destination = cachePathHash hash
             do! copy cachePath destination
             return destination
           }
           |> Async.StartChild
-          
+
         cache <- cache |> Map.add url task
         replyChannel.Reply(task)
   })
 
   member this.DownloadToCache (url : string) = async {
     let! res = downloadCache.PostAndAsyncReply(fun ch -> Download(url, ch))
-    return! res 
+    return! res
   }
 
   member this.Download (url : string) (path : string) = async {
@@ -109,18 +109,19 @@ type DownloadManager (console : ConsoleManager, cacheDirectory : string) =
     do! Files.copy source path
   }
 
-  member this.DownloadHash (sha256 : string) (urls : string list) : Async<string> = 
+  member this.DownloadHash (sha256 : string) (urls : string list) : Async<string> =
     let rec processUrls urls = async {
       match urls with
-      | head::tail -> 
+      | head::tail ->
         let! cachePath = this.DownloadToCache head
         let! actualHash = Files.sha256 cachePath
+
         if actualHash = sha256
-        then 
+        then
           return cachePath
         else
           return! processUrls tail
-      | [] -> 
-        return raise <| new Exception("Ran out of URLs to try")
+      | [] ->
+        return raise <| Exception "Ran out of URLs to try"
     }
     processUrls urls

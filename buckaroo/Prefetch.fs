@@ -7,7 +7,7 @@ type private PrefetcherMessage =
 | Prefetch of PackageIdentifier
 
 type Prefetcher (sourceExplorer : ISourceExplorer, limit : int) =
-  let agent = MailboxProcessor.Start(fun inbox ->
+  let agent = MailboxProcessor.Start (fun inbox ->
     let rec waiting () =
       inbox.Scan (fun x ->
         match x with

@@ -2,13 +2,12 @@ module Buckaroo.InstallCommand
 
 open System
 open System.IO
+open FSharp.Control
 open FSharpx.Control
 open Buckaroo
 open Buckaroo.BuckConfig
 open Buckaroo.Tasks
-open Buckaroo.Console
 open Buckaroo.Logger
-open Buckaroo.RichOutput
 
 let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplorer) (package : PackageIdentifier) = async {
   let location =
@@ -21,35 +20,7 @@ let private fetchManifestFromLock (lock : Lock) (sourceExplorer : ISourceExplore
   return! sourceExplorer.FetchManifest location
 }
 
-let private fetchDependencyTargets (lock : Lock) (sourceExplorer : ISourceExplorer) (manifest : Manifest) = async {
-  let! targetIdentifiers =
-    manifest.Dependencies
-    |> Seq.map (fun d -> async {
-      let! targets =
-        match d.Targets with
-        | Some targets -> async {
-            return targets |> List.toSeq
-          }
-        | None -> async {
-            let! manifest = fetchManifestFromLock lock sourceExplorer d.Package
-            return manifest.Targets |> Set.toSeq
-          }
-
-      return
-        targets
-        |> Seq.map (fun target ->
-          { Package = d.Package; Target = target }
-        )
-    })
-    |> Async.Parallel
-
-  return
-    targetIdentifiers
-    |> Seq.collect id
-    |> Seq.toList
-}
-
-let private buckarooMacros =
+let private buckarooBuckMacros =
   [
     "def buckaroo_cell(package): ";
     "  cell = native.read_config('buckaroo', package, '').strip()";
@@ -93,11 +64,24 @@ let rec computeCellIdentifier (parents : PackageIdentifier list) (package : Pack
   | head::tail ->
     (computeCellIdentifier tail head) + "." + (computeCellIdentifier [] package)
 
-let rec private combinePaths xs =
-  match xs with
-  | [ x ] -> x
-  | x::xs -> Path.Combine (x, combinePaths xs)
-  | [] -> ""
+let private packageWorkspaceName (parents : PackageIdentifier list) (package : PackageIdentifier) =
+  let s =
+    seq {
+      yield! parents
+      yield package
+    }
+    |> Seq.map PackageIdentifier.show
+    |> String.concat "_"
+
+  "buckaroo_" +
+  (
+    s
+    |> Strings.replaceAll [ "/"; "."; "-" ] "_"
+  ) + "_" +
+  (
+    Hashing.sha256 s
+    |> Strings.truncate 8
+  )
 
 let rec packageInstallPath (parents : PackageIdentifier list) (package : PackageIdentifier) =
   match parents with
@@ -106,13 +90,11 @@ let rec packageInstallPath (parents : PackageIdentifier list) (package : Package
       match package with
       | PackageIdentifier.GitHub x -> ("github", x.Owner, x.Project)
       | PackageIdentifier.BitBucket x -> ("bitbucket", x.Owner, x.Project)
-      | PackageIdentifier.GitLab x -> ("gitlab", combinePaths x.Groups, x.Project)
+      | PackageIdentifier.GitLab x -> ("gitlab", Paths.combineAll x.Groups, x.Project)
       | PackageIdentifier.Adhoc x -> ("adhoc", x.Owner, x.Project)
-    Path.Combine(".", Constants.PackagesDirectory, prefix, owner, project)
+    String.Join ("/", [ Constants.PackagesDirectory; prefix; owner; project ])
   | head::tail ->
-    Path.Combine(packageInstallPath tail head, packageInstallPath [] package)
-    |> Paths.normalize
-
+    String.Join ("/", [ packageInstallPath tail head; packageInstallPath [] package ])
 
 let getReceiptPath installPath = installPath + ".receipt.toml"
 
@@ -322,14 +304,17 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
 
   let buckarooSectionPublic =
     manifest.Dependencies
-    |> Seq.map (fun d -> d.Package)
-    |> Seq.map (fun package -> (PackageIdentifier.show package, computeCellIdentifier (List.tail parents) package |> INIString))
+    |> Seq.map (fun d ->
+      let package = d.Package
+      PackageIdentifier.show package, computeCellIdentifier (List.tail parents) package |> INIString
+    )
 
   let buckarooSectionPrivate =
     lockedPackage.PrivatePackages
     |> Map.toSeq
-    |> Seq.map fst
-    |> Seq.map (fun package -> (PackageIdentifier.show package, computeCellIdentifier parents package |> INIString))
+    |> Seq.map (fun (package, _) ->
+      PackageIdentifier.show package, computeCellIdentifier parents package |> INIString
+    )
 
   let buckarooSection =
     buckarooSectionPublic
@@ -346,14 +331,32 @@ let private generateBuckConfig (sourceExplorer : ISourceExplorer) (parents : Pac
   return buckarooConfig |> BuckConfig.render
 }
 
-let rec private installPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
+let private generateBazelDefs (targets : Set<TargetIdentifier>) =
+  seq {
+    yield "def buckaroo_deps():"
+
+    yield "  return ["
+    yield!
+      targets
+      |> Seq.collect (fun t -> seq {
+        let parents, package = t.PackagePath
+        yield "    \"@" + (packageWorkspaceName parents package) + (Target.show t.Target) + "\","
+      })
+
+    yield "  ]"
+
+    yield ""
+  }
+  |> String.concat "\n"
+
+let rec private installBuckPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
   // Prepare workspace
   do! Files.mkdirp root
   do! Files.touch (Path.Combine(root, ".buckconfig"))
 
   if File.Exists (Path.Combine(root, Constants.BuckarooMacrosFileName)) |> not
   then
-    do! Files.writeFile (Path.Combine(root, Constants.BuckarooMacrosFileName)) buckarooMacros
+    do! Files.writeFile (Path.Combine(root, Constants.BuckarooMacrosFileName)) buckarooBuckMacros
 
   // Install packages
   for (package, lockedPackage) in packages |> Map.toSeq do
@@ -361,13 +364,13 @@ let rec private installPackages (context : Tasks.TaskContext) (root : string) (p
       Path.Combine(root, packageInstallPath [] package)
       |> Paths.normalize
 
-    let childParents = (parents @ [ package ])
+    let childParents = parents @ [ package ]
 
     // Install child package sources
     do! installPackageSources context installPath lockedPackage.Location lockedPackage.Versions
 
     // Install child's child (recurse)
-    do! installPackages context installPath childParents lockedPackage.PrivatePackages
+    do! installBuckPackages context installPath childParents lockedPackage.PrivatePackages
 
     // Write .buckconfig.d for child package
     let! buckarooConfig =
@@ -385,7 +388,107 @@ let rec private computeNestedPackages (parents : PackageIdentifier list) package
     yield! computeNestedPackages (parents @ [ k ]) v.PrivatePackages
   })
 
-let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Lock) = async {
+let private generateTopLevelBazelDefs (sourceExplorer : ISourceExplorer) (lock : Lock) = async {
+  return
+    seq {
+      yield "def buckaroo_setup():"
+
+      // We need to create a "local_repository" for every package and its private packages
+      yield!
+        lock.Packages
+        |> computeNestedPackages []
+        |> Seq.collect (fun (parents, package) -> seq {
+          yield "  native.local_repository("
+          yield "    name = \"" + (packageWorkspaceName parents package) + "\","
+          yield "    path = \"" + (packageInstallPath parents package) + "\""
+          yield "  )"
+          yield ""
+        })
+
+      yield "  return None"
+      yield ""
+      yield generateBazelDefs lock.Dependencies
+    }
+    |> String.concat "\n"
+}
+
+let rec private installBazelPackages (context : Tasks.TaskContext) (root : string) (parents : PackageIdentifier list) (packages : Map<PackageIdentifier, LockedPackage>) = async {
+  do! Files.touch (Paths.combine root "WORKSPACE")
+
+  // Install packages
+  for (package, lockedPackage) in packages |> Map.toSeq do
+    let installPath =
+      Paths.combine root (packageInstallPath [] package)
+      |> Paths.normalize
+
+    let childParents = parents @ [ package ]
+
+    // Install child package sources
+    do! installPackageSources context installPath lockedPackage.Location lockedPackage.Versions
+
+    // Install child's children (recurse)
+    do! installBazelPackages context installPath childParents lockedPackage.PrivatePackages
+
+    // Write buckaroo/defs.bzl
+    do! Files.mkdirp (Paths.combineAll [ installPath; Constants.PackagesDirectory ])
+
+    do! Files.touch (Paths.combineAll [ installPath; Constants.PackagesDirectory; "BUILD.bazel" ])
+
+    let! manifest = context.SourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
+
+    let! targets =
+      asyncSeq {
+        let xs =
+          manifest.Dependencies
+          |> Seq.map (fun d -> (parents, d))
+          |> Seq.append (
+            manifest.PrivateDependencies
+            |> Seq.map (fun d -> (parents @ [ package ], d))
+          )
+
+        for parents, dependency in xs do
+          match dependency.Targets with
+          | Some targets ->
+            yield!
+              targets
+              |> Seq.map (fun target ->
+                {
+                  PackagePath = parents, dependency.Package
+                  Target = target
+                }
+              )
+              |> AsyncSeq.ofSeq
+          | None ->
+            // If the manifest does not specify any targets then
+            // we need to take the defaults listed in the package manifest.
+            let lockedPackage =
+              packages
+              |> Map.find dependency.Package // TODO: Better error if this fails. Indicates an invalid lock-file?
+
+            let! manifest =
+              context.SourceExplorer.FetchManifest (lockedPackage.Location, lockedPackage.Versions)
+
+            yield!
+              manifest.Targets
+              |> Seq.map (fun target ->
+                {
+                  PackagePath = parents, dependency.Package
+                  Target = target
+                }
+              )
+              |> AsyncSeq.ofSeq
+      }
+      |> AsyncSeq.toListAsync
+      |> Async.map Set.ofSeq
+
+    let buckarooDefs =
+      generateBazelDefs
+        targets
+
+    do! Files.writeFile (Path.Combine(installPath, Constants.PackagesDirectory, Constants.BuckarooDefsFileName)) buckarooDefs
+}
+
+let writeTopLevelBuckFiles (context : Tasks.TaskContext) (root : string) (lock : Lock) = async {
   let nestedPackages =
     computeNestedPackages [] lock.Packages
     |> Seq.distinct
@@ -410,7 +513,7 @@ let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Loc
         "dependencies",
         (
           lock.Dependencies
-          |> Seq.map (fun d -> (computeCellIdentifier [] d.Package) + (Target.show d.Target))
+          |> Seq.map (fun d -> (computeCellIdentifier (fst d.PackagePath) (snd d.PackagePath)) + (Target.show d.Target))
           |> String.concat " "
           |> INIString
         )
@@ -427,17 +530,39 @@ let writeTopLevelFiles (context : Tasks.TaskContext) (root : string) (lock : Loc
   do! Files.writeFile (Path.Combine (root, ".buckconfig.d", ".buckconfig.buckaroo")) (BuckConfig.render config)
 }
 
+let writeTopLevelBazelFiles context lock = async {
+  do! Files.mkdirp (Paths.combine "." Constants.PackagesDirectory)
+  do! Files.touch (Paths.combineAll [ "."; Constants.PackagesDirectory; "BUILD.bazel" ])
+
+  let! bazelDefs = generateTopLevelBazelDefs context.SourceExplorer lock
+
+  do! Files.writeFile (Paths.combineAll [ "."; Constants.PackagesDirectory; Constants.BuckarooDefsFileName ]) bazelDefs
+}
+
 let task (context : Tasks.TaskContext) = async {
   let logger = createLogger context.Console None
 
   logger.Info "Installing packages..."
 
-  let! lock = Tasks.readLock
+  let! lockFileExists = Files.exists Constants.LockFileName
 
-  do! installPackages context "." [] lock.Packages
-  do! writeTopLevelFiles context "." lock
+  if lockFileExists
+  then
+    let! lock = Tasks.readLock
 
-  logger.Success "The packages folder is now up-to-date. "
+    match context.BuildSystem with
+    | Buck ->
+      do! writeTopLevelBuckFiles context "." lock
+      do! installBuckPackages context "." [] lock.Packages
+    | Bazel ->
+      do! writeTopLevelBazelFiles context lock
+      do! installBazelPackages context "." [] lock.Packages
 
-  return ()
+    logger.Success "The packages folder is now up-to-date. "
+
+    return 0
+  else
+    logger.Error "No lock-file was found. Perhaps you need to run buckaroo resolve? "
+
+    return 1
 }
