@@ -89,6 +89,12 @@ To run the project:
 dotnet run --project ./buckaroo-cli
 ```
 
+To pass arguments to Buckaroo using `dotnet`, use `--`:
+
+```bash=
+dotnet run --project ./buckaroo-cli -- version
+```
+
 
 ### Which branch should I use? 🤔
 
