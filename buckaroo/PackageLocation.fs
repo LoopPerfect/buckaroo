@@ -45,21 +45,21 @@ module PackageLocation =
     then
       "https://github.com/" + x.Owner + "/" + x.Project + ".git"
     else
-      "ssh://git@github.com:" + x.Owner + "/" + x.Project + ".git"
+      "git@github.com:" + x.Owner + "/" + x.Project + ".git"
 
   let bitBucketUrl (x : AdhocPackageIdentifier) =
     if Environment.GetEnvironmentVariable "BUCKAROO_BITBUCKET_SSH" |> isNull
     then
       "https://bitbucket.org/" + x.Owner + "/" + x.Project + ".git"
     else
-      "ssh://git@bitbucket.org:" + x.Owner + "/" + x.Project + ".git"
+      "git@bitbucket.org:" + x.Owner + "/" + x.Project + ".git"
 
   let gitLabUrl (x : GitLabPackageIdentifier) =
     if Environment.GetEnvironmentVariable "BUCKAROO_GITLAB_SSH" |> isNull
     then
       "https://gitlab.com/" + (x.Groups |> String.concat "/") + "/" + x.Project + ".git"
     else
-      "ssh://git@gitlab.com:" + (x.Groups |> String.concat "/") + "/" + x.Project + ".git"
+      "git@gitlab.com:" + (x.Groups |> String.concat "/") + "/" + x.Project + ".git"
 
   let versionSetFromLocation location =
     match location with
