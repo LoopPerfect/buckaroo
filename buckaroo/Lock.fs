@@ -254,10 +254,15 @@ module Lock =
       |> Option.map (Result.map Option.Some)
       |> Option.defaultValue (Result.Ok Option.None)
 
+    let! manifestType =
+      x |> ManifestType.fromToml
+
+
     return PackageLock.Http ({
       Url = url;
       StripPrefix = stripPrefix;
       Type = archiveType;
+      ManifestType = manifestType
     }, sha256)
   }
 
@@ -274,9 +279,13 @@ module Lock =
       |> Result.mapError Toml.TomlError.show
       |> Result.bind (Toml.asString >> Result.mapError Toml.TomlError.show)
 
+    let! manifestType =
+      x |> ManifestType.fromToml
+
     return PackageLock.Git {
       Url = uri;
       Revision = revision
+      ManifestType = manifestType
     }
   }
 

@@ -17,6 +17,7 @@
     <Compile Include="BuckConfig.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="Archive.fs" />
+    <Compile Include="ManifestType.fs" />
     <Compile Include="PackageIdentifier.fs" />
     <Compile Include="Target.fs" />
     <Compile Include="TargetIdentifier.fs" />

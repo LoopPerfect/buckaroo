@@ -4,11 +4,13 @@ type HttpLocation = {
   Url : string
   StripPrefix : string option
   Type : ArchiveType option
+  ManifestType: ManifestType
 }
 
 type GitLocation = {
   Url : string
   Revision : Revision
+  ManifestType: ManifestType
 }
 
 type GitLabLocation = {
@@ -37,8 +39,15 @@ type PackageLocation =
     | GitLab gitLab -> "gitlab.com/" + (gitLab.Package.Groups |> String.concat "/") + "/" + gitLab.Package.Project + "#" + gitLab.Revision
 
 module PackageLocation =
-
   open System
+
+  let getManifestType (id : PackageLocation) =
+    match id with
+    | GitHub x -> x.Package.Type
+    | BitBucket x -> x.Package.Type
+    | GitLab x -> x.Package.Type
+    | Http x -> x.ManifestType
+    | Git x -> x.ManifestType
 
   let gitHubUrl (x : AdhocPackageIdentifier) =
     if Environment.GetEnvironmentVariable "BUCKAROO_GITHUB_SSH" |> isNull

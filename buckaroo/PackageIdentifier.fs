@@ -1,8 +1,8 @@
 namespace Buckaroo
 
-type AdhocPackageIdentifier = { Owner : string; Project : string }
+type AdhocPackageIdentifier = { Owner : string; Project : string; Type : ManifestType }
 
-type GitLabPackageIdentifier = { Groups : string list; Project : string }
+type GitLabPackageIdentifier = { Groups : string list; Project : string; Type : ManifestType }
 
 type PackageIdentifier =
 | GitHub of AdhocPackageIdentifier
@@ -15,12 +15,23 @@ module PackageIdentifier =
   open FParsec
   open Buckaroo.RichOutput
 
+  let getManifestType (id : PackageIdentifier) =
+    match id with
+    | GitHub x -> x.Type
+    | BitBucket x -> x.Type
+    | GitLab x -> x.Type
+    | Adhoc x -> x.Type
+
   let show (id : PackageIdentifier) =
     match id with
-    | GitHub x -> "github.com/" + x.Owner + "/" + x.Project
-    | BitBucket x -> "bitbucket.org/" + x.Owner + "/" + x.Project
-    | GitLab x -> "gitlab.com/" + (x.Groups |> String.concat "/") + "/" + x.Project
-    | Adhoc x -> x.Owner + "/" + x.Project
+    | GitHub x ->
+      ManifestType.show x.Type + "github.com/" + x.Owner + "/" + x.Project
+    | BitBucket x ->
+      ManifestType.show x.Type + "bitbucket.org/" + x.Owner + "/" + x.Project
+    | GitLab x ->
+      ManifestType.show x.Type + "gitlab.com/" + (x.Groups |> String.concat "/") + "/" + x.Project
+    | Adhoc x ->
+      ManifestType.show x.Type + x.Owner + "/" + x.Project
 
   let showRich (id : PackageIdentifier) =
     id
@@ -31,10 +42,11 @@ module PackageIdentifier =
     CharParsers.regex @"[a-zA-Z.\d](?:[a-zA-Z_.\d]|-(?=[a-zA-Z_.\d])){0,38}"
 
   let adhocPackageIdentifierParser = parse {
+    let! manifestType = ManifestType.parser
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner.ToLower(); Project = project.ToLower() }
+    return { Owner = owner.ToLower(); Project = project.ToLower(); Type = manifestType }
   }
 
   let parseAdhocIdentifier (x : string) : Result<AdhocPackageIdentifier, string> =
@@ -43,11 +55,12 @@ module PackageIdentifier =
     | Failure(error, _, _) -> Result.Error error
 
   let gitHubPackageIdentifierParser = parse {
+    let! manifestType = ManifestType.parser
     do! CharParsers.skipString "github.com/" <|> CharParsers.skipString "github+"
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner.ToLower(); Project = project.ToLower() }
+    return { Owner = owner.ToLower(); Project = project.ToLower(); Type = manifestType  }
   }
 
   let parseGitHubIdentifier (x : string) =
@@ -56,11 +69,12 @@ module PackageIdentifier =
     | Failure(error, _, _) -> Result.Error error
 
   let bitBucketPackageIdentifierParser = parse {
+    let! manifestType = ManifestType.parser
     do! CharParsers.skipString "bitbucket.org/" <|> CharParsers.skipString "bitbucket+"
     let! owner = gitHubIdentifierParser
     do! CharParsers.skipString "/"
     let! project = gitHubIdentifierParser
-    return { Owner = owner.ToLower(); Project = project.ToLower() }
+    return { Owner = owner.ToLower(); Project = project.ToLower(); Type = manifestType  }
   }
 
   let parseBitBucketIdentifier (x : string) =
@@ -69,6 +83,7 @@ module PackageIdentifier =
     | Failure(error, _, _) -> Result.Error error
 
   let gitLabPackageIdentifierParser = parse {
+    let! manifestType = ManifestType.parser
     do! CharParsers.skipString "gitlab.com/"
     let! x = gitHubIdentifierParser
     do! CharParsers.skipString "/"
@@ -80,6 +95,7 @@ module PackageIdentifier =
     return {
       Groups = parts |> List.truncate (parts.Length - 1)
       Project = parts |> List.last
+      Type = manifestType
     }
   }
 

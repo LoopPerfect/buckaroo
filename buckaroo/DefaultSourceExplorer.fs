@@ -236,6 +236,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
                 Url = h.Url;
                 StripPrefix = h.StripPrefix;
                 Type = h.Type;
+                ManifestType = h.ManifestType
               },
               hash
             )
@@ -282,6 +283,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
               PackageLocation.Git {
                 Url = git.Uri;
                 Revision = revision;
+                ManifestType =  adhoc.Type
               }
             )
         | Some (PackageSource.Http versions) ->
@@ -292,24 +294,37 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
     }
 
     member this.FetchManifest (location, versions) =
-      async {
-        let! maybeContent =
-          fetchFile location Constants.ManifestFileName
-          |> toOptional
+      let mType = PackageLock.getManifestType location
+      match mType with
+      | NO_MANIFEST ->
+        async {
+          return Manifest.zero
+        }
 
-        match maybeContent with
-        | Some content ->
-          return
-            match Manifest.parse content with
-            | Result.Ok manifest -> manifest
-            | Result.Error error ->
-              let errorMessage =
-                "Invalid " + Constants.ManifestFileName + " file. \n" +
-                (Manifest.ManifestParseError.show error)
-              raise <| System.Exception errorMessage
-        | None ->
-          return raise <| System.Exception ("No manifest was found at " + (PackageLock.show location) + ". ")
-      }
+      | BUCKAROO_TOML ->
+        async {
+          let! maybeContent =
+            fetchFile location Constants.ManifestFileName
+            |> toOptional
+
+          match maybeContent with
+          | Some content ->
+            return
+              match Manifest.parse content with
+              | Result.Ok manifest -> manifest
+              | Result.Error error ->
+                let errorMessage =
+                  "Invalid " + Constants.ManifestFileName + " file. \n" +
+                  (Manifest.ManifestParseError.show error)
+                raise <| System.Exception errorMessage
+          | None ->
+            return raise <| System.Exception ("No manifest was found at " + (PackageLock.show location) + ". ")
+        }
+
+      | _ ->
+        async {
+          return raise <| System.Exception ("Manifests of type " +  (ManifestType.show mType) + " not supported yet")
+        }
 
     member this.FetchLock (location, versions) =
       async {

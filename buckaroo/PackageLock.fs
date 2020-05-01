@@ -21,6 +21,8 @@ module PackageLock =
     | BitBucket git -> PackageLocation.BitBucket git
     | GitLab git -> PackageLocation.GitLab git
 
+  let getManifestType lock = toLocation lock |> PackageLocation.getManifestType
+
   let show (x : PackageLock) =
     match x with
     | Git g -> g.Url + "#" + g.Revision
@@ -46,7 +48,9 @@ module PackageLock =
         |> Result.bind Toml.asString
         |> Result.mapError Toml.TomlError.show
 
-      return PackageLock.Git { Url = git; Revision = revision }
+      let! manifestType = ManifestType.fromToml toml
+
+      return PackageLock.Git { Url = git; Revision = revision; ManifestType = manifestType }
     | None ->
       match toml |> Toml.tryGet "package" with
       | Some tomlPackage ->
@@ -101,7 +105,10 @@ module PackageLock =
           |> Option.map (Result.map Option.Some)
           |> Option.defaultValue (Result.Ok Option.None)
 
+        let! manifestType = ManifestType.fromToml toml
+
+
         return
           PackageLock.Http
-          ({ Url = url; StripPrefix = stripPrefix; Type = archiveType }, sha256)
+          ({ Url = url; StripPrefix = stripPrefix; Type = archiveType; ManifestType = manifestType }, sha256)
   }

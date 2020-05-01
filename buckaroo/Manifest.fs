@@ -23,6 +23,7 @@ type LocationParseError =
 | InvalidPackage of string
 | InvalidVersion of string
 | ArchiveTypeParseError of ArchiveType.ParseError
+| ManifestTypeNotImplemented of string
 
 type ManifestParseError =
 | TomlError of TomlError
@@ -185,8 +186,12 @@ module Manifest =
       |> Option.map (Result.map Option.Some)
       |> Option.defaultValue (Ok Option.None)
 
+    let! manifestType =
+      ManifestType.fromToml x
+      |> Result.mapError (LocationParseError.ManifestTypeNotImplemented)
+
     return PackageSource.Http (Map.ofSeq ([
-        (version, { Url = url; StripPrefix = stripPrefix; Type = archiveType; })
+        (version, { Url = url; StripPrefix = stripPrefix; Type = archiveType; ManifestType = manifestType})
     ]))
   }
 
