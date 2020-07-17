@@ -13,11 +13,22 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
   let fromFileCache url revision path =
     gitManager.GetFile url revision path |> toOptional
 
+
+  // We fetch from cache or api if possible.
+  // However fetching from api might be not feasable if credentials are required.
+  // In such case we fallback to git and try to find the requested commit.
   let cacheOrApi (api, url : string, rev : string, path : string) = async {
     let! cached = fromFileCache url rev path
     match cached with
     | Some data -> return data
-    | None -> return! api rev path
+    | None ->
+      match! (api rev path |> Async.Catch) with
+      | Choice1Of2 result ->
+        return result
+      | Choice2Of2 error ->
+        logger.Trace("failed to fetch file using api, falling back to git")
+        do! gitManager.FindCommit url rev None
+        return! fromFileCache url rev path |> Async.map (Option.getOrRaise <| error)
   }
 
   let extractFileFromHttp (source : HttpLocation) (filePath : string) = async {
