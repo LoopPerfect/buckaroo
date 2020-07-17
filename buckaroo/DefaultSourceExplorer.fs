@@ -6,8 +6,6 @@ open Buckaroo.Console
 open Buckaroo.RichOutput
 open Buckaroo.Logger
 
-
-
 type DefaultSourceExplorer (console : ConsoleManager, downloadManager : DownloadManager, gitManager : GitManager) =
   let logger = createLogger console (Some "explorer")
   let toOptional = Async.Catch >> (Async.map Choice.toOption)
@@ -28,7 +26,7 @@ type DefaultSourceExplorer (console : ConsoleManager, downloadManager : Download
       | Choice1Of2 result ->
         return result
       | Choice2Of2 error ->
-        logger.Info("failed to fetch file using api, falling back to git")
+        logger.Trace("failed to fetch file using api, falling back to git")
         do! gitManager.FindCommit url rev None
         return! fromFileCache url rev path |> Async.map (Option.getOrRaise <| error)
   }
