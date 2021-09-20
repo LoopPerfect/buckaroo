@@ -76,6 +76,6 @@
     <PackageReference Include="LibGit2Sharp.NativeBinaries" Version="1.0.217" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="2.1.1" />
     <PackageReference Include="Nett" Version="0.9.0" />
-    <PackageReference Include="sharpcompress" Version="0.22.0" />
+    <PackageReference Include="sharpcompress" Version="0.29.0" />
   </ItemGroup>
 </Project>
